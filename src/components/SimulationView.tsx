@@ -14,6 +14,8 @@ export function SimulationView({
   rotationSpeed,
   magnetism,
   proximity,
+  desperation,
+  despairAge,
   flowerSize,
   entropyThreshold,
   tideSpeed,
@@ -52,12 +54,15 @@ export function SimulationView({
   globalPulseSpeed,
   multicolorAppProb,
   sameColorAppProb,
+  maxSaturation,
 }: Props & {
   restartTrigger?: number;
   randomizeTrigger?: number;
   rotationSpeed?: number;
   magnetism?: number;
   proximity?: number;
+  desperation?: number;
+  despairAge?: number;
   flowerSize?: number;
   entropyThreshold?: number;
   tideSpeed?: number;
@@ -96,6 +101,7 @@ export function SimulationView({
   globalPulseSpeed?: number;
   multicolorAppProb?: number;
   sameColorAppProb?: number;
+  maxSaturation?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -128,6 +134,18 @@ export function SimulationView({
       engineRef.current.setProximity(proximity);
     }
   }, [proximity]);
+
+  useEffect(() => {
+    if (engineRef.current && desperation !== undefined) {
+      engineRef.current.setDesperation(desperation);
+    }
+  }, [desperation]);
+
+  useEffect(() => {
+    if (engineRef.current && despairAge !== undefined) {
+      engineRef.current.setDespairAge(despairAge);
+    }
+  }, [despairAge]);
 
   useEffect(() => {
     if (engineRef.current && flowerSize !== undefined) {
@@ -212,6 +230,8 @@ export function SimulationView({
         engineRef.current.setMulticolorAppProb(multicolorAppProb);
       if (sameColorAppProb !== undefined)
         engineRef.current.setSameColorAppProb(sameColorAppProb);
+      if (maxSaturation !== undefined)
+        engineRef.current.setMaxSaturation(maxSaturation);
     }
   }, [
     tideColor,
@@ -248,6 +268,7 @@ export function SimulationView({
     globalPulseSpeed,
     multicolorAppProb,
     sameColorAppProb,
+    maxSaturation,
   ]);
 
   useEffect(() => {
@@ -271,6 +292,8 @@ export function SimulationView({
     if (rotationSpeed !== undefined) engine.setRotationSpeed(rotationSpeed);
     if (magnetism !== undefined) engine.setMagnetism(magnetism);
     if (proximity !== undefined) engine.setProximity(proximity);
+    if (desperation !== undefined) engine.setDesperation(desperation);
+    if (despairAge !== undefined) engine.setDespairAge(despairAge);
     if (flowerSize !== undefined) engine.setFlowerSize(flowerSize);
     if (entropyThreshold !== undefined)
       engine.setEntropyThreshold(entropyThreshold);

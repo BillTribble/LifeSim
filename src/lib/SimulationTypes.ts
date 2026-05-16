@@ -68,6 +68,8 @@ export interface Agent {
   suppressionFade?: number;
   growthAccumulator?: number;
   spiralAxis?: THREE.Vector3;
+  isFeeler?: boolean;
+  realGenome?: Genome;
 }
 
 export interface Segment {

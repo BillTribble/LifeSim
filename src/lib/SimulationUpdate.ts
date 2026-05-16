@@ -207,8 +207,8 @@ export function updateSimulation(engine: SimulationEngine) {
     engine.cylinderMesh.instanceColor!.needsUpdate = true;
   }
 
-  const effectiveDieback =
-    engine.diebackRate * Math.max(0.1, engine.growthSpeed);
+  const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
+  const effectiveDieback = engine.diebackRate * speedFactor;
 
   if (effectiveDieback > 0.001) {
     const batchSize = Math.floor(engine.maxDOMs / 20); // Full sweep every ~20 frames
@@ -301,35 +301,29 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (engine.hybridConnectionMesh) {
     const positions: number[] = [];
-    const activeHybrids: THREE.Vector3[] = [];
+    const activeHybrids: { pos: THREE.Vector3; time: number }[] = [];
     for (let i = 0; i < 2000; i++) {
       const seg = engine.hybridSegments[i];
       if (seg && !engine.dyingHybrids.has(seg.index)) {
         const pos = new THREE.Vector3();
         pos.setFromMatrixPosition(seg.matrix);
-        activeHybrids.push(pos);
+        activeHybrids.push({ pos, time: seg.timestamp });
       }
     }
 
-    for (let i = 0; i < activeHybrids.length; i++) {
-      for (let j = i + 1; j < activeHybrids.length; j++) {
-        if (
-          activeHybrids[i].distanceTo(activeHybrids[j]) <
-          engine.proximity * 1.5
-        ) {
-          // Connect if close
-          positions.push(
-            activeHybrids[i].x,
-            activeHybrids[i].y,
-            activeHybrids[i].z,
-          );
-          positions.push(
-            activeHybrids[j].x,
-            activeHybrids[j].y,
-            activeHybrids[j].z,
-          );
-        }
-      }
+    activeHybrids.sort((a, b) => a.time - b.time);
+
+    for (let i = 0; i < activeHybrids.length - 1; i++) {
+      positions.push(
+        activeHybrids[i].pos.x,
+        activeHybrids[i].pos.y,
+        activeHybrids[i].pos.z,
+      );
+      positions.push(
+        activeHybrids[i + 1].pos.x,
+        activeHybrids[i + 1].pos.y,
+        activeHybrids[i + 1].pos.z,
+      );
     }
 
     const posAttr = engine.hybridConnectionMesh.geometry.getAttribute(
@@ -389,7 +383,23 @@ export function updateSimulation(engine: SimulationEngine) {
     if (totalBiomass > 1000) {
       engine.biomassMap.forEach((biomass, strainName) => {
         if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
+        if (!engine.speciesAbove5Percent) engine.speciesAbove5Percent = new Set();
+        
         const ratio = biomass / totalBiomass;
+
+        if (ratio > 0.05) {
+          engine.speciesAbove5Percent.add(strainName);
+        } else if (ratio < 0.05 && engine.speciesAbove5Percent.has(strainName)) {
+          engine.speciesAbove5Percent.delete(strainName);
+          for (let i = 0; i < activeAgents.length; i++) {
+            if (activeAgents[i].genome.name === strainName) {
+              activeAgents[i].tapering = true;
+              activeAgents[i].forceTapering = true;
+            }
+          }
+          engine.onLog(`Species ${strainName} dropped below 5% and was culled to make space.`);
+        }
+
         const justSuppressed = ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
         
         if (ratio > engine.entropyThreshold) {

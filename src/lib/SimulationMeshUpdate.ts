@@ -30,6 +30,13 @@ export function updateMeshSegments(
   }
 
   const finalColor = genome.color.clone();
+  
+  // Apply real-time saturation limit
+  const hsl = finalColor.getHSL({ h: 0, s: 0, l: 0 });
+  if (hsl.s > engine.maxSaturation) {
+    finalColor.setHSL(hsl.h, engine.maxSaturation, hsl.l);
+  }
+
   if (genome.gradientGrowth) {
     finalColor.offsetHSL((engine.time * 0.001) % 1.0, 0, 0);
   }
@@ -87,6 +94,13 @@ export function updateMeshSegments(
         }
       } else if (!genome.sameColorAppendage) {
         finalColor.offsetHSL(0.5, 0, 0);
+      }
+      
+      // Re-apply saturation limit after offsetHSL which might alter or preserve it 
+      // depending on implementation, or just to be safe.
+      const appHsl = finalColor.getHSL({ h: 0, s: 0, l: 0 });
+      if (appHsl.s > engine.maxSaturation) {
+        finalColor.setHSL(appHsl.h, engine.maxSaturation, appHsl.l);
       }
     } else {
       return;

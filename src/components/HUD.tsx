@@ -61,6 +61,7 @@ export function HUD({
 }: HUDProps) {
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
+  const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(false);
 
   const totalBiomass =
     stats.strains.reduce((acc: number, s: any) => acc + s.biomass, 0) || 1;
@@ -78,12 +79,12 @@ export function HUD({
       {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
 
       <div
-        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 border-2 border-[#D2B48C]/20 m-4 rounded transition-opacity duration-500 ${showHUD ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
-        <header className="flex justify-between items-start mb-6 text-[10px] font-mono opacity-80 border-b border-[#D2B48C]/30 pb-2">
+        <header className={`flex justify-between items-start mb-6 text-[10px] font-mono pb-2 transition-all duration-500 ${showHUD ? "border-b border-[#D2B48C]/30" : "border-b border-transparent"}`}>
           <div className="flex gap-4">
             <div
-              className="flex items-center gap-2 pointer-events-auto cursor-pointer hover:text-white"
+              className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
               onClick={handleRestart}
               title="Re-initialize system"
             >
@@ -91,7 +92,7 @@ export function HUD({
               <span>RESTART_SIM</span>
             </div>
             <div
-              className="flex items-center gap-2 pointer-events-auto cursor-pointer hover:text-white transition-colors"
+              className={`flex items-center gap-2 cursor-pointer hover:text-white transition-all duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
               onClick={handleCopySettings}
               title="Copy all settings to clipboard"
             >
@@ -101,7 +102,7 @@ export function HUD({
               <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-4 text-right justify-end text-[9px] sm:text-[10px] pointer-events-auto items-center">
+          <div className={`flex flex-wrap gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center transition-opacity duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
             <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
               <span className="text-[#D2B48C] font-bold">MODE:</span>
               <span className="text-[#87CEEB]">{stats.season || "INIT"}</span>
@@ -134,12 +135,19 @@ export function HUD({
         <div className="flex-1 grid grid-cols-4 gap-6 pointer-events-none">
           <div className="col-span-1 flex flex-col gap-6">
             <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-32 sm:w-40">
-              <h2 className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center gap-1.5 tracking-widest">
-                <Share2 className="w-3 h-3" />
-                BIOMASS
+              <h2 
+                className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center justify-between gap-1.5 tracking-widest cursor-pointer"
+                onClick={() => setIsBiomassCollapsed(!isBiomassCollapsed)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Share2 className="w-3 h-3" />
+                  BIOMASS
+                </div>
+                <ChevronDown className={`w-3 h-3 transition-transform ${isBiomassCollapsed ? "rotate-180" : ""}`} />
               </h2>
-              <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
-                {(() => {
+              {!isBiomassCollapsed && (
+                <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                  {(() => {
                   const archetypeTotals: Record<string, number> = {};
                   stats.strains.forEach((s: any) => {
                     const arch = s.archetype || "unknown";
@@ -305,14 +313,15 @@ export function HUD({
                   );
                 })}
               </div>
+              )}
             </div>
           </div>
           <div className="col-span-3"></div>
         </div>
 
-        <footer className="mt-6 flex flex-col justify-between items-end border-t border-[#D2B48C]/30 pt-4 text-[9px] font-mono opacity-100 gap-4">
+        <footer className={`mt-6 flex flex-col justify-between items-end border-t border-[#D2B48C]/30 pt-4 text-[9px] font-mono transition-opacity duration-500 gap-4 ${showHUD ? "opacity-100" : "opacity-0"}`}>
           <div className="flex justify-between items-end w-full pointer-events-none">
-            <div className="flex gap-6 pointer-events-auto items-center">
+            <div className={`flex gap-6 items-center ${showHUD ? "pointer-events-auto" : "pointer-events-none"}`}>
               <div className="flex flex-col items-center gap-1">
                 <span className="opacity-60 text-[8px] uppercase">Active</span>
                 <span>{stats.totalAgents}</span>
@@ -336,13 +345,43 @@ export function HUD({
                   color="#87CEEB"
                 />
                 <SmartDial state={state} setters={setters}
+                  tooltip="MAX MEMORY POINTS: Increases maximum tail length. WARNING: High values will crash the browser!"
+                  label="MAX_DOMS"
+                  min={50000}
+                  max={450000}
+                  step={1000}
+                  value={state.maxDOMs}
+                  onChange={setters.setMaxDOMs}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
                   tooltip="DETECTION RANGE: Distance for cross-breeding. High = frequent hybridization. Low = isolated species."
                   label="PROXIM"
                   min={1}
-                  max={250.0}
-                  step={1.0}
+                  max={2000.0}
+                  step={10.0}
                   value={state.proximity}
                   onChange={setters.setProximity}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
+                  tooltip="DESPERATION: Multiplier for age-based hunting and hybridization."
+                  label="DESPAIR"
+                  min={1}
+                  max={10.0}
+                  step={0.1}
+                  value={state.desperation}
+                  onChange={setters.setDesperation}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
+                  tooltip="DESPAIR AGE: Age at which creatures become desperate for hybridization."
+                  label="DESP_AGE"
+                  min={100}
+                  max={5000}
+                  step={100}
+                  value={state.despairAge}
+                  onChange={setters.setDespairAge}
                   color="#87CEEB"
                 />
                 <SmartDial state={state} setters={setters}
@@ -470,7 +509,7 @@ export function HUD({
                   label="TERM_PROB"
                   min={0.0}
                   max={1.0}
-                  step={0.01}
+                  step={0.0001}
                   value={state.terminationProb}
                   onChange={setters.setTerminationProb}
                   color="#87CEEB"
@@ -499,7 +538,7 @@ export function HUD({
                   tooltip="MAX ORGANISMS: Hard limit on active organisms, kills oldest. High = swarms. Low = only a few lines."
                   label="MAX_AGENTS"
                   min={1}
-                  max={50}
+                  max={200}
                   step={1}
                   value={state.maxAgents}
                   onChange={setters.setMaxAgents}
@@ -566,6 +605,16 @@ export function HUD({
                   color="#87CEEB"
                 />
                 <SmartDial state={state} setters={setters}
+                  tooltip="MAX SATURATION: Controls the maximum possible saturation for organisms. High = vivid neon colors. Low = muted grayscale organisms."
+                  label="MAX_SATURATION"
+                  min={0.0}
+                  max={1.0}
+                  step={0.05}
+                  value={state.maxSaturation}
+                  onChange={setters.setMaxSaturation}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
                   tooltip="MAX WIDTH: Stem thickness limit. High = massive giant vines. Low = whisper-thin hair spirals."
                   label="MAX_WIDTH"
                   min={1.0}
@@ -578,7 +627,7 @@ export function HUD({
               </div>
             </div>
 
-            <div className="text-right flex flex-col gap-1 items-end pointer-events-auto w-full md:w-auto">
+            <div className={`text-right flex flex-col gap-1 items-end w-full md:w-auto ${showHUD ? "pointer-events-auto" : "pointer-events-none"}`}>
               <div className="flex flex-col items-end gap-1 mb-2 w-full max-w-[200px]">
                 <div className="flex justify-between w-full text-[10px] opacity-60 uppercase">
                   <span>Tide Level</span>
@@ -620,11 +669,21 @@ export function HUD({
         </footer>
       </div>
 
-      <button
-        onClick={() => setShowHUD(!showHUD)}
-        className="absolute top-6 right-6 z-20 w-3 h-3 bg-[#D2B48C]/60 hover:bg-white transition-all cursor-pointer rounded-full"
-        title="Toggle HUD Interface"
-      />
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-2 pointer-events-none">
+        {!showHUD && (
+          <span 
+            className="text-[10px] font-mono text-[#D2B48C] opacity-80 uppercase transition-opacity duration-500 cursor-pointer pointer-events-auto hover:text-white"
+            onClick={() => setShowHUD(true)}
+          >
+            Interface
+          </span>
+        )}
+        <button
+          onClick={() => setShowHUD(!showHUD)}
+          className="w-3 h-3 bg-[#D2B48C]/60 hover:bg-white transition-all cursor-pointer rounded-full pointer-events-auto"
+          title="Toggle HUD Interface"
+        />
+      </div>
     </>
   );
 }

@@ -4,7 +4,7 @@ import { HUD } from "./components/HUD";
 import { useSimulationState } from "./hooks/useSimulationState";
 
 export default function App() {
-  const [showHUD, setShowHUD] = useState(true);
+  const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
   const { state, setters } = useSimulationState();
 
@@ -59,13 +59,18 @@ export default function App() {
         }}
       />
       <SimulationView
-        onLog={(msg) => console.log(msg)}
+        onLog={(msg) => {
+          console.log(msg);
+          fetch('/api/log', { method: 'POST', body: msg }).catch(() => {});
+        }}
         onStateUpdate={handleStateUpdate}
         restartTrigger={restartKey}
         randomizeTrigger={randomizeKey}
         rotationSpeed={state.rotationSpeed}
         magnetism={state.magnetism}
         proximity={state.proximity}
+        desperation={state.desperation}
+        despairAge={state.despairAge}
         flowerSize={state.flowerSize}
         entropyThreshold={state.entropyThreshold}
         tideSpeed={state.tideSpeed}
@@ -104,6 +109,7 @@ export default function App() {
         globalPulseSpeed={state.globalPulseSpeed}
         multicolorAppProb={state.multicolorAppProb}
         sameColorAppProb={state.sameColorAppProb}
+        maxSaturation={state.maxSaturation}
       />
 
       <HUD

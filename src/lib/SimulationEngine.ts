@@ -59,13 +59,16 @@ export class SimulationEngine {
   biomassMap: Map<string, number> = new Map();
   genomeMap: Map<string, Genome> = new Map();
   suppressedStrains: Set<string> = new Set();
+  speciesAbove5Percent: Set<string> = new Set();
   time: number = 0;
 
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
 
   magnetism: number = 0.02;
-  proximity: number = 250.0;
+  proximity: number = 400.0;
+  desperation: number = 2.0;
+  despairAge: number = 1000;
   flowerSize: number = 1.0;
   entropyThreshold: number = 0.7;
   globalPulseSpeed: number = 1.0;
@@ -79,6 +82,7 @@ export class SimulationEngine {
   tideThickness: number = 140.0;
   tideOpacity: number = 0.5;
   tideSaturation: number = 1.0;
+  maxSaturation: number = 1.0;
   growthSpeed: number = 1.0;
   diebackRate: number = 1.0;
   hybridCooldown: number = 300;
@@ -239,6 +243,14 @@ export class SimulationEngine {
   setProximity(val: number) {
     this.proximity = val;
   }
+
+  setDesperation(val: number) {
+    this.desperation = val;
+  }
+
+  setDespairAge(val: number) {
+    this.despairAge = val;
+  }
   setFlowerSize(val: number) {
     this.flowerSize = val;
   }
@@ -332,6 +344,9 @@ export class SimulationEngine {
   }
   setDiebackRate(d: number) {
     this.diebackRate = d;
+  }
+  setMaxSaturation(val: number) {
+    this.maxSaturation = val;
   }
   setHybridCooldown(c: number) {
     this.hybridCooldown = c;

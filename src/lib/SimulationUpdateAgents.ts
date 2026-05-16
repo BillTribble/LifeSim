@@ -53,6 +53,8 @@ export function processAgents(
     totalBiomass += v;
   });
 
+  let projectedSpeciesCount = Math.max(strainCounts.size, aliveSpeciesCount);
+
   const monopolyThreshold = Math.max(10, totalBiomass * engine.entropyThreshold);
   const monopolyStrains = new Set<string>();
   if (totalBiomass > 0) {
@@ -396,7 +398,12 @@ export function processAgents(
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
       const maxForArchetype = genome.archetype === "bush" ? 40 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "fuzzy" ? 150 : 20;
 
+      const isSnake = genome.archetype === "snake";
+      let allowedToBranch = !(isSnake && myStrainCount >= maxForArchetype);
+
       if (
+        allowedToBranch &&
+        !agent.isFeeler &&
         !agent.tapering &&
         agent.age > 30 + Math.random() * 40 &&
         activeAgents.length + newAgents.length < engine.maxAgents * 1.5 &&
@@ -450,7 +457,7 @@ export function processAgents(
         if (
           engine.branchMutationRate > 0 &&
           Math.random() < engine.branchMutationRate &&
-          aliveSpeciesCount < engine.maxSpecies
+          projectedSpeciesCount < engine.maxSpecies
         ) {
           branchGenome = mutateBranchGenome(
             agent.genome,
@@ -459,6 +466,7 @@ export function processAgents(
             engine.sameColorAppProb,
           );
           branchGenome.createdAt = engine.time;
+          projectedSpeciesCount++;
         }
 
         newAgents.push({
@@ -474,16 +482,19 @@ export function processAgents(
         });
       }
 
+      const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : genome;
       let strainAge = 0;
-      if (genome.createdAt !== undefined) {
-         strainAge = engine.time - genome.createdAt;
+      if (evalGenome.createdAt !== undefined) {
+         strainAge = engine.time - evalGenome.createdAt;
       }
 
-      const isMonopoly = monopolyStrains.has(genome.name);
+      const isMonopoly = monopolyStrains.has(evalGenome.name);
       if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
-      const isSuppressed = engine.suppressedStrains.has(genome.name);
-      const isFertile = !agent.tapering && (agent.age > 50 || genome.stability < 0.5 || isMonopoly || strainAge > 2000);
-      const canBreed = isFertile && (agent.cooldown <= 0 || isMonopoly || strainAge > 2000) && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5 && aliveSpeciesCount < engine.maxSpecies && myStrainCount < maxForArchetype;
+      const isSuppressed = engine.suppressedStrains.has(evalGenome.name);
+      const isFertile = !agent.tapering && (agent.age > 50 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
+      // Removed species and branch limits from canBreed so that older/desperate creatures continue to seek out mates
+      // The culling logic will naturally handle cleaning up excess creatures.
+      const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5;
 
       if (canBreed) {
         let bestPartner: any = null;
@@ -494,27 +505,28 @@ export function processAgents(
            if (j === i) continue;
 
            const partner = activeAgents[j];
-           const partnerStrainAge = partner.genome.createdAt !== undefined ? engine.time - partner.genome.createdAt : 0;
-           const partnerMonopoly = monopolyStrains.has(partner.genome.name);
+           const partnerEvalGenome = partner.isFeeler && partner.realGenome ? partner.realGenome : partner.genome;
+           const partnerStrainAge = partnerEvalGenome.createdAt !== undefined ? engine.time - partnerEvalGenome.createdAt : 0;
+           const partnerMonopoly = monopolyStrains.has(partnerEvalGenome.name);
            const partnerFertile =
-             partner.age > 50 || partner.genome.stability < 0.5 || partnerMonopoly || partnerStrainAge > 2000;
+             partner.age > 50 || partnerEvalGenome.stability < 0.5 || partnerMonopoly || partnerStrainAge > 2000;
 
            if (
              !partnerFertile ||
-             (partner.cooldown > 0 && !partnerMonopoly && partnerStrainAge <= 2000) ||
+             partner.cooldown > 0 ||
              bredThisFrame.has(partner)
            )
              continue;
 
-           if (agent.genome.name !== partner.genome.name) {
+           if (evalGenome.name !== partnerEvalGenome.name) {
              const distSq = agent.position.distanceToSquared(partner.position);
 
              if (isMonopoly) {
                  let diffScore = 0;
-                 if (agent.genome.archetype !== partner.genome.archetype) diffScore += 10;
-                 if (agent.genome.movementType !== partner.genome.movementType) diffScore += 5;
-                 const h1 = agent.genome.color.getHSL({h:0,s:0,l:0}).h;
-                 const h2 = partner.genome.color.getHSL({h:0,s:0,l:0}).h;
+                 if (evalGenome.archetype !== partnerEvalGenome.archetype) diffScore += 10;
+                 if (evalGenome.movementType !== partnerEvalGenome.movementType) diffScore += 5;
+                 const h1 = evalGenome.color.getHSL({h:0,s:0,l:0}).h;
+                 const h2 = partnerEvalGenome.color.getHSL({h:0,s:0,l:0}).h;
                  let hDiff = Math.abs(h1 - h2);
                  if (hDiff > 0.5) hDiff = 1.0 - hDiff;
                  diffScore += hDiff * 10;
@@ -537,14 +549,16 @@ export function processAgents(
 
         if (bestPartner) {
            const distSq = nearestDistSq;
-           const reach = engine.proximity * engine.proximity * (isMonopoly || strainAge > 2000 ? 900.0 : 25.0);
+           const isDesperate = isMonopoly || strainAge > 2000 || agent.age > engine.despairAge;
+           const reachMultiplier = isDesperate ? engine.desperation : 1.0;
+           const reach = engine.proximity * engine.proximity * reachMultiplier * reachMultiplier;
            
            if (distSq < reach) {
                const towardsPartner = bestPartner.position.clone().sub(agent.position).normalize();
-               // If monopoly, forcefully reach out; else gently steer
-               agent.direction.lerp(towardsPartner, isMonopoly || strainAge > 2000 ? 0.8 : 0.2).normalize();
+               // If desperate, forcefully reach out; else gently steer
+               agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
                
-               if (isSuppressed && agent.cooldown <= 0 && Math.random() < 0.2) {
+               if ((isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
@@ -553,31 +567,71 @@ export function processAgents(
                    // High wander so it spirals towards them quickly
                    feelerGenome.wanderIntensity *= 1.5;
                    
-                   newAgents.push({
-                       position: agent.position.clone(),
-                       lastPosition: agent.position.clone(),
-                       direction: towardsPartner.clone(),
-                       genome: feelerGenome,
-                       active: true,
-                       age: 0,
-                       thickness: feelerGenome.thicknessBase,
-                       cooldown: 20, // Low cooldown so the feeler itself can breed quickly
-                   });
+                    newAgents.push({
+                        position: agent.position.clone(),
+                        lastPosition: agent.position.clone(),
+                        direction: towardsPartner.clone(),
+                        genome: feelerGenome,
+                        active: true,
+                        age: 0,
+                        thickness: feelerGenome.thicknessBase,
+                        cooldown: 20, // Low cooldown so the feeler itself can breed quickly
+                        isFeeler: true,
+                        realGenome: agent.genome,
+                    });
                    agent.cooldown = 150; // Prevent spamming feelers too fast
-                   engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} sent out a feeler!`);
+                   if (isDesperate && !isSuppressed) {
+                       engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} desperately hunting for a mate!`);
+                   } else {
+                       engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} sent out a feeler!`);
+                   }
                }
            }
            
-           const breedReach = engine.proximity * engine.proximity * (isMonopoly ? 400.0 : 4.0);
-           if (distSq < breedReach) {
-               const nearestPartner = bestPartner;
-               const childGenome = breedGenomes(
-                 agent.genome,
-                 nearestPartner.genome,
-                 engine.traitProbs,
-                 engine.multicolorAppProb,
-                 engine.sameColorAppProb,
-               );
+            const breedReach = engine.proximity * engine.proximity * (isDesperate ? 0.2 : 0.05) * reachMultiplier;
+            if (distSq < breedReach) {
+                const nearestPartner = bestPartner;
+                
+                let allowBreeding = true;
+                if (projectedSpeciesCount >= engine.maxSpecies) {
+                    if (agent.isFeeler || nearestPartner.isFeeler) {
+                        let oldestSpeciesName = "";
+                        let oldestCreatedAt = Infinity;
+                        for (let idx = 0; idx < activeAgents.length; idx++) {
+                            const ca = activeAgents[idx];
+                            if (ca.active && !ca.tapering && ca.genome.createdAt !== undefined) {
+                                const evalGenomeAgent = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+                                const evalGenomePartner = nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome : nearestPartner.genome;
+                                if (ca.genome.name !== evalGenomeAgent.name && ca.genome.name !== evalGenomePartner.name) {
+                                    if (ca.genome.createdAt < oldestCreatedAt) {
+                                        oldestCreatedAt = ca.genome.createdAt;
+                                        oldestSpeciesName = ca.genome.name;
+                                    }
+                                }
+                            }
+                        }
+                        if (oldestSpeciesName) {
+                            for (let idx = 0; idx < activeAgents.length; idx++) {
+                                if (activeAgents[idx].genome.name === oldestSpeciesName) {
+                                    activeAgents[idx].tapering = true;
+                                    activeAgents[idx].forceTapering = true;
+                                }
+                            }
+                            engine.onLog(`Feeler bred! Eradicating oldest species: ${oldestSpeciesName.split(' ')[0]} to make room!`);
+                        }
+                    } else {
+                        allowBreeding = false;
+                    }
+                }
+
+                if (allowBreeding) {
+                    const childGenome = breedGenomes(
+                  agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome,
+                  nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome : nearestPartner.genome,
+                  engine.traitProbs,
+                  engine.multicolorAppProb,
+                  engine.sameColorAppProb,
+                );
                childGenome.createdAt = engine.time;
                const childDir = agent.direction
                  .clone()
@@ -606,28 +660,42 @@ export function processAgents(
                bredThisFrame.add(agent);
                bredThisFrame.add(nearestPartner);
                
+               if (!(projectedSpeciesCount >= engine.maxSpecies && (agent.isFeeler || nearestPartner.isFeeler))) {
+                   projectedSpeciesCount++;
+               }
+               
                if (isMonopoly) {
                  agent.tapering = true;
                  agent.forceTapering = true;
                }
+
+               if (agent.isFeeler) {
+                 agent.tapering = true;
+                 agent.forceTapering = true;
+               }
+               if (nearestPartner.isFeeler) {
+                 nearestPartner.tapering = true;
+                 nearestPartner.forceTapering = true;
+               }
+            }
            }
-        }
+         }
       }
 
 
-      let currentTermProb = engine.terminationProb * 0.1;
+      let currentTermProb = engine.terminationProb * 0.001; // Extremely low base multiplier for long life
       if (genome.archetype === "fuzzy") {
          currentTermProb *= 0.2; // Proliferate for longer
       }
       if (agent.age < 120) {
-        currentTermProb *= engine.termProbPostBranch; // Scaled chance after branching
+        currentTermProb *= engine.termProbPostBranch * 0.1; // Scaled down branch penalty
       }
 
       // 1: Older Strains Die Out (Bias system towards old variants dying to make room)
       if (strainAge > 0) {
          // Non-linear increase in termination probability for older variants
          const agePenalty = Math.pow(Math.max(0, strainAge - 2000) / 2000, 2) * 0.4;
-         currentTermProb += agePenalty; 
+         currentTermProb += agePenalty * engine.terminationProb; // Make age penalty relative to dial, so 0 dial = 0 death 
       }
       
       // 4: Hybrid Vigor / Young Strain Immunity
@@ -636,6 +704,9 @@ export function processAgents(
          // Young variants are highly resistant to natural random tapering
          currentTermProb *= 0.1;
       }
+
+      const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
+      currentTermProb *= speedFactor;
 
       const activeStrainsCount = strainCounts.size || 1;
       const minPerStrain = Math.max(1, Math.floor(engine.minAgents / activeStrainsCount));
@@ -676,6 +747,12 @@ export function processAgents(
       if (!agent.tapering && agent.active) {
         if (!agent.recovering) {
           agent.thickness *= genome.thicknessDecay;
+          // Natural recovery: if they get too thin, they bounce back and get thick again
+          if (agent.thickness <= genome.minThickness * 1.5 && Math.random() < 0.05) {
+             agent.recovering = true;
+             agent.targetThickness = genome.thicknessBase;
+             engine.onLog(`Strain ${genome.name.split(' ')[0]} recovered its thickness!`);
+          }
         }
         agent.thickness = Math.max(agent.thickness, genome.minThickness);
 

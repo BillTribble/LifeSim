@@ -1,21 +1,22 @@
 import { useState, useEffect } from "react";
 
 export const DEFAULTS = {
-  dialLimits: {} as Record<string, {min: number, max: number}>,
-  rotationSpeed: 0.40615340987509785,
-  magnetism: 0.1,
-  proximity: 113,
-  flowerSize: 0.42,
+  rotationSpeed: 0.20615340987509784,
+  magnetism: 10,
+  proximity: 250,
+  desperation: 2,
+  despairAge: 1000,
+  flowerSize: 0.41000000000000003,
   entropyThreshold: 0.7,
-  tideSpeed: 3,
+  tideSpeed: 1.1,
   tideColor: "#643707",
   bgColor: "#073464",
   fogColor: "#000000",
   tideThickness: 110,
-  tideOpacity: 0.25,
+  tideOpacity: 0.15000000000000002,
   tideSaturation: 1,
-  growthSpeed: 0.7000000000000001,
-  diebackRate: 0.59,
+  growthSpeed: 0.2,
+  diebackRate: 0.01,
   hybridCooldown: 200,
   hybridStickiness: 47,
   branchTendencyVar: 50,
@@ -23,38 +24,54 @@ export const DEFAULTS = {
   branchingMultiplier: 884.4000000000001,
   branchBigger: 0.75,
   branchSplitSizeProb: 0.9500000000000001,
-  maxDOMs: 121600,
+  maxDOMs: 285000,
   maxAgents: 50,
-  maxSpecies: 3,
+  maxSpecies: 4,
   ecoFade: 1,
   minAgents: 4,
   desiccationSpeed: 5.7,
-  hybridSize: 3.1,
-  terminationProb: 0.71,
-  termProbPostBranch: 2.5,
+  hybridSize: 3.5,
+  terminationProb: 0.13,
+  termProbPostBranch: 1.5,
   taperDuration: 1,
   diebackAgeBias: 5,
-  branchMutationRate: 0.04,
+  branchMutationRate: 0,
   enableGlow: false,
   glowSize: 0.5,
-  fogVisibility: 750,
+  fogVisibility: 800,
   traitProbs: {
     flowers: 0.45,
-    leaves: 0.45,
+    leaves: 0.5,
     petals: 0.45,
-    needles: 0.4,
+    needles: 0.5,
     thorns: 0.4,
     hair: 0.6000000000000001,
-    curlyHair: 0.45,
+    curlyHair: 0.5,
     crystals: 0.6000000000000001,
-    spores: 0.45,
+    spores: 0.5,
     scales: 0.5,
-    spirals: 0.45,
+    spirals: 0.5
   },
   maxLineWidth: 12,
-  globalPulseSpeed: 0.6000000000000001,
+  globalPulseSpeed: 0.2,
   multicolorAppProb: 0.05,
-  sameColorAppProb: 0.8500000000000001,
+  sameColorAppProb: 0.9,
+  maxSaturation: 0.9,
+  dialLimits: {
+    "DEATH RATE": {
+      "min": 0,
+      "max": 1
+    },
+    "MAGNET": {
+      "min": 0,
+      "max": 10
+    },
+    "BUDGET": {
+      "min": 500,
+      "max": 1000000
+    }
+  } as Record<string, {min: number, max: number}>,
+  version: "1.0"
 };
 
 export function useSimulationState() {
@@ -80,6 +97,16 @@ export function useSimulationState() {
   const [proximity, setProximity] = useState(() =>
     parseFloat(
       localStorage.getItem("proximity") || DEFAULTS.proximity.toString(),
+    ),
+  );
+  const [desperation, setDesperation] = useState(() =>
+    parseFloat(
+      localStorage.getItem("desperation") || DEFAULTS.desperation.toString(),
+    ),
+  );
+  const [despairAge, setDespairAge] = useState(() =>
+    parseFloat(
+      localStorage.getItem("despairAge") || DEFAULTS.despairAge.toString(),
     ),
   );
   const [flowerSize, setFlowerSize] = useState(() =>
@@ -274,6 +301,12 @@ export function useSimulationState() {
         DEFAULTS.sameColorAppProb.toString(),
     ),
   );
+  const [maxSaturation, setMaxSaturation] = useState(() =>
+    parseFloat(
+      localStorage.getItem("maxSaturation") ||
+        DEFAULTS.maxSaturation.toString(),
+    ),
+  );
 
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
@@ -290,6 +323,8 @@ export function useSimulationState() {
     localStorage.setItem("rotationSpeed", rotationSpeed.toString());
     localStorage.setItem("magnetism", magnetism.toString());
     localStorage.setItem("proximity", proximity.toString());
+    localStorage.setItem("desperation", desperation.toString());
+    localStorage.setItem("despairAge", despairAge.toString());
     localStorage.setItem("flowerSize", flowerSize.toString());
     localStorage.setItem("entropyThreshold", entropyThreshold.toString());
     localStorage.setItem("tideSpeed", tideSpeed.toString());
@@ -327,12 +362,15 @@ export function useSimulationState() {
     localStorage.setItem("globalPulseSpeed", globalPulseSpeed.toString());
     localStorage.setItem("multicolorAppProb", multicolorAppProb.toString());
     localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
+    localStorage.setItem("maxSaturation", maxSaturation.toString());
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
     rotationSpeed,
     magnetism,
     proximity,
+    desperation,
+    despairAge,
     flowerSize,
     entropyThreshold,
     tideSpeed,
@@ -372,6 +410,7 @@ export function useSimulationState() {
     globalPulseSpeed,
     multicolorAppProb,
     sameColorAppProb,
+    maxSaturation,
     dialLimits,
   ]);
 
@@ -380,6 +419,8 @@ export function useSimulationState() {
       rotationSpeed,
       magnetism,
       proximity,
+    desperation,
+    despairAge,
       flowerSize,
       entropyThreshold,
       tideSpeed,
@@ -418,12 +459,15 @@ export function useSimulationState() {
       globalPulseSpeed,
       multicolorAppProb,
       sameColorAppProb,
+      maxSaturation,
       dialLimits,
     },
     setters: {
       setRotationSpeed,
       setMagnetism,
       setProximity,
+      setDesperation,
+      setDespairAge,
       setFlowerSize,
       setEntropyThreshold,
       setTideSpeed,
@@ -462,6 +506,7 @@ export function useSimulationState() {
       setGlobalPulseSpeed,
       setMulticolorAppProb,
       setSameColorAppProb,
+      setMaxSaturation,
       setDialLimits,
     },
   };
