@@ -225,11 +225,15 @@ export function updateSimulation(engine: SimulationEngine) {
           1.0,
           Math.pow(age / 500, bias) * Math.max(0.000001, effectiveDieback) * 0.5, // 10x higher probability but smaller chunks
         );
+        
+        let activeDieback = effectiveDieback;
         if (isDyingStrain) {
-          prob = Math.min(1.0, Math.pow(age / 100, bias) * (engine.cullRate * 0.16)); // Much higher probability, focusing on oldest parts
+          activeDieback = (engine.cullRate / 100.0) * speedFactor;
+          prob = Math.min(1.0, Math.pow(age / 500, bias) * Math.max(0.000001, activeDieback) * 0.5);
         }
+        
         if (Math.random() < prob) {
-          const chunkSize = Math.max(1, Math.random() * Math.min(20, effectiveDieback * 5)); // Smaller, more uniform chunks
+          const chunkSize = Math.max(1, Math.random() * Math.min(20, activeDieback * 5)); // Smaller, more uniform chunks
           for (let j = 0; j < chunkSize; j++) {
             const chunkIdx = (idx + j) % engine.maxDOMs;
             const cSeg = engine.segments[chunkIdx];
@@ -384,7 +388,7 @@ export function updateSimulation(engine: SimulationEngine) {
     let totalBiomass = 0;
     engine.biomassMap.forEach((v) => (totalBiomass += v));
 
-    if (totalBiomass > 1000) {
+    if (totalBiomass > 100) {
       engine.biomassMap.forEach((biomass, strainName) => {
         const ratio = biomass / totalBiomass;
         const isDying = engine.dyingStrains && engine.dyingStrains.has(strainName);

@@ -663,9 +663,9 @@ export function HUD({
                 <SmartDial state={state} setters={setters}
                   tooltip="CULL RATE: Multiplier for how fast a species dies off when marked for culling."
                   label="CULL_RATE"
-                  min={1.0}
+                  min={0.0}
                   max={50.0}
-                  step={0.5}
+                  step={0.01}
                   value={state.cullRate}
                   onChange={setters.setCullRate}
                   color="#87CEEB"

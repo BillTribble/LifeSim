@@ -530,10 +530,9 @@ export class SimulationEngine {
     if (seg && !seg.dyingStart) {
       seg.dyingStart = this.time;
       dyingSet.add(idx);
-      if (segments === this.segments) {
-        const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
-        if (prevBiomass > 0)
-          this.biomassMap.set(seg.strainName, prevBiomass - 1);
+      const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
+      if (prevBiomass > 0) {
+        this.biomassMap.set(seg.strainName, prevBiomass - 1);
       }
     }
   }
