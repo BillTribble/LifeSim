@@ -594,30 +594,46 @@ export function processAgents(
                 
                 let allowBreeding = true;
                 if (projectedSpeciesCount >= engine.maxSpecies) {
-                    if (agent.isFeeler || nearestPartner.isFeeler) {
-                        let oldestSpeciesName = "";
+                    let victimSpeciesName = "";
+
+                    // 1. Try to find an unrelated feeler to sacrifice first
+                    for (let idx = 0; idx < activeAgents.length; idx++) {
+                        const ca = activeAgents[idx];
+                        if (ca.active && !ca.tapering && ca.isFeeler && ca !== agent && ca !== nearestPartner) {
+                            victimSpeciesName = ca.genome.name;
+                            break;
+                        }
+                    }
+
+                    // 2. If no feeler found, and one of the breeders is a feeler, eradicate oldest species
+                    if (!victimSpeciesName && (agent.isFeeler || nearestPartner.isFeeler)) {
                         let oldestCreatedAt = Infinity;
                         for (let idx = 0; idx < activeAgents.length; idx++) {
                             const ca = activeAgents[idx];
-                            if (ca.active && !ca.tapering && ca.genome.createdAt !== undefined) {
+                            if (ca.active && !ca.tapering && ca.genome.createdAt !== undefined && !ca.isFeeler) {
                                 const evalGenomeAgent = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
                                 const evalGenomePartner = nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome : nearestPartner.genome;
                                 if (ca.genome.name !== evalGenomeAgent.name && ca.genome.name !== evalGenomePartner.name) {
                                     if (ca.genome.createdAt < oldestCreatedAt) {
                                         oldestCreatedAt = ca.genome.createdAt;
-                                        oldestSpeciesName = ca.genome.name;
+                                        victimSpeciesName = ca.genome.name;
                                     }
                                 }
                             }
                         }
-                        if (oldestSpeciesName) {
-                            for (let idx = 0; idx < activeAgents.length; idx++) {
-                                if (activeAgents[idx].genome.name === oldestSpeciesName) {
-                                    activeAgents[idx].tapering = true;
-                                    activeAgents[idx].forceTapering = true;
-                                }
+                    }
+
+                    if (victimSpeciesName) {
+                        for (let idx = 0; idx < activeAgents.length; idx++) {
+                            if (activeAgents[idx].genome.name === victimSpeciesName) {
+                                activeAgents[idx].tapering = true;
+                                activeAgents[idx].forceTapering = true;
                             }
-                            engine.onLog(`Feeler bred! Eradicating oldest species: ${oldestSpeciesName.split(' ')[0]} to make room!`);
+                        }
+                        if (victimSpeciesName.startsWith("Feeler")) {
+                            engine.onLog(`Sacrificed a feeler to make room for hybrid!`);
+                        } else {
+                            engine.onLog(`Feeler bred! Eradicating oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
                         }
                     } else {
                         allowBreeding = false;
@@ -660,7 +676,7 @@ export function processAgents(
                bredThisFrame.add(agent);
                bredThisFrame.add(nearestPartner);
                
-               if (!(projectedSpeciesCount >= engine.maxSpecies && (agent.isFeeler || nearestPartner.isFeeler))) {
+               if (projectedSpeciesCount < engine.maxSpecies) {
                    projectedSpeciesCount++;
                }
                
@@ -728,7 +744,9 @@ export function processAgents(
           agent.recovering = true;
           agent.targetThickness = genome.thicknessBase;
         } else {
-          let shrinkRate = Math.pow(0.5, 1.0 / (engine.taperDuration * 30 + 1));
+          let duration = engine.taperDuration;
+          if (agent.isFeeler) duration /= engine.feelerFade;
+          let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
           
           agent.thickness *= shrinkRate;
           if (agent.thickness <= 0.15) {

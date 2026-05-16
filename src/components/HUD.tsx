@@ -31,6 +31,7 @@ function SmartDial(props: any) {
     />
   );
 }
+import { PresetPanel } from "./PresetPanel";
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
 
@@ -61,6 +62,7 @@ export function HUD({
 }: HUDProps) {
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
+  const [presetPanelOpen, setPresetPanelOpen] = useState(false);
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(false);
 
   const totalBiomass =
@@ -77,6 +79,7 @@ export function HUD({
     <>
       {cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
       {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
+      {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} />}
 
       <div
         className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
@@ -104,12 +107,17 @@ export function HUD({
           </div>
           <div className={`flex flex-wrap gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center transition-opacity duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
             <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
-              <span className="text-[#D2B48C] font-bold">MODE:</span>
-              <span className="text-[#87CEEB]">{stats.season || "INIT"}</span>
-            </div>
-            <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
               <span className="text-[#D2B48C]">UPTIME:</span>
               <span className="text-white">{formatUptime(uptime)}</span>
+            </div>
+            <div
+              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
+              onClick={() => setPresetPanelOpen(!presetPanelOpen)}
+              title="Presets"
+            >
+              <Database className="w-3 h-3 text-[#D2B48C]" />
+              <span>PRESETS</span>
+              <ChevronDown className="w-3 h-3" />
             </div>
             <div
               className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
@@ -335,6 +343,16 @@ export function HUD({
 
               <div className="flex gap-4 items-center flex-wrap">
                 <SmartDial state={state} setters={setters}
+                  tooltip="ROTATION VELOCITY: Speed of the camera rotation."
+                  label="ROT_VEL"
+                  min={0.01}
+                  max={5.0}
+                  step={0.01}
+                  value={state.rotationSpeed}
+                  onChange={setters.setRotationSpeed}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
                   tooltip="SWARM COHESION: Gravitational attraction. High = dense clustered structures. Low = sprawling independent organisms."
                   label="MAGNET"
                   min={0}
@@ -485,6 +503,16 @@ export function HUD({
                   color="#87CEEB"
                 />
                 <SmartDial state={state} setters={setters}
+                  tooltip="FEELER FADE: Speed multiplier for feelers dying off. High = feelers die very fast. Low = feelers linger like normal paths."
+                  label="FEELER_FADE"
+                  min={1.0}
+                  max={50.0}
+                  step={1.0}
+                  value={state.feelerFade}
+                  onChange={setters.setFeelerFade}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
                   tooltip="FADE SPEED: How fast dead segments dissolve into wireframes and nothing. High = aggressive fast fade. Low = long slow ghost trails."
                   label="FADE_SPEED"
                   min={0.1}
@@ -598,7 +626,7 @@ export function HUD({
                   tooltip="PULSE SPEED: Bioluminescence frequency. High = hyperactive strobe effect. Low = gentle breathing glow."
                   label="PULSE_SPD"
                   min={0.1}
-                  max={5.0}
+                  max={1.0}
                   step={0.1}
                   value={state.globalPulseSpeed}
                   onChange={setters.setGlobalPulseSpeed}
@@ -639,30 +667,6 @@ export function HUD({
                     style={{ width: `${stats.tideValue * 100}%` }}
                   />
                 </div>
-              </div>
-              <div className="flex gap-4 items-center mb-1">
-                <span className="text-[10px] opacity-60">ROTATION_VEL:</span>
-                <button
-                  onClick={() =>
-                    setters.setRotationSpeed((prev: number) =>
-                      Math.max(0, prev - 0.2),
-                    )
-                  }
-                  className="hover:text-white cursor-pointer px-2 py-0.5 border border-[#D2B48C]/20 rounded"
-                >
-                  -
-                </button>
-                <span className="w-8 text-center">
-                  {state.rotationSpeed.toFixed(1)}
-                </span>
-                <button
-                  onClick={() =>
-                    setters.setRotationSpeed((prev: number) => prev + 0.2)
-                  }
-                  className="hover:text-white cursor-pointer px-2 py-0.5 border border-[#D2B48C]/20 rounded"
-                >
-                  +
-                </button>
               </div>
             </div>
           </div>

@@ -55,6 +55,7 @@ export function SimulationView({
   multicolorAppProb,
   sameColorAppProb,
   maxSaturation,
+  feelerFade,
 }: Props & {
   restartTrigger?: number;
   randomizeTrigger?: number;
@@ -102,6 +103,7 @@ export function SimulationView({
   multicolorAppProb?: number;
   sameColorAppProb?: number;
   maxSaturation?: number;
+  feelerFade?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -232,6 +234,8 @@ export function SimulationView({
         engineRef.current.setSameColorAppProb(sameColorAppProb);
       if (maxSaturation !== undefined)
         engineRef.current.setMaxSaturation(maxSaturation);
+      if (feelerFade !== undefined)
+        engineRef.current.setFeelerFade(feelerFade);
     }
   }, [
     tideColor,
@@ -269,6 +273,7 @@ export function SimulationView({
     multicolorAppProb,
     sameColorAppProb,
     maxSaturation,
+    feelerFade,
   ]);
 
   useEffect(() => {
@@ -346,6 +351,8 @@ export function SimulationView({
       engine.setMulticolorAppProb(multicolorAppProb);
     if (sameColorAppProb !== undefined)
       engine.setSameColorAppProb(sameColorAppProb);
+    if (feelerFade !== undefined)
+      engine.setFeelerFade(feelerFade);
 
     engine.start();
 

@@ -139,7 +139,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
           />
         </div>
       </div>
-      <span className="text-[8px] font-mono opacity-80" style={{ color }}>{Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step < 0.1 ? 2 : 1)}</span>
+      <span className="text-[8px] font-mono opacity-80" style={{ color }}>{Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1)}</span>
     </div>
   );
 }

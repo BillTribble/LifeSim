@@ -134,6 +134,7 @@ export class SimulationEngine {
   terminationProb: number = 0.02;
   termProbPostBranch: number = 2.0;
   taperDuration: number = 1.5;
+  feelerFade: number = 10.0;
   diebackAgeBias: number = 2.0;
 
   private reqId: number = 0;
@@ -329,6 +330,9 @@ export class SimulationEngine {
   }
   setTaperDuration(val: number) {
     this.taperDuration = val;
+  }
+  setFeelerFade(val: number) {
+    this.feelerFade = val;
   }
   setDiebackAgeBias(val: number) {
     this.diebackAgeBias = val;
@@ -620,17 +624,17 @@ export class SimulationEngine {
         }
       }
 
-      const seasonLength = 4000;
-      const seasonIndex = Math.floor(this.time / seasonLength) % 4;
-      const seasonNames = ["Spring", "Summer", "Autumn", "Winter"];
-      const season = seasonNames[seasonIndex];
-
       this.onStateUpdate({
         geometryCount: totalActiveGeometries,
         totalAgents: activeCount,
         strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
         tideValue: this.tideValue,
-        season,
+        cameraPosition: {
+          x: this.camera.position.x,
+          y: this.camera.position.y,
+          z: this.camera.position.z,
+          zoom: this.camera.zoom,
+        },
       });
     }
   };

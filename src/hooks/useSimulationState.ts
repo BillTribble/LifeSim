@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 
 export const DEFAULTS = {
-  rotationSpeed: 0.20615340987509784,
+  rotationSpeed: 0.1,
   magnetism: 10,
-  proximity: 250,
+  proximity: 40,
   desperation: 2,
   despairAge: 1000,
   flowerSize: 0.41000000000000003,
@@ -26,7 +26,7 @@ export const DEFAULTS = {
   branchSplitSizeProb: 0.9500000000000001,
   maxDOMs: 285000,
   maxAgents: 50,
-  maxSpecies: 4,
+  maxSpecies: 3,
   ecoFade: 1,
   minAgents: 4,
   desiccationSpeed: 5.7,
@@ -38,7 +38,7 @@ export const DEFAULTS = {
   branchMutationRate: 0,
   enableGlow: false,
   glowSize: 0.5,
-  fogVisibility: 800,
+  fogVisibility: 1250,
   traitProbs: {
     flowers: 0.45,
     leaves: 0.5,
@@ -56,7 +56,8 @@ export const DEFAULTS = {
   globalPulseSpeed: 0.2,
   multicolorAppProb: 0.05,
   sameColorAppProb: 0.9,
-  maxSaturation: 0.9,
+  maxSaturation: 0.8,
+  feelerFade: 10.0,
   dialLimits: {
     "DEATH RATE": {
       "min": 0,
@@ -77,7 +78,12 @@ export const DEFAULTS = {
 export function useSimulationState() {
   const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: number}>>(() => {
     try {
-      return JSON.parse(localStorage.getItem("dialLimits") || "{}") || DEFAULTS.dialLimits;
+      const stored = localStorage.getItem("dialLimits");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Object.keys(parsed).length > 0) return parsed;
+      }
+      return DEFAULTS.dialLimits;
     } catch {
       return DEFAULTS.dialLimits;
     }
@@ -266,9 +272,10 @@ export function useSimulationState() {
         DEFAULTS.branchMutationRate.toString(),
     ),
   );
-  const [enableGlow, setEnableGlow] = useState(
-    () => localStorage.getItem("enableGlow") === "true" || DEFAULTS.enableGlow,
-  );
+  const [enableGlow, setEnableGlow] = useState(() => {
+    const stored = localStorage.getItem("enableGlow");
+    return stored !== null ? stored === "true" : DEFAULTS.enableGlow;
+  });
   const [glowSize, setGlowSize] = useState(() =>
     parseFloat(
       localStorage.getItem("glowSize") || DEFAULTS.glowSize.toString(),
@@ -305,6 +312,13 @@ export function useSimulationState() {
     parseFloat(
       localStorage.getItem("maxSaturation") ||
         DEFAULTS.maxSaturation.toString(),
+    ),
+  );
+
+  const [feelerFade, setFeelerFade] = useState(() =>
+    parseFloat(
+      localStorage.getItem("feelerFade") ||
+        DEFAULTS.feelerFade.toString(),
     ),
   );
 
@@ -363,6 +377,7 @@ export function useSimulationState() {
     localStorage.setItem("multicolorAppProb", multicolorAppProb.toString());
     localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
     localStorage.setItem("maxSaturation", maxSaturation.toString());
+    localStorage.setItem("feelerFade", feelerFade.toString());
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
@@ -411,6 +426,7 @@ export function useSimulationState() {
     multicolorAppProb,
     sameColorAppProb,
     maxSaturation,
+    feelerFade,
     dialLimits,
   ]);
 
@@ -460,6 +476,7 @@ export function useSimulationState() {
       multicolorAppProb,
       sameColorAppProb,
       maxSaturation,
+      feelerFade,
       dialLimits,
     },
     setters: {
@@ -507,6 +524,7 @@ export function useSimulationState() {
       setMulticolorAppProb,
       setSameColorAppProb,
       setMaxSaturation,
+      setFeelerFade,
       setDialLimits,
     },
   };

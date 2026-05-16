@@ -19,6 +19,7 @@ export default function App() {
       archetype?: string;
     }[],
     tideValue: 0,
+    cameraPosition: { x: 0, y: 0, z: 0, zoom: 1 },
   });
   const [uptime, setUptime] = useState(0);
 
@@ -28,6 +29,7 @@ export default function App() {
   const handleCopySettings = () => {
     const settings = {
       ...state,
+      cameraPosition: stats.cameraPosition,
       version: "1.0",
     };
     navigator.clipboard.writeText(JSON.stringify(settings, null, 2));
@@ -110,6 +112,7 @@ export default function App() {
         multicolorAppProb={state.multicolorAppProb}
         sameColorAppProb={state.sameColorAppProb}
         maxSaturation={state.maxSaturation}
+        feelerFade={state.feelerFade}
       />
 
       <HUD
