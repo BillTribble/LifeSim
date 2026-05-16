@@ -483,7 +483,7 @@ export function processAgents(
       if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
       const isSuppressed = engine.suppressedStrains.has(genome.name);
       const isFertile = !agent.tapering && (agent.age > 50 || genome.stability < 0.5 || isMonopoly || strainAge > 2000);
-      const canBreed = !isSuppressed && isFertile && (agent.cooldown <= 0 || isMonopoly || strainAge > 2000) && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5 && aliveSpeciesCount < engine.maxSpecies && myStrainCount < maxForArchetype;
+      const canBreed = isFertile && (agent.cooldown <= 0 || isMonopoly || strainAge > 2000) && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5 && aliveSpeciesCount < engine.maxSpecies && myStrainCount < maxForArchetype;
 
       if (canBreed) {
         let bestPartner: any = null;
@@ -543,6 +543,29 @@ export function processAgents(
                const towardsPartner = bestPartner.position.clone().sub(agent.position).normalize();
                // If monopoly, forcefully reach out; else gently steer
                agent.direction.lerp(towardsPartner, isMonopoly || strainAge > 2000 ? 0.8 : 0.2).normalize();
+               
+               if (isSuppressed && agent.cooldown <= 0 && Math.random() < 0.2) {
+                   const feelerGenome = { ...agent.genome };
+                   feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
+                   feelerGenome.archetype = "snake"; // Fast!
+                   feelerGenome.thicknessBase = Math.max(0.2, agent.thickness * 0.3);
+                   feelerGenome.minThickness = 0.1;
+                   // High wander so it spirals towards them quickly
+                   feelerGenome.wanderIntensity *= 1.5;
+                   
+                   newAgents.push({
+                       position: agent.position.clone(),
+                       lastPosition: agent.position.clone(),
+                       direction: towardsPartner.clone(),
+                       genome: feelerGenome,
+                       active: true,
+                       age: 0,
+                       thickness: feelerGenome.thicknessBase,
+                       cooldown: 20, // Low cooldown so the feeler itself can breed quickly
+                   });
+                   agent.cooldown = 150; // Prevent spamming feelers too fast
+                   engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} sent out a feeler!`);
+               }
            }
            
            const breedReach = engine.proximity * engine.proximity * (isMonopoly ? 400.0 : 4.0);
