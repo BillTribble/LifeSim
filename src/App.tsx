@@ -17,6 +17,7 @@ export default function App() {
       color2?: string;
       biomass: number;
       archetype?: string;
+      isDying?: boolean;
     }[],
     tideValue: 0,
     cameraPosition: { x: 0, y: 0, z: 0, zoom: 1 },
@@ -66,6 +67,9 @@ export default function App() {
           fetch('/api/log', { method: 'POST', body: msg }).catch(() => {});
         }}
         onStateUpdate={handleStateUpdate}
+        onConfigChange={(config) => {
+          if (config.bgColor) setters.setBgColor(config.bgColor);
+        }}
         restartTrigger={restartKey}
         randomizeTrigger={randomizeKey}
         rotationSpeed={state.rotationSpeed}
@@ -113,6 +117,7 @@ export default function App() {
         sameColorAppProb={state.sameColorAppProb}
         maxSaturation={state.maxSaturation}
         feelerFade={state.feelerFade}
+        cullRate={state.cullRate}
       />
 
       <HUD

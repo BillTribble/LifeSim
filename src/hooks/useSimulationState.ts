@@ -4,13 +4,13 @@ export const DEFAULTS = {
   rotationSpeed: 0.1,
   magnetism: 10,
   proximity: 40,
-  desperation: 2,
-  despairAge: 1000,
+  desperation: 7.7,
+  despairAge: 800,
   flowerSize: 0.41000000000000003,
   entropyThreshold: 0.7,
   tideSpeed: 1.1,
   tideColor: "#643707",
-  bgColor: "#073464",
+  bgColor: "#5a3e5e",
   fogColor: "#000000",
   tideThickness: 110,
   tideOpacity: 0.15000000000000002,
@@ -53,11 +53,12 @@ export const DEFAULTS = {
     spirals: 0.5
   },
   maxLineWidth: 12,
-  globalPulseSpeed: 0.2,
+  globalPulseSpeed: 0.1,
   multicolorAppProb: 0.05,
   sameColorAppProb: 0.9,
   maxSaturation: 0.8,
-  feelerFade: 10.0,
+  feelerFade: 10,
+  cullRate: 5.0,
   dialLimits: {
     "DEATH RATE": {
       "min": 0,
@@ -72,6 +73,12 @@ export const DEFAULTS = {
       "max": 1000000
     }
   } as Record<string, {min: number, max: number}>,
+  cameraPosition: {
+    x: -50.57290351996895,
+    y: 199.99999999999997,
+    z: 278.2847128923183,
+    zoom: 1
+  },
   version: "1.0"
 };
 
@@ -322,6 +329,13 @@ export function useSimulationState() {
     ),
   );
 
+  const [cullRate, setCullRate] = useState(() =>
+    parseFloat(
+      localStorage.getItem("cullRate") ||
+        DEFAULTS.cullRate.toString(),
+    ),
+  );
+
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
       return (
@@ -378,6 +392,7 @@ export function useSimulationState() {
     localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
     localStorage.setItem("maxSaturation", maxSaturation.toString());
     localStorage.setItem("feelerFade", feelerFade.toString());
+    localStorage.setItem("cullRate", cullRate.toString());
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
@@ -427,6 +442,7 @@ export function useSimulationState() {
     sameColorAppProb,
     maxSaturation,
     feelerFade,
+    cullRate,
     dialLimits,
   ]);
 
@@ -477,6 +493,7 @@ export function useSimulationState() {
       sameColorAppProb,
       maxSaturation,
       feelerFade,
+      cullRate,
       dialLimits,
     },
     setters: {
@@ -525,6 +542,7 @@ export function useSimulationState() {
       setSameColorAppProb,
       setMaxSaturation,
       setFeelerFade,
+      setCullRate,
       setDialLimits,
     },
   };

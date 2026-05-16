@@ -14,20 +14,25 @@ export function processAgents(
   bredThisFrame: Set<Agent>,
 ) {
   const strainCounts = new Map<string, number>();
+  const nonTaperingStrains = new Set<string>();
   let currentActiveCount = 0;
+  
   for (const a of activeAgents) {
     if (a.active) {
       strainCounts.set(a.genome.name, (strainCounts.get(a.genome.name) || 0) + 1);
       currentActiveCount++;
+      if (!a.tapering && !a.isFeeler) {
+        nonTaperingStrains.add(a.genome.name);
+      }
     }
   }
 
   // Cap maximum species by tapering the oldest variant
-  if (strainCounts.size > engine.maxSpecies) {
+  if (nonTaperingStrains.size > engine.maxSpecies) {
     let oldestGenomeName: string | null = null;
     let oldestAge = -Infinity;
     for (const a of activeAgents) {
-      if (a.active) {
+      if (a.active && !a.tapering && !a.isFeeler) {
          const age = engine.time - (a.genome.createdAt || 0);
          if (age > oldestAge) {
              oldestAge = age;
@@ -37,6 +42,9 @@ export function processAgents(
     }
     
     if (oldestGenomeName) {
+      if (!engine.dyingStrains) engine.dyingStrains = new Set();
+      engine.dyingStrains.add(oldestGenomeName);
+      engine.onLog(`Maximum species exceeded! Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
       for (const a of activeAgents) {
         if (a.genome.name === oldestGenomeName) {
            a.tapering = true;
@@ -53,7 +61,9 @@ export function processAgents(
     totalBiomass += v;
   });
 
-  let projectedSpeciesCount = Math.max(strainCounts.size, aliveSpeciesCount);
+  // Ignore aliveSpeciesCount (which includes fading dead trails) for breeding caps, 
+  // so we don't accidentally eradicate healthy species just because old trails haven't faded yet.
+  let projectedSpeciesCount = nonTaperingStrains.size;
 
   const monopolyThreshold = Math.max(10, totalBiomass * engine.entropyThreshold);
   const monopolyStrains = new Set<string>();
@@ -209,7 +219,9 @@ export function processAgents(
 
       if (genome.stability > 0) genome.stability -= 0.003;
 
-      if (genome.movementType === "spiral") {
+      if (agent.isFeeler) {
+        // Feelers don't wander, wave, or spiral; they are homing missiles.
+      } else if (genome.movementType === "spiral") {
         if (!agent.spiralAxis) {
           // Determine a spiral axis perpendicular to the current direction
           const up = new THREE.Vector3(0, 1, 0);
@@ -258,7 +270,7 @@ export function processAgents(
           .normalize();
       }
 
-      if (genome.wavingAmplitude > 0) {
+      if (!agent.isFeeler && genome.wavingAmplitude > 0) {
         const wave =
           Math.sin(engine.time * genome.wavingSpeed + agent.age * 0.1) *
           genome.wavingAmplitude;
@@ -553,12 +565,15 @@ export function processAgents(
            const reachMultiplier = isDesperate ? engine.desperation : 1.0;
            const reach = engine.proximity * engine.proximity * reachMultiplier * reachMultiplier;
            
-           if (distSq < reach) {
-               const towardsPartner = bestPartner.position.clone().sub(agent.position).normalize();
+           const towardsPartner = bestPartner.position.clone().sub(agent.position).normalize();
+           if (agent.isFeeler) {
+               agent.direction.copy(towardsPartner);
+           } else if (distSq < reach) {
                // If desperate, forcefully reach out; else gently steer
                agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
-               
-               if ((isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier) {
+           }
+           
+           if (!agent.isFeeler && distSq < reach && (isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
@@ -584,9 +599,8 @@ export function processAgents(
                        engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} desperately hunting for a mate!`);
                    } else {
                        engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} sent out a feeler!`);
-                   }
+                    }
                }
-           }
            
             const breedReach = engine.proximity * engine.proximity * (isDesperate ? 0.2 : 0.05) * reachMultiplier;
             if (distSq < breedReach) {
@@ -605,8 +619,8 @@ export function processAgents(
                         }
                     }
 
-                    // 2. If no feeler found, and one of the breeders is a feeler, eradicate oldest species
-                    if (!victimSpeciesName && (agent.isFeeler || nearestPartner.isFeeler)) {
+                    // 2. If no feeler found, eradicate oldest species (whether breeder is a feeler or not)
+                    if (!victimSpeciesName) {
                         let oldestCreatedAt = Infinity;
                         for (let idx = 0; idx < activeAgents.length; idx++) {
                             const ca = activeAgents[idx];
@@ -624,16 +638,27 @@ export function processAgents(
                     }
 
                     if (victimSpeciesName) {
+                        let isFeelerSacrifice = false;
                         for (let idx = 0; idx < activeAgents.length; idx++) {
+                            if (activeAgents[idx].genome.name === victimSpeciesName && activeAgents[idx].isFeeler) {
+                                isFeelerSacrifice = true;
+                            }
                             if (activeAgents[idx].genome.name === victimSpeciesName) {
                                 activeAgents[idx].tapering = true;
                                 activeAgents[idx].forceTapering = true;
                             }
                         }
-                        if (victimSpeciesName.startsWith("Feeler")) {
+                        // Instantly reflect this in the projected count so we don't count the dying species anymore
+                        if (!isFeelerSacrifice) {
+                            nonTaperingStrains.delete(victimSpeciesName);
+                        }
+                        
+                        if (isFeelerSacrifice) {
                             engine.onLog(`Sacrificed a feeler to make room for hybrid!`);
                         } else {
-                            engine.onLog(`Feeler bred! Eradicating oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
+                            if (!engine.dyingStrains) engine.dyingStrains = new Set();
+                            engine.dyingStrains.add(victimSpeciesName);
+                            engine.onLog(`Hybridization occurred! Gradual die-off of oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
                         }
                     } else {
                         allowBreeding = false;
@@ -676,9 +701,7 @@ export function processAgents(
                bredThisFrame.add(agent);
                bredThisFrame.add(nearestPartner);
                
-               if (projectedSpeciesCount < engine.maxSpecies) {
-                   projectedSpeciesCount++;
-               }
+               projectedSpeciesCount++;
                
                if (isMonopoly) {
                  agent.tapering = true;
@@ -738,7 +761,7 @@ export function processAgents(
       }
 
       if (agent.tapering) {
-        if (currentActiveCount <= engine.minAgents || (!agent.forceTapering && myStrainCount <= minPerStrain)) {
+        if (!agent.forceTapering && (currentActiveCount <= engine.minAgents || myStrainCount <= minPerStrain)) {
           agent.tapering = false;
           agent.forceTapering = false;
           agent.recovering = true;

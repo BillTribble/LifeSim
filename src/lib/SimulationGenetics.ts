@@ -133,6 +133,10 @@ export function breedGenomes(
     (Math.random() < 0.5 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]) :
     (Math.random() < 0.3 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]);
 
+  const isAlbino = Math.random() < 0.1;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
+  const resultL = isAlbino ? 0.4 + Math.random() * 0.5 : 0.6;
+
   const res: any = {
     name: `Hybrid [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
       Math.random() * 1000,
@@ -141,7 +145,7 @@ export function breedGenomes(
       .padStart(3, "0")}`,
     archetype: newArchetype,
     movementType: newMovementType,
-    color: new THREE.Color().setHSL(resultH, 0.9, 0.6),
+    color: new THREE.Color().setHSL(resultH, resultS, resultL),
     thicknessBase: Math.max(
       0.5,
       ((g1.thicknessBase + g2.thicknessBase) / 2) *
@@ -192,7 +196,7 @@ export function breedGenomes(
         : Math.random() < 0.5
           ? g1.appendage
           : g2.appendage,
-    multicolorAppendage: Math.random() < multicolorAppProb + 0.2, // increased chance of multicolor
+    multicolorAppendage: Math.random() < multicolorAppProb,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
     pulseTarget: pulseTarget as any,
@@ -238,7 +242,10 @@ export function mutateBranchGenome(
   const res = { ...g };
   res.color = g.color.clone();
   const h = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-  res.color.setHSL((h + (Math.random() - 0.5) * 0.15 + 1.0) % 1.0, 0.9, 0.6);
+  const isAlbino = Math.random() < 0.05;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
+  const resultL = isAlbino ? 0.4 + Math.random() * 0.5 : 0.6;
+  res.color.setHSL((h + (Math.random() - 0.5) * 0.15 + 1.0) % 1.0, resultS, resultL);
 
   res.wanderIntensity = Math.max(0, res.wanderIntensity + (Math.random() - 0.5) * 0.05);
   res.wavingSpeed = Math.max(0, res.wavingSpeed + (Math.random() - 0.5) * 0.03);

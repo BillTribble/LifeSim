@@ -196,10 +196,18 @@ export function HUD({
                       key={i}
                       className="group relative cursor-pointer pointer-events-auto"
                     >
-                      <div className="flex justify-between mb-0.5">
-                        <span className="truncate mr-2" style={textStyle}>
-                          {strain.name}
-                        </span>
+                      <div className="flex justify-between mb-0.5 items-center">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="truncate" style={textStyle}>
+                            {strain.name}
+                          </span>
+                          {strain.isDying && (
+                            <span 
+                              className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0 animate-pulse shadow-[0_0_4px_rgba(239,68,68,0.8)]" 
+                              title="Marked for gradual die-off"
+                            />
+                          )}
+                        </div>
                         <span>{percent.toFixed(1)}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-white/5 overflow-hidden">
@@ -650,6 +658,16 @@ export function HUD({
                   step={0.5}
                   value={state.maxLineWidth}
                   onChange={setters.setMaxLineWidth}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
+                  tooltip="CULL RATE: Multiplier for how fast a species dies off when marked for culling."
+                  label="CULL_RATE"
+                  min={1.0}
+                  max={50.0}
+                  step={0.5}
+                  value={state.cullRate}
+                  onChange={setters.setCullRate}
                   color="#87CEEB"
                 />
               </div>

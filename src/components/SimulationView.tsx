@@ -4,6 +4,7 @@ import { SimulationEngine } from "../lib/SimulationEngine";
 interface Props {
   onLog: (msg: string) => void;
   onStateUpdate: (state: any) => void;
+  onConfigChange?: (config: any) => void;
 }
 
 export function SimulationView({
@@ -56,6 +57,8 @@ export function SimulationView({
   sameColorAppProb,
   maxSaturation,
   feelerFade,
+  cullRate,
+  onConfigChange,
 }: Props & {
   restartTrigger?: number;
   randomizeTrigger?: number;
@@ -104,6 +107,7 @@ export function SimulationView({
   sameColorAppProb?: number;
   maxSaturation?: number;
   feelerFade?: number;
+  cullRate?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -174,6 +178,12 @@ export function SimulationView({
   }, [tideSpeed]);
 
   useEffect(() => {
+    if (engineRef.current && cullRate !== undefined) {
+      engineRef.current.setCullRate(cullRate);
+    }
+  }, [cullRate]);
+
+  useEffect(() => {
     if (engineRef.current) {
       if (tideColor !== undefined) engineRef.current.setTideColor(tideColor);
       if (bgColor !== undefined) engineRef.current.setBgColor(bgColor);
@@ -236,6 +246,8 @@ export function SimulationView({
         engineRef.current.setMaxSaturation(maxSaturation);
       if (feelerFade !== undefined)
         engineRef.current.setFeelerFade(feelerFade);
+      if (cullRate !== undefined)
+        engineRef.current.setCullRate(cullRate);
     }
   }, [
     tideColor,
@@ -274,6 +286,7 @@ export function SimulationView({
     sameColorAppProb,
     maxSaturation,
     feelerFade,
+    cullRate,
   ]);
 
   useEffect(() => {
@@ -291,6 +304,10 @@ export function SimulationView({
     const engine = new SimulationEngine(canvasRef.current, width, height);
     engine.onLog = onLog;
     engine.onStateUpdate = onStateUpdate;
+    if (onConfigChange) {
+      engine.onConfigChange = onConfigChange;
+      onConfigChange({ bgColor: engine.bgColor });
+    }
     engineRef.current = engine;
 
     // Apply initial settings immediately so they are never ignored
@@ -353,6 +370,8 @@ export function SimulationView({
       engine.setSameColorAppProb(sameColorAppProb);
     if (feelerFade !== undefined)
       engine.setFeelerFade(feelerFade);
+    if (cullRate !== undefined)
+      engine.setCullRate(cullRate);
 
     engine.start();
 

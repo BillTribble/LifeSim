@@ -8,10 +8,20 @@ interface CloudPanelProps {
 }
 
 export function CloudConfigPanel({ state, setters }: CloudPanelProps) {
+  const [bgH, bgS, bgL] = hexToHSL(state.bgColor);
+
   const handleBgColorChange = (newBg: string) => {
       setters.setBgColor(newBg);
       const [h, s, l] = hexToHSL(newBg);
       setters.setTideColor(hslToHex((h + 0.5) % 1.0, s, l));
+  };
+
+  const handleBgSatChange = (newSat: number) => {
+      setters.setBgColor(hslToHex(bgH, newSat, bgL));
+  };
+
+  const handleBgLumChange = (newLum: number) => {
+      setters.setBgColor(hslToHex(bgH, bgS, newLum));
   };
 
   return (
@@ -37,6 +47,10 @@ export function CloudConfigPanel({ state, setters }: CloudPanelProps) {
             <div className="flex flex-col gap-1.5">
                 <span className="opacity-80">BG COLOR</span>
                 <input type="color" value={state.bgColor} onChange={(e) => handleBgColorChange(e.target.value)} className="w-full h-6 rounded cursor-pointer border-none p-0 bg-transparent"/>
+                <div className="flex justify-between gap-2 mt-2">
+                    <Dial tooltip="Adjust background saturation." label="BG_SAT" min={0} max={1} step={0.05} value={bgS} onChange={handleBgSatChange} color="#a855f7" />
+                    <Dial tooltip="Adjust background brightness." label="BG_LUM" min={0} max={1} step={0.01} value={bgL} onChange={handleBgLumChange} color="#a855f7" />
+                </div>
             </div>
             <div className="flex flex-col gap-1.5">
                 <span className="opacity-80">TIDE COLOR</span>

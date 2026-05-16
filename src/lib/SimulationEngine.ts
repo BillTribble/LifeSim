@@ -64,6 +64,7 @@ export class SimulationEngine {
 
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
+  onConfigChange?: (config: any) => void;
 
   magnetism: number = 0.02;
   proximity: number = 400.0;
@@ -127,6 +128,7 @@ export class SimulationEngine {
 
   dyingStems = new Set<number>();
   dyingHybrids = new Set<number>();
+  dyingStrains = new Set<string>();
 
   blackColor = new THREE.Color(0, 0, 0);
   colorDummy = new THREE.Color();
@@ -136,6 +138,7 @@ export class SimulationEngine {
   taperDuration: number = 1.5;
   feelerFade: number = 10.0;
   diebackAgeBias: number = 2.0;
+  cullRate: number = 5.0;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
@@ -207,10 +210,18 @@ export class SimulationEngine {
     if (alphaGenome && betaGenome) {
       const baseHue = Math.random();
       alphaGenome.color.setHSL(baseHue, 0.8, 0.5);
-      betaGenome.color.setHSL((baseHue + 0.5) % 1.0, 0.8, 0.5);
+      betaGenome.color.setHSL((baseHue + 1 / 3) % 1.0, 0.8, 0.5);
 
       colorMap.set(alphaGenome.name, alphaGenome.color.clone());
       colorMap.set(betaGenome.name, betaGenome.color.clone());
+
+      const bgHue = (baseHue + 2 / 3) % 1.0;
+      const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
+      const bgHex = "#" + bgColorObj.getHexString();
+      this.setBgColor(bgHex);
+      if (this.onConfigChange) {
+        this.onConfigChange({ bgColor: bgHex });
+      }
     }
 
     uniqueGenomes.forEach((g) => {
@@ -334,6 +345,11 @@ export class SimulationEngine {
   setFeelerFade(val: number) {
     this.feelerFade = val;
   }
+
+  setCullRate(val: number) {
+    this.cullRate = val;
+  }
+
   setDiebackAgeBias(val: number) {
     this.diebackAgeBias = val;
   }
@@ -443,7 +459,15 @@ export class SimulationEngine {
     }
 
     const alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-    betaGenome.color.setHSL((alphaHue + 0.5) % 1.0, 0.8, 0.5);
+    betaGenome.color.setHSL((alphaHue + 1 / 3) % 1.0, 0.8, 0.5);
+
+    const bgHue = (alphaHue + 2 / 3) % 1.0;
+    const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
+    const bgHex = "#" + bgColorObj.getHexString();
+    this.setBgColor(bgHex);
+    if (this.onConfigChange) {
+      this.onConfigChange({ bgColor: bgHex });
+    }
 
     this.agents.push({
       position: new THREE.Vector3(-40, 0, 0),
@@ -586,6 +610,7 @@ export class SimulationEngine {
         biomass: number;
         genome: any;
         archetype?: string;
+        isDying?: boolean;
       }[] = [];
       this.biomassMap.forEach((v, k) => {
         if (v > 0) {
@@ -602,6 +627,7 @@ export class SimulationEngine {
               biomass: v,
               genome: genome,
               archetype: genome.archetype,
+              isDying: this.dyingStrains?.has(k),
             });
           }
         }
@@ -609,7 +635,7 @@ export class SimulationEngine {
 
       let activeCount = 0;
       for (let i = 0; i < this.agents.length; i++) {
-        if (this.agents[i].active && !this.agents[i].tapering) activeCount++;
+        if (this.agents[i].active && !this.agents[i].tapering && !this.agents[i].isFeeler) activeCount++;
       }
 
       let totalActiveGeometries = 0;

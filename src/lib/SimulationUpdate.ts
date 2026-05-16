@@ -208,9 +208,9 @@ export function updateSimulation(engine: SimulationEngine) {
   }
 
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
-  const effectiveDieback = engine.diebackRate * speedFactor;
+  const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor;
 
-  if (effectiveDieback > 0.001) {
+  if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = Math.floor(engine.maxDOMs / 20); // Full sweep every ~20 frames
     const sweepStart = (engine.time * batchSize) % engine.maxDOMs;
 
@@ -220,10 +220,14 @@ export function updateSimulation(engine: SimulationEngine) {
       if (seg && !engine.dyingStems.has(idx)) {
         const age = engine.time - seg.timestamp;
         const bias = engine.diebackAgeBias || 1.0;
-        const prob = Math.min(
+        const isDyingStrain = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
+        let prob = Math.min(
           1.0,
-          Math.pow(age / 500, bias) * Math.max(0.01, effectiveDieback) * 0.5, // 10x higher probability but smaller chunks
+          Math.pow(age / 500, bias) * Math.max(0.000001, effectiveDieback) * 0.5, // 10x higher probability but smaller chunks
         );
+        if (isDyingStrain) {
+          prob = Math.min(1.0, Math.pow(age / 100, bias) * (engine.cullRate * 0.16)); // Much higher probability, focusing on oldest parts
+        }
         if (Math.random() < prob) {
           const chunkSize = Math.max(1, Math.random() * Math.min(20, effectiveDieback * 5)); // Smaller, more uniform chunks
           for (let j = 0; j < chunkSize; j++) {
@@ -278,7 +282,7 @@ export function updateSimulation(engine: SimulationEngine) {
   for (const app of engine.appendages.values()) {
     engine.processDying(app.segments, app.dyingSet, app.mesh, true);
 
-    if (effectiveDieback > 0.001) {
+    if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
       const sweepDist = 50 + Math.floor(engine.growthSpeed * 10);
       const appLimit = Math.floor(engine.maxDOMs / 4);
       if (appLimit > 0) {
@@ -349,7 +353,7 @@ export function updateSimulation(engine: SimulationEngine) {
       true;
   }
 
-  if (effectiveDieback > 0.001) {
+  if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = 100;
     const sweepStart = (engine.time * batchSize) % 2000;
     for (let i = 0; i < batchSize; i++) {
@@ -359,7 +363,7 @@ export function updateSimulation(engine: SimulationEngine) {
         const age = engine.time - seg.timestamp;
         const deathProb = Math.min(
           1.0,
-          Math.pow(age / 5000, engine.diebackAgeBias) * Math.max(0.01, effectiveDieback) * 0.05,
+          Math.pow(age / 5000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.05,
         );
         if (Math.random() < deathProb) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
@@ -382,11 +386,48 @@ export function updateSimulation(engine: SimulationEngine) {
 
     if (totalBiomass > 1000) {
       engine.biomassMap.forEach((biomass, strainName) => {
+        const ratio = biomass / totalBiomass;
+        const isDying = engine.dyingStrains && engine.dyingStrains.has(strainName);
+
+        if (isDying && ratio < 0.05) {
+          engine.biomassMap.delete(strainName);
+          engine.dyingStrains.delete(strainName);
+          if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
+          if (engine.suppressedStrains) engine.suppressedStrains.delete(strainName);
+          
+          for (let i = 0; i < engine.maxDOMs; i++) {
+            if (engine.segments[i] && engine.segments[i].strainName === strainName) {
+              engine.dummy.matrix.makeScale(0, 0, 0);
+              engine.cylinderMesh.setMatrixAt(i, engine.dummy.matrix);
+              engine.segments[i] = undefined as any;
+            }
+          }
+          engine.cylinderMesh.instanceMatrix.needsUpdate = true;
+          
+          for (const app of engine.appendages.values()) {
+            const lim = Math.floor(engine.maxDOMs / 4);
+            for (let i = 0; i < lim; i++) {
+              if (app.segments[i] && app.segments[i].strainName === strainName) {
+                engine.dummy.matrix.makeScale(0, 0, 0);
+                app.mesh.setMatrixAt(i, engine.dummy.matrix);
+                app.segments[i] = undefined as any;
+              }
+            }
+            app.mesh.instanceMatrix.needsUpdate = true;
+          }
+          
+          for (let i = 0; i < activeAgents.length; i++) {
+            if (activeAgents[i].genome.name === strainName) {
+              activeAgents[i].active = false;
+            }
+          }
+          engine.onLog(`Species ${strainName.split(' ')[0]} was fully eradicated.`);
+          return;
+        }
+
         if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
         if (!engine.speciesAbove5Percent) engine.speciesAbove5Percent = new Set();
         
-        const ratio = biomass / totalBiomass;
-
         if (ratio > 0.05) {
           engine.speciesAbove5Percent.add(strainName);
         } else if (ratio < 0.05 && engine.speciesAbove5Percent.has(strainName)) {
@@ -397,6 +438,8 @@ export function updateSimulation(engine: SimulationEngine) {
               activeAgents[i].forceTapering = true;
             }
           }
+          if (!engine.dyingStrains) engine.dyingStrains = new Set();
+          engine.dyingStrains.add(strainName);
           engine.onLog(`Species ${strainName} dropped below 5% and was culled to make space.`);
         }
 
@@ -515,7 +558,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
   engine.agents = engine.agents.filter((a) => a.active);
 
-  const activeNotTapering = engine.agents.filter(a => !a.tapering);
+  const activeNotTapering = engine.agents.filter(a => !a.tapering && !a.isFeeler);
   
   if (activeNotTapering.length > engine.maxAgents * 0.5) { // Optimization: only run if mildly crowded
     const strainGroups = new Map<string, typeof activeNotTapering>();
@@ -547,7 +590,7 @@ export function updateSimulation(engine: SimulationEngine) {
     }
     
     // Pass 2: Failsafe global cut (in case ecoFade < 1 and sum exceeds maxAgents)
-    const survivors = engine.agents.filter(a => !a.tapering);
+    const survivors = engine.agents.filter(a => !a.tapering && !a.isFeeler);
     if (survivors.length > globalLimit) {
       survivors.sort((a, b) => b.age - a.age);
       const overflow = survivors.length - globalLimit;
