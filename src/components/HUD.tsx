@@ -1,0 +1,609 @@
+import React, { useState } from "react";
+import {
+  Activity,
+  Cpu,
+  Database,
+  Share2,
+  Palette,
+  Cloud,
+  Dna,
+  ChevronDown,
+} from "lucide-react";
+import { Dial } from "./Dial";
+import { CloudConfigPanel } from "./CloudConfigPanel";
+import { MutationPanel } from "./MutationPanel";
+
+interface HUDProps {
+  showHUD: boolean;
+  setShowHUD: (s: boolean) => void;
+  stats: any;
+  state: any;
+  setters: any;
+  handleRestart: () => void;
+  setRandomizeKey: React.Dispatch<React.SetStateAction<number>>;
+  handleCopySettings: () => void;
+  copied: boolean;
+  uptime: number;
+}
+
+export function HUD({
+  showHUD,
+  setShowHUD,
+  stats,
+  state,
+  setters,
+  handleRestart,
+  setRandomizeKey,
+  handleCopySettings,
+  copied,
+  uptime,
+}: HUDProps) {
+  const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
+  const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
+
+  const totalBiomass =
+    stats.strains.reduce((acc: number, s: any) => acc + s.biomass, 0) || 1;
+
+  const formatUptime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <>
+      {cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
+      {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
+
+      <div
+        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 border-2 border-[#D2B48C]/20 m-4 rounded transition-opacity duration-500 ${showHUD ? "opacity-100" : "opacity-0"}`}
+      >
+        <header className="flex justify-between items-start mb-6 text-[10px] font-mono opacity-80 border-b border-[#D2B48C]/30 pb-2">
+          <div className="flex gap-4">
+            <div
+              className="flex items-center gap-2 pointer-events-auto cursor-pointer hover:text-white"
+              onClick={handleRestart}
+              title="Re-initialize system"
+            >
+              <Activity className="w-3.5 h-3.5 text-green-400" />
+              <span>RESTART_SIM</span>
+            </div>
+            <div
+              className="flex items-center gap-2 pointer-events-auto cursor-pointer hover:text-white transition-colors"
+              onClick={handleCopySettings}
+              title="Copy all settings to clipboard"
+            >
+              <Database
+                className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
+              />
+              <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4 text-right justify-end text-[9px] sm:text-[10px] pointer-events-auto items-center">
+            <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
+              <span className="text-[#D2B48C] font-bold">MODE:</span>
+              <span className="text-[#87CEEB]">{stats.season || "INIT"}</span>
+            </div>
+            <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
+              <span className="text-[#D2B48C]">UPTIME:</span>
+              <span className="text-white">{formatUptime(uptime)}</span>
+            </div>
+            <div
+              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
+              onClick={() => setMutationPanelOpen(!mutationPanelOpen)}
+              title="Mutations"
+            >
+              <Dna className="w-3 h-3 text-[#87CEEB]" />
+              <span>MUTATION</span>
+              <ChevronDown className="w-3 h-3" />
+            </div>
+            <div
+              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
+              onClick={() => setCloudPanelOpen(!cloudPanelOpen)}
+              title="Configure Tide Cloud"
+            >
+              <Cloud className="w-3 h-3 text-purple-400" />
+              <span>CONFIG</span>
+              <ChevronDown className="w-3 h-3" />
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 grid grid-cols-4 gap-6 pointer-events-none">
+          <div className="col-span-1 flex flex-col gap-6">
+            <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-32 sm:w-40">
+              <h2 className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center gap-1.5 tracking-widest">
+                <Share2 className="w-3 h-3" />
+                BIOMASS
+              </h2>
+              <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                {(() => {
+                  const archetypeTotals: Record<string, number> = {};
+                  stats.strains.forEach((s: any) => {
+                    const arch = s.archetype || "unknown";
+                    archetypeTotals[arch] = (archetypeTotals[arch] || 0) + s.biomass;
+                  });
+                  return Object.entries(archetypeTotals)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([arch, mass]) => {
+                      const pct = ((mass / totalBiomass) * 100).toFixed(1);
+                      return (
+                        <div key={arch} className="flex justify-between text-[#87CEEB] opacity-80 border-b border-[#87CEEB]/20 pb-1 mb-1">
+                          <span className="capitalize">{arch}</span>
+                          <span>{pct}%</span>
+                        </div>
+                      );
+                    });
+                })()}
+                {stats.strains.map((strain: any, i: number) => {
+                  const percent = (strain.biomass / totalBiomass) * 100;
+                  const hasGradient =
+                    strain.color2 && strain.color2 !== strain.color;
+                  const textStyle = hasGradient
+                    ? {
+                        backgroundImage: `linear-gradient(to right, ${strain.color}, ${strain.color2})`,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                      }
+                    : { color: strain.color };
+                  const barStyle = hasGradient
+                    ? {
+                        width: `${percent}%`,
+                        backgroundImage: `linear-gradient(to right, ${strain.color}, ${strain.color2})`,
+                      }
+                    : { width: `${percent}%`, backgroundColor: strain.color };
+
+                  return (
+                    <div
+                      key={i}
+                      className="group relative cursor-pointer pointer-events-auto"
+                    >
+                      <div className="flex justify-between mb-0.5">
+                        <span className="truncate mr-2" style={textStyle}>
+                          {strain.name}
+                        </span>
+                        <span>{percent.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-1000 ease-out"
+                          style={barStyle as React.CSSProperties}
+                        />
+                      </div>
+                      {strain.genome && (
+                        <div className="fixed left-40 sm:left-48 top-32 hidden group-hover:flex flex-col bg-[#001220]/95 border border-[#87CEEB]/50 p-3 z-[9999] min-w-[200px] shadow-2xl text-[#87CEEB] text-[9px] sm:text-[10px] pointer-events-none rounded whitespace-nowrap">
+                          <div className="font-bold text-[10px] sm:text-[11px] border-b border-[#87CEEB]/30 pb-1 mb-1 shadow-sm">
+                            {strain.name} traits
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Color:</span>
+                            <span style={{ color: strain.color }}>
+                              {strain.color}
+                            </span>
+                          </div>
+                          {strain.color2 && strain.color2 !== strain.color && (
+                            <div className="flex justify-between">
+                              <span>Tip Color:</span>
+                              <span style={{ color: strain.color2 }}>
+                                {strain.color2}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Thickness:</span>
+                            <span>
+                              {strain.genome.thicknessBase?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Thickness Decay:</span>
+                            <span>
+                              {strain.genome.thicknessDecay?.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Min Thickness:</span>
+                            <span>
+                              {strain.genome.minThickness?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Step Size:</span>
+                            <span>{strain.genome.stepSize?.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Wander:</span>
+                            <span>
+                              {strain.genome.wanderIntensity?.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Bifurcation:</span>
+                            <span>
+                              {strain.genome.bifurcationRate?.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Branch Tendency:</span>
+                            <span>
+                              {strain.genome.branchTendency?.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Waving Speed:</span>
+                            <span>{strain.genome.wavingSpeed?.toFixed(3)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Waving Amp:</span>
+                            <span>
+                              {strain.genome.wavingAmplitude?.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Geometry:</span>
+                            <span>{strain.genome.geometryType}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Appendage:</span>
+                            <span>{strain.genome.appendage}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Multicolor App:</span>
+                            <span>
+                              {strain.genome.multicolorAppendage ? "Yes" : "No"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Same Color App:</span>
+                            <span>
+                              {strain.genome.sameColorAppendage ? "Yes" : "No"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Pulse Target:</span>
+                            <span>{strain.genome.pulseTarget}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Pulse Speed:</span>
+                            <span>{strain.genome.pulseSpeed?.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Gradient Growth:</span>
+                            <span>
+                              {strain.genome.gradientGrowth ? "Yes" : "No"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Stability:</span>
+                            <span>{strain.genome.stability?.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="col-span-3"></div>
+        </div>
+
+        <footer className="mt-6 flex flex-col justify-between items-end border-t border-[#D2B48C]/30 pt-4 text-[9px] font-mono opacity-100 gap-4">
+          <div className="flex justify-between items-end w-full pointer-events-none">
+            <div className="flex gap-6 pointer-events-auto items-center">
+              <div className="flex flex-col items-center gap-1">
+                <span className="opacity-60 text-[8px] uppercase">Active</span>
+                <span>{stats.totalAgents}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="opacity-60 text-[8px] uppercase">Vectors</span>
+                <span>{stats.geometryCount.toLocaleString()}</span>
+              </div>
+
+              <div className="h-full border-l border-[#D2B48C]/30 mx-2"></div>
+
+              <div className="flex gap-4 items-center flex-wrap">
+                <Dial
+                  tooltip="SWARM COHESION: Gravitational attraction. High = dense clustered structures. Low = sprawling independent organisms."
+                  label="MAGNET"
+                  min={0}
+                  max={0.1}
+                  step={0.002}
+                  value={state.magnetism}
+                  onChange={setters.setMagnetism}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="DETECTION RANGE: Distance for cross-breeding. High = frequent hybridization. Low = isolated species."
+                  label="PROXIM"
+                  min={1}
+                  max={250.0}
+                  step={1.0}
+                  value={state.proximity}
+                  onChange={setters.setProximity}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="ARTIFACT SCALE: Size multiplier for ornaments. High = huge flowers/crystals. Low = tiny subtle details."
+                  label="ART_SIZE"
+                  min={0.05}
+                  max={1.0}
+                  step={0.01}
+                  value={state.flowerSize}
+                  onChange={setters.setFlowerSize}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="POPULATION LIMIT: Stability threshold. High = only highly dominant species survive. Low = extreme diversity."
+                  label="ENTROPY"
+                  min={0.0}
+                  max={1.0}
+                  step={0.05}
+                  value={state.entropyThreshold}
+                  onChange={setters.setEntropyThreshold}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="EXTRUSION SPEED: Rate of growth. High = explosive rapid expansion. Low = slow deliberate crawling."
+                  label="GROW_SPD"
+                  min={0.1}
+                  max={5.0}
+                  step={0.1}
+                  value={state.growthSpeed}
+                  onChange={setters.setGrowthSpeed}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="DECAY VELOCITY: Speed of recycling. High = volatile fleeting patterns. Low = persistent lingering trails."
+                  label="DEATH RATE"
+                  min={0.0}
+                  max={10.0}
+                  step={0.01}
+                  value={state.diebackRate}
+                  onChange={setters.setDiebackRate}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="HYBRID BREED COOL: Hybridization cooldown. High = rare hybridization. Low = bursts of hybrids."
+                  label="HYBRID_COOL"
+                  min={10}
+                  max={2000}
+                  step={10}
+                  value={state.hybridCooldown}
+                  onChange={setters.setHybridCooldown}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="ARTIFACT DECAY: How long hybrid artifacts persist compared to paths."
+                  label="ART_DECAY"
+                  min={1}
+                  max={50.0}
+                  step={1.0}
+                  value={state.hybridStickiness}
+                  onChange={setters.setHybridStickiness}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="BRANCH VARIANCE: Tendency ratio for species branching."
+                  label="BRANCH_VAR"
+                  min={1}
+                  max={50.0}
+                  step={1.0}
+                  value={state.branchTendencyVar}
+                  onChange={setters.setBranchTendencyVar}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="BRANCH RATE: Base multiplier for branching. High = complex fractals. Low = single lines."
+                  label="BRANCHING"
+                  min={0.1}
+                  max={500.0}
+                  step={0.1}
+                  value={state.branchingMultiplier}
+                  onChange={setters.setBranchingMultiplier}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="AGE BIAS: Targets old structures. High = brutal early culling. Low = long-lived ancient trails."
+                  label="DIE_BIAS"
+                  min={0.5}
+                  max={5.0}
+                  step={0.1}
+                  value={state.diebackAgeBias}
+                  onChange={setters.setDiebackAgeBias}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="HYBRID_SIZE: Size of the hybridization polyhedra artifacts left behind."
+                  label="HYBRID_SIZE"
+                  min={0.5}
+                  max={10.0}
+                  step={0.1}
+                  value={state.hybridSize}
+                  onChange={setters.setHybridSize}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="FADE SPEED: How fast dead segments dissolve into wireframes and nothing. High = aggressive fast fade. Low = long slow ghost trails."
+                  label="FADE_SPEED"
+                  min={0.1}
+                  max={15.0}
+                  step={0.1}
+                  value={state.desiccationSpeed}
+                  onChange={setters.setDesiccationSpeed}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="TAPER DUR: Tapering animation time. High = long thin pointy tails. Low = blunt sudden cutoffs."
+                  label="TAPER_TIME"
+                  min={0.5}
+                  max={3.0}
+                  step={0.1}
+                  value={state.taperDuration}
+                  onChange={setters.setTaperDuration}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="TERMINATION: Natural life span. High = short burst-like organisms. Low = immortal endless trails."
+                  label="TERM_PROB"
+                  min={0.0}
+                  max={1.0}
+                  step={0.01}
+                  value={state.terminationProb}
+                  onChange={setters.setTerminationProb}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="BRANCH TERM PENALTY: Extra chance of termination shortly after branching."
+                  label="TERM_BRANCH"
+                  min={0.5}
+                  max={10.0}
+                  step={0.5}
+                  value={state.termProbPostBranch}
+                  onChange={setters.setTermProbPostBranch}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="BRANCH MUTATION: Child vs parent traits. High = branches look entirely alien. Low = branches perfectly match."
+                  label="B_MUTATE"
+                  min={0.0}
+                  max={1.0}
+                  step={0.01}
+                  value={state.branchMutationRate}
+                  onChange={setters.setBranchMutationRate}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="MAX ORGANISMS: Hard limit on active organisms, kills oldest. High = swarms. Low = only a few lines."
+                  label="MAX_AGENTS"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={state.maxAgents}
+                  onChange={setters.setMaxAgents}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="MAX SPECIES: Limits number of viable distinct species. Breeding will be constrained to not exceed this limit."
+                  label="MAX_SPECIES"
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={state.maxSpecies}
+                  onChange={setters.setMaxSpecies}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="ECO_FADE: 0 = Global Agent Limit. 1 = Perfect equality between active species (protects bushier slow-growing species from extinction by single-strand fast growers)."
+                  label="ECO_FADE"
+                  min={0.0}
+                  max={1.0}
+                  step={0.01}
+                  value={state.ecoFade}
+                  onChange={setters.setEcoFade}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="MIN ORGANISMS: Minimum number of organisms to keep alive."
+                  label="MIN_AGENTS"
+                  min={2}
+                  max={20}
+                  step={1}
+                  value={state.minAgents}
+                  onChange={setters.setMinAgents}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="MULTI COLOR APP PROB: Appendage color chaos. High = rainbow gradients on thorns/flowers. Low = simple colors."
+                  label="MULTI_COLOR"
+                  min={0}
+                  max={1.0}
+                  step={0.05}
+                  value={state.multicolorAppProb}
+                  onChange={setters.setMulticolorAppProb}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="SAME COLOR APP PROB: Host vs complementary color. High = matching cohesive color palette. Low = highly contrasting colors."
+                  label="SAME_COLOR"
+                  min={0.0}
+                  max={1.0}
+                  step={0.05}
+                  value={state.sameColorAppProb || 0.0}
+                  onChange={setters.setSameColorAppProb}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="PULSE SPEED: Bioluminescence frequency. High = hyperactive strobe effect. Low = gentle breathing glow."
+                  label="PULSE_SPD"
+                  min={0.1}
+                  max={5.0}
+                  step={0.1}
+                  value={state.globalPulseSpeed}
+                  onChange={setters.setGlobalPulseSpeed}
+                  color="#87CEEB"
+                />
+                <Dial
+                  tooltip="MAX WIDTH: Stem thickness limit. High = massive giant vines. Low = whisper-thin hair spirals."
+                  label="MAX_WIDTH"
+                  min={1.0}
+                  max={20.0}
+                  step={0.5}
+                  value={state.maxLineWidth}
+                  onChange={setters.setMaxLineWidth}
+                  color="#87CEEB"
+                />
+              </div>
+            </div>
+
+            <div className="text-right flex flex-col gap-1 items-end pointer-events-auto w-full md:w-auto">
+              <div className="flex flex-col items-end gap-1 mb-2 w-full max-w-[200px]">
+                <div className="flex justify-between w-full text-[10px] opacity-60 uppercase">
+                  <span>Tide Level</span>
+                  <span>{(stats.tideValue * 100).toFixed(0)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 border border-[#D2B48C]/20 overflow-hidden relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-600 to-red-600 transition-all duration-75"
+                    style={{ width: `${stats.tideValue * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4 items-center mb-1">
+                <span className="text-[10px] opacity-60">ROTATION_VEL:</span>
+                <button
+                  onClick={() =>
+                    setters.setRotationSpeed((prev: number) =>
+                      Math.max(0, prev - 0.2),
+                    )
+                  }
+                  className="hover:text-white cursor-pointer px-2 py-0.5 border border-[#D2B48C]/20 rounded"
+                >
+                  -
+                </button>
+                <span className="w-8 text-center">
+                  {state.rotationSpeed.toFixed(1)}
+                </span>
+                <button
+                  onClick={() =>
+                    setters.setRotationSpeed((prev: number) => prev + 0.2)
+                  }
+                  className="hover:text-white cursor-pointer px-2 py-0.5 border border-[#D2B48C]/20 rounded"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+
+      <button
+        onClick={() => setShowHUD(!showHUD)}
+        className="absolute top-6 right-6 z-20 w-3 h-3 bg-[#D2B48C]/60 hover:bg-white transition-all cursor-pointer rounded-full"
+        title="Toggle HUD Interface"
+      />
+    </>
+  );
+}

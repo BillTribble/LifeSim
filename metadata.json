@@ -1,0 +1,8 @@
+{
+  "name": "The Living Archive",
+  "description": "An interactive, browser-based 3D visualization simulating an evolving, organic vector structure.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
