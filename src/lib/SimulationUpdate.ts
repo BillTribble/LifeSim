@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
-import { Genome, Agent, MAX_POINTS, BOUNDARY } from "./SimulationTypes";
+import { Genome, Agent, MAX_POINTS } from "./SimulationTypes";
 import { mutateGenome, breedGenomes } from "./SimulationGenetics";
 import { processAgents } from "./SimulationUpdateAgents";
 
@@ -18,13 +18,13 @@ export function updateSimulation(engine: SimulationEngine) {
   const adjustedCycle = baseCycle / (engine.tideSpeed || 0.01);
   const cycleProgress = (engine.time % adjustedCycle) / adjustedCycle;
 
-  let pulseOffset = -BOUNDARY - 300;
+  let pulseOffset = -engine.boundarySize - 300;
 
   if (cycleProgress > 0.95) {
     const pulseProgress = (cycleProgress - 0.95) / 0.05;
     engine.tideValue = Math.sin(pulseProgress * Math.PI);
     engine.tideValue = Math.pow(engine.tideValue, 1.2);
-    pulseOffset = -BOUNDARY - 100 + pulseProgress * (BOUNDARY * 2 + 200);
+    pulseOffset = -engine.boundarySize - 100 + pulseProgress * (engine.boundarySize * 2 + 200);
   } else {
     engine.tideValue = 0;
   }

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
-import { Agent, MAX_POINTS, BOUNDARY } from "./SimulationTypes";
+import { Agent, MAX_POINTS } from "./SimulationTypes";
 import {
   mutateGenome,
   breedGenomes,
@@ -43,8 +43,10 @@ export function processAgents(
     
     if (oldestGenomeName) {
       if (!engine.dyingStrains) engine.dyingStrains = new Set();
+      if (!engine.dyingStrains.has(oldestGenomeName)) {
+        engine.onLog(`Maximum species exceeded! Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
+      }
       engine.dyingStrains.add(oldestGenomeName);
-      engine.onLog(`Maximum species exceeded! Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
       for (const a of activeAgents) {
         if (a.genome.name === oldestGenomeName) {
            a.tapering = true;
@@ -282,13 +284,45 @@ export function processAgents(
           agent.direction.applyAxisAngle(waveAxis, wave);
       }
 
-      if (agent.position.length() > BOUNDARY) {
-        agent.direction
-          .sub(agent.position.clone().normalize().multiplyScalar(0.08))
-          .normalize();
+      agent.position.addScaledVector(agent.direction, effectiveStepSize);
+
+      const b = engine.boundarySize;
+      let bounced = false;
+
+      if (agent.position.x > b) {
+        agent.position.x = b;
+        agent.direction.x *= -1;
+        bounced = true;
+      } else if (agent.position.x < -b) {
+        agent.position.x = -b;
+        agent.direction.x *= -1;
+        bounced = true;
       }
 
-      agent.position.addScaledVector(agent.direction, effectiveStepSize);
+      if (agent.position.y > b) {
+        agent.position.y = b;
+        agent.direction.y *= -1;
+        bounced = true;
+      } else if (agent.position.y < -b) {
+        agent.position.y = -b;
+        agent.direction.y *= -1;
+        bounced = true;
+      }
+
+      if (agent.position.z > b) {
+        agent.position.z = b;
+        agent.direction.z *= -1;
+        bounced = true;
+      } else if (agent.position.z < -b) {
+        agent.position.z = -b;
+        agent.direction.z *= -1;
+        bounced = true;
+      }
+
+      if (bounced) {
+        agent.direction.normalize();
+      }
+
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         0.1,
@@ -657,8 +691,10 @@ export function processAgents(
                             engine.onLog(`Sacrificed a feeler to make room for hybrid!`);
                         } else {
                             if (!engine.dyingStrains) engine.dyingStrains = new Set();
+                            if (!engine.dyingStrains.has(victimSpeciesName)) {
+                                engine.onLog(`Hybridization occurred! Gradual die-off of oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
+                            }
                             engine.dyingStrains.add(victimSpeciesName);
-                            engine.onLog(`Hybridization occurred! Gradual die-off of oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
                         }
                     } else {
                         allowBreeding = false;
@@ -761,7 +797,7 @@ export function processAgents(
       }
 
       if (agent.tapering) {
-        if (!agent.forceTapering && (currentActiveCount <= engine.minAgents || myStrainCount <= minPerStrain)) {
+        if (!agent.isFeeler && (currentActiveCount <= engine.minAgents || myStrainCount <= minPerStrain)) {
           agent.tapering = false;
           agent.forceTapering = false;
           agent.recovering = true;

@@ -611,6 +611,16 @@ export function HUD({
                   color="#87CEEB"
                 />
                 <SmartDial state={state} setters={setters}
+                  tooltip="BOUNDARY RADIUS: The size of the invisible sphere containing the organisms."
+                  label="RADIUS"
+                  min={50}
+                  max={1000}
+                  step={10}
+                  value={state.boundarySize}
+                  onChange={setters.setBoundarySize}
+                  color="#87CEEB"
+                />
+                <SmartDial state={state} setters={setters}
                   tooltip="MULTI COLOR APP PROB: Appendage color chaos. High = rainbow gradients on thorns/flowers. Low = simple colors."
                   label="MULTI_COLOR"
                   min={0}

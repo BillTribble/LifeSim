@@ -10,12 +10,12 @@ export const DEFAULTS = {
   entropyThreshold: 0.7,
   tideSpeed: 1.1,
   tideColor: "#643707",
-  bgColor: "#5a3e5e",
+  bgColor: "#3e5e4c",
   fogColor: "#000000",
   tideThickness: 110,
   tideOpacity: 0.15000000000000002,
   tideSaturation: 1,
-  growthSpeed: 0.2,
+  growthSpeed: 0.4,
   diebackRate: 0.01,
   hybridCooldown: 200,
   hybridStickiness: 47,
@@ -24,12 +24,13 @@ export const DEFAULTS = {
   branchingMultiplier: 884.4000000000001,
   branchBigger: 0.75,
   branchSplitSizeProb: 0.9500000000000001,
-  maxDOMs: 285000,
+  maxDOMs: 341000,
   maxAgents: 50,
-  maxSpecies: 3,
+  maxSpecies: 4,
   ecoFade: 1,
   minAgents: 4,
-  desiccationSpeed: 5.7,
+  boundarySize: 150,
+  desiccationSpeed: 9.9,
   hybridSize: 3.5,
   terminationProb: 0.13,
   termProbPostBranch: 1.5,
@@ -38,7 +39,7 @@ export const DEFAULTS = {
   branchMutationRate: 0,
   enableGlow: false,
   glowSize: 0.5,
-  fogVisibility: 1250,
+  fogVisibility: 950,
   traitProbs: {
     flowers: 0.45,
     leaves: 0.5,
@@ -58,7 +59,7 @@ export const DEFAULTS = {
   sameColorAppProb: 0.9,
   maxSaturation: 0.8,
   feelerFade: 10,
-  cullRate: 5.0,
+  cullRate: 0.36,
   dialLimits: {
     "DEATH RATE": {
       "min": 0,
@@ -74,9 +75,9 @@ export const DEFAULTS = {
     }
   } as Record<string, {min: number, max: number}>,
   cameraPosition: {
-    x: -50.57290351996895,
+    x: 183.0903286489081,
     y: 199.99999999999997,
-    z: 278.2847128923183,
+    z: 215.5874104748114,
     zoom: 1
   },
   version: "1.0"
@@ -244,6 +245,11 @@ export function useSimulationState() {
       localStorage.getItem("minAgents") || DEFAULTS.minAgents.toString(),
     ),
   );
+  const [boundarySize, setBoundarySize] = useState(() =>
+    parseFloat(
+      localStorage.getItem("boundarySize") || DEFAULTS.boundarySize.toString(),
+    ),
+  );
   const [hybridSize, setHybridSize] = useState(() =>
     parseFloat(
       localStorage.getItem("hybridSize") || DEFAULTS.hybridSize.toString(),
@@ -375,6 +381,7 @@ export function useSimulationState() {
     localStorage.setItem("maxSpecies", maxSpecies.toString());
     localStorage.setItem("ecoFade", ecoFade.toString());
     localStorage.setItem("minAgents", minAgents.toString());
+    localStorage.setItem("boundarySize", boundarySize.toString());
     localStorage.setItem("desiccationSpeed", desiccationSpeed.toString());
     localStorage.setItem("hybridSize", hybridSize.toString());
     localStorage.setItem("terminationProb", terminationProb.toString());
@@ -424,6 +431,7 @@ export function useSimulationState() {
     maxSpecies,
     ecoFade,
     minAgents,
+    boundarySize,
     desiccationSpeed,
     enableGlow,
     glowSize,
@@ -476,6 +484,7 @@ export function useSimulationState() {
       maxSpecies,
       ecoFade,
       minAgents,
+      boundarySize,
       desiccationSpeed,
       hybridSize,
       terminationProb,
@@ -525,6 +534,7 @@ export function useSimulationState() {
       setMaxSpecies,
       setEcoFade,
       setMinAgents,
+      setBoundarySize,
       setDesiccationSpeed,
       setHybridSize,
       setTerminationProb,

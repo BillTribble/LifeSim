@@ -5,7 +5,6 @@ import {
   Agent,
   Segment,
   MAX_POINTS,
-  BOUNDARY,
   GEO_TYPES,
   PULSE_TARGETS,
   ARCHETYPES,
@@ -98,6 +97,7 @@ export class SimulationEngine {
   maxDOMs: number = 80000;
   lastMaxDOMs: number = 80000;
   minAgents: number = 2;
+  boundarySize: number = 150;
   maxSpecies: number = 6;
   ecoFade: number = 0.5;
   probGlow: number = 0.0;
@@ -271,6 +271,9 @@ export class SimulationEngine {
   }
   setMinAgents(val: number) {
     this.minAgents = val;
+  }
+  setBoundarySize(val: number) {
+    this.boundarySize = val;
   }
   setTideSpeed(val: number) {
     this.tideSpeed = val;

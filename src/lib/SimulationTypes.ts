@@ -85,4 +85,3 @@ export interface Segment {
 }
 
 export const MAX_POINTS = 240000;
-export const BOUNDARY = 250;

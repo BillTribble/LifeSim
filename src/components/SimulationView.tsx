@@ -21,6 +21,7 @@ export function SimulationView({
   entropyThreshold,
   tideSpeed,
   minAgents,
+  boundarySize,
   tideColor,
   bgColor,
   fogColor,
@@ -71,6 +72,7 @@ export function SimulationView({
   entropyThreshold?: number;
   tideSpeed?: number;
   minAgents?: number;
+  boundarySize?: number;
   tideColor?: string;
   bgColor?: string;
   fogColor?: string;
@@ -166,6 +168,12 @@ export function SimulationView({
   }, [minAgents]);
 
   useEffect(() => {
+    if (engineRef.current && boundarySize !== undefined) {
+      engineRef.current.setBoundarySize(boundarySize);
+    }
+  }, [boundarySize]);
+
+  useEffect(() => {
     if (engineRef.current && entropyThreshold !== undefined) {
       engineRef.current.setEntropyThreshold(entropyThreshold);
     }
@@ -214,6 +222,8 @@ export function SimulationView({
         engineRef.current.setBranchSplitSizeProb(branchSplitSizeProb);
       if (maxDOMs !== undefined) engineRef.current.setMaxDOMs(maxDOMs);
       if (maxAgents !== undefined) engineRef.current.setMaxAgents(maxAgents);
+      if (minAgents !== undefined) engineRef.current.setMinAgents(minAgents);
+      if (boundarySize !== undefined) engineRef.current.setBoundarySize(boundarySize);
       if (maxSpecies !== undefined) engineRef.current.setMaxSpecies(maxSpecies);
       if (ecoFade !== undefined) engineRef.current.setEcoFade(ecoFade);
       if (desiccationSpeed !== undefined)
@@ -320,6 +330,7 @@ export function SimulationView({
     if (entropyThreshold !== undefined)
       engine.setEntropyThreshold(entropyThreshold);
     if (minAgents !== undefined) engine.setMinAgents(minAgents);
+    if (boundarySize !== undefined) engine.setBoundarySize(boundarySize);
     if (tideSpeed !== undefined) engine.setTideSpeed(tideSpeed);
 
     if (tideColor !== undefined) engine.setTideColor(tideColor);
