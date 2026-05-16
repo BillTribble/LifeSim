@@ -53,7 +53,7 @@ export function processAgents(
     totalBiomass += v;
   });
 
-  const monopolyThreshold = Math.max(10, totalBiomass * 0.6);
+  const monopolyThreshold = Math.max(10, totalBiomass * engine.entropyThreshold);
   const monopolyStrains = new Set<string>();
   if (totalBiomass > 0) {
      engine.biomassMap.forEach((v, k) => {
@@ -64,7 +64,18 @@ export function processAgents(
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
     
-    const speedMult = agent.genome.archetype === "snake" ? 3.0 : 1.0;
+    const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
+    agent.suppressionFade = agent.suppressionFade || 0;
+    if (isSuppressed) {
+      agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02); // 50 frames to fully suppress (about 1 second)
+    } else {
+      agent.suppressionFade = Math.max(0.0, agent.suppressionFade - 0.02);
+    }
+    
+    let baseSpeedMult = agent.genome.archetype === "snake" ? 3.0 : 1.0;
+    // Blend smoothly from normal speed to heavily nerfed (0.2x) speed
+    const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8);
+    
     agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult;
     let iterations = Math.floor(agent.growthAccumulator);
     agent.growthAccumulator -= iterations;
@@ -92,7 +103,7 @@ export function processAgents(
         effectiveStepSize *= 1.5;
       } else if (genome.archetype === "fuzzy") {
         effectiveBifurcationRate *= 12.0;
-        effectiveStepSize *= 0.15;
+        effectiveStepSize *= 0.6;
         effectiveWanderIntensity *= 12.0;
       }
 
@@ -469,8 +480,10 @@ export function processAgents(
       }
 
       const isMonopoly = monopolyStrains.has(genome.name);
+      if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
+      const isSuppressed = engine.suppressedStrains.has(genome.name);
       const isFertile = !agent.tapering && (agent.age > 50 || genome.stability < 0.5 || isMonopoly || strainAge > 2000);
-      const canBreed = isFertile && (agent.cooldown <= 0 || isMonopoly || strainAge > 2000) && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5 && aliveSpeciesCount < engine.maxSpecies && myStrainCount < maxForArchetype;
+      const canBreed = !isSuppressed && isFertile && (agent.cooldown <= 0 || isMonopoly || strainAge > 2000) && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5 && aliveSpeciesCount < engine.maxSpecies && myStrainCount < maxForArchetype;
 
       if (canBreed) {
         let bestPartner: any = null;
@@ -615,8 +628,9 @@ export function processAgents(
       }
 
       if (agent.tapering) {
-        if (!agent.forceTapering && (currentActiveCount <= engine.minAgents || myStrainCount <= minPerStrain)) {
+        if (currentActiveCount <= engine.minAgents || (!agent.forceTapering && myStrainCount <= minPerStrain)) {
           agent.tapering = false;
+          agent.forceTapering = false;
           agent.recovering = true;
           agent.targetThickness = genome.thicknessBase;
         } else {

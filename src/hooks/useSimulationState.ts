@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 
 export const DEFAULTS = {
+  dialLimits: {} as Record<string, {min: number, max: number}>,
   rotationSpeed: 0.40615340987509785,
   magnetism: 0.1,
   proximity: 113,
   flowerSize: 0.42,
-  entropyThreshold: 0.2,
+  entropyThreshold: 0.7,
   tideSpeed: 3,
   tideColor: "#643707",
   bgColor: "#073464",
@@ -57,6 +58,14 @@ export const DEFAULTS = {
 };
 
 export function useSimulationState() {
+  const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: number}>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dialLimits") || "{}") || DEFAULTS.dialLimits;
+    } catch {
+      return DEFAULTS.dialLimits;
+    }
+  });
+
   const [rotationSpeed, setRotationSpeed] = useState(() =>
     parseFloat(
       localStorage.getItem("rotationSpeed") ||
@@ -319,6 +328,7 @@ export function useSimulationState() {
     localStorage.setItem("multicolorAppProb", multicolorAppProb.toString());
     localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
+    localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
     rotationSpeed,
     magnetism,
@@ -351,6 +361,7 @@ export function useSimulationState() {
     glowSize,
     fogVisibility,
     traitProbs,
+    dialLimits,
     hybridSize,
     terminationProb,
     termProbPostBranch,
@@ -361,6 +372,7 @@ export function useSimulationState() {
     globalPulseSpeed,
     multicolorAppProb,
     sameColorAppProb,
+    dialLimits,
   ]);
 
   return {
@@ -406,6 +418,7 @@ export function useSimulationState() {
       globalPulseSpeed,
       multicolorAppProb,
       sameColorAppProb,
+      dialLimits,
     },
     setters: {
       setRotationSpeed,
@@ -449,6 +462,7 @@ export function useSimulationState() {
       setGlobalPulseSpeed,
       setMulticolorAppProb,
       setSameColorAppProb,
+      setDialLimits,
     },
   };
 }

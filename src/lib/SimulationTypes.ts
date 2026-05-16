@@ -65,6 +65,7 @@ export interface Agent {
   tapering?: boolean;
   forceTapering?: boolean;
   recovering?: boolean;
+  suppressionFade?: number;
   growthAccumulator?: number;
   spiralAxis?: THREE.Vector3;
 }

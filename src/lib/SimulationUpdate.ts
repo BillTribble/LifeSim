@@ -388,14 +388,35 @@ export function updateSimulation(engine: SimulationEngine) {
 
     if (totalBiomass > 1000) {
       engine.biomassMap.forEach((biomass, strainName) => {
-        if (biomass / totalBiomass > engine.entropyThreshold) {
+        if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
+        const ratio = biomass / totalBiomass;
+        const justSuppressed = ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
+        
+        if (ratio > engine.entropyThreshold) {
+          engine.suppressedStrains.add(strainName);
+        } else if (ratio < 0.5) {
+          engine.suppressedStrains.delete(strainName);
+        }
+
+        if (engine.suppressedStrains.has(strainName)) {
           const dominantAgents: Agent[] = [];
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
               dominantAgents.push(activeAgents[i]);
             }
           }
-          if (dominantAgents.length > 0) {
+          
+          if (dominantAgents.length > 1) {
+            // Sort by age, keep the newest one, taper the rest
+            dominantAgents.sort((a, b) => a.age - b.age);
+            for (let i = 1; i < dominantAgents.length; i++) {
+              const agent = dominantAgents[i];
+              agent.tapering = true;
+              agent.forceTapering = true;
+            }
+          }
+
+          if (justSuppressed && dominantAgents.length > 0) {
             const victim =
               dominantAgents[Math.floor(Math.random() * dominantAgents.length)];
             const mutatedGenome = mutateGenome(
@@ -425,7 +446,7 @@ export function updateSimulation(engine: SimulationEngine) {
               activeAgents.push(spawned);
             }
             engine.onLog(
-              `CRITICAL ENTROPY: ${strainName} dominated. Triggering mutation burst.`,
+              `CRITICAL ENTROPY: ${strainName} suppressed. Triggering mutation burst.`,
             );
           }
         }

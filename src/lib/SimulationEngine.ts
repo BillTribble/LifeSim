@@ -58,6 +58,7 @@ export class SimulationEngine {
 
   biomassMap: Map<string, number> = new Map();
   genomeMap: Map<string, Genome> = new Map();
+  suppressedStrains: Set<string> = new Set();
   time: number = 0;
 
   onLog: (msg: string) => void = () => {};
@@ -66,7 +67,7 @@ export class SimulationEngine {
   magnetism: number = 0.02;
   proximity: number = 250.0;
   flowerSize: number = 1.0;
-  entropyThreshold: number = 0.8;
+  entropyThreshold: number = 0.7;
   globalPulseSpeed: number = 1.0;
   maxLineWidth: number = 8.0;
   multicolorAppProb: number = 0.5;

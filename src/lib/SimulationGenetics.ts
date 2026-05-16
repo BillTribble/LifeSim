@@ -133,7 +133,7 @@ export function breedGenomes(
     (Math.random() < 0.5 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]) :
     (Math.random() < 0.3 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]);
 
-  return {
+  const res: any = {
     name: `Hybrid [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
       Math.random() * 1000,
     )
@@ -202,9 +202,9 @@ export function breedGenomes(
   };
   
   if (res.archetype === "fuzzy") {
-    res.minThickness = Math.min(res.minThickness, 0.3);
-    res.thicknessBase = Math.min(res.thicknessBase, 1.2);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.95, 0.999);
+    res.minThickness = Math.min(res.minThickness, 1.0);
+    res.thicknessBase = Math.min(res.thicknessBase, 3.0);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.98, 0.999);
   }
   
   return res;

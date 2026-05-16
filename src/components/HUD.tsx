@@ -10,6 +10,27 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Dial } from "./Dial";
+
+function SmartDial(props: any) {
+  const { label, min: defaultMin, max: defaultMax, state, setters, ...rest } = props;
+  const limits = state.dialLimits?.[label];
+  const min = limits?.min ?? defaultMin;
+  const max = limits?.max ?? defaultMax;
+  
+  return (
+    <Dial 
+      label={label}
+      min={min}
+      max={max}
+      {...rest}
+      onLimitsChange={(newMin: number, newMax: number) => {
+        if (setters.setDialLimits) {
+          setters.setDialLimits((prev: any) => ({ ...prev, [label]: { min: newMin, max: newMax } }));
+        }
+      }}
+    />
+  );
+}
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
 
@@ -304,7 +325,7 @@ export function HUD({
               <div className="h-full border-l border-[#D2B48C]/30 mx-2"></div>
 
               <div className="flex gap-4 items-center flex-wrap">
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="SWARM COHESION: Gravitational attraction. High = dense clustered structures. Low = sprawling independent organisms."
                   label="MAGNET"
                   min={0}
@@ -314,7 +335,7 @@ export function HUD({
                   onChange={setters.setMagnetism}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="DETECTION RANGE: Distance for cross-breeding. High = frequent hybridization. Low = isolated species."
                   label="PROXIM"
                   min={1}
@@ -324,7 +345,7 @@ export function HUD({
                   onChange={setters.setProximity}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="ARTIFACT SCALE: Size multiplier for ornaments. High = huge flowers/crystals. Low = tiny subtle details."
                   label="ART_SIZE"
                   min={0.05}
@@ -334,7 +355,7 @@ export function HUD({
                   onChange={setters.setFlowerSize}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="POPULATION LIMIT: Stability threshold. High = only highly dominant species survive. Low = extreme diversity."
                   label="ENTROPY"
                   min={0.0}
@@ -344,7 +365,7 @@ export function HUD({
                   onChange={setters.setEntropyThreshold}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="EXTRUSION SPEED: Rate of growth. High = explosive rapid expansion. Low = slow deliberate crawling."
                   label="GROW_SPD"
                   min={0.1}
@@ -354,7 +375,7 @@ export function HUD({
                   onChange={setters.setGrowthSpeed}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="DECAY VELOCITY: Speed of recycling. High = volatile fleeting patterns. Low = persistent lingering trails."
                   label="DEATH RATE"
                   min={0.0}
@@ -364,7 +385,7 @@ export function HUD({
                   onChange={setters.setDiebackRate}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="HYBRID BREED COOL: Hybridization cooldown. High = rare hybridization. Low = bursts of hybrids."
                   label="HYBRID_COOL"
                   min={10}
@@ -374,7 +395,7 @@ export function HUD({
                   onChange={setters.setHybridCooldown}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="ARTIFACT DECAY: How long hybrid artifacts persist compared to paths."
                   label="ART_DECAY"
                   min={1}
@@ -384,7 +405,7 @@ export function HUD({
                   onChange={setters.setHybridStickiness}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="BRANCH VARIANCE: Tendency ratio for species branching."
                   label="BRANCH_VAR"
                   min={1}
@@ -394,7 +415,7 @@ export function HUD({
                   onChange={setters.setBranchTendencyVar}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="BRANCH RATE: Base multiplier for branching. High = complex fractals. Low = single lines."
                   label="BRANCHING"
                   min={0.1}
@@ -404,7 +425,7 @@ export function HUD({
                   onChange={setters.setBranchingMultiplier}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="AGE BIAS: Targets old structures. High = brutal early culling. Low = long-lived ancient trails."
                   label="DIE_BIAS"
                   min={0.5}
@@ -414,7 +435,7 @@ export function HUD({
                   onChange={setters.setDiebackAgeBias}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="HYBRID_SIZE: Size of the hybridization polyhedra artifacts left behind."
                   label="HYBRID_SIZE"
                   min={0.5}
@@ -424,7 +445,7 @@ export function HUD({
                   onChange={setters.setHybridSize}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="FADE SPEED: How fast dead segments dissolve into wireframes and nothing. High = aggressive fast fade. Low = long slow ghost trails."
                   label="FADE_SPEED"
                   min={0.1}
@@ -434,7 +455,7 @@ export function HUD({
                   onChange={setters.setDesiccationSpeed}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="TAPER DUR: Tapering animation time. High = long thin pointy tails. Low = blunt sudden cutoffs."
                   label="TAPER_TIME"
                   min={0.5}
@@ -444,7 +465,7 @@ export function HUD({
                   onChange={setters.setTaperDuration}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="TERMINATION: Natural life span. High = short burst-like organisms. Low = immortal endless trails."
                   label="TERM_PROB"
                   min={0.0}
@@ -454,7 +475,7 @@ export function HUD({
                   onChange={setters.setTerminationProb}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="BRANCH TERM PENALTY: Extra chance of termination shortly after branching."
                   label="TERM_BRANCH"
                   min={0.5}
@@ -464,7 +485,7 @@ export function HUD({
                   onChange={setters.setTermProbPostBranch}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="BRANCH MUTATION: Child vs parent traits. High = branches look entirely alien. Low = branches perfectly match."
                   label="B_MUTATE"
                   min={0.0}
@@ -474,7 +495,7 @@ export function HUD({
                   onChange={setters.setBranchMutationRate}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="MAX ORGANISMS: Hard limit on active organisms, kills oldest. High = swarms. Low = only a few lines."
                   label="MAX_AGENTS"
                   min={1}
@@ -484,7 +505,7 @@ export function HUD({
                   onChange={setters.setMaxAgents}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="MAX SPECIES: Limits number of viable distinct species. Breeding will be constrained to not exceed this limit."
                   label="MAX_SPECIES"
                   min={1}
@@ -494,7 +515,7 @@ export function HUD({
                   onChange={setters.setMaxSpecies}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="ECO_FADE: 0 = Global Agent Limit. 1 = Perfect equality between active species (protects bushier slow-growing species from extinction by single-strand fast growers)."
                   label="ECO_FADE"
                   min={0.0}
@@ -504,7 +525,7 @@ export function HUD({
                   onChange={setters.setEcoFade}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="MIN ORGANISMS: Minimum number of organisms to keep alive."
                   label="MIN_AGENTS"
                   min={2}
@@ -514,7 +535,7 @@ export function HUD({
                   onChange={setters.setMinAgents}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="MULTI COLOR APP PROB: Appendage color chaos. High = rainbow gradients on thorns/flowers. Low = simple colors."
                   label="MULTI_COLOR"
                   min={0}
@@ -524,7 +545,7 @@ export function HUD({
                   onChange={setters.setMulticolorAppProb}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="SAME COLOR APP PROB: Host vs complementary color. High = matching cohesive color palette. Low = highly contrasting colors."
                   label="SAME_COLOR"
                   min={0.0}
@@ -534,7 +555,7 @@ export function HUD({
                   onChange={setters.setSameColorAppProb}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="PULSE SPEED: Bioluminescence frequency. High = hyperactive strobe effect. Low = gentle breathing glow."
                   label="PULSE_SPD"
                   min={0.1}
@@ -544,7 +565,7 @@ export function HUD({
                   onChange={setters.setGlobalPulseSpeed}
                   color="#87CEEB"
                 />
-                <Dial
+                <SmartDial state={state} setters={setters}
                   tooltip="MAX WIDTH: Stem thickness limit. High = massive giant vines. Low = whisper-thin hair spirals."
                   label="MAX_WIDTH"
                   min={1.0}

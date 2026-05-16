@@ -10,17 +10,28 @@ interface DialProps {
   color?: string;
   label?: string;
   tooltip?: string;
+  onLimitsChange?: (min: number, max: number) => void;
 }
 
-export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip }: DialProps) {
+export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange }: DialProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startVal = useRef(value);
   const [hover, setHover] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [showDialog, setShowDialog] = useState(false);
+  const [tempMin, setTempMin] = useState(min.toString());
+  const [tempMax, setTempMax] = useState(max.toString());
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      setTempMin(min.toString());
+      setTempMax(max.toString());
+      setShowDialog(true);
+      return;
+    }
     isDragging.current = true;
     startY.current = e.clientY;
     startVal.current = value;
@@ -62,13 +73,40 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
     setHover(true);
   };
 
+  const handleDialogSubmit = () => {
+    const newMin = parseFloat(tempMin);
+    const newMax = parseFloat(tempMax);
+    if (!isNaN(newMin) && !isNaN(newMax)) {
+      onLimitsChange?.(newMin, newMax);
+    }
+    setShowDialog(false);
+  };
+
   return (
     <div 
       className="flex flex-col items-center gap-1 relative group w-12"
       onMouseEnter={onMouseEnter}
       onMouseLeave={() => setHover(false)}
     >
-      {hover && tooltip && createPortal(
+      {showDialog && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="bg-[#001220] border border-[#D2B48C] p-4 rounded shadow-2xl flex flex-col gap-3 font-mono text-[10px]">
+             <h3 className="text-[#87CEEB] text-center mb-2">Configure {label} Limits</h3>
+             <label className="flex justify-between items-center gap-4 text-[#D2B48C]">
+                Min: <input type="number" step="any" value={tempMin} onChange={e => setTempMin(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleDialogSubmit()} className="bg-black/50 border border-[#D2B48C]/50 px-2 py-1 w-20 text-white focus:outline-none focus:border-[#87CEEB]" />
+             </label>
+             <label className="flex justify-between items-center gap-4 text-[#D2B48C]">
+                Max: <input type="number" step="any" value={tempMax} onChange={e => setTempMax(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleDialogSubmit()} className="bg-black/50 border border-[#D2B48C]/50 px-2 py-1 w-20 text-white focus:outline-none focus:border-[#87CEEB]" />
+             </label>
+             <div className="flex justify-end gap-2 mt-2">
+                <button onClick={() => setShowDialog(false)} className="px-3 py-1 border border-[#D2B48C]/50 text-[#D2B48C] hover:bg-white/10 rounded">Cancel</button>
+                <button onClick={handleDialogSubmit} className="px-3 py-1 border border-[#D2B48C] bg-[#D2B48C]/20 text-[#D2B48C] hover:bg-[#D2B48C]/40 rounded">OK</button>
+             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {hover && tooltip && !showDialog && createPortal(
         <div 
           className="fixed bg-[#001220]/95 border border-[#D2B48C]/50 text-white text-[10px] px-3 py-2 rounded pointer-events-none w-48 text-center z-[9999] shadow-xl font-sans leading-relaxed backdrop-blur-sm"
           style={{ 
