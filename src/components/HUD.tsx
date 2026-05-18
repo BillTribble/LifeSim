@@ -63,7 +63,9 @@ export function HUD({
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
   const [presetPanelOpen, setPresetPanelOpen] = useState(false);
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(false);
+  const [isControlsExpanded, setIsControlsExpanded] = useState(false);
 
   const totalBiomass =
     stats.strains.reduce((acc: number, s: any) => acc + s.biomass, 0) || 1;
@@ -73,6 +75,16 @@ export function HUD({
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const formatMorphFreq = (val: number) => {
+    if (val >= 1.0) return "OFF";
+    const freq = Math.min(0.99, val);
+    const intervalSecs = 3 * Math.pow(600 / 3, freq / 0.99);
+    if (intervalSecs < 60) return `${Math.round(intervalSecs)}s`;
+    const mins = Math.floor(intervalSecs / 60);
+    const secs = Math.round(intervalSecs % 60);
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
   };
 
   return (
@@ -94,6 +106,56 @@ export function HUD({
               <Activity className="w-3.5 h-3.5 text-green-400" />
               <span>RESTART_SIM</span>
             </div>
+            
+            <div className="relative">
+              <div
+                className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
+                onClick={() => setThemePanelOpen(!themePanelOpen)}
+                title="Theme Settings"
+              >
+                <Palette className="w-3.5 h-3.5 text-pink-400" />
+                <span>THEME</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
+              
+              {themePanelOpen && (
+                <div className="absolute top-full left-0 mt-2 bg-[#001220]/90 border border-purple-500/50 p-4 rounded w-56 backdrop-blur-md z-50 pointer-events-auto shadow-lg shadow-purple-900/20">
+                  <div className="flex flex-col gap-4 text-[9px]">
+                    <div className="flex flex-col gap-1.5 border-b border-purple-500/30 pb-3">
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { id: 0, label: "NORMAL" },
+                                { id: 1, label: "ALBINO" },
+                                { id: 2, label: "COMPLEMENT" },
+                                { id: 3, label: "DUOTONE" }
+                            ].map(theme => {
+                                const isSelected = state.theme === theme.id;
+                                const isPulsing = isSelected && (stats.themeProgress !== undefined && stats.themeProgress < 1.0 && stats.nextTheme === theme.id);
+                                return (
+                                    <button
+                                        key={theme.id}
+                                        onClick={() => setters.setTheme(theme.id)}
+                                        className={`p-1 border rounded transition-colors ${
+                                            isSelected 
+                                                ? (isPulsing ? 'bg-purple-500/50 border-purple-400 text-white animate-pulse' : 'bg-purple-500/50 border-purple-400 text-white')
+                                                : 'bg-transparent border-purple-500/30 hover:border-purple-400/80 text-[#D2B48C]/70 hover:text-[#D2B48C]'
+                                        }`}
+                                    >
+                                        {theme.label}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                        <SmartDial state={state} setters={setters} tooltip="How often the theme automatically changes. Max value = OFF." label="MORPH_FREQ" min={0} max={1} step={0.01} value={state.themeMorphFreq} onChange={setters.setThemeMorphFreq} color="#a855f7" formatValue={formatMorphFreq} />
+                        <SmartDial state={state} setters={setters} tooltip="The duration of the transition between themes in seconds." label="TRANS_SPEED" min={1} max={20} step={0.5} value={state.themeMorphSpeed} onChange={setters.setThemeMorphSpeed} color="#a855f7" formatValue={(v: number) => `${v.toFixed(1)}s`} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div
               className={`flex items-center gap-2 cursor-pointer hover:text-white transition-all duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
               onClick={handleCopySettings}
@@ -335,365 +397,260 @@ export function HUD({
           <div className="col-span-3"></div>
         </div>
 
-        <footer className={`mt-6 flex flex-col justify-between items-end border-t border-[#D2B48C]/30 pt-4 text-[9px] font-mono transition-opacity duration-500 gap-4 ${showHUD ? "opacity-100" : "opacity-0"}`}>
-          <div className="flex justify-between items-end w-full pointer-events-none">
-            <div className={`flex gap-6 items-center ${showHUD ? "pointer-events-auto" : "pointer-events-none"}`}>
-              <div className="flex flex-col items-center gap-1">
-                <span className="opacity-60 text-[8px] uppercase">Active</span>
-                <span>{stats.totalAgents}</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="opacity-60 text-[8px] uppercase">Vectors</span>
-                <span>{stats.geometryCount.toLocaleString()}</span>
-              </div>
-
-              <div className="h-full border-l border-[#D2B48C]/30 mx-2"></div>
-
-              <div className="flex gap-4 items-center flex-wrap">
-                <SmartDial state={state} setters={setters}
-                  tooltip="ROTATION VELOCITY: Speed of the camera rotation."
-                  label="ROT_VEL"
-                  min={0.01}
-                  max={5.0}
-                  step={0.01}
-                  value={state.rotationSpeed}
-                  onChange={setters.setRotationSpeed}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="SWARM COHESION: Gravitational attraction. High = dense clustered structures. Low = sprawling independent organisms."
-                  label="MAGNET"
-                  min={0}
-                  max={0.1}
-                  step={0.002}
-                  value={state.magnetism}
-                  onChange={setters.setMagnetism}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MAX MEMORY POINTS: Increases maximum tail length. WARNING: High values will crash the browser!"
-                  label="MAX_DOMS"
-                  min={50000}
-                  max={450000}
-                  step={1000}
-                  value={state.maxDOMs}
-                  onChange={setters.setMaxDOMs}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="DETECTION RANGE: Distance for cross-breeding. High = frequent hybridization. Low = isolated species."
-                  label="PROXIM"
-                  min={1}
-                  max={2000.0}
-                  step={10.0}
-                  value={state.proximity}
-                  onChange={setters.setProximity}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="DESPERATION: Multiplier for age-based hunting and hybridization."
-                  label="DESPAIR"
-                  min={1}
-                  max={10.0}
-                  step={0.1}
-                  value={state.desperation}
-                  onChange={setters.setDesperation}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="DESPAIR AGE: Age at which creatures become desperate for hybridization."
-                  label="DESP_AGE"
-                  min={100}
-                  max={5000}
-                  step={100}
-                  value={state.despairAge}
-                  onChange={setters.setDespairAge}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="ARTIFACT SCALE: Size multiplier for ornaments. High = huge flowers/crystals. Low = tiny subtle details."
-                  label="ART_SIZE"
-                  min={0.05}
-                  max={1.0}
-                  step={0.01}
-                  value={state.flowerSize}
-                  onChange={setters.setFlowerSize}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="POPULATION LIMIT: Stability threshold. High = only highly dominant species survive. Low = extreme diversity."
-                  label="ENTROPY"
-                  min={0.0}
-                  max={1.0}
-                  step={0.05}
-                  value={state.entropyThreshold}
-                  onChange={setters.setEntropyThreshold}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="EXTRUSION SPEED: Rate of growth. High = explosive rapid expansion. Low = slow deliberate crawling."
-                  label="GROW_SPD"
-                  min={0.1}
-                  max={5.0}
-                  step={0.1}
-                  value={state.growthSpeed}
-                  onChange={setters.setGrowthSpeed}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="DECAY VELOCITY: Speed of recycling. High = volatile fleeting patterns. Low = persistent lingering trails."
-                  label="DEATH RATE"
-                  min={0.0}
-                  max={10.0}
-                  step={0.01}
-                  value={state.diebackRate}
-                  onChange={setters.setDiebackRate}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="HYBRID BREED COOL: Hybridization cooldown. High = rare hybridization. Low = bursts of hybrids."
-                  label="HYBRID_COOL"
-                  min={10}
-                  max={2000}
-                  step={10}
-                  value={state.hybridCooldown}
-                  onChange={setters.setHybridCooldown}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="ARTIFACT DECAY: How long hybrid artifacts persist compared to paths."
-                  label="ART_DECAY"
-                  min={1}
-                  max={50.0}
-                  step={1.0}
-                  value={state.hybridStickiness}
-                  onChange={setters.setHybridStickiness}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="BRANCH VARIANCE: Tendency ratio for species branching."
-                  label="BRANCH_VAR"
-                  min={1}
-                  max={50.0}
-                  step={1.0}
-                  value={state.branchTendencyVar}
-                  onChange={setters.setBranchTendencyVar}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="BRANCH RATE: Base multiplier for branching. High = complex fractals. Low = single lines."
-                  label="BRANCHING"
-                  min={0.1}
-                  max={500.0}
-                  step={0.1}
-                  value={state.branchingMultiplier}
-                  onChange={setters.setBranchingMultiplier}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="AGE BIAS: Targets old structures. High = brutal early culling. Low = long-lived ancient trails."
-                  label="DIE_BIAS"
-                  min={0.5}
-                  max={5.0}
-                  step={0.1}
-                  value={state.diebackAgeBias}
-                  onChange={setters.setDiebackAgeBias}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="HYBRID_SIZE: Size of the hybridization polyhedra artifacts left behind."
-                  label="HYBRID_SIZE"
-                  min={0.5}
-                  max={10.0}
-                  step={0.1}
-                  value={state.hybridSize}
-                  onChange={setters.setHybridSize}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="FEELER FADE: Speed multiplier for feelers dying off. High = feelers die very fast. Low = feelers linger like normal paths."
-                  label="FEELER_FADE"
-                  min={1.0}
-                  max={50.0}
-                  step={1.0}
-                  value={state.feelerFade}
-                  onChange={setters.setFeelerFade}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="FADE SPEED: How fast dead segments dissolve into wireframes and nothing. High = aggressive fast fade. Low = long slow ghost trails."
-                  label="FADE_SPEED"
-                  min={0.1}
-                  max={15.0}
-                  step={0.1}
-                  value={state.desiccationSpeed}
-                  onChange={setters.setDesiccationSpeed}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="TAPER DUR: Tapering animation time. High = long thin pointy tails. Low = blunt sudden cutoffs."
-                  label="TAPER_TIME"
-                  min={0.5}
-                  max={3.0}
-                  step={0.1}
-                  value={state.taperDuration}
-                  onChange={setters.setTaperDuration}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="TERMINATION: Natural life span. High = short burst-like organisms. Low = immortal endless trails."
-                  label="TERM_PROB"
-                  min={0.0}
-                  max={1.0}
-                  step={0.0001}
-                  value={state.terminationProb}
-                  onChange={setters.setTerminationProb}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="BRANCH TERM PENALTY: Extra chance of termination shortly after branching."
-                  label="TERM_BRANCH"
-                  min={0.5}
-                  max={10.0}
-                  step={0.5}
-                  value={state.termProbPostBranch}
-                  onChange={setters.setTermProbPostBranch}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="BRANCH MUTATION: Child vs parent traits. High = branches look entirely alien. Low = branches perfectly match."
-                  label="B_MUTATE"
-                  min={0.0}
-                  max={1.0}
-                  step={0.01}
-                  value={state.branchMutationRate}
-                  onChange={setters.setBranchMutationRate}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MAX ORGANISMS: Hard limit on active organisms, kills oldest. High = swarms. Low = only a few lines."
-                  label="MAX_AGENTS"
-                  min={1}
-                  max={200}
-                  step={1}
-                  value={state.maxAgents}
-                  onChange={setters.setMaxAgents}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MAX SPECIES: Limits number of viable distinct species. Breeding will be constrained to not exceed this limit."
-                  label="MAX_SPECIES"
-                  min={1}
-                  max={20}
-                  step={1}
-                  value={state.maxSpecies}
-                  onChange={setters.setMaxSpecies}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="ECO_FADE: 0 = Global Agent Limit. 1 = Perfect equality between active species (protects bushier slow-growing species from extinction by single-strand fast growers)."
-                  label="ECO_FADE"
-                  min={0.0}
-                  max={1.0}
-                  step={0.01}
-                  value={state.ecoFade}
-                  onChange={setters.setEcoFade}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MIN ORGANISMS: Minimum number of organisms to keep alive."
-                  label="MIN_AGENTS"
-                  min={2}
-                  max={20}
-                  step={1}
-                  value={state.minAgents}
-                  onChange={setters.setMinAgents}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="BOUNDARY RADIUS: The size of the invisible sphere containing the organisms."
-                  label="RADIUS"
-                  min={50}
-                  max={1000}
-                  step={10}
-                  value={state.boundarySize}
-                  onChange={setters.setBoundarySize}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MULTI COLOR APP PROB: Appendage color chaos. High = rainbow gradients on thorns/flowers. Low = simple colors."
-                  label="MULTI_COLOR"
-                  min={0}
-                  max={1.0}
-                  step={0.05}
-                  value={state.multicolorAppProb}
-                  onChange={setters.setMulticolorAppProb}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="SAME COLOR APP PROB: Host vs complementary color. High = matching cohesive color palette. Low = highly contrasting colors."
-                  label="SAME_COLOR"
-                  min={0.0}
-                  max={1.0}
-                  step={0.05}
-                  value={state.sameColorAppProb || 0.0}
-                  onChange={setters.setSameColorAppProb}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="PULSE SPEED: Bioluminescence frequency. High = hyperactive strobe effect. Low = gentle breathing glow."
-                  label="PULSE_SPD"
-                  min={0.1}
-                  max={1.0}
-                  step={0.1}
-                  value={state.globalPulseSpeed}
-                  onChange={setters.setGlobalPulseSpeed}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MAX SATURATION: Controls the maximum possible saturation for organisms. High = vivid neon colors. Low = muted grayscale organisms."
-                  label="MAX_SATURATION"
-                  min={0.0}
-                  max={1.0}
-                  step={0.05}
-                  value={state.maxSaturation}
-                  onChange={setters.setMaxSaturation}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="MAX WIDTH: Stem thickness limit. High = massive giant vines. Low = whisper-thin hair spirals."
-                  label="MAX_WIDTH"
-                  min={1.0}
-                  max={20.0}
-                  step={0.5}
-                  value={state.maxLineWidth}
-                  onChange={setters.setMaxLineWidth}
-                  color="#87CEEB"
-                />
-                <SmartDial state={state} setters={setters}
-                  tooltip="CULL RATE: Multiplier for how fast a species dies off when marked for culling."
-                  label="CULL_RATE"
-                  min={0.0}
-                  max={50.0}
-                  step={0.01}
-                  value={state.cullRate}
-                  onChange={setters.setCullRate}
-                  color="#87CEEB"
-                />
-              </div>
+                        <footer className={`absolute bottom-0 left-0 right-0 flex flex-col justify-end border-t border-[#D2B48C]/30 text-[9px] font-mono transition-opacity duration-500 ${showHUD ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+          <div className={`w-full flex flex-col bg-[#001220]/95 sm:bg-[#001220]/60 backdrop-blur-md transition-all duration-500 origin-bottom`}>
+            
+            {/* Mobile Chevron Header */}
+            <div 
+              className="flex justify-center w-full py-2 cursor-pointer hover:bg-white/5 border-b border-[#D2B48C]/20 sm:hidden"
+              onClick={() => setIsControlsExpanded(!isControlsExpanded)}
+            >
+              <ChevronDown className={`w-5 h-5 text-[#D2B48C] transition-transform duration-300 ${isControlsExpanded ? "" : "rotate-180"}`} />
             </div>
 
-            <div className={`text-right flex flex-col gap-1 items-end w-full md:w-auto ${showHUD ? "pointer-events-auto" : "pointer-events-none"}`}>
-              <div className="flex flex-col items-end gap-1 mb-2 w-full max-w-[200px]">
-                <div className="flex justify-between w-full text-[10px] opacity-60 uppercase">
-                  <span>Tide Level</span>
+            {/* Controls Area */}
+            <div className={`w-full transition-all duration-500 ${isControlsExpanded ? "max-h-[60vh] sm:max-h-[35vh] overflow-y-auto sm:overflow-x-hidden custom-scrollbar" : "max-h-0 sm:max-h-[35vh] overflow-y-auto sm:overflow-x-hidden custom-scrollbar"}`}>
+              <div className="flex overflow-x-auto sm:flex-wrap gap-6 p-4 pb-6 custom-scrollbar snap-x">
+                
+                {/* SYSTEM */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">SYSTEM</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="TIME SCALE
+Controls the simulation speed.
+High: Fast motion.
+Low: Slow motion." label="SLOW_MO" min={0.1} max={5.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="ROTATION VELOCITY
+Controls the base camera rotation speed.
+High: Fast spinning view.
+Low: Slow or stationary view." label="ROT_VEL" min={0.01} max={5.0} step={0.01} value={state.rotationSpeed} onChange={setters.setRotationSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MAX MEMORY POINTS
+Limits total rendering complexity.
+High: Richer visuals, lower performance.
+Low: Simpler visuals, faster performance." label="MAX_DOMS" min={50000} max={450000} step={1000} value={state.maxDOMs} onChange={setters.setMaxDOMs} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MAX ORGANISMS
+Upper limit for population.
+High: Crowded ecosystem.
+Low: Sparse ecosystem." label="MAX_AGENTS" min={1} max={200} step={1} value={state.maxAgents} onChange={setters.setMaxAgents} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MIN ORGANISMS
+Lower limit for population.
+High: Ecosystem never dies out.
+Low: Ecosystem can become almost empty." label="MIN_AGENTS" min={2} max={20} step={1} value={state.minAgents} onChange={setters.setMinAgents} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MAX SPECIES
+Maximum active genetic strains.
+High: High biodiversity.
+Low: Monoculture." label="MAX_SPECIES" min={1} max={20} step={1} value={state.maxSpecies} onChange={setters.setMaxSpecies} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BOUNDARY RADIUS
+Size of the simulation area.
+High: Vast open space.
+Low: Confined, dense space." label="RADIUS" min={50} max={1000} step={10} value={state.boundarySize} onChange={setters.setBoundarySize} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* ECOLOGY */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">ECOLOGY</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="SWARM COHESION
+How strongly organisms attract each other.
+High: Tight, dense swarms.
+Low: Independent, scattered movement." label="MAGNET" min={0} max={0.1} step={0.002} value={state.magnetism} onChange={setters.setMagnetism} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="DETECTION RANGE
+How far organisms can sense others.
+High: Long-range interactions.
+Low: Myopic, local interactions only." label="PROXIM" min={1} max={2000.0} step={10.0} value={state.proximity} onChange={setters.setProximity} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="DESPERATION
+Erratic movement when seeking food/mates.
+High: Frantic, fast searching.
+Low: Calm, methodical movement." label="DESPAIR" min={1} max={10.0} step={0.1} value={state.desperation} onChange={setters.setDesperation} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="DESPAIR AGE
+Age at which desperation begins.
+High: Only elders become desperate.
+Low: Youthful desperation." label="DESP_AGE" min={100} max={5000} step={100} value={state.despairAge} onChange={setters.setDespairAge} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="POPULATION LIMIT
+Threshold for environmental capacity.
+High: Sustains larger populations.
+Low: Strict population culling." label="ENTROPY" min={0.0} max={1.0} step={0.05} value={state.entropyThreshold} onChange={setters.setEntropyThreshold} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="ECO FADE
+Rate at which environment marks disappear.
+High: Trails fade quickly.
+Low: Long-lasting environmental impact." label="ECO_FADE" min={0.0} max={1.0} step={0.01} value={state.ecoFade} onChange={setters.setEcoFade} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="CULL RATE
+Speed of population control.
+High: Rapid culling of excess organisms.
+Low: Slow, gradual culling." label="CULL_RATE" min={0.0} max={50.0} step={0.01} value={state.cullRate} onChange={setters.setCullRate} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* LIFECYCLE */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">LIFECYCLE</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="EXTRUSION SPEED
+Growth rate of organisms.
+High: Fast, explosive growth.
+Low: Slow, deliberate growth." label="GROW_SPD" min={0.1} max={5.0} step={0.1} value={state.growthSpeed} onChange={setters.setGrowthSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="DECAY VELOCITY
+Speed of organism deterioration.
+High: Rapid decay and death.
+Low: Slow, lingering decline." label="DEATH RATE" min={0.0} max={100.0} step={0.01} value={state.diebackRate} onChange={setters.setDiebackRate} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="AGE BIAS
+Impact of age on death rate.
+High: Old age is strictly fatal.
+Low: Age matters less for survival." label="DIE_BIAS" min={0.5} max={5.0} step={0.1} value={state.diebackAgeBias} onChange={setters.setDiebackAgeBias} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="TERMINATION
+Base chance of sudden death.
+High: Frequent random casualties.
+Low: Rare random deaths." label="TERM_PROB" min={0.0} max={1.0} step={0.0001} value={state.terminationProb} onChange={setters.setTerminationProb} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="FADE SPEED
+How fast dead organisms vanish.
+High: Corpses disappear quickly.
+Low: Ghostly remains linger." label="FADE_SPEED" min={0.1} max={15.0} step={0.1} value={state.desiccationSpeed} onChange={setters.setDesiccationSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="FEELER FADE
+Decay rate of sensory appendages.
+High: Feelers are short-lived.
+Low: Long, persistent feelers." label="FEELER_FADE" min={1.0} max={50.0} step={1.0} value={state.feelerFade} onChange={setters.setFeelerFade} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* REPRODUCTION */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">REPRODUCTION</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="HYBRID BREED COOL
+Delay between breeding attempts.
+High: Infrequent, rare breeding.
+Low: Rapid, continuous breeding." label="HYBRID_COOL" min={10} max={2000} step={10} value={state.hybridCooldown} onChange={setters.setHybridCooldown} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="HYBRID SIZE
+Starting size of new offspring.
+High: Massive newborns.
+Low: Tiny, fragile newborns." label="HYBRID_SIZE" min={0.5} max={10.0} step={0.1} value={state.hybridSize} onChange={setters.setHybridSize} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="HYBRID DECAY
+Duration that hybridization artifacts persist before fading.
+High: Artifacts linger for a long time.
+Low: Artifacts fade away quickly." label="HYBRID_DECAY" min={1} max={50.0} step={1.0} value={state.hybridStickiness} onChange={setters.setHybridStickiness} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* BRANCHING */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">BRANCHING</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="BRANCH VARIANCE
+Randomness in branching patterns.
+High: Wild, chaotic branching.
+Low: Uniform, predictable branching." label="BRANCH_VAR" min={1} max={50.0} step={1.0} value={state.branchTendencyVar} onChange={setters.setBranchTendencyVar} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BRANCH RATE
+Overall frequency of branching.
+High: Dense, bushy structures.
+Low: Linear, simple structures." label="BRANCHING" min={0.1} max={500.0} step={0.1} value={state.branchingMultiplier} onChange={setters.setBranchingMultiplier} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BRANCH TERM PENALTY
+Death risk after creating a branch.
+High: Branching is often fatal.
+Low: Safe, frequent branching." label="TERM_BRANCH" min={0.5} max={10.0} step={0.5} value={state.termProbPostBranch} onChange={setters.setTermProbPostBranch} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BRANCH MUTATION
+Chance of mutation upon branching.
+High: Rapid evolution on new branches.
+Low: Stable genetic clones." label="B_MUTATE" min={0.0} max={1.0} step={0.01} value={state.branchMutationRate} onChange={setters.setBranchMutationRate} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BRANCH BIGGER
+Chance for branches to be thicker.
+High: Thick, heavy secondary branches.
+Low: Thin, wispy branches." label="BRANCH_BIG" min={0} max={1.0} step={0.05} value={state.branchBigger} onChange={setters.setBranchBigger} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="LARGE BRANCH PROB
+Frequency of major structural forks.
+High: Frequent major splits.
+Low: Mostly minor side-branches." label="LRG_BRANCH" min={0.0} max={1.0} step={0.05} value={state.branchSplitSizeProb} onChange={setters.setBranchSplitSizeProb} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* SPEEDS */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">SPEEDS</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="SNAKE SPEED
+Movement speed for snake-types.
+High: Fast, darting snakes.
+Low: Sluggish snakes." label="SNAKE" min={0.1} max={10.0} step={0.1} value={state.snakeSpeed} onChange={setters.setSnakeSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="SNAKE STEP
+Step size for snake-types.
+High: Snakes cover more ground per tick.
+Low: Snakes take smaller steps." label="S_STEP" min={0.1} max={5.0} step={0.1} value={state.snakeStepSize} onChange={setters.setSnakeStepSize} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="SNAKE WANDER
+Wander intensity for snake-types.
+High: Snakes turn frantically.
+Low: Snakes move in straight lines." label="S_WAND" min={0.1} max={10.0} step={0.1} value={state.snakeWander} onChange={setters.setSnakeWander} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="BUSH SPEED
+Growth speed for bush-types.
+High: Rapidly expanding bushes.
+Low: Slowly growing bushes." label="BUSH" min={0.1} max={10.0} step={0.1} value={state.bushSpeed} onChange={setters.setBushSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="TREE SPEED
+Growth speed for tree-types.
+High: Fast-sprouting trees.
+Low: Slow, ancient trees." label="TREE" min={0.1} max={10.0} step={0.1} value={state.treeSpeed} onChange={setters.setTreeSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="GINGER SPEED
+Movement speed for ginger-types.
+High: Quick, erratic gingers.
+Low: Slow, drifting gingers." label="GINGER" min={0.1} max={10.0} step={0.1} value={state.gingerSpeed} onChange={setters.setGingerSpeed} color="#87CEEB" />
+                  </div>
+                </div>
+
+                {/* MORPHOLOGY */}
+                <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">MORPHOLOGY</span>
+                  <div className="flex gap-3 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial state={state} setters={setters} tooltip="APPENDAGE SIZE
+Scale of structural appendages.
+High: Massive, prominent appendages.
+Low: Tiny, subtle appendages." label="APP_SIZE" min={0.05} max={1.0} step={0.01} value={state.flowerSize} onChange={setters.setFlowerSize} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="TAPER DUR
+Duration of line thickness tapering.
+High: Long, smooth tapers.
+Low: Abrupt, sharp tapers." label="TAPER_TIME" min={0.5} max={3.0} step={0.1} value={state.taperDuration} onChange={setters.setTaperDuration} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MAX WIDTH
+Maximum thickness of organisms.
+High: Thick, bulky lines.
+Low: Thin, delicate lines." label="MAX_WIDTH" min={1.0} max={20.0} step={0.5} value={state.maxLineWidth} onChange={setters.setMaxLineWidth} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="MULTI COLOR APP PROB
+Chance of colorful appendages.
+High: Rainbow, multi-colored parts.
+Low: Monochromatic parts." label="MULTI_COLOR" min={0} max={1.0} step={0.05} value={state.multicolorAppProb} onChange={setters.setMulticolorAppProb} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="SAME COLOR APP PROB
+Chance appendages match body color.
+High: Uniformly colored organisms.
+Low: Contrasting appendage colors." label="SAME_COLOR" min={0.0} max={1.0} step={0.05} value={state.sameColorAppProb} onChange={setters.setSameColorAppProb} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="PULSE SPEED
+Speed of luminescent pulses.
+High: Rapid, strobing pulses.
+Low: Slow, gentle throbbing." label="PULSE_SPD" min={0.1} max={1.0} step={0.1} value={state.globalPulseSpeed} onChange={setters.setGlobalPulseSpeed} color="#87CEEB" />
+                    <SmartDial state={state} setters={setters} tooltip="SATURATION
+Overall color intensity limit.
+High: Vibrant, neon colors.
+Low: Muted, pastel colors." label="SATURATION" min={0.0} max={1.0} step={0.05} value={state.maxSaturation} onChange={setters.setMaxSaturation} color="#87CEEB" />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            
+            {/* Stats Bar */}
+            <div className="flex justify-between items-center w-full p-2 px-4 border-t border-[#D2B48C]/20 bg-[#001220] z-20 shrink-0 pointer-events-auto">
+              <div className="flex gap-4 sm:gap-6 items-center">
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="opacity-60 text-[8px] uppercase">Active</span>
+                  <span>{stats.totalAgents}</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="opacity-60 text-[8px] uppercase">Vectors</span>
+                  <span>{stats.geometryCount.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="text-right flex flex-col gap-1 items-end w-[100px] sm:w-[150px]">
+                <div className="flex justify-between w-full text-[9px] opacity-60 uppercase">
+                  <span>Tide</span>
                   <span>{(stats.tideValue * 100).toFixed(0)}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-white/5 border border-[#D2B48C]/20 overflow-hidden relative">
-                  <div
-                    className="h-full bg-gradient-to-r from-orange-600 to-red-600 transition-all duration-75"
-                    style={{ width: `${stats.tideValue * 100}%` }}
-                  />
+                  <div className="h-full bg-gradient-to-r from-orange-600 to-red-600 transition-all duration-75" style={{ width: `${stats.tideValue * 100}%` }} />
                 </div>
               </div>
             </div>

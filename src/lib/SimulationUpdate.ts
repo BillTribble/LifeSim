@@ -5,9 +5,85 @@ import { mutateGenome, breedGenomes } from "./SimulationGenetics";
 import { processAgents } from "./SimulationUpdateAgents";
 
 export function updateSimulation(engine: SimulationEngine) {
-  engine.time++;
+  engine.time += engine.timeScale;
+  engine.unscaledTime += 1;
+  engine.frameCount++;
   if (engine.controls) {
     engine.controls.update();
+  }
+
+  // Handle automatic theme morphing
+  if (engine.themeMorphFreq < 1.0) {
+    // scale from 3s to 10 minutes (600s). Max morphFreq (1.0) is OFF, so calculate up to 0.99
+    const freq = Math.min(0.99, engine.themeMorphFreq);
+    const intervalSecs = 3 * Math.pow(600 / 3, freq / 0.99);
+    // 60 frames per second
+    const intervalFrames = intervalSecs * 60;
+    
+    if (engine.frameCount - engine.lastThemeMorphTime > intervalFrames && engine.themeProgress >= 1.0) {
+      engine.lastThemeMorphTime = engine.frameCount;
+      
+      // Pick random next theme different from current
+      let next = Math.floor(Math.random() * 4);
+      while (next === engine.theme) next = Math.floor(Math.random() * 4);
+      
+          engine.setTheme(next, false);
+          // We don't want the React layer to overwrite this automatically, 
+          // but it will if the React state has its own 'theme'. 
+          // To properly sync this, the engine should emit an event or React should just not force theme if it hasn't changed.
+          // We will handle it locally.
+          if (engine.onConfigChange) {
+            engine.onConfigChange({ theme: next });
+          }
+        }
+      }
+    
+      // Handle theme transition progress
+      if (engine.themeProgress < 1.0) {
+        // themeMorphSpeed is in seconds (1 to 20)
+        const transitionSpeed = engine.manualThemeTransition ? 0.5 : engine.themeMorphSpeed;
+        const progressInc = 1.0 / (transitionSpeed * 60);
+        engine.themeProgress += progressInc;
+        
+        if (engine.themeProgress >= 1.0) {
+          engine.themeProgress = 1.0;
+          engine.theme = engine.nextTheme;
+          engine.themeColor1 = engine.nextThemeColor1;
+          engine.themeColor2 = engine.nextThemeColor2;
+        }
+      }
+
+  // Update theme uniforms
+  const materialsToUpdate = [
+    engine.cylinderMesh.material as THREE.MeshPhysicalMaterial,
+  ];
+  if (engine.hybridMeshes.length > 0) {
+    materialsToUpdate.push(engine.hybridMeshes[0].material as THREE.MeshPhysicalMaterial);
+  }
+  for (const mat of materialsToUpdate) {
+    if (mat && mat.userData.theme1) {
+      mat.userData.theme1.value = engine.theme;
+      mat.userData.theme2.value = engine.nextTheme;
+      mat.userData.themeMix.value = engine.themeProgress < 1.0 ? engine.themeProgress : 0.0;
+      
+      if (engine.theme === 3) {
+        const bgC = new THREE.Color(engine.bgColor);
+        const hsl = bgC.getHSL({h:0,s:0,l:0});
+        mat.userData.themeColor1_A.value.setHSL((hsl.h + 0.5) % 1.0, Math.max(hsl.s, 0.5), 0.5);
+      } else {
+        mat.userData.themeColor1_A.value.set(engine.themeColor1);
+        mat.userData.themeColor2_A.value.set(engine.themeColor2);
+      }
+
+      if (engine.nextTheme === 3) {
+        const bgC = new THREE.Color(engine.bgColor);
+        const hsl = bgC.getHSL({h:0,s:0,l:0});
+        mat.userData.themeColor1_B.value.setHSL((hsl.h + 0.5) % 1.0, Math.max(hsl.s, 0.5), 0.5);
+      } else {
+        mat.userData.themeColor1_B.value.set(engine.nextThemeColor1);
+        mat.userData.themeColor2_B.value.set(engine.nextThemeColor2);
+      }
+    }
   }
 
   if (engine.lastMaxDOMs !== undefined && engine.lastMaxDOMs > engine.maxDOMs) {
@@ -104,7 +180,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
           if (match) {
             const pulseVal = Math.sin(
-                engine.time *
+                engine.unscaledTime *
                   genome.pulseSpeed *
                   (engine.globalPulseSpeed || 1.0),
               );
@@ -194,7 +270,7 @@ export function updateSimulation(engine: SimulationEngine) {
           const pulseEffect =
             1.0 +
             Math.sin(
-              engine.time *
+              engine.unscaledTime *
                 genome.pulseSpeed *
                 (engine.globalPulseSpeed || 1.0),
             ) *
@@ -208,11 +284,11 @@ export function updateSimulation(engine: SimulationEngine) {
   }
 
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
-  const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor;
+  const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 
   if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = Math.floor(engine.maxDOMs / 20); // Full sweep every ~20 frames
-    const sweepStart = (engine.time * batchSize) % engine.maxDOMs;
+    const sweepStart = (Math.floor(engine.time) * batchSize) % engine.maxDOMs;
 
     for (let i = 0; i < batchSize; i++) {
       const idx = (sweepStart + i) % engine.maxDOMs;
@@ -252,7 +328,7 @@ export function updateSimulation(engine: SimulationEngine) {
       const appLim = Math.floor(engine.maxDOMs / 4);
       if (appLim > 0) {
         const appBatchSize = Math.floor(appLim / 20); // Faster sweep for appendages since they just check parents
-        const appSweepStart = (engine.time * appBatchSize) % appLim;
+        const appSweepStart = (Math.floor(engine.time) * appBatchSize) % appLim;
         for (let i = 0; i < appBatchSize; i++) {
           const idx = (appSweepStart + i) % appLim;
           const seg = app.segments[idx];
@@ -309,13 +385,26 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (engine.hybridConnectionMesh) {
     const positions: number[] = [];
-    const activeHybrids: { pos: THREE.Vector3; time: number }[] = [];
+    const colors: number[] = [];
+    const activeHybrids: { pos: THREE.Vector3; time: number; alpha: number }[] = [];
     for (let i = 0; i < 2000; i++) {
       const seg = engine.hybridSegments[i];
-      if (seg && !engine.dyingHybrids.has(seg.index)) {
+      if (seg) {
+        let alpha = 1.0;
+        if (engine.dyingHybrids.has(seg.index)) {
+          if (seg.dyingStart) {
+            const fadeAge = engine.time - seg.dyingStart;
+            const desiccationSpeed = engine.desiccationSpeed || 1.0;
+            const wipeDuration = (engine.hybridStickiness * 12) / desiccationSpeed;
+            if (fadeAge > wipeDuration) continue;
+            alpha = Math.max(0, 1.0 - fadeAge / wipeDuration);
+          } else {
+            alpha = 1.0;
+          }
+        }
         const pos = new THREE.Vector3();
         pos.setFromMatrixPosition(seg.matrix);
-        activeHybrids.push({ pos, time: seg.timestamp });
+        activeHybrids.push({ pos, time: seg.timestamp, alpha });
       }
     }
 
@@ -327,11 +416,14 @@ export function updateSimulation(engine: SimulationEngine) {
         activeHybrids[i].pos.y,
         activeHybrids[i].pos.z,
       );
+      colors.push(1, 1, 1, activeHybrids[i].alpha);
+      
       positions.push(
         activeHybrids[i + 1].pos.x,
         activeHybrids[i + 1].pos.y,
         activeHybrids[i + 1].pos.z,
       );
+      colors.push(1, 1, 1, activeHybrids[i + 1].alpha);
     }
 
     const posAttr = engine.hybridConnectionMesh.geometry.getAttribute(
@@ -342,14 +434,30 @@ export function updateSimulation(engine: SimulationEngine) {
         "position",
         new THREE.BufferAttribute(new Float32Array(positions.length * 2), 3),
       );
+      engine.hybridConnectionMesh.geometry.setAttribute(
+        "color",
+        new THREE.BufferAttribute(new Float32Array(colors.length * 2), 4),
+      );
     }
 
-    const newArray = engine.hybridConnectionMesh.geometry.getAttribute(
+    const newPosArray = engine.hybridConnectionMesh.geometry.getAttribute(
       "position",
     ).array as Float32Array;
-    newArray.set(positions);
-    for (let k = positions.length; k < newArray.length; k++) {
-      newArray[k] = 0;
+    newPosArray.set(positions);
+    for (let k = positions.length; k < newPosArray.length; k++) {
+      newPosArray[k] = 0;
+    }
+    
+    const colorAttr = engine.hybridConnectionMesh.geometry.getAttribute(
+      "color",
+    ) as THREE.BufferAttribute;
+    if (colorAttr) {
+      const newColorArray = colorAttr.array as Float32Array;
+      newColorArray.set(colors);
+      for (let k = colors.length; k < newColorArray.length; k++) {
+        newColorArray[k] = 0;
+      }
+      colorAttr.needsUpdate = true;
     }
 
     engine.hybridConnectionMesh.geometry.setDrawRange(0, positions.length / 3);
@@ -359,7 +467,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = 100;
-    const sweepStart = (engine.time * batchSize) % 2000;
+    const sweepStart = (Math.floor(engine.time) * batchSize) % 2000;
     for (let i = 0; i < batchSize; i++) {
       const idx = (sweepStart + i) % 2000;
       const seg = engine.hybridSegments[idx];
@@ -384,7 +492,7 @@ export function updateSimulation(engine: SimulationEngine) {
   }
   engine.agents = activeAgents;
 
-  if (engine.time % 120 === 0) {
+  if (engine.frameCount % 120 === 0) {
     let totalBiomass = 0;
     engine.biomassMap.forEach((v) => (totalBiomass += v));
 
@@ -393,31 +501,29 @@ export function updateSimulation(engine: SimulationEngine) {
         const ratio = biomass / totalBiomass;
         const isDying = engine.dyingStrains && engine.dyingStrains.has(strainName);
 
-        if (isDying && ratio < 0.05) {
+        if (isDying && ratio < 0.03) {
           engine.biomassMap.delete(strainName);
           engine.dyingStrains.delete(strainName);
           if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
           if (engine.suppressedStrains) engine.suppressedStrains.delete(strainName);
           
           for (let i = 0; i < engine.maxDOMs; i++) {
-            if (engine.segments[i] && engine.segments[i].strainName === strainName) {
-              engine.dummy.matrix.makeScale(0, 0, 0);
-              engine.cylinderMesh.setMatrixAt(i, engine.dummy.matrix);
-              engine.segments[i] = undefined as any;
+            const seg = engine.segments[i];
+            if (seg && seg.strainName === strainName) {
+              if (!seg.dyingStart) seg.dyingStart = engine.time;
+              engine.dyingStems.add(i);
             }
           }
-          engine.cylinderMesh.instanceMatrix.needsUpdate = true;
           
           for (const app of engine.appendages.values()) {
             const lim = Math.floor(engine.maxDOMs / 4);
             for (let i = 0; i < lim; i++) {
-              if (app.segments[i] && app.segments[i].strainName === strainName) {
-                engine.dummy.matrix.makeScale(0, 0, 0);
-                app.mesh.setMatrixAt(i, engine.dummy.matrix);
-                app.segments[i] = undefined as any;
+              const seg = app.segments[i];
+              if (seg && seg.strainName === strainName) {
+                if (!seg.dyingStart) seg.dyingStart = engine.time;
+                app.dyingSet.add(i);
               }
             }
-            app.mesh.instanceMatrix.needsUpdate = true;
           }
           
           for (let i = 0; i < activeAgents.length; i++) {
@@ -432,9 +538,9 @@ export function updateSimulation(engine: SimulationEngine) {
         if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
         if (!engine.speciesAbove5Percent) engine.speciesAbove5Percent = new Set();
         
-        if (ratio > 0.05) {
+        if (ratio > 0.03) {
           engine.speciesAbove5Percent.add(strainName);
-        } else if (ratio < 0.05 && engine.speciesAbove5Percent.has(strainName)) {
+        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName)) {
           engine.speciesAbove5Percent.delete(strainName);
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
@@ -444,7 +550,7 @@ export function updateSimulation(engine: SimulationEngine) {
           }
           if (!engine.dyingStrains) engine.dyingStrains = new Set();
           engine.dyingStrains.add(strainName);
-          engine.onLog(`Species ${strainName} dropped below 5% and was culled to make space.`);
+          engine.onLog(`Species ${strainName} dropped below 3% and was culled to make space.`);
         }
 
         const justSuppressed = ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
@@ -523,7 +629,7 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
-  if (engine.time % 15 === 0) {
+  if (engine.frameCount % 15 === 0) {
     for (let i = 0; i < activeAgents.length; i++) {
       const a1 = activeAgents[i];
       if (!a1.active || a1.tapering) continue;

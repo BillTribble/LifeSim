@@ -1,66 +1,76 @@
 import { useState, useEffect } from "react";
 
 export const DEFAULTS = {
-  rotationSpeed: 0.1,
-  magnetism: 10,
-  proximity: 40,
-  desperation: 7.7,
-  despairAge: 800,
-  flowerSize: 0.41000000000000003,
-  entropyThreshold: 0.7,
-  tideSpeed: 1.1,
-  tideColor: "#643707",
-  bgColor: "#3e5e4c",
-  fogColor: "#000000",
-  tideThickness: 110,
-  tideOpacity: 0.15000000000000002,
-  tideSaturation: 1,
-  growthSpeed: 0.4,
-  diebackRate: 0.01,
-  hybridCooldown: 200,
-  hybridStickiness: 47,
-  branchTendencyVar: 50,
-  ornamentFrequency: 3.2,
-  branchingMultiplier: 884.4000000000001,
-  branchBigger: 0.75,
-  branchSplitSizeProb: 0.9500000000000001,
-  maxDOMs: 341000,
-  maxAgents: 50,
-  maxSpecies: 4,
-  ecoFade: 1,
-  minAgents: 4,
-  boundarySize: 150,
-  desiccationSpeed: 9.9,
-  hybridSize: 3.5,
-  terminationProb: 0.13,
-  termProbPostBranch: 1.5,
-  taperDuration: 1,
-  diebackAgeBias: 5,
-  branchMutationRate: 0,
-  enableGlow: false,
-  glowSize: 0.5,
-  fogVisibility: 950,
-  traitProbs: {
-    flowers: 0.45,
-    leaves: 0.5,
-    petals: 0.45,
-    needles: 0.5,
-    thorns: 0.4,
-    hair: 0.6000000000000001,
-    curlyHair: 0.5,
-    crystals: 0.6000000000000001,
-    spores: 0.5,
-    scales: 0.5,
-    spirals: 0.5
+  "themeMorphSpeed": 5,
+  "themeMorphFreq": 0.61,
+  "theme": 1,
+  "timeScale": 2.12,
+  "gingerSpeed": 1,
+  "treeSpeed": 1,
+  "bushSpeed": 1,
+  "snakeWander": 1,
+  "snakeStepSize": 1,
+  "snakeSpeed": 1,
+  "rotationSpeed": 0.1,
+  "magnetism": 10,
+  "proximity": 40,
+  "desperation": 7.7,
+  "despairAge": 1800,
+  "flowerSize": 0.71,
+  "entropyThreshold": 0.7,
+  "tideSpeed": 0.30000000000000004,
+  "tideColor": "#643707",
+  "bgColor": "#4f5e3e",
+  "fogColor": "#000000",
+  "tideThickness": 300,
+  "tideOpacity": 0.15000000000000002,
+  "tideSaturation": 0.4,
+  "growthSpeed": 0.1,
+  "diebackRate": 1,
+  "hybridCooldown": 200,
+  "hybridStickiness": 1,
+  "branchTendencyVar": 50,
+  "ornamentFrequency": 3.2,
+  "branchingMultiplier": 3,
+  "branchBigger": 0.75,
+  "branchSplitSizeProb": 0.95,
+  "maxDOMs": 341000,
+  "maxAgents": 50,
+  "maxSpecies": 4,
+  "ecoFade": 1,
+  "minAgents": 4,
+  "boundarySize": 200,
+  "desiccationSpeed": 1.1,
+  "hybridSize": 2,
+  "terminationProb": 0.02,
+  "termProbPostBranch": 1.5,
+  "taperDuration": 1,
+  "diebackAgeBias": 1.5,
+  "branchMutationRate": 0,
+  "enableGlow": false,
+  "glowSize": 0.5,
+  "fogVisibility": 1250,
+  "traitProbs": {
+    "flowers": 0.45,
+    "leaves": 0.5,
+    "petals": 0.45,
+    "needles": 0.5,
+    "thorns": 0.4,
+    "hair": 0.6000000000000001,
+    "curlyHair": 0.5,
+    "crystals": 0.6000000000000001,
+    "spores": 0.5,
+    "scales": 0.5,
+    "spirals": 0.5
   },
-  maxLineWidth: 12,
-  globalPulseSpeed: 0.1,
-  multicolorAppProb: 0.05,
-  sameColorAppProb: 0.9,
-  maxSaturation: 0.8,
-  feelerFade: 10,
-  cullRate: 0.36,
-  dialLimits: {
+  "maxLineWidth": 12,
+  "globalPulseSpeed": 0.1,
+  "multicolorAppProb": 0.05,
+  "sameColorAppProb": 0.9,
+  "maxSaturation": 0.8,
+  "feelerFade": 10,
+  "cullRate": 48.87,
+  "dialLimits": {
     "DEATH RATE": {
       "min": 0,
       "max": 1
@@ -74,17 +84,67 @@ export const DEFAULTS = {
       "max": 1000000
     }
   } as Record<string, {min: number, max: number}>,
-  cameraPosition: {
-    x: 183.0903286489081,
-    y: 199.99999999999997,
-    z: 215.5874104748114,
-    zoom: 1
+  "cameraPosition": {
+    "x": -134.13585804333533,
+    "y": 199.99999999999997,
+    "z": 249.013195608141,
+    "zoom": 1
   },
-  version: "1.0"
+  "version": "1.0"
 };
 
 export function useSimulationState() {
-  const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: number}>>(() => {
+    const [snakeSpeed, setSnakeSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("snakeSpeed") || DEFAULTS.snakeSpeed.toString(),
+    ),
+  );
+  const [snakeStepSize, setSnakeStepSize] = useState(() =>
+    parseFloat(
+      localStorage.getItem("snakeStepSize") || DEFAULTS.snakeStepSize.toString(),
+    ),
+  );
+  const [snakeWander, setSnakeWander] = useState(() =>
+    parseFloat(
+      localStorage.getItem("snakeWander") || DEFAULTS.snakeWander.toString(),
+    ),
+  );
+  const [bushSpeed, setBushSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("bushSpeed") || DEFAULTS.bushSpeed.toString(),
+    ),
+  );
+  const [treeSpeed, setTreeSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("treeSpeed") || DEFAULTS.treeSpeed.toString(),
+    ),
+  );
+  const [gingerSpeed, setGingerSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("gingerSpeed") || DEFAULTS.gingerSpeed.toString(),
+    ),
+  );
+  const [timeScale, setTimeScale] = useState(() =>
+    parseFloat(
+      localStorage.getItem("timeScale") || DEFAULTS.timeScale.toString(),
+    ),
+  );
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored !== null) return parseInt(stored, 10);
+    return DEFAULTS.theme;
+  });
+  const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
+    parseFloat(
+      localStorage.getItem("themeMorphFreq") || DEFAULTS.themeMorphFreq.toString(),
+    ),
+  );
+  const [themeMorphSpeed, setThemeMorphSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("themeMorphSpeed") || DEFAULTS.themeMorphSpeed.toString(),
+    ),
+  );
+const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: number}>>(() => {
     try {
       const stored = localStorage.getItem("dialLimits");
       if (stored) {
@@ -354,6 +414,15 @@ export function useSimulationState() {
   });
 
   useEffect(() => {
+    localStorage.setItem("snakeSpeed", snakeSpeed.toString());
+    localStorage.setItem("snakeStepSize", snakeStepSize.toString());
+    localStorage.setItem("snakeWander", snakeWander.toString());
+    localStorage.setItem("bushSpeed", bushSpeed.toString());
+    localStorage.setItem("treeSpeed", treeSpeed.toString());
+    localStorage.setItem("gingerSpeed", gingerSpeed.toString());
+    localStorage.setItem("timeScale", timeScale.toString());
+    localStorage.setItem("themeMorphFreq", themeMorphFreq.toString());
+    localStorage.setItem("themeMorphSpeed", themeMorphSpeed.toString());
     localStorage.setItem("rotationSpeed", rotationSpeed.toString());
     localStorage.setItem("magnetism", magnetism.toString());
     localStorage.setItem("proximity", proximity.toString());
@@ -456,6 +525,16 @@ export function useSimulationState() {
 
   return {
     state: {
+      themeMorphSpeed,
+      themeMorphFreq,
+      theme,
+      timeScale,
+      gingerSpeed,
+      treeSpeed,
+      bushSpeed,
+      snakeWander,
+      snakeStepSize,
+      snakeSpeed,
       rotationSpeed,
       magnetism,
       proximity,
@@ -506,6 +585,16 @@ export function useSimulationState() {
       dialLimits,
     },
     setters: {
+      setThemeMorphSpeed,
+      setThemeMorphFreq,
+      setTheme,
+      setTimeScale,
+      setGingerSpeed,
+      setTreeSpeed,
+      setBushSpeed,
+      setSnakeWander,
+      setSnakeStepSize,
+      setSnakeSpeed,
       setRotationSpeed,
       setMagnetism,
       setProximity,

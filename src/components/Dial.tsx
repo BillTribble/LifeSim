@@ -11,9 +11,10 @@ interface DialProps {
   label?: string;
   tooltip?: string;
   onLimitsChange?: (min: number, max: number) => void;
+  formatValue?: (val: number) => React.ReactNode;
 }
 
-export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange }: DialProps) {
+export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange, formatValue }: DialProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
@@ -84,7 +85,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
 
   return (
     <div 
-      className="flex flex-col items-center gap-1 relative group w-12"
+      className="flex flex-col items-center gap-1 relative group min-w-[72px]"
       onMouseEnter={onMouseEnter}
       onMouseLeave={() => setHover(false)}
     >
@@ -108,7 +109,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
       )}
       {hover && tooltip && !showDialog && createPortal(
         <div 
-          className="fixed bg-[#001220]/95 border border-[#D2B48C]/50 text-white text-[10px] px-3 py-2 rounded pointer-events-none w-48 text-center z-[9999] shadow-xl font-sans leading-relaxed backdrop-blur-sm"
+          className="fixed bg-[#001220]/95 border border-[#D2B48C]/50 text-white text-[10px] px-3 py-2 rounded pointer-events-none w-64 text-left z-[9999] shadow-xl font-sans leading-relaxed backdrop-blur-sm whitespace-pre-line"
           style={{ 
             left: tooltipPos.x, 
             top: tooltipPos.y,
@@ -139,7 +140,9 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
           />
         </div>
       </div>
-      <span className="text-[8px] font-mono opacity-80" style={{ color }}>{Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1)}</span>
+      <span className="text-[8px] font-mono opacity-80" style={{ color }}>
+        {formatValue ? formatValue(value) : (Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1))}
+      </span>
     </div>
   );
 }

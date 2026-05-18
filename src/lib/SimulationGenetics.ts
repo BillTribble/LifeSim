@@ -9,27 +9,88 @@ import {
 } from "./SimulationTypes";
 
 export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
+  material.userData.theme1 = { value: 0 };
+  material.userData.theme2 = { value: 0 };
+  material.userData.themeMix = { value: 0.0 };
+  material.userData.themeColor1_A = { value: new THREE.Color() };
+  material.userData.themeColor2_A = { value: new THREE.Color() };
+  material.userData.themeColor1_B = { value: new THREE.Color() };
+  material.userData.themeColor2_B = { value: new THREE.Color() };
+
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.theme1 = material.userData.theme1;
+    shader.uniforms.theme2 = material.userData.theme2;
+    shader.uniforms.themeMix = material.userData.themeMix;
+    shader.uniforms.themeColor1_A = material.userData.themeColor1_A;
+    shader.uniforms.themeColor2_A = material.userData.themeColor2_A;
+    shader.uniforms.themeColor1_B = material.userData.themeColor1_B;
+    shader.uniforms.themeColor2_B = material.userData.themeColor2_B;
+
     // Expose Attributes
     shader.vertexShader = `
             attribute float instanceGlow;
             attribute float instanceDecay;
+            attribute float instanceHash;
             varying float vGlow;
             varying float vDecay;
+            varying float vHash;
+            varying vec3 vInstanceColor;
             ${shader.vertexShader}
         `.replace(
       "#include <color_vertex>",
       `#include <color_vertex>
              vGlow = instanceGlow;
-             vDecay = instanceDecay;`,
+             vDecay = instanceDecay;
+             vHash = instanceHash;
+             #ifdef USE_INSTANCING_COLOR
+               vInstanceColor = instanceColor;
+             #else
+               vInstanceColor = diffuse;
+             #endif`
     );
 
     // Inject Custom Discard & Glow Logic
     shader.fragmentShader = `
+            uniform int theme1;
+            uniform int theme2;
+            uniform float themeMix;
+            uniform vec3 themeColor1_A;
+            uniform vec3 themeColor2_A;
+            uniform vec3 themeColor1_B;
+            uniform vec3 themeColor2_B;
             varying float vGlow;
             varying float vDecay;
+            varying float vHash;
+            varying vec3 vInstanceColor;
             ${shader.fragmentShader}
         `.replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+             vec3 colorA = diffuseColor.rgb;
+             if (theme1 == 1) { // Albino
+                 float luminance = dot(colorA, vec3(0.299, 0.587, 0.114));
+                 colorA = vec3(mix(0.5, 1.0, luminance));
+             } else if (theme1 == 2) { // Complementary
+                 vec3 baseColor = mix(themeColor1_A, themeColor2_A, step(0.5, vHash));
+                 colorA = baseColor * (length(vInstanceColor) * 1.2);
+             } else if (theme1 == 3) { // Duotone
+                 colorA = themeColor1_A * (length(vInstanceColor) * 1.2);
+             }
+
+             vec3 colorB = diffuseColor.rgb;
+             if (theme2 == 1) { // Albino
+                 float luminance = dot(colorB, vec3(0.299, 0.587, 0.114));
+                 colorB = vec3(mix(0.5, 1.0, luminance));
+             } else if (theme2 == 2) { // Complementary
+                 vec3 baseColor = mix(themeColor1_B, themeColor2_B, step(0.5, vHash));
+                 colorB = baseColor * (length(vInstanceColor) * 1.2);
+             } else if (theme2 == 3) { // Duotone
+                 colorB = themeColor1_B * (length(vInstanceColor) * 1.2);
+             }
+
+             diffuseColor.rgb = mix(colorA, colorB, themeMix);
+            `
+    ).replace(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
@@ -58,7 +119,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
              if (vGlow > 0.0) {
                  diffuseColor.rgb += (diffuseColor.rgb * vGlow * 2.0); // additive glow approximation since alpha limits glow otherwise
              }
-            `,
+            `
     );
   };
   return material;
@@ -205,7 +266,7 @@ export function breedGenomes(
     singleton: newArchetype === "snake" && Math.random() < 0.5,
   };
   
-  if (res.archetype === "fuzzy") {
+  if (res.archetype === "ginger") {
     res.minThickness = Math.min(res.minThickness, 1.0);
     res.thicknessBase = Math.min(res.thicknessBase, 3.0);
     res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.98, 0.999);

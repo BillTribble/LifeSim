@@ -18,8 +18,8 @@ export const APPENDAGES = [
   "ferns",
   "buds",
 ] as const;
-export type Archetype = "bush" | "tree" | "snake" | "fuzzy";
-export const ARCHETYPES: Archetype[] = ["bush", "tree", "snake", "fuzzy"];
+export type Archetype = "bush" | "tree" | "snake" | "ginger";
+export const ARCHETYPES: Archetype[] = ["bush", "tree", "snake", "ginger"];
 
 export type MovementType = "wiggle" | "spiral" | "orthogonal";
 export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"];

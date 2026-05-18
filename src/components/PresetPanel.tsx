@@ -13,7 +13,58 @@ interface PresetPanelProps {
 export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRestart }: PresetPanelProps) {
   const [presets, setPresets] = useState<any[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('presets') || '[]');
+      const stored = JSON.parse(localStorage.getItem('presets') || '[]');
+      if (!stored.some((p: any) => p.name === "Agent recommended")) {
+        stored.unshift({
+          id: "agent-recommended",
+          name: "Agent recommended",
+          state: {
+            ...DEFAULTS,
+            rotationSpeed: 0.1,
+            maxDOMs: 341000,
+            maxAgents: 50,
+            minAgents: 4,
+            maxSpecies: 4,
+            boundarySize: 150,
+            magnetism: 10.0,
+            proximity: 40,
+            desperation: 7.7,
+            despairAge: 800,
+            entropyThreshold: 0.7,
+            ecoFade: 1.0,
+            cullRate: 48.87,
+            growthSpeed: 1.6,
+            diebackRate: 5.0,
+            diebackAgeBias: 1.5,
+            terminationProb: 0.02,
+            desiccationSpeed: 9.9,
+            feelerFade: 10,
+            hybridCooldown: 200,
+            hybridSize: 3.5,
+            hybridStickiness: 47,
+            branchTendencyVar: 50,
+            branchingMultiplier: 3.0,
+            termProbPostBranch: 1.5,
+            branchMutationRate: 0.0,
+            branchBigger: 0.75,
+            branchSplitSizeProb: 0.95,
+            timeScale: 2.2,
+            snakeSpeed: 1.5,
+            bushSpeed: 1.0,
+            treeSpeed: 1.0,
+            gingerSpeed: 1.0,
+            flowerSize: 0.41,
+            taperDuration: 1.0,
+            maxLineWidth: 12.0,
+            multicolorAppProb: 0.05,
+            sameColorAppProb: 0.9,
+            globalPulseSpeed: 0.1,
+            maxSaturation: 0.8
+          }
+        });
+        localStorage.setItem('presets', JSON.stringify(stored));
+      }
+      return stored;
     } catch {
       return [];
     }

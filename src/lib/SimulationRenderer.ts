@@ -64,14 +64,20 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       
       const glowArray = new Float32Array(count).fill(0.0);
       const decayArray = new Float32Array(count).fill(0.0);
+      const hashArray = new Float32Array(count);
+      for (let i = 0; i < count; i++) hashArray[i] = Math.random();
+      
       const glowAttr = new THREE.InstancedBufferAttribute(glowArray, 1);
       const decayAttr = new THREE.InstancedBufferAttribute(decayArray, 1);
+      const hashAttr = new THREE.InstancedBufferAttribute(hashArray, 1);
       
       glowAttr.setUsage(THREE.DynamicDrawUsage);
       decayAttr.setUsage(THREE.DynamicDrawUsage);
+      hashAttr.setUsage(THREE.DynamicDrawUsage); // Dynamic since it now changes per creature
       
       mesh.geometry.setAttribute('instanceGlow', glowAttr);
       mesh.geometry.setAttribute('instanceDecay', decayAttr);
+      mesh.geometry.setAttribute('instanceHash', hashAttr);
     };
 
     engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);
@@ -155,7 +161,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
 
     const connectionGeo = new THREE.BufferGeometry();
     connectionGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60000), 3));
-    const connectionMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+    connectionGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(80000), 4));
+    const connectionMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0 });
     engine.hybridConnectionMesh = new THREE.LineSegments(connectionGeo, connectionMat);
     engine.hybridConnectionMesh.frustumCulled = false;
     engine.scene.add(engine.hybridConnectionMesh);

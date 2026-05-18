@@ -134,11 +134,23 @@ export function updateMeshSegments(
   const decayAttr = targetMesh.geometry.getAttribute(
     "instanceDecay",
   ) as THREE.InstancedBufferAttribute;
-  if (glowAttr && decayAttr) {
+  const hashAttr = targetMesh.geometry.getAttribute(
+    "instanceHash",
+  ) as THREE.InstancedBufferAttribute;
+  if (glowAttr && decayAttr && hashAttr) {
     glowAttr.setX(targetIndex, engine.enableGlow ? engine.glowSize : 0.0);
     decayAttr.setX(targetIndex, 0.0);
+    
+    let h = 0;
+    for(let i=0; i<genome.name.length; i++) {
+        h = Math.imul(31, h) + genome.name.charCodeAt(i) | 0;
+    }
+    const genomeHash = (Math.abs(h) % 1000) / 1000;
+    hashAttr.setX(targetIndex, genomeHash);
+    
     glowAttr.needsUpdate = true;
     decayAttr.needsUpdate = true;
+    hashAttr.needsUpdate = true;
   }
 
   if (targetMesh === engine.cylinderMesh) {
@@ -209,7 +221,7 @@ export function processDyingSegments(
     const fadeAge = engine.time - seg.dyingStart;
     const desiccationSpeed = engine.desiccationSpeed || 1.0;
     const wipeDuration =
-      (600 / desiccationSpeed) * (isHybrid ? engine.hybridStickiness : 1.0);
+      (isHybrid ? engine.hybridStickiness * 12 : 600) / desiccationSpeed;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

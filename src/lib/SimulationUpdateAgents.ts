@@ -81,16 +81,21 @@ export function processAgents(
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     agent.suppressionFade = agent.suppressionFade || 0;
     if (isSuppressed) {
-      agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02); // 50 frames to fully suppress (about 1 second)
+      agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02 * engine.timeScale); // 50 frames to fully suppress (about 1 second)
     } else {
-      agent.suppressionFade = Math.max(0.0, agent.suppressionFade - 0.02);
+      agent.suppressionFade = Math.max(0.0, agent.suppressionFade - 0.02 * engine.timeScale);
     }
     
-    let baseSpeedMult = agent.genome.archetype === "snake" ? 3.0 : 1.0;
+    let baseSpeedMult = 1.0;
+    if (agent.genome.archetype === "snake") baseSpeedMult = engine.snakeSpeed;
+    else if (agent.genome.archetype === "bush") baseSpeedMult = engine.bushSpeed;
+    else if (agent.genome.archetype === "tree") baseSpeedMult = engine.treeSpeed;
+    else if (agent.genome.archetype === "ginger") baseSpeedMult = engine.gingerSpeed;
+    
     // Blend smoothly from normal speed to heavily nerfed (0.2x) speed
     const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8);
     
-    agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult;
+    agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult * engine.timeScale;
     let iterations = Math.floor(agent.growthAccumulator);
     agent.growthAccumulator -= iterations;
 
@@ -113,9 +118,9 @@ export function processAgents(
         effectiveWanderIntensity *= 0.5;
       } else if (genome.archetype === "snake") {
         effectiveBifurcationRate *= 0.05;
-        effectiveWanderIntensity *= 3.0;
-        effectiveStepSize *= 1.5;
-      } else if (genome.archetype === "fuzzy") {
+        effectiveWanderIntensity *= engine.snakeWander;
+        effectiveStepSize *= engine.snakeStepSize;
+      } else if (genome.archetype === "ginger") {
         effectiveBifurcationRate *= 12.0;
         effectiveStepSize *= 0.6;
         effectiveWanderIntensity *= 12.0;
@@ -132,7 +137,7 @@ export function processAgents(
       const isYoungHybrid = isHybrid && agent.age < 2400;
       const onCooldown = agent.cooldown > 0;
 
-      if (engine.time % 4 === 0) {
+      if (engine.frameCount % 4 === 0) {
         for (let j = 0; j < activeAgents.length; j++) {
           const other = activeAgents[j];
           if (other === agent) continue;
@@ -289,34 +294,51 @@ export function processAgents(
       const b = engine.boundarySize;
       let bounced = false;
 
-      if (agent.position.x > b) {
-        agent.position.x = b;
-        agent.direction.x *= -1;
-        bounced = true;
-      } else if (agent.position.x < -b) {
-        agent.position.x = -b;
-        agent.direction.x *= -1;
-        bounced = true;
-      }
+      if (engine.boundaryShape === "sphere") {
+        const distSq = agent.position.lengthSq();
+        if (distSq > b * b) {
+          const dist = Math.sqrt(distSq);
+          const normal = agent.position.clone().divideScalar(dist);
+          
+          // Push agent back to the sphere surface
+          agent.position.copy(normal).multiplyScalar(b);
+          
+          // Reflect direction: R = D - 2(D.N)N
+          const dot = agent.direction.dot(normal);
+          agent.direction.sub(normal.multiplyScalar(2 * dot));
+          
+          bounced = true;
+        }
+      } else {
+        if (agent.position.x > b) {
+          agent.position.x = b;
+          agent.direction.x *= -1;
+          bounced = true;
+        } else if (agent.position.x < -b) {
+          agent.position.x = -b;
+          agent.direction.x *= -1;
+          bounced = true;
+        }
 
-      if (agent.position.y > b) {
-        agent.position.y = b;
-        agent.direction.y *= -1;
-        bounced = true;
-      } else if (agent.position.y < -b) {
-        agent.position.y = -b;
-        agent.direction.y *= -1;
-        bounced = true;
-      }
+        if (agent.position.y > b) {
+          agent.position.y = b;
+          agent.direction.y *= -1;
+          bounced = true;
+        } else if (agent.position.y < -b) {
+          agent.position.y = -b;
+          agent.direction.y *= -1;
+          bounced = true;
+        }
 
-      if (agent.position.z > b) {
-        agent.position.z = b;
-        agent.direction.z *= -1;
-        bounced = true;
-      } else if (agent.position.z < -b) {
-        agent.position.z = -b;
-        agent.direction.z *= -1;
-        bounced = true;
+        if (agent.position.z > b) {
+          agent.position.z = b;
+          agent.direction.z *= -1;
+          bounced = true;
+        } else if (agent.position.z < -b) {
+          agent.position.z = -b;
+          agent.direction.z *= -1;
+          bounced = true;
+        }
       }
 
       if (bounced) {
@@ -442,7 +464,7 @@ export function processAgents(
       agent.lastPosition.copy(agent.position);
 
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
-      const maxForArchetype = genome.archetype === "bush" ? 40 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "fuzzy" ? 150 : 20;
+      const maxForArchetype = genome.archetype === "bush" ? 40 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "ginger" ? 150 : 20;
 
       const isSnake = genome.archetype === "snake";
       let allowedToBranch = !(isSnake && myStrainCount >= maxForArchetype);
@@ -759,7 +781,7 @@ export function processAgents(
 
 
       let currentTermProb = engine.terminationProb * 0.001; // Extremely low base multiplier for long life
-      if (genome.archetype === "fuzzy") {
+      if (genome.archetype === "ginger") {
          currentTermProb *= 0.2; // Proliferate for longer
       }
       if (agent.age < 120) {

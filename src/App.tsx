@@ -21,6 +21,9 @@ export default function App() {
     }[],
     tideValue: 0,
     cameraPosition: { x: 0, y: 0, z: 0, zoom: 1 },
+    theme: 0,
+    nextTheme: 0,
+    themeProgress: 1.0,
   });
   const [uptime, setUptime] = useState(0);
 
@@ -69,6 +72,7 @@ export default function App() {
         onStateUpdate={handleStateUpdate}
         onConfigChange={(config) => {
           if (config.bgColor) setters.setBgColor(config.bgColor);
+          if (config.theme !== undefined) setters.setTheme(config.theme);
         }}
         restartTrigger={restartKey}
         randomizeTrigger={randomizeKey}
@@ -100,6 +104,7 @@ export default function App() {
         maxSpecies={state.maxSpecies}
         ecoFade={state.ecoFade}
         minAgents={state.minAgents}
+        boundarySize={state.boundarySize}
         desiccationSpeed={state.desiccationSpeed}
         enableGlow={state.enableGlow}
         glowSize={state.glowSize}
@@ -118,6 +123,16 @@ export default function App() {
         maxSaturation={state.maxSaturation}
         feelerFade={state.feelerFade}
         cullRate={state.cullRate}
+        snakeSpeed={state.snakeSpeed}
+        snakeStepSize={state.snakeStepSize}
+        snakeWander={state.snakeWander}
+        bushSpeed={state.bushSpeed}
+        treeSpeed={state.treeSpeed}
+        gingerSpeed={state.gingerSpeed}
+        timeScale={state.timeScale}
+        theme={state.theme}
+        themeMorphFreq={state.themeMorphFreq}
+        themeMorphSpeed={state.themeMorphSpeed}
       />
 
       <HUD

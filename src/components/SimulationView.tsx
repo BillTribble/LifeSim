@@ -59,6 +59,16 @@ export function SimulationView({
   maxSaturation,
   feelerFade,
   cullRate,
+  snakeSpeed,
+  snakeStepSize,
+  snakeWander,
+  bushSpeed,
+  treeSpeed,
+  gingerSpeed,
+  timeScale,
+  theme,
+  themeMorphFreq,
+  themeMorphSpeed,
   onConfigChange,
 }: Props & {
   restartTrigger?: number;
@@ -110,6 +120,16 @@ export function SimulationView({
   maxSaturation?: number;
   feelerFade?: number;
   cullRate?: number;
+  snakeSpeed?: number;
+  snakeStepSize?: number;
+  snakeWander?: number;
+  bushSpeed?: number;
+  treeSpeed?: number;
+  gingerSpeed?: number;
+  timeScale?: number;
+  theme?: number;
+  themeMorphFreq?: number;
+  themeMorphSpeed?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,6 +144,24 @@ export function SimulationView({
       engineRef.current.randomizeColors();
     }
   }, [randomizeTrigger]);
+
+  useEffect(() => {
+    if (engineRef.current && theme !== undefined) {
+      engineRef.current.setTheme(theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (engineRef.current && themeMorphFreq !== undefined) {
+      engineRef.current.themeMorphFreq = themeMorphFreq;
+    }
+  }, [themeMorphFreq]);
+
+  useEffect(() => {
+    if (engineRef.current && themeMorphSpeed !== undefined) {
+      engineRef.current.themeMorphSpeed = themeMorphSpeed;
+    }
+  }, [themeMorphSpeed]);
 
   useEffect(() => {
     if (engineRef.current && rotationSpeed !== undefined) {
@@ -192,6 +230,48 @@ export function SimulationView({
   }, [cullRate]);
 
   useEffect(() => {
+    if (engineRef.current && snakeSpeed !== undefined) {
+      engineRef.current.setSnakeSpeed(snakeSpeed);
+    }
+  }, [snakeSpeed]);
+
+  useEffect(() => {
+    if (engineRef.current && snakeStepSize !== undefined) {
+      engineRef.current.setSnakeStepSize(snakeStepSize);
+    }
+  }, [snakeStepSize]);
+
+  useEffect(() => {
+    if (engineRef.current && snakeWander !== undefined) {
+      engineRef.current.setSnakeWander(snakeWander);
+    }
+  }, [snakeWander]);
+
+  useEffect(() => {
+    if (engineRef.current && bushSpeed !== undefined) {
+      engineRef.current.setBushSpeed(bushSpeed);
+    }
+  }, [bushSpeed]);
+
+  useEffect(() => {
+    if (engineRef.current && treeSpeed !== undefined) {
+      engineRef.current.setTreeSpeed(treeSpeed);
+    }
+  }, [treeSpeed]);
+
+  useEffect(() => {
+    if (engineRef.current && gingerSpeed !== undefined) {
+      engineRef.current.setGingerSpeed(gingerSpeed);
+    }
+  }, [gingerSpeed]);
+
+  useEffect(() => {
+    if (engineRef.current && timeScale !== undefined) {
+      engineRef.current.setTimeScale(timeScale);
+    }
+  }, [timeScale]);
+
+  useEffect(() => {
     if (engineRef.current) {
       if (tideColor !== undefined) engineRef.current.setTideColor(tideColor);
       if (bgColor !== undefined) engineRef.current.setBgColor(bgColor);
@@ -258,6 +338,26 @@ export function SimulationView({
         engineRef.current.setFeelerFade(feelerFade);
       if (cullRate !== undefined)
         engineRef.current.setCullRate(cullRate);
+      if (snakeSpeed !== undefined)
+        engineRef.current.setSnakeSpeed(snakeSpeed);
+      if (snakeStepSize !== undefined)
+        engineRef.current.setSnakeStepSize(snakeStepSize);
+      if (snakeWander !== undefined)
+        engineRef.current.setSnakeWander(snakeWander);
+      if (bushSpeed !== undefined)
+        engineRef.current.setBushSpeed(bushSpeed);
+      if (treeSpeed !== undefined)
+        engineRef.current.setTreeSpeed(treeSpeed);
+      if (gingerSpeed !== undefined)
+        engineRef.current.setGingerSpeed(gingerSpeed);
+      if (timeScale !== undefined)
+        engineRef.current.setTimeScale(timeScale);
+      if (theme !== undefined)
+        engineRef.current.setTheme(theme);
+      if (themeMorphFreq !== undefined)
+        engineRef.current.themeMorphFreq = themeMorphFreq;
+      if (themeMorphSpeed !== undefined)
+        engineRef.current.themeMorphSpeed = themeMorphSpeed;
     }
   }, [
     tideColor,
@@ -297,6 +397,16 @@ export function SimulationView({
     maxSaturation,
     feelerFade,
     cullRate,
+    snakeSpeed,
+    snakeStepSize,
+    snakeWander,
+    bushSpeed,
+    treeSpeed,
+    gingerSpeed,
+    timeScale,
+    theme,
+    themeMorphFreq,
+    themeMorphSpeed,
   ]);
 
   useEffect(() => {
@@ -383,6 +493,22 @@ export function SimulationView({
       engine.setFeelerFade(feelerFade);
     if (cullRate !== undefined)
       engine.setCullRate(cullRate);
+    if (snakeSpeed !== undefined)
+      engine.setSnakeSpeed(snakeSpeed);
+    if (snakeStepSize !== undefined)
+      engine.setSnakeStepSize(snakeStepSize);
+    if (snakeWander !== undefined)
+      engine.setSnakeWander(snakeWander);
+    if (bushSpeed !== undefined)
+      engine.setBushSpeed(bushSpeed);
+    if (treeSpeed !== undefined)
+      engine.setTreeSpeed(treeSpeed);
+    if (gingerSpeed !== undefined)
+      engine.setGingerSpeed(gingerSpeed);
+    if (timeScale !== undefined)
+      engine.setTimeScale(timeScale);
+    if (theme !== undefined)
+      engine.setTheme(theme);
 
     engine.start();
 

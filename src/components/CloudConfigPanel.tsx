@@ -31,25 +31,41 @@ export function CloudConfigPanel({ state, setters }: CloudPanelProps) {
         </div>
         <div className="flex flex-col gap-4 text-[9px]">
             <div className="flex justify-between gap-2">
-                <Dial tooltip="The thickness of the tidal wave cloud that periodically sweeps through the environment." label="THICKNESS" min={10} max={400} step={10} value={state.tideThickness} onChange={setters.setTideThickness} color="#a855f7" />
-                <Dial tooltip="The visibility range of the atmospheric fog. Lower values create a more enclosed, misty feel." label="FOG_DEPTH" min={200} max={2000} step={50} value={state.fogVisibility} onChange={setters.setFogVisibility} color="#a855f7" />
+                <Dial tooltip="TIDE THICKNESS
+Thickness of the tidal wave cloud.
+High: Wide, sweeping wave.
+Low: Thin, sharp wave." label="THICKNESS" min={10} max={400} step={10} value={state.tideThickness} onChange={setters.setTideThickness} color="#a855f7" />
+                <Dial tooltip="FOG DEPTH
+Visibility range of atmospheric fog.
+High: Clear, deep visibility.
+Low: Enclosed, misty environment." label="FOG_DEPTH" min={200} max={2000} step={50} value={state.fogVisibility} onChange={setters.setFogVisibility} color="#a855f7" />
             </div>
             <div className="flex justify-between gap-2">
-                <Dial tooltip="Transparency level of the tidal wave cloud. Adjusts how much of the simulation remains visible during a surge." label="OPACITY" min={0} max={1} step={0.05} value={state.tideOpacity} onChange={setters.setTideOpacity} color="#a855f7" />
-                <Dial tooltip="Periodicity of the tidal pulse. Slower speeds allow longer periods of stable growth between cycles." label="TIDE_SPEED" min={0} max={5.0} step={0.1} value={state.tideSpeed} onChange={setters.setTideSpeed} color="#a855f7" />
-                <Dial tooltip="Color intensity of the tidal wave cloud. Low values make the wave feel more spectral or ghostly." label="SATURATION" min={0} max={2} step={0.1} value={state.tideSaturation} onChange={setters.setTideSaturation} color="#a855f7" />
-            </div>
-            <div className="flex justify-between gap-2">
-                <Dial tooltip="Multiplier for the chance of an organism splitting into new branches as it grows." label="BRANCH_PROB" min={0.1} max={5.0} step={0.1} value={state.branchingMultiplier} onChange={setters.setBranchingMultiplier} color="#a855f7" />
-                <Dial tooltip="Likelihood that a new branch will be thicker than its parent, enabling upward scaling of organisms." label="BRANCH_BIG" min={0} max={1.0} step={0.05} value={state.branchBigger} onChange={setters.setBranchBigger} color="#a855f7" />
-                <Dial tooltip="The scale of geometric artifacts spawned during successful cross-breeding events." label="HYBRID_SIZE" min={0.5} max={8.0} step={0.1} value={state.hybridSize} onChange={setters.setHybridSize} color="#a855f7" />
+                <Dial tooltip="TIDE OPACITY
+Transparency of the tidal wave.
+High: Dense, opaque wave.
+Low: Faint, transparent wave." label="OPACITY" min={0} max={1} step={0.05} value={state.tideOpacity} onChange={setters.setTideOpacity} color="#a855f7" />
+                <Dial tooltip="TIDE SPEED
+Periodicity of the tidal pulse.
+High: Frequent, rapid surges.
+Low: Long periods of calm." label="TIDE_SPEED" min={0} max={5.0} step={0.1} value={state.tideSpeed} onChange={setters.setTideSpeed} color="#a855f7" />
+                <Dial tooltip="TIDE SATURATION
+Color intensity of the tidal wave.
+High: Vibrant, rich colors.
+Low: Spectral, ghostly colors." label="SATURATION" min={0} max={2} step={0.1} value={state.tideSaturation} onChange={setters.setTideSaturation} color="#a855f7" />
             </div>
             <div className="flex flex-col gap-1.5">
                 <span className="opacity-80">BG COLOR</span>
                 <input type="color" value={state.bgColor} onChange={(e) => handleBgColorChange(e.target.value)} className="w-full h-6 rounded cursor-pointer border-none p-0 bg-transparent"/>
                 <div className="flex justify-between gap-2 mt-2">
-                    <Dial tooltip="Adjust background saturation." label="BG_SAT" min={0} max={1} step={0.05} value={bgS} onChange={handleBgSatChange} color="#a855f7" />
-                    <Dial tooltip="Adjust background brightness." label="BG_LUM" min={0} max={1} step={0.01} value={bgL} onChange={handleBgLumChange} color="#a855f7" />
+                    <Dial tooltip="BACKGROUND SATURATION
+Saturation of the void background.
+High: Colorful space.
+Low: Grayscale void." label="BG_SAT" min={0} max={1} step={0.05} value={bgS} onChange={handleBgSatChange} color="#a855f7" />
+                    <Dial tooltip="BACKGROUND LUMINOSITY
+Brightness of the void background.
+High: Bright, lit space.
+Low: Dark, deep void." label="BG_LUM" min={0} max={1} step={0.01} value={bgL} onChange={handleBgLumChange} color="#a855f7" />
                 </div>
             </div>
             <div className="flex flex-col gap-1.5">

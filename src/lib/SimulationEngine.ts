@@ -60,6 +60,9 @@ export class SimulationEngine {
   suppressedStrains: Set<string> = new Set();
   speciesAbove5Percent: Set<string> = new Set();
   time: number = 0;
+  unscaledTime: number = 0;
+  frameCount: number = 0;
+  timeScale: number = 1.0;
 
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
@@ -98,6 +101,7 @@ export class SimulationEngine {
   lastMaxDOMs: number = 80000;
   minAgents: number = 2;
   boundarySize: number = 150;
+  boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
   maxSpecies: number = 6;
   ecoFade: number = 0.5;
   probGlow: number = 0.0;
@@ -111,6 +115,19 @@ export class SimulationEngine {
 
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
+  
+  theme: number = 0;
+  nextTheme: number = 0;
+  themeProgress: number = 1.0;
+  themeMorphFreq: number = 1.0;
+  themeMorphSpeed: number = 5.0;
+  manualThemeTransition: boolean = false;
+  lastThemeMorphTime: number = 0;
+
+  themeColor1: string = "#ffffff";
+  themeColor2: string = "#ffffff";
+  nextThemeColor1: string = "#ffffff";
+  nextThemeColor2: string = "#ffffff";
 
   traitProbs: Record<string, number> = {
     flowers: 0.1,
@@ -139,6 +156,13 @@ export class SimulationEngine {
   feelerFade: number = 10.0;
   diebackAgeBias: number = 2.0;
   cullRate: number = 5.0;
+
+  snakeSpeed: number = 3.0;
+  snakeStepSize: number = 1.0;
+  snakeWander: number = 1.0;
+  bushSpeed: number = 1.0;
+  treeSpeed: number = 1.0;
+  gingerSpeed: number = 1.0;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
@@ -287,6 +311,9 @@ export class SimulationEngine {
   setDesiccationSpeed(val: number) {
     this.desiccationSpeed = val;
   }
+  setTimeScale(val: number) {
+    this.timeScale = val;
+  }
   setEnableGlow(val: boolean) {
     this.enableGlow = val;
   }
@@ -298,6 +325,24 @@ export class SimulationEngine {
     if (this.scene.fog) {
       (this.scene.fog as THREE.Fog).far = val;
       (this.scene.fog as THREE.Fog).near = Math.max(10, val / 4);
+    }
+  }
+  setTheme(val: number, manual: boolean = true) {
+    if (this.nextTheme !== val) {
+      if (this.themeProgress < 1.0) {
+        this.theme = this.nextTheme;
+        this.themeColor1 = this.nextThemeColor1;
+        this.themeColor2 = this.nextThemeColor2;
+      }
+      
+      this.nextTheme = val;
+      this.themeProgress = 0.0;
+      this.manualThemeTransition = manual;
+      
+      const tc1 = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
+      const tc2 = new THREE.Color().setHSL((tc1.getHSL({h:0,s:0,l:0}).h + 0.5) % 1.0, 0.8, 0.5);
+      this.nextThemeColor1 = "#" + tc1.getHexString();
+      this.nextThemeColor2 = "#" + tc2.getHexString();
     }
   }
   setBgColor(c: string) {
@@ -352,6 +397,24 @@ export class SimulationEngine {
   setCullRate(val: number) {
     this.cullRate = val;
   }
+  setSnakeSpeed(val: number) {
+    this.snakeSpeed = val;
+  }
+  setSnakeStepSize(val: number) {
+    this.snakeStepSize = val;
+  }
+  setSnakeWander(val: number) {
+    this.snakeWander = val;
+  }
+  setBushSpeed(val: number) {
+    this.bushSpeed = val;
+  }
+  setTreeSpeed(val: number) {
+    this.treeSpeed = val;
+  }
+  setGingerSpeed(val: number) {
+    this.gingerSpeed = val;
+  }
 
   setDiebackAgeBias(val: number) {
     this.diebackAgeBias = val;
@@ -398,6 +461,7 @@ export class SimulationEngine {
     this.hybridSegments = [];
     this.hybridCount = 0;
     this.time = 0;
+    this.frameCount = 0;
     const idm = new THREE.Matrix4().set(
       0,
       0,
@@ -453,9 +517,9 @@ export class SimulationEngine {
     let betaGenome = this.generateRandomGenome("Beta", betaArchetype);
 
     while (
-       betaGenome.appendage === alphaGenome.appendage ||
-       betaGenome.geometryType === alphaGenome.geometryType ||
-       betaGenome.movementType === alphaGenome.movementType ||
+       betaGenome.appendage === alphaGenome.appendage &&
+       betaGenome.geometryType === alphaGenome.geometryType &&
+       betaGenome.movementType === alphaGenome.movementType &&
        betaGenome.pulseTarget === alphaGenome.pulseTarget
     ) {
       betaGenome = this.generateRandomGenome("Beta", betaArchetype);
@@ -468,6 +532,18 @@ export class SimulationEngine {
     const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
     const bgHex = "#" + bgColorObj.getHexString();
     this.setBgColor(bgHex);
+    
+    // Generate theme colors
+    const tc1 = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
+    const tc2 = new THREE.Color().setHSL((tc1.getHSL({h:0,s:0,l:0}).h + 0.5) % 1.0, 0.8, 0.5);
+    this.themeColor1 = "#" + tc1.getHexString();
+    this.themeColor2 = "#" + tc2.getHexString();
+    this.nextThemeColor1 = this.themeColor1;
+    this.nextThemeColor2 = this.themeColor2;
+    this.nextTheme = this.theme;
+    this.themeProgress = 1.0;
+    this.lastThemeMorphTime = 0;
+
     if (this.onConfigChange) {
       this.onConfigChange({ bgColor: bgHex });
     }
@@ -652,18 +728,21 @@ export class SimulationEngine {
         }
       }
 
-      this.onStateUpdate({
-        geometryCount: totalActiveGeometries,
-        totalAgents: activeCount,
-        strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
-        tideValue: this.tideValue,
-        cameraPosition: {
-          x: this.camera.position.x,
-          y: this.camera.position.y,
-          z: this.camera.position.z,
-          zoom: this.camera.zoom,
-        },
-      });
+        this.onStateUpdate({
+          geometryCount: totalActiveGeometries,
+          totalAgents: activeCount,
+          strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
+          tideValue: this.tideValue,
+          cameraPosition: {
+            x: this.camera.position.x,
+            y: this.camera.position.y,
+            z: this.camera.position.z,
+            zoom: this.camera.zoom,
+          },
+          theme: this.theme,
+          nextTheme: this.nextTheme,
+          themeProgress: this.themeProgress,
+        });
     }
   };
 
