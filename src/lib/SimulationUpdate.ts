@@ -358,6 +358,63 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
+  const ambientAttr = engine.cylinderMesh.geometry.getAttribute("instanceAmbientReflect") as THREE.InstancedBufferAttribute;
+  const lightDirAttr = engine.cylinderMesh.geometry.getAttribute("instanceLightDir") as THREE.InstancedBufferAttribute;
+  if (ambientAttr && lightDirAttr && engine.glowTraitReflect > 0.0) {
+    const glowingAgents = engine.agents.filter(a => a.active && !a.isFeeler && a.genome.isGlowing);
+    if (glowingAgents.length > 0) {
+      const activePoints = Math.min(engine.pointCount, engine.maxDOMs);
+      const batchSize = Math.min(activePoints, 8000);
+      const startIdx = (engine.frameCount * batchSize) % Math.max(1, activePoints);
+      let anyUpdated = false;
+      const vPos = new THREE.Vector3();
+      const maxDist = engine.glowTraitDistance || 50.0;
+      const maxDistSq = maxDist * maxDist;
+
+      for (let k = 0; k < batchSize; k++) {
+        const i = (startIdx + k) % activePoints;
+        const seg = engine.segments[i];
+        if (seg && !engine.dyingStems.has(i)) {
+          vPos.setFromMatrixPosition(seg.matrix);
+          let r = 0, g = 0, b = 0;
+          let lx = 0, ly = 1, lz = 0;
+          let nearestD = Infinity;
+
+          for (let gIdx = 0; gIdx < glowingAgents.length; gIdx++) {
+            const ga = glowingAgents[gIdx];
+            if (ga.genome.name === seg.strainName) continue;
+            const distSq = vPos.distanceToSquared(ga.position);
+            if (distSq < maxDistSq) {
+              const weight = (1.0 - Math.sqrt(distSq) / maxDist) * engine.glowTraitIntensity * engine.glowTraitReflect;
+              let emitProb = 1.0;
+              if (ga.tapering && Math.random() < 0.4) emitProb = 0.3;
+              r += ga.genome.color.r * weight * emitProb;
+              g += ga.genome.color.g * weight * emitProb;
+              b += ga.genome.color.b * weight * emitProb;
+
+              if (distSq < nearestD) {
+                nearestD = distSq;
+                const dist = Math.sqrt(distSq) || 1.0;
+                lx = (ga.position.x - vPos.x) / dist;
+                ly = (ga.position.y - vPos.y) / dist;
+                lz = (ga.position.z - vPos.z) / dist;
+              }
+            }
+          }
+          if (ambientAttr.getX(i) !== r || ambientAttr.getY(i) !== g || ambientAttr.getZ(i) !== b) {
+            ambientAttr.setXYZ(i, Math.min(1.0, r), Math.min(1.0, g), Math.min(1.0, b));
+            lightDirAttr.setXYZ(i, lx, ly, lz);
+            anyUpdated = true;
+          }
+        }
+      }
+      if (anyUpdated) {
+        ambientAttr.needsUpdate = true;
+        lightDirAttr.needsUpdate = true;
+      }
+    }
+  }
+
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 

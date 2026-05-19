@@ -72,6 +72,9 @@ export function SimulationView({
   theme,
   themeMorphFreq,
   themeMorphSpeed,
+  glowTraitIntensity,
+  glowTraitDistance,
+  glowTraitReflect,
   onConfigChange,
 }: Props & {
   restartTrigger?: number;
@@ -133,6 +136,9 @@ export function SimulationView({
   theme?: number;
   themeMorphFreq?: number;
   themeMorphSpeed?: number;
+  glowTraitIntensity?: number;
+  glowTraitDistance?: number;
+  glowTraitReflect?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -365,6 +371,12 @@ export function SimulationView({
         engineRef.current.themeMorphFreq = themeMorphFreq;
       if (themeMorphSpeed !== undefined)
         engineRef.current.themeMorphSpeed = themeMorphSpeed;
+      if (glowTraitIntensity !== undefined)
+        engineRef.current.glowTraitIntensity = glowTraitIntensity;
+      if (glowTraitDistance !== undefined)
+        engineRef.current.glowTraitDistance = glowTraitDistance;
+      if (glowTraitReflect !== undefined)
+        engineRef.current.glowTraitReflect = glowTraitReflect;
     }
   }, [
     tideColor,
@@ -414,6 +426,9 @@ export function SimulationView({
     theme,
     themeMorphFreq,
     themeMorphSpeed,
+    glowTraitIntensity,
+    glowTraitDistance,
+    glowTraitReflect,
   ]);
 
   useEffect(() => {
@@ -516,6 +531,12 @@ export function SimulationView({
       engine.setTimeScale(timeScale);
     if (theme !== undefined)
       engine.setTheme(theme);
+    if (glowTraitIntensity !== undefined)
+      engine.glowTraitIntensity = glowTraitIntensity;
+    if (glowTraitDistance !== undefined)
+      engine.glowTraitDistance = glowTraitDistance;
+    if (glowTraitReflect !== undefined)
+      engine.glowTraitReflect = glowTraitReflect;
 
     engine.start();
 

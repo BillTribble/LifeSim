@@ -61,8 +61,12 @@ export const DEFAULTS = {
     "crystals": 0.6000000000000001,
     "spores": 0.5,
     "scales": 0.5,
-    "spirals": 0.5
+    "spirals": 0.5,
+    "glow": 0.25
   },
+  "glowTraitIntensity": 1.5,
+  "glowTraitDistance": 50.0,
+  "glowTraitReflect": 1.0,
   "maxLineWidth": 12,
   "globalPulseSpeed": 0.1,
   "multicolorAppProb": 0.05,
@@ -90,6 +94,18 @@ export const DEFAULTS = {
     "SLOW_MO": {
       "min": 0.1,
       "max": 50
+    },
+    "GLOW_INTENSITY": {
+      "min": 0.1,
+      "max": 10.0
+    },
+    "GLOW_DIST": {
+      "min": 5.0,
+      "max": 200.0
+    },
+    "GLOW_REFLECT": {
+      "min": 0.0,
+      "max": 5.0
     }
   } as Record<string, {min: number, max: number}>,
   "cameraPosition": {
@@ -406,6 +422,16 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     ),
   );
 
+  const [glowTraitIntensity, setGlowTraitIntensity] = useState(() =>
+    parseFloat(localStorage.getItem("glowTraitIntensity") || DEFAULTS.glowTraitIntensity.toString()),
+  );
+  const [glowTraitDistance, setGlowTraitDistance] = useState(() =>
+    parseFloat(localStorage.getItem("glowTraitDistance") || DEFAULTS.glowTraitDistance.toString()),
+  );
+  const [glowTraitReflect, setGlowTraitReflect] = useState(() =>
+    parseFloat(localStorage.getItem("glowTraitReflect") || DEFAULTS.glowTraitReflect.toString()),
+  );
+
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
       return (
@@ -473,6 +499,9 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("maxSaturation", maxSaturation.toString());
     localStorage.setItem("feelerFade", feelerFade.toString());
     localStorage.setItem("cullRate", cullRate.toString());
+    localStorage.setItem("glowTraitIntensity", glowTraitIntensity.toString());
+    localStorage.setItem("glowTraitDistance", glowTraitDistance.toString());
+    localStorage.setItem("glowTraitReflect", glowTraitReflect.toString());
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
@@ -524,6 +553,9 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     maxSaturation,
     feelerFade,
     cullRate,
+    glowTraitIntensity,
+    glowTraitDistance,
+    glowTraitReflect,
     dialLimits,
   ]);
 
@@ -586,6 +618,9 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       maxSaturation,
       feelerFade,
       cullRate,
+      glowTraitIntensity,
+      glowTraitDistance,
+      glowTraitReflect,
       dialLimits,
     },
     setters: {
@@ -646,6 +681,9 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setMaxSaturation,
       setFeelerFade,
       setCullRate,
+      setGlowTraitIntensity,
+      setGlowTraitDistance,
+      setGlowTraitReflect,
       setDialLimits,
     },
   };

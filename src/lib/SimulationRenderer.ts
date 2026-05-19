@@ -78,12 +78,25 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       glowAttr.setUsage(THREE.DynamicDrawUsage);
       decayAttr.setUsage(THREE.DynamicDrawUsage);
       growthAttr.setUsage(THREE.DynamicDrawUsage);
-      hashAttr.setUsage(THREE.DynamicDrawUsage); // Dynamic since it now changes per creature
+      hashAttr.setUsage(THREE.DynamicDrawUsage);
+
+      const glowTraitArray = new Float32Array(count).fill(0.0);
+      const ambientReflectArray = new Float32Array(count * 3).fill(0.0);
+      const lightDirArray = new Float32Array(count * 3).fill(0.0);
+      const glowTraitAttr = new THREE.InstancedBufferAttribute(glowTraitArray, 1);
+      const ambientReflectAttr = new THREE.InstancedBufferAttribute(ambientReflectArray, 3);
+      const lightDirAttr = new THREE.InstancedBufferAttribute(lightDirArray, 3);
+      glowTraitAttr.setUsage(THREE.DynamicDrawUsage);
+      ambientReflectAttr.setUsage(THREE.DynamicDrawUsage);
+      lightDirAttr.setUsage(THREE.DynamicDrawUsage);
       
       mesh.geometry.setAttribute('instanceGlow', glowAttr);
       mesh.geometry.setAttribute('instanceDecay', decayAttr);
       mesh.geometry.setAttribute('instanceGrowth', growthAttr);
       mesh.geometry.setAttribute('instanceHash', hashAttr);
+      mesh.geometry.setAttribute('instanceGlowTrait', glowTraitAttr);
+      mesh.geometry.setAttribute('instanceAmbientReflect', ambientReflectAttr);
+      mesh.geometry.setAttribute('instanceLightDir', lightDirAttr);
     };
 
     engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);

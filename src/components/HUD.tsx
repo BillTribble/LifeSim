@@ -720,6 +720,12 @@ Low: Slow, gentle throbbing." label="PULSE_SPD" min={0.1} max={1.0} step={0.1} v
 Overall color intensity limit.
 High: Vibrant, neon colors.
 Low: Muted, pastel colors." label="SATURATION" min={0.0} max={1.0} step={0.05} value={state.maxSaturation} onChange={setters.setMaxSaturation} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="GLOW INTENSITY
+Intrinsic brightness of glowing organisms." label="GLOW_INTENSITY" min={0.1} max={10.0} step={0.1} value={state.glowTraitIntensity} onChange={setters.setGlowTraitIntensity} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="GLOW DISTANCE
+Max spill range of reflected light onto neighboring creatures." label="GLOW_DIST" min={5.0} max={200.0} step={5.0} value={state.glowTraitDistance} onChange={setters.setGlowTraitDistance} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="GLOW REFLECT
+Multiplier for how intensely nearby creatures reflect ambient glow." label="GLOW_REFLECT" min={0.0} max={5.0} step={0.1} value={state.glowTraitReflect} onChange={setters.setGlowTraitReflect} color="#87CEEB" />
                   </div>
                 </div>
                 )}

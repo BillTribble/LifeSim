@@ -50,6 +50,7 @@ export interface Genome {
   gradientGrowth?: boolean;
   createdAt?: number;
   singleton?: boolean;
+  isGlowing?: boolean;
 }
 
 export interface Agent {

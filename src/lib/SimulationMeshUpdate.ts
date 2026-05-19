@@ -165,6 +165,14 @@ export function updateMeshSegments(
     glowAttr.needsUpdate = true;
     decayAttr.needsUpdate = true;
     hashAttr.needsUpdate = true;
+
+    const glowTraitAttr = targetMesh.geometry.getAttribute(
+      "instanceGlowTrait",
+    ) as THREE.InstancedBufferAttribute;
+    if (glowTraitAttr) {
+      glowTraitAttr.setX(targetIndex, genome.isGlowing ? 1.0 : 0.0);
+      glowTraitAttr.needsUpdate = true;
+    }
   }
 
   if (targetMesh === engine.cylinderMesh) {

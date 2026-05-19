@@ -29,22 +29,31 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
     // Expose Attributes
     shader.vertexShader = `
             attribute float instanceGlow;
+            attribute float instanceGlowTrait;
             attribute float instanceDecay;
             attribute float instanceHash;
             attribute float instanceGrowth;
+            attribute vec3 instanceAmbientReflect;
+            attribute vec3 instanceLightDir;
             varying float vGlow;
+            varying float vGlowTrait;
             varying float vDecay;
             varying float vHash;
             varying float vGrowth;
+            varying vec3 vAmbientReflect;
+            varying vec3 vLightDir;
             varying vec3 vInstanceColor;
             ${shader.vertexShader}
         `.replace(
       "#include <color_vertex>",
       `#include <color_vertex>
              vGlow = instanceGlow;
+             vGlowTrait = instanceGlowTrait;
              vDecay = instanceDecay;
              vHash = instanceHash;
              vGrowth = instanceGrowth;
+             vAmbientReflect = instanceAmbientReflect;
+             vLightDir = instanceLightDir;
              #ifdef USE_INSTANCING_COLOR
                vInstanceColor = instanceColor;
              #else
@@ -62,9 +71,12 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
             uniform vec3 themeColor1_B;
             uniform vec3 themeColor2_B;
             varying float vGlow;
+            varying float vGlowTrait;
             varying float vDecay;
             varying float vHash;
             varying float vGrowth;
+            varying vec3 vAmbientReflect;
+            varying vec3 vLightDir;
             varying vec3 vInstanceColor;
             ${shader.fragmentShader}
         `.replace(
@@ -128,9 +140,28 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
                  }
              }
              
-             // Soft additive Glow 
+             // Subtle selecting highlight outline glow across all themes
              if (vGlow > 0.0) {
-                 diffuseColor.rgb += (diffuseColor.rgb * vGlow * 2.0); // additive glow approximation since alpha limits glow otherwise
+                 float fresnelSelect = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
+                 vec3 selectColor = mix(diffuseColor.rgb, vec3(1.0, 1.0, 1.0), 0.5);
+                 diffuseColor.rgb += selectColor * (vGlow * 0.4 + fresnelSelect * vGlow * 0.5);
+             }
+             
+             // Intrinsic body glow & outline aura trait
+             if (vGlowTrait > 0.0) {
+                 float intrinsicMult = 1.0;
+                 if (vDecay > 0.0) { // Faltering flicker when reaching dying stage
+                     intrinsicMult = sin(gl_FragCoord.x * 12.34 + gl_FragCoord.y * 45.67) * 0.4 + 0.6;
+                 }
+                 float fresnelTrait = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
+                 diffuseColor.rgb += diffuseColor.rgb * (vGlowTrait * intrinsicMult + fresnelTrait * 1.5 * intrinsicMult);
+             }
+             
+             // Environmental proximity directional reflection
+             if (length(vAmbientReflect) > 0.0) {
+                 float nDotL = max(dot(normalize(vNormal), normalize(vLightDir)), 0.0);
+                 float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
+                 diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4);
              }
             `
     );
@@ -277,6 +308,7 @@ export function breedGenomes(
     pulseSpeed: 0.05 + Math.random() * 0.15,
     gradientGrowth: Math.random() < (traitProbs["gradient"] || 0.1),
     singleton: newArchetype === "snake" && Math.random() < 0.5,
+    isGlowing: Math.random() < 0.15 || !!(g1.isGlowing || g2.isGlowing) && Math.random() < 0.5,
   };
   
   if (res.archetype === "ginger") {
@@ -340,6 +372,8 @@ export function mutateBranchGenome(
     res.multicolorAppendage = Math.random() < multicolorAppProb;
   if (Math.random() < 0.1)
     res.sameColorAppendage = Math.random() < sameColorAppProb;
+  if (Math.random() < 0.1)
+    res.isGlowing = true;
   res.name = `Branch-Mutant-${Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0")}`;

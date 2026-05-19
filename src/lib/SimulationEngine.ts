@@ -65,6 +65,9 @@ export class SimulationEngine {
   timeScale: number = 1.0;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
+  glowTraitIntensity: number = 1.5;
+  glowTraitDistance: number = 50.0;
+  glowTraitReflect: number = 1.0;
 
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
@@ -217,6 +220,7 @@ export class SimulationEngine {
       gradientGrowth: Math.random() < (this.traitProbs["gradient"] || 0.1),
       createdAt: this.time,
       singleton: archetype === "snake" && Math.random() < 0.5,
+      isGlowing: Math.random() < 0.15,
     };
   }
 

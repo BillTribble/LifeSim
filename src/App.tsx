@@ -146,6 +146,9 @@ export default function App() {
         theme={state.theme}
         themeMorphFreq={state.themeMorphFreq}
         themeMorphSpeed={state.themeMorphSpeed}
+        glowTraitIntensity={state.glowTraitIntensity}
+        glowTraitDistance={state.glowTraitDistance}
+        glowTraitReflect={state.glowTraitReflect}
       />
 
       <HUD
