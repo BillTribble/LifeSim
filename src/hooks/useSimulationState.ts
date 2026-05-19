@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 
 export const DEFAULTS = {
   "themeMorphSpeed": 5,
-  "themeMorphFreq": 0.61,
-  "theme": 2,
-  "timeScale": 1,
+  "themeMorphFreq": 0.8,
+  "theme": 0,
+  "timeScale": 0.5,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -14,21 +14,21 @@ export const DEFAULTS = {
   "rotationSpeed": 0.1,
   "magnetism": 10,
   "proximity": 40,
-  "desperation": 7.7,
-  "despairAge": 1800,
+  "desperation": 9.5,
+  "despairAge": 1000,
   "flowerSize": 0.25,
-  "entropyThreshold": 0.7,
-  "tideSpeed": 0.30000000000000004,
+  "entropyThreshold": 1,
+  "tideSpeed": 0.1,
   "tideColor": "#643707",
-  "bgColor": "#5e593e",
+  "bgColor": "#5e503e",
   "fogColor": "#000000",
-  "tideThickness": 300,
-  "tideOpacity": 0.15000000000000002,
+  "tideThickness": 330,
+  "tideOpacity": 0.1,
   "tideSaturation": 0.4,
   "growthSpeed": 0.1,
-  "diebackRate": 1,
+  "diebackRate": 7.42,
   "hybridCooldown": 200,
-  "hybridStickiness": 4757,
+  "hybridStickiness": 0.05,
   "branchTendencyVar": 50,
   "ornamentFrequency": 3.2,
   "branchingMultiplier": 3,
@@ -42,10 +42,10 @@ export const DEFAULTS = {
   "boundarySize": 120,
   "desiccationSpeed": 1.1,
   "hybridSize": 2,
-  "terminationProb": 0.02,
+  "terminationProb": 0.9051,
   "termProbPostBranch": 1.5,
   "taperDuration": 1,
-  "diebackAgeBias": 3,
+  "diebackAgeBias": 5,
   "branchMutationRate": 0,
   "enableGlow": false,
   "glowSize": 0.5,
@@ -73,7 +73,7 @@ export const DEFAULTS = {
   "dialLimits": {
     "DEATH RATE": {
       "min": 0,
-      "max": 100
+      "max": 10
     },
     "MAGNET": {
       "min": 0,
@@ -84,14 +84,18 @@ export const DEFAULTS = {
       "max": 1000000
     },
     "HYBRID_DECAY": {
-      "min": 0.01,
+      "min": 0,
       "max": 1
+    },
+    "SLOW_MO": {
+      "min": 0.1,
+      "max": 50
     }
   } as Record<string, {min: number, max: number}>,
   "cameraPosition": {
-    "x": -138.72339373186549,
+    "x": 338.3537304509371,
     "y": 66.42053119728962,
-    "z": -310.39351324888355,
+    "z": -33.24253488237013,
     "zoom": 1.916305230244903
   },
   "version": "1.0"

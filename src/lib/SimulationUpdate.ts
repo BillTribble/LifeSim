@@ -24,11 +24,17 @@ export function updateSimulation(engine: SimulationEngine) {
     if (engine.frameCount - engine.lastThemeMorphTime > intervalFrames && engine.themeProgress >= 1.0) {
       engine.lastThemeMorphTime = engine.frameCount;
       
-      // Pick random next theme different from current
-      let next = Math.floor(Math.random() * 4);
-      while (next === engine.theme) next = Math.floor(Math.random() * 4);
+      // Pick random next theme different from current, biasing towards complementary (2) x2
+      const candidates: number[] = [];
+      for (let t = 0; t < 4; t++) {
+        if (t !== engine.theme) {
+          candidates.push(t);
+          if (t === 2) candidates.push(t);
+        }
+      }
+      const next = candidates[Math.floor(Math.random() * candidates.length)];
       
-          engine.setTheme(next, false);
+      engine.setTheme(next, false);
           // We don't want the React layer to overwrite this automatically, 
           // but it will if the React state has its own 'theme'. 
           // To properly sync this, the engine should emit an event or React should just not force theme if it hasn't changed.
@@ -323,6 +329,35 @@ export function updateSimulation(engine: SimulationEngine) {
     engine.cylinderMesh.instanceColor!.needsUpdate = true;
   }
 
+  if (engine.hoveredStrainName !== engine.lastHoveredStrainName) {
+    engine.lastHoveredStrainName = engine.hoveredStrainName;
+    const glowAttr = engine.cylinderMesh.geometry.getAttribute("instanceGlow") as THREE.InstancedBufferAttribute;
+    if (glowAttr) {
+      const activeRange = Math.min(engine.pointCount, engine.maxDOMs);
+      for (let i = 0; i < activeRange; i++) {
+        const seg = engine.segments[i];
+        if (seg) {
+          glowAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
+        }
+      }
+      glowAttr.needsUpdate = true;
+    }
+    
+    for (const app of engine.appendages.values()) {
+      const appGlowAttr = app.mesh.geometry.getAttribute("instanceGlow") as THREE.InstancedBufferAttribute;
+      if (appGlowAttr) {
+        const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
+        for (let i = 0; i < appLim; i++) {
+          const seg = app.segments[i];
+          if (seg) {
+            appGlowAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
+          }
+        }
+        appGlowAttr.needsUpdate = true;
+      }
+    }
+  }
+
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 
@@ -426,7 +461,7 @@ export function updateSimulation(engine: SimulationEngine) {
   if (engine.hybridConnectionMesh) {
     const positions: number[] = [];
     const colors: number[] = [];
-    const activeHybrids: { pos: THREE.Vector3; time: number; alpha: number }[] = [];
+    const activeHybrids: { pos: THREE.Vector3; time: number; alpha: number; color?: THREE.Color }[] = [];
     for (let i = 0; i < 2000; i++) {
       const seg = engine.hybridSegments[i];
       if (seg) {
@@ -444,7 +479,7 @@ export function updateSimulation(engine: SimulationEngine) {
         }
         const pos = new THREE.Vector3();
         pos.setFromMatrixPosition(seg.matrix);
-        activeHybrids.push({ pos, time: seg.timestamp, alpha });
+        activeHybrids.push({ pos, time: seg.timestamp, alpha, color: seg.color });
       }
     }
 
@@ -452,19 +487,22 @@ export function updateSimulation(engine: SimulationEngine) {
 
     for (let i = 0; i < activeHybrids.length - 1; i++) {
       const lineAlpha = Math.min(activeHybrids[i].alpha, activeHybrids[i + 1].alpha);
+      const c1 = activeHybrids[i].color ? activeHybrids[i].color!.clone().lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color(1, 1, 1);
+      const c2 = activeHybrids[i + 1].color ? activeHybrids[i + 1].color!.clone().lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color(1, 1, 1);
+
       positions.push(
         activeHybrids[i].pos.x,
         activeHybrids[i].pos.y,
         activeHybrids[i].pos.z,
       );
-      colors.push(1, 1, 1, lineAlpha);
+      colors.push(c1.r, c1.g, c1.b, lineAlpha);
       
       positions.push(
         activeHybrids[i + 1].pos.x,
         activeHybrids[i + 1].pos.y,
         activeHybrids[i + 1].pos.z,
       );
-      colors.push(1, 1, 1, lineAlpha);
+      colors.push(c2.r, c2.g, c2.b, lineAlpha);
     }
 
     const posAttr = engine.hybridConnectionMesh.geometry.getAttribute(

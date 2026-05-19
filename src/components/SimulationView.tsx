@@ -6,11 +6,13 @@ interface Props {
   onLog: (msg: string) => void;
   onStateUpdate: (state: any) => void;
   onConfigChange?: (config: any) => void;
+  stats?: any;
 }
 
 export function SimulationView({
   onLog,
   onStateUpdate,
+  stats,
   restartTrigger,
   randomizeTrigger,
   rotationSpeed,
@@ -135,6 +137,10 @@ export function SimulationView({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SimulationEngine | null>(null);
+  const [hoveredStrainName, setHoveredStrainName] = useState<string | null>(null);
+  const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{ age: number; tapering: boolean } | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const lastRaycastTime = useRef<number>(0);
 
   useEffect(() => {
     if (
@@ -594,9 +600,186 @@ export function SimulationView({
     }
   };
 
+  const handlePointerMove = (e: React.PointerEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+    if (!containerRef.current || !engineRef.current) return;
+    const now = performance.now();
+    if (now - lastRaycastTime.current < 40) return;
+    lastRaycastTime.current = now;
+
+    const engine = engineRef.current;
+    if (!engine.camera || !engine.cylinderMesh) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    const mouse = new THREE.Vector2(x, y);
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, engine.camera);
+
+    const intersects = raycaster.intersectObject(engine.cylinderMesh, true);
+    
+    let targetStrainName: string | null = null;
+
+    if (intersects.length > 0) {
+      const instanceId = intersects[0].instanceId;
+      if (instanceId !== undefined && engine.segments[instanceId]) {
+        const sName = engine.segments[instanceId].strainName;
+        if (sName !== "hybrid") {
+          targetStrainName = sName;
+        }
+      }
+    }
+
+    if (!targetStrainName && engine.agents.length > 0) {
+      let nearestAgent: any = null;
+      let minDistSq = Infinity;
+      const clickRay = raycaster.ray;
+
+      engine.agents.forEach(agent => {
+        if (agent.active && !agent.isFeeler) {
+          const distSq = clickRay.distanceSqToPoint(agent.position);
+          if (distSq < minDistSq && distSq < 300) {
+            minDistSq = distSq;
+            nearestAgent = agent;
+          }
+        }
+      });
+
+      if (nearestAgent) {
+        targetStrainName = nearestAgent.genome.name;
+      }
+    }
+
+    if (targetStrainName) {
+      let matchingAgent: any = null;
+      let minD = Infinity;
+      const clickRay = raycaster.ray;
+      engine.agents.forEach(agent => {
+        if (agent.active && !agent.isFeeler && agent.genome.name === targetStrainName) {
+          const distSq = clickRay.distanceSqToPoint(agent.position);
+          if (distSq < minD) {
+            minD = distSq;
+            matchingAgent = agent;
+          }
+        }
+      });
+      if (!matchingAgent) {
+        matchingAgent = engine.agents.find(a => a.active && !a.isFeeler && a.genome.name === targetStrainName);
+      }
+      if (matchingAgent) {
+        setHoveredAgentInfo({ age: matchingAgent.age, tapering: !!matchingAgent.tapering });
+      } else {
+        setHoveredAgentInfo(null);
+      }
+    } else {
+      setHoveredAgentInfo(null);
+    }
+
+    engine.hoveredStrainName = targetStrainName;
+    setHoveredStrainName(targetStrainName);
+  };
+
+  const hoveredStrain = hoveredStrainName && stats?.strains ? stats.strains.find((s: any) => s.name === hoveredStrainName) : null;
+  const totalBiomass = stats?.strains ? stats.strains.reduce((acc: number, s: any) => acc + s.biomass, 0) || 1 : 1;
+  const biomassPercent = hoveredStrain ? (hoveredStrain.biomass / totalBiomass) * 100 : 0;
+
+  let textStyle = {};
+  let barStyle = {};
+  if (hoveredStrain) {
+    const hasGradient = hoveredStrain.color2 && hoveredStrain.color2 !== hoveredStrain.color;
+    textStyle = hasGradient
+      ? {
+          backgroundImage: `linear-gradient(to right, ${hoveredStrain.color}, ${hoveredStrain.color2})`,
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }
+      : { color: hoveredStrain.color };
+    barStyle = hasGradient
+      ? {
+          width: `${biomassPercent}%`,
+          backgroundImage: `linear-gradient(to right, ${hoveredStrain.color}, ${hoveredStrain.color2})`,
+        }
+      : { width: `${biomassPercent}%`, backgroundColor: hoveredStrain.color };
+  }
+
+  let lifespanPercent = 100;
+  let lifespanColor = "bg-green-500";
+  let lifespanText = "Optimal";
+  if (hoveredAgentInfo) {
+    const remaining = Math.max(5, Math.min(100, 100 - (hoveredAgentInfo.age / 400) * 100));
+    lifespanPercent = remaining;
+    if (hoveredAgentInfo.tapering) {
+      lifespanColor = "bg-gray-500";
+      lifespanText = "Deleting";
+    } else if (remaining <= 15 || hoveredAgentInfo.age >= 380) {
+      lifespanColor = "bg-red-500 animate-pulse";
+      lifespanText = "End of Life";
+    } else if (remaining <= 50) {
+      lifespanColor = "bg-yellow-500";
+      lifespanText = "Maturing";
+    } else {
+      lifespanColor = "bg-green-500";
+      lifespanText = "Flourishing";
+    }
+  }
+
+  const popupLeft = mousePos.x + 180 > window.innerWidth ? mousePos.x - 170 : mousePos.x + 15;
+  const popupTop = mousePos.y + 140 > window.innerHeight ? mousePos.y - 130 : mousePos.y + 15;
+
   return (
     <div ref={containerRef} className="absolute inset-0 z-0">
-      <canvas ref={canvasRef} onClick={handleClick} className="block w-full h-full cursor-pointer pointer-events-auto" />
+      <canvas
+        ref={canvasRef}
+        onClick={handleClick}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => {
+          if (engineRef.current) engineRef.current.hoveredStrainName = null;
+          setHoveredStrainName(null);
+          setHoveredAgentInfo(null);
+        }}
+        className="block w-full h-full cursor-pointer pointer-events-auto"
+      />
+      {hoveredStrain && (
+        <div
+          className="fixed z-[9999] pointer-events-none bg-[#001220]/95 border border-[#87CEEB]/50 p-3 shadow-2xl text-[#87CEEB] text-[10px] rounded min-w-[160px] max-w-[220px]"
+          style={{ top: popupTop, left: popupLeft }}
+        >
+          <div className="flex justify-between items-center mb-1 font-bold pb-1 border-b border-[#87CEEB]/30">
+            <span className="truncate mr-2" style={textStyle}>
+              {hoveredStrain.name}
+            </span>
+            {hoveredStrain.isDying && (
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0 animate-pulse shadow-[0_0_4px_rgba(239,68,68,0.8)]" />
+            )}
+          </div>
+          <div className="flex justify-between mb-1 gap-2">
+            <span>Archetype:</span>
+            <span className="capitalize">{hoveredStrain.archetype || "unknown"}</span>
+          </div>
+          <div className="flex justify-between mb-1 gap-2">
+            <span>Biomass:</span>
+            <span>{biomassPercent.toFixed(1)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-white/5 overflow-hidden rounded mt-1.5 mb-2">
+            <div
+              className="h-full transition-all duration-300 ease-out"
+              style={barStyle as React.CSSProperties}
+            />
+          </div>
+          <div className="flex justify-between mb-1 gap-2 border-t border-[#87CEEB]/20 pt-2">
+            <span>Lifespan:</span>
+            <span>{lifespanText}</span>
+          </div>
+          <div className="h-1.5 w-full bg-white/5 overflow-hidden rounded mt-1">
+            <div
+              className={`h-full transition-all duration-300 ease-out ${lifespanColor}`}
+              style={{ width: `${lifespanPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

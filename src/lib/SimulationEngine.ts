@@ -63,6 +63,8 @@ export class SimulationEngine {
   unscaledTime: number = 0;
   frameCount: number = 0;
   timeScale: number = 1.0;
+  hoveredStrainName: string | null = null;
+  lastHoveredStrainName: string | null = null;
 
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
@@ -655,6 +657,7 @@ export class SimulationEngine {
       thickness: this.hybridSize,
       strainName: "hybrid",
       variant: variant,
+      color: color.clone(),
     };
 
     this.dyingHybrids.delete(currentCount);

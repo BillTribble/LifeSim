@@ -77,6 +77,7 @@ export default function App() {
         }}
       />
       <SimulationView
+        stats={stats}
         onLog={(msg) => {
           console.log(msg);
           fetch('/api/log', { method: 'POST', body: msg }).catch(() => {});

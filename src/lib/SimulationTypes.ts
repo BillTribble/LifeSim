@@ -83,6 +83,7 @@ export interface Segment {
   variant?: number;
   parentIndex?: number;
   parentTimestamp?: number;
+  color?: THREE.Color;
 }
 
 export const MAX_POINTS = 240000;
