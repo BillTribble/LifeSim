@@ -9,6 +9,7 @@ export function updateSimulation(engine: SimulationEngine) {
   engine.unscaledTime += 1;
   engine.frameCount++;
   if (engine.controls) {
+    engine.controls.autoRotateSpeed = (engine.rotationSpeed || 0.1) * engine.timeScale * 2.0;
     engine.controls.update();
   }
 
@@ -42,7 +43,7 @@ export function updateSimulation(engine: SimulationEngine) {
       if (engine.themeProgress < 1.0) {
         // themeMorphSpeed is in seconds (1 to 20)
         const transitionSpeed = engine.manualThemeTransition ? 0.5 : engine.themeMorphSpeed;
-        const progressInc = 1.0 / (transitionSpeed * 60);
+        const progressInc = (1.0 / (transitionSpeed * 60)) * engine.timeScale;
         engine.themeProgress += progressInc;
         
         if (engine.themeProgress >= 1.0) {
@@ -66,6 +67,13 @@ export function updateSimulation(engine: SimulationEngine) {
       mat.userData.theme2.value = engine.nextTheme;
       mat.userData.themeMix.value = engine.themeProgress < 1.0 ? engine.themeProgress : 0.0;
       
+      const adjustSat = (c: THREE.Color) => {
+        const hsl = c.getHSL({h:0,s:0,l:0});
+        if (hsl.s > engine.maxSaturation) {
+          c.setHSL(hsl.h, engine.maxSaturation, hsl.l);
+        }
+      };
+
       if (engine.theme === 3) {
         const bgC = new THREE.Color(engine.bgColor);
         const hsl = bgC.getHSL({h:0,s:0,l:0});
@@ -74,6 +82,8 @@ export function updateSimulation(engine: SimulationEngine) {
         mat.userData.themeColor1_A.value.set(engine.themeColor1);
         mat.userData.themeColor2_A.value.set(engine.themeColor2);
       }
+      adjustSat(mat.userData.themeColor1_A.value);
+      adjustSat(mat.userData.themeColor2_A.value);
 
       if (engine.nextTheme === 3) {
         const bgC = new THREE.Color(engine.bgColor);
@@ -83,6 +93,8 @@ export function updateSimulation(engine: SimulationEngine) {
         mat.userData.themeColor1_B.value.set(engine.nextThemeColor1);
         mat.userData.themeColor2_B.value.set(engine.nextThemeColor2);
       }
+      adjustSat(mat.userData.themeColor1_B.value);
+      adjustSat(mat.userData.themeColor2_B.value);
     }
   }
 
@@ -189,7 +201,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
           if (match) {
             const pulseVal = Math.sin(
-                engine.unscaledTime *
+                engine.time *
                   genome.pulseSpeed *
                   (engine.globalPulseSpeed || 1.0),
               );
@@ -264,13 +276,18 @@ export function updateSimulation(engine: SimulationEngine) {
 
   const stemGrowthAttr = engine.cylinderMesh.geometry.getAttribute("instanceGrowth") as THREE.InstancedBufferAttribute;
   if (stemGrowthAttr) {
-    const activeRange = Math.min(engine.pointCount, MAX_POINTS);
+    const limit = Math.min(engine.pointCount, engine.maxDOMs);
     let updated = false;
-    for (let i = Math.max(0, activeRange - 10000); i < activeRange; i++) {
-       const val = stemGrowthAttr.getX(i);
-       if (val < 1.0) {
-          stemGrowthAttr.setX(i, Math.min(1.0, val + 0.05 * engine.timeScale));
-          updated = true;
+    const currentHead = engine.pointCount % engine.maxDOMs;
+    const windowSize = Math.min(10000, engine.maxDOMs);
+    for (let i = 0; i < windowSize; i++) {
+       const idx = (currentHead - i + engine.maxDOMs) % engine.maxDOMs;
+       if (idx < limit) {
+          const val = stemGrowthAttr.getX(idx);
+          if (val < 1.0) {
+             stemGrowthAttr.setX(idx, Math.min(1.0, val + 0.05 * engine.timeScale));
+             updated = true;
+          }
        }
     }
     if (updated) stemGrowthAttr.needsUpdate = true;
@@ -293,7 +310,7 @@ export function updateSimulation(engine: SimulationEngine) {
           const pulseEffect =
             1.0 +
             Math.sin(
-              engine.unscaledTime *
+              engine.time *
                 genome.pulseSpeed *
                 (engine.globalPulseSpeed || 1.0),
             ) *
@@ -311,7 +328,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = Math.floor(engine.maxDOMs / 20); // Full sweep every ~20 frames
-    const sweepStart = (Math.floor(engine.time) * batchSize) % engine.maxDOMs;
+    const sweepStart = (engine.frameCount * batchSize) % engine.maxDOMs;
 
     for (let i = 0; i < batchSize; i++) {
       const idx = (sweepStart + i) % engine.maxDOMs;
@@ -322,7 +339,7 @@ export function updateSimulation(engine: SimulationEngine) {
         const isDyingStrain = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
         let prob = Math.min(
           1.0,
-          Math.pow(age / 500, bias) * Math.max(0.000001, effectiveDieback) * 0.5, // 10x higher probability but smaller chunks
+          Math.pow(age / 500, bias) * Math.max(0.000001, effectiveDieback) * 0.5,
         );
         
         let activeDieback = effectiveDieback;
@@ -332,7 +349,7 @@ export function updateSimulation(engine: SimulationEngine) {
         }
         
         if (Math.random() < prob) {
-          const chunkSize = Math.max(1, Math.random() * Math.min(20, activeDieback * 5)); // Smaller, more uniform chunks
+          const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(100, engine.diebackRate * engine.timeScale * 2 + 1)));
           for (let j = 0; j < chunkSize; j++) {
             const chunkIdx = (idx + j) % engine.maxDOMs;
             const cSeg = engine.segments[chunkIdx];
@@ -351,7 +368,7 @@ export function updateSimulation(engine: SimulationEngine) {
       const appLim = Math.floor(engine.maxDOMs / 4);
       if (appLim > 0) {
         const appBatchSize = Math.floor(appLim / 20); // Faster sweep for appendages since they just check parents
-        const appSweepStart = (Math.floor(engine.time) * appBatchSize) % appLim;
+        const appSweepStart = (engine.frameCount * appBatchSize) % appLim;
         for (let i = 0; i < appBatchSize; i++) {
           const idx = (appSweepStart + i) % appLim;
           const seg = app.segments[idx];
@@ -491,18 +508,23 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
     const batchSize = 100;
-    const sweepStart = (Math.floor(engine.time) * batchSize) % 2000;
+    const sweepStart = (engine.frameCount * batchSize) % 2000;
     for (let i = 0; i < batchSize; i++) {
       const idx = (sweepStart + i) % 2000;
       const seg = engine.hybridSegments[idx];
       if (seg && !engine.dyingHybrids.has(idx)) {
         const age = engine.time - seg.timestamp;
-        const deathProb = Math.min(
-          1.0,
-          Math.pow(age / 5000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.05,
-        );
-        if (Math.random() < deathProb) {
+        const maxHybridLife = engine.hybridStickiness * 60 + 5;
+        if (age > maxHybridLife) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
+        } else {
+          const deathProb = Math.min(
+            1.0,
+            Math.pow(age / 2000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.2,
+          );
+          if (Math.random() < deathProb) {
+            engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
+          }
         }
       }
     }

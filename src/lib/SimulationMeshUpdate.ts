@@ -148,11 +148,18 @@ export function updateMeshSegments(
       growthAttr.needsUpdate = true;
     }
     
-    let h = 0;
-    for(let i=0; i<genome.name.length; i++) {
-        h = Math.imul(31, h) + genome.name.charCodeAt(i) | 0;
+    let genomeHash = 0;
+    if (genome.name.startsWith("Alpha")) {
+      genomeHash = 0.1;
+    } else if (genome.name.startsWith("Beta")) {
+      genomeHash = 0.9;
+    } else {
+      let h = 0;
+      for(let i=0; i<genome.name.length; i++) {
+          h = Math.imul(31, h) + genome.name.charCodeAt(i) | 0;
+      }
+      genomeHash = (Math.abs(h) % 1000) / 1000;
     }
-    const genomeHash = (Math.abs(h) % 1000) / 1000;
     hashAttr.setX(targetIndex, genomeHash);
     
     glowAttr.needsUpdate = true;
@@ -254,8 +261,20 @@ export function processDyingSegments(
       if (decayAttr) {
         decayAttr.setX(idx, Math.min(shrink, 1.0));
         decayAttr.needsUpdate = true;
-      } else {
-        if (seg.matrix) {
+      }
+      
+      if (isHybrid && seg && seg.matrix) {
+        engine.dummy.matrix.copy(seg.matrix);
+        engine.dummy.matrix.decompose(
+          engine.dummy.position,
+          engine.dummy.quaternion,
+          engine.dummy.scale,
+        );
+        engine.dummy.scale.multiplyScalar(Math.max(1.0 - shrink, 0.001));
+        engine.dummy.updateMatrix();
+        mesh.setMatrixAt(idx, engine.dummy.matrix);
+      } else if (!decayAttr) {
+        if (seg && seg.matrix) {
           engine.dummy.matrix.copy(seg.matrix);
           engine.dummy.matrix.decompose(
             engine.dummy.position,

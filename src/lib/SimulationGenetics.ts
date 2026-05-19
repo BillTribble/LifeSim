@@ -73,7 +73,9 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
              vec3 colorA = diffuseColor.rgb;
              if (theme1 == 1) { // Albino
                  float luminance = dot(colorA, vec3(0.299, 0.587, 0.114));
-                 colorA = vec3(mix(0.5, 1.0, luminance));
+                 vec3 silverShadow = vec3(0.75, 0.78, 0.82);
+                 vec3 platinumHighlight = vec3(0.98, 0.99, 1.0);
+                 colorA = mix(silverShadow, platinumHighlight, luminance);
              } else if (theme1 == 2) { // Complementary
                  vec3 baseColor = mix(themeColor1_A, themeColor2_A, step(0.5, vHash));
                  colorA = baseColor * (length(vInstanceColor) * 1.2);
@@ -84,7 +86,9 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
              vec3 colorB = diffuseColor.rgb;
              if (theme2 == 1) { // Albino
                  float luminance = dot(colorB, vec3(0.299, 0.587, 0.114));
-                 colorB = vec3(mix(0.5, 1.0, luminance));
+                 vec3 silverShadow = vec3(0.75, 0.78, 0.82);
+                 vec3 platinumHighlight = vec3(0.98, 0.99, 1.0);
+                 colorB = mix(silverShadow, platinumHighlight, luminance);
              } else if (theme2 == 2) { // Complementary
                  vec3 baseColor = mix(themeColor1_B, themeColor2_B, step(0.5, vHash));
                  colorB = baseColor * (length(vInstanceColor) * 1.2);
@@ -205,7 +209,7 @@ export function breedGenomes(
 
   const isAlbino = Math.random() < 0.1;
   const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
-  const resultL = isAlbino ? 0.4 + Math.random() * 0.5 : 0.6;
+  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
 
   const res: any = {
     name: `Hybrid [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
@@ -314,7 +318,7 @@ export function mutateBranchGenome(
   const h = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
   const isAlbino = Math.random() < 0.05;
   const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
-  const resultL = isAlbino ? 0.4 + Math.random() * 0.5 : 0.6;
+  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
   res.color.setHSL((h + (Math.random() - 0.5) * 0.15 + 1.0) % 1.0, resultS, resultL);
 
   res.wanderIntensity = Math.max(0, res.wanderIntensity + (Math.random() - 0.5) * 0.05);

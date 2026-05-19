@@ -130,8 +130,8 @@ export function HUD({
       <div
         className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
-        <header className={`flex justify-between items-start mb-2 sm:mb-6 text-[10px] font-mono pb-2 transition-all duration-500 ${showHUD ? "opacity-100 visible border-b border-[#D2B48C]/30 pointer-events-auto" : "opacity-0 invisible border-b border-transparent pointer-events-none"}`}>
-          <div className="flex gap-4">
+        <header className="flex justify-between items-start mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20">
+          <div className={`flex gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`}>
             <div
               className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
               onClick={handleRestart}
@@ -191,7 +191,7 @@ export function HUD({
             </div>
 
             <div
-              className={`flex items-center gap-2 cursor-pointer hover:text-white transition-all duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+              className="flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto opacity-80"
               onClick={handleCopySettings}
               title="Copy all settings to clipboard"
             >
@@ -201,45 +201,52 @@ export function HUD({
               <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
             </div>
           </div>
-          <div className={`flex flex-wrap gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center transition-opacity duration-500 ${showHUD ? "opacity-80 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
-            <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
-              <span className="text-[#D2B48C]">UPTIME:</span>
-              <span className="text-white">{formatUptime(uptime)}</span>
+          <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none">
+            <div className={`flex flex-wrap items-center gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`}>
+              <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
+                <span className="text-[#D2B48C]">UPTIME:</span>
+                <span className="text-white">{formatUptime(uptime)}</span>
+              </div>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
+                onClick={() => setPresetPanelOpen(!presetPanelOpen)}
+                title="Presets"
+              >
+                <Database className="w-3 h-3 text-[#D2B48C]" />
+                <span>PRESETS</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
+                onClick={() => setMutationPanelOpen(!mutationPanelOpen)}
+                title="Mutations"
+              >
+                <Dna className="w-3 h-3 text-[#87CEEB]" />
+                <span>MUTATION</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
+                onClick={() => setCloudPanelOpen(!cloudPanelOpen)}
+                title="Configure Tide Cloud"
+              >
+                <Cloud className="w-3 h-3 text-purple-400" />
+                <span>CONFIG</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
             </div>
-            <div
-              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
-              onClick={() => setPresetPanelOpen(!presetPanelOpen)}
-              title="Presets"
+            <button
+              onClick={() => setShowHUD(!showHUD)}
+              className={`flex items-center gap-2 bg-[#001220]/60 border border-[#D2B48C]/30 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-500 overflow-hidden shrink-0 ${
+                showHUD ? "w-6 h-6 p-0 justify-center hover:bg-white/20" : "px-3 py-1 hover:bg-white/10 pr-3.5"
+              }`}
+              title={showHUD ? "Hide HUD Interface" : "Show HUD Interface"}
             >
-              <Database className="w-3 h-3 text-[#D2B48C]" />
-              <span>PRESETS</span>
-              <ChevronDown className="w-3 h-3" />
-            </div>
-            <div
-              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
-              onClick={() => setMutationPanelOpen(!mutationPanelOpen)}
-              title="Mutations"
-            >
-              <Dna className="w-3 h-3 text-[#87CEEB]" />
-              <span>MUTATION</span>
-              <ChevronDown className="w-3 h-3" />
-            </div>
-            <div
-              className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded"
-              onClick={() => setCloudPanelOpen(!cloudPanelOpen)}
-              title="Configure Tide Cloud"
-            >
-              <Cloud className="w-3 h-3 text-purple-400" />
-              <span>CONFIG</span>
-              <ChevronDown className="w-3 h-3" />
-            </div>
-            {showHUD && (
-              <button
-                onClick={() => setShowHUD(false)}
-                className="w-3 h-3 bg-[#D2B48C]/60 hover:bg-white transition-all cursor-pointer rounded-full pointer-events-auto ml-2 my-auto flex shrink-0"
-                title="Hide HUD Interface"
-              />
-            )}
+              <div className={`rounded-full transition-all duration-300 ${showHUD ? "w-2.5 h-2.5 bg-[#D2B48C]/60 hover:bg-white" : "w-2 h-2 bg-[#87CEEB]"}`} />
+              <span className={`text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap transition-all duration-300 ${showHUD ? "opacity-0 w-0 hidden" : "opacity-100"}`}>
+                Interface
+              </span>
+            </button>
           </div>
         </header>
 
@@ -474,7 +481,7 @@ export function HUD({
               <div 
                 ref={controlsRef}
                 onScroll={handleScroll}
-                className="flex sm:grid sm:grid-flow-col sm:grid-rows-2 overflow-x-auto gap-3 p-4 pb-3 custom-scrollbar snap-x scroll-smooth pointer-events-auto"
+                className="flex sm:grid sm:grid-flow-col sm:grid-rows-2 overflow-x-auto gap-3 p-4 pb-3 no-scrollbar snap-x scroll-smooth pointer-events-auto"
               >
                 
                 {/* SYSTEM */}
@@ -598,7 +605,7 @@ Low: Tiny, fragile newborns." label="HYBRID_SIZE" min={0.5} max={10.0} step={0.1
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="HYBRID DECAY
 Duration that hybridization artifacts persist before fading.
 High: Artifacts linger for a long time.
-Low: Artifacts fade away quickly." label="HYBRID_DECAY" min={0.1} max={500.0} step={0.1} value={state.hybridStickiness} onChange={setters.setHybridStickiness} color="#87CEEB" />
+Low: Artifacts fade away quickly." label="HYBRID_DECAY" min={0.01} max={1.0} step={0.01} value={state.hybridStickiness} onChange={setters.setHybridStickiness} color="#87CEEB" />
                   </div>
                 </div>
                 )}
@@ -738,21 +745,6 @@ Low: Muted, pastel colors." label="SATURATION" min={0.0} max={1.0} step={0.05} v
           </div>
         </footer>
       </div>
-
-      {!showHUD && (
-      <div className="absolute top-6 right-6 z-20 flex items-center pointer-events-none">
-        <button
-          onClick={() => setShowHUD(true)}
-          className="flex items-center gap-2 px-3 py-1 bg-[#001220]/60 border border-[#D2B48C]/30 backdrop-blur-md rounded-full pointer-events-auto hover:bg-white/10 transition-all duration-500"
-          title="Show HUD Interface"
-        >
-          <div className="w-2 h-2 rounded-full bg-[#87CEEB]" />
-          <span className="text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap">
-            Interface
-          </span>
-        </button>
-      </div>
-      )}
     </>
   );
 }

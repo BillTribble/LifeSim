@@ -73,7 +73,7 @@ export const DEFAULTS = {
   "dialLimits": {
     "DEATH RATE": {
       "min": 0,
-      "max": 1
+      "max": 100
     },
     "MAGNET": {
       "min": 0,
@@ -84,8 +84,8 @@ export const DEFAULTS = {
       "max": 1000000
     },
     "HYBRID_DECAY": {
-      "min": 1,
-      "max": 5000
+      "min": 0.01,
+      "max": 1
     }
   } as Record<string, {min: number, max: number}>,
   "cameraPosition": {

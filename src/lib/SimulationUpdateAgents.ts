@@ -789,13 +789,17 @@ export function processAgents(
       if (strainAge > 0) {
          // Non-linear increase in termination probability for older variants
          const agePenalty = Math.pow(Math.max(0, strainAge - 2000) / 2000, 2) * 0.4;
-         currentTermProb += agePenalty * engine.terminationProb; // Make age penalty relative to dial, so 0 dial = 0 death 
+         currentTermProb += agePenalty * engine.terminationProb; 
+      }
+
+      // Individual organism aging penalty tied to DEATH RATE
+      if (agent.age > 150) {
+         currentTermProb += Math.min(1.0, Math.pow(agent.age / 400.0, engine.diebackAgeBias) * engine.diebackRate * 0.05);
       }
       
       // 4: Hybrid Vigor / Young Strain Immunity
-      const hasVigor = strainAge < 1000;
+      const hasVigor = strainAge < 1000 && agent.age < 120;
       if (hasVigor) {
-         // Young variants are highly resistant to natural random tapering
          currentTermProb *= 0.1;
       }
 

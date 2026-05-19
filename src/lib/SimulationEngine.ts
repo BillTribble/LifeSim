@@ -328,6 +328,9 @@ export class SimulationEngine {
     }
   }
   setTheme(val: number, manual: boolean = true) {
+    if (manual) {
+      this.lastThemeMorphTime = this.frameCount;
+    }
     if (this.nextTheme !== val) {
       if (this.themeProgress < 1.0) {
         this.theme = this.nextTheme;
