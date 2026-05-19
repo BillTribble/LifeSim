@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import { SimulationEngine } from "../lib/SimulationEngine";
 
 interface Props {
@@ -532,9 +533,70 @@ export function SimulationView({
     };
   }, []);
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (!containerRef.current || !engineRef.current) return;
+    const engine = engineRef.current;
+    if (!engine.camera || !engine.cylinderMesh) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    const mouse = new THREE.Vector2(x, y);
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, engine.camera);
+
+    const intersects = raycaster.intersectObject(engine.cylinderMesh, true);
+    
+    let targetStrainName: string | null = null;
+
+    if (intersects.length > 0) {
+      const instanceId = intersects[0].instanceId;
+      if (instanceId !== undefined && engine.segments[instanceId]) {
+        targetStrainName = engine.segments[instanceId].strainName;
+      }
+    }
+
+    if (!targetStrainName && engine.agents.length > 0) {
+      let nearestAgent: any = null;
+      let minDistSq = Infinity;
+      const clickRay = raycaster.ray;
+
+      engine.agents.forEach(agent => {
+        if (agent.active && !agent.isFeeler) {
+          const distSq = clickRay.distanceSqToPoint(agent.position);
+          if (distSq < minDistSq && distSq < 8000) {
+            minDistSq = distSq;
+            nearestAgent = agent;
+          }
+        }
+      });
+
+      if (nearestAgent) {
+        targetStrainName = nearestAgent.genome.name;
+      }
+    }
+
+    if (targetStrainName) {
+      let boosted = 0;
+      engine.agents.forEach(agent => {
+        if (agent.active && agent.genome.name === targetStrainName) {
+          agent.growthAccumulator = (agent.growthAccumulator || 0) + 40;
+          agent.thickness = Math.min(agent.thickness * 1.5, agent.genome.thicknessBase * 3.0);
+          agent.cooldown = 0;
+          boosted++;
+        }
+      });
+
+      if (boosted > 0) {
+        engine.onLog(`🌟 Growth spurt triggered for ${targetStrainName.split(' ')[0]}!`);
+      }
+    }
+  };
+
   return (
     <div ref={containerRef} className="absolute inset-0 z-0">
-      <canvas ref={canvasRef} className="block w-full h-full" />
+      <canvas ref={canvasRef} onClick={handleClick} className="block w-full h-full cursor-pointer pointer-events-auto" />
     </div>
   );
 }
