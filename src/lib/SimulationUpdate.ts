@@ -9,7 +9,7 @@ export function updateSimulation(engine: SimulationEngine) {
   engine.unscaledTime += 1;
   engine.frameCount++;
   if (engine.controls) {
-    engine.controls.autoRotateSpeed = (engine.rotationSpeed || 0.1) * engine.timeScale * 2.0;
+    engine.controls.autoRotateSpeed = engine.rotationSpeed || 0.1;
     engine.controls.update();
   }
 
@@ -43,7 +43,7 @@ export function updateSimulation(engine: SimulationEngine) {
       if (engine.themeProgress < 1.0) {
         // themeMorphSpeed is in seconds (1 to 20)
         const transitionSpeed = engine.manualThemeTransition ? 0.5 : engine.themeMorphSpeed;
-        const progressInc = (1.0 / (transitionSpeed * 60)) * engine.timeScale;
+        const progressInc = 1.0 / (transitionSpeed * 60);
         engine.themeProgress += progressInc;
         
         if (engine.themeProgress >= 1.0) {
@@ -201,7 +201,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
           if (match) {
             const pulseVal = Math.sin(
-                engine.time *
+                engine.unscaledTime *
                   genome.pulseSpeed *
                   (engine.globalPulseSpeed || 1.0),
               );
@@ -310,7 +310,7 @@ export function updateSimulation(engine: SimulationEngine) {
           const pulseEffect =
             1.0 +
             Math.sin(
-              engine.time *
+              engine.unscaledTime *
                 genome.pulseSpeed *
                 (engine.globalPulseSpeed || 1.0),
             ) *

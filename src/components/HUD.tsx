@@ -542,10 +542,10 @@ Low: Calm, methodical movement." label="DESPAIR" min={1} max={10.0} step={0.1} v
 Age at which desperation begins.
 High: Only elders become desperate.
 Low: Youthful desperation." label="DESP_AGE" min={100} max={5000} step={100} value={state.despairAge} onChange={setters.setDespairAge} color="#87CEEB" />
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="POPULATION LIMIT
-Threshold for environmental capacity.
-High: Sustains larger populations.
-Low: Strict population culling." label="ENTROPY" min={0.0} max={1.0} step={0.05} value={state.entropyThreshold} onChange={setters.setEntropyThreshold} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="SELF HYBRIDIZATION (ENTROPY)
+Biomass threshold for spontaneous self-mutation.
+High: Dominant species remain purebred longer.
+Low: Frequent spontaneous self-hybridization." label="ENTROPY" min={0.0} max={1.0} step={0.05} value={state.entropyThreshold} onChange={setters.setEntropyThreshold} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="ECO FADE
 Rate at which environment marks disappear.
 High: Trails fade quickly.

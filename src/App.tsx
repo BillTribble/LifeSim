@@ -33,6 +33,18 @@ export default function App() {
   const handleCopySettings = () => {
     const settings = {
       ...state,
+      appendageSize: state.flowerSize,
+      hybridDecay: state.hybridStickiness,
+      deathRate: state.diebackRate,
+      slowMotion: state.timeScale,
+      rotationVelocity: state.rotationSpeed,
+      swarmCohesion: state.magnetism,
+      detectionRange: state.proximity,
+      populationLimit: state.entropyThreshold,
+      extrusionSpeed: state.growthSpeed,
+      fadeSpeed: state.desiccationSpeed,
+      pulseSpeed: state.globalPulseSpeed,
+      saturation: state.maxSaturation,
       cameraPosition: stats.cameraPosition,
       version: "1.0",
     };
