@@ -581,7 +581,7 @@ export function SimulationView({
       let boosted = 0;
       engine.agents.forEach(agent => {
         if (agent.active && agent.genome.name === targetStrainName) {
-          agent.growthBoost = 8.0;
+          agent.growthBoost = 16.0;
           agent.thickness = Math.min(agent.thickness * 1.5, agent.genome.thicknessBase * 3.0);
           agent.cooldown = 0;
           boosted++;
