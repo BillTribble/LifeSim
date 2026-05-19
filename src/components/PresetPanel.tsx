@@ -111,6 +111,9 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         setters[setterName]((DEFAULTS as any)[key]);
       }
     });
+    if (handleRestart) {
+      handleRestart();
+    }
   };
 
   const handleRandomize = () => {

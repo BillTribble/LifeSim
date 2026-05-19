@@ -130,8 +130,8 @@ export function HUD({
       <div
         className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
-        <header className="flex justify-between items-start mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20">
-          <div className={`flex gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`}>
+        <header className="flex justify-between items-start mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
+          <div className={`flex gap-3 sm:gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
             <div
               className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
               onClick={handleRestart}
@@ -201,8 +201,8 @@ export function HUD({
               <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
             </div>
           </div>
-          <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none">
-            <div className={`flex flex-wrap items-center gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`}>
+          <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto">
+            <div className={`flex flex-wrap items-center gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
               <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
                 <span className="text-[#D2B48C]">UPTIME:</span>
                 <span className="text-white">{formatUptime(uptime)}</span>
