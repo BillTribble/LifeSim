@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 export const DEFAULTS = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.61,
-  "theme": 1,
-  "timeScale": 2.12,
+  "theme": 2,
+  "timeScale": 1,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -16,11 +16,11 @@ export const DEFAULTS = {
   "proximity": 40,
   "desperation": 7.7,
   "despairAge": 1800,
-  "flowerSize": 0.71,
+  "flowerSize": 0.25,
   "entropyThreshold": 0.7,
   "tideSpeed": 0.30000000000000004,
   "tideColor": "#643707",
-  "bgColor": "#4f5e3e",
+  "bgColor": "#5e593e",
   "fogColor": "#000000",
   "tideThickness": 300,
   "tideOpacity": 0.15000000000000002,
@@ -28,7 +28,7 @@ export const DEFAULTS = {
   "growthSpeed": 0.1,
   "diebackRate": 1,
   "hybridCooldown": 200,
-  "hybridStickiness": 1,
+  "hybridStickiness": 4757,
   "branchTendencyVar": 50,
   "ornamentFrequency": 3.2,
   "branchingMultiplier": 3,
@@ -39,17 +39,17 @@ export const DEFAULTS = {
   "maxSpecies": 4,
   "ecoFade": 1,
   "minAgents": 4,
-  "boundarySize": 200,
+  "boundarySize": 120,
   "desiccationSpeed": 1.1,
   "hybridSize": 2,
   "terminationProb": 0.02,
   "termProbPostBranch": 1.5,
   "taperDuration": 1,
-  "diebackAgeBias": 1.5,
+  "diebackAgeBias": 3,
   "branchMutationRate": 0,
   "enableGlow": false,
   "glowSize": 0.5,
-  "fogVisibility": 1250,
+  "fogVisibility": 800,
   "traitProbs": {
     "flowers": 0.45,
     "leaves": 0.5,
@@ -82,13 +82,17 @@ export const DEFAULTS = {
     "BUDGET": {
       "min": 500,
       "max": 1000000
+    },
+    "HYBRID_DECAY": {
+      "min": 1,
+      "max": 5000
     }
   } as Record<string, {min: number, max: number}>,
   "cameraPosition": {
-    "x": -134.13585804333533,
-    "y": 199.99999999999997,
-    "z": 249.013195608141,
-    "zoom": 1
+    "x": -138.72339373186549,
+    "y": 66.42053119728962,
+    "z": -310.39351324888355,
+    "zoom": 1.916305230244903
   },
   "version": "1.0"
 };
@@ -129,11 +133,7 @@ export function useSimulationState() {
       localStorage.getItem("timeScale") || DEFAULTS.timeScale.toString(),
     ),
   );
-  const [theme, setTheme] = useState(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored !== null) return parseInt(stored, 10);
-    return DEFAULTS.theme;
-  });
+  const [theme, setTheme] = useState(2); // Always start in complementary theme
   const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
     parseFloat(
       localStorage.getItem("themeMorphFreq") || DEFAULTS.themeMorphFreq.toString(),

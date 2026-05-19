@@ -355,7 +355,7 @@ export function processAgents(
       engine.addLineSegment(
         agent.lastPosition,
         agent.position,
-        genome,
+        agent.isFeeler && agent.realGenome ? agent.realGenome : genome,
         renderThickness,
       );
 
@@ -780,12 +780,9 @@ export function processAgents(
       }
 
 
-      let currentTermProb = engine.terminationProb * 0.001; // Extremely low base multiplier for long life
-      if (genome.archetype === "ginger") {
-         currentTermProb *= 0.2; // Proliferate for longer
-      }
+      let currentTermProb = 0; // Only die when old
       if (agent.age < 120) {
-        currentTermProb *= engine.termProbPostBranch * 0.1; // Scaled down branch penalty
+        currentTermProb = 0;
       }
 
       // 1: Older Strains Die Out (Bias system towards old variants dying to make room)

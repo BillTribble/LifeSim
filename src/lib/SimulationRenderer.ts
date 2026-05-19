@@ -11,7 +11,9 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const aspect = width / height;
     const d = 180;
     engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-    engine.camera.position.set(200, 200, 200);
+    engine.camera.position.set(-138.72339373186549, 66.42053119728962, -310.39351324888355);
+    engine.camera.zoom = 1.916305230244903;
+    engine.camera.updateProjectionMatrix();
     engine.camera.lookAt(engine.scene.position);
     
     engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true });
@@ -64,19 +66,23 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       
       const glowArray = new Float32Array(count).fill(0.0);
       const decayArray = new Float32Array(count).fill(0.0);
+      const growthArray = new Float32Array(count).fill(1.0);
       const hashArray = new Float32Array(count);
       for (let i = 0; i < count; i++) hashArray[i] = Math.random();
       
       const glowAttr = new THREE.InstancedBufferAttribute(glowArray, 1);
       const decayAttr = new THREE.InstancedBufferAttribute(decayArray, 1);
+      const growthAttr = new THREE.InstancedBufferAttribute(growthArray, 1);
       const hashAttr = new THREE.InstancedBufferAttribute(hashArray, 1);
       
       glowAttr.setUsage(THREE.DynamicDrawUsage);
       decayAttr.setUsage(THREE.DynamicDrawUsage);
+      growthAttr.setUsage(THREE.DynamicDrawUsage);
       hashAttr.setUsage(THREE.DynamicDrawUsage); // Dynamic since it now changes per creature
       
       mesh.geometry.setAttribute('instanceGlow', glowAttr);
       mesh.geometry.setAttribute('instanceDecay', decayAttr);
+      mesh.geometry.setAttribute('instanceGrowth', growthAttr);
       mesh.geometry.setAttribute('instanceHash', hashAttr);
     };
 

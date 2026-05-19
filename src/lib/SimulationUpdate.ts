@@ -161,6 +161,15 @@ export function updateSimulation(engine: SimulationEngine) {
         let sizePulseEffect = 1.0;
         let colorPulseEffect = 1.0;
 
+        const growthAttr = mesh.geometry.getAttribute("instanceGrowth") as THREE.InstancedBufferAttribute;
+        if (growthAttr) {
+           const val = growthAttr.getX(i);
+           if (val < 1.0) {
+              growthAttr.setX(i, Math.min(1.0, val + 0.05 * engine.timeScale));
+              growthAttr.needsUpdate = true;
+           }
+        }
+
         if (isHybrid) {
           if (age < 300) {
             const phase = Math.sin(
@@ -209,7 +218,7 @@ export function updateSimulation(engine: SimulationEngine) {
           );
 
           if (isHybrid) {
-            const slowRot = age * 0.005;
+            const slowRot = i * 2.5 + engine.unscaledTime * 0.005;
             engine.dummy.quaternion.multiply(
               new THREE.Quaternion().setFromEuler(
                 new THREE.Euler(slowRot, slowRot * 1.1, slowRot * 0.8),
@@ -251,6 +260,20 @@ export function updateSimulation(engine: SimulationEngine) {
   }
   for (const mesh of engine.hybridMeshes) {
     updateMeshGrowth(mesh, engine.hybridSegments);
+  }
+
+  const stemGrowthAttr = engine.cylinderMesh.geometry.getAttribute("instanceGrowth") as THREE.InstancedBufferAttribute;
+  if (stemGrowthAttr) {
+    const activeRange = Math.min(engine.pointCount, MAX_POINTS);
+    let updated = false;
+    for (let i = Math.max(0, activeRange - 10000); i < activeRange; i++) {
+       const val = stemGrowthAttr.getX(i);
+       if (val < 1.0) {
+          stemGrowthAttr.setX(i, Math.min(1.0, val + 0.05 * engine.timeScale));
+          updated = true;
+       }
+    }
+    if (updated) stemGrowthAttr.needsUpdate = true;
   }
 
   if (
@@ -411,19 +434,20 @@ export function updateSimulation(engine: SimulationEngine) {
     activeHybrids.sort((a, b) => a.time - b.time);
 
     for (let i = 0; i < activeHybrids.length - 1; i++) {
+      const lineAlpha = Math.min(activeHybrids[i].alpha, activeHybrids[i + 1].alpha);
       positions.push(
         activeHybrids[i].pos.x,
         activeHybrids[i].pos.y,
         activeHybrids[i].pos.z,
       );
-      colors.push(1, 1, 1, activeHybrids[i].alpha);
+      colors.push(1, 1, 1, lineAlpha);
       
       positions.push(
         activeHybrids[i + 1].pos.x,
         activeHybrids[i + 1].pos.y,
         activeHybrids[i + 1].pos.z,
       );
-      colors.push(1, 1, 1, activeHybrids[i + 1].alpha);
+      colors.push(1, 1, 1, lineAlpha);
     }
 
     const posAttr = engine.hybridConnectionMesh.geometry.getAttribute(

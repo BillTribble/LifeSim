@@ -116,8 +116,8 @@ export class SimulationEngine {
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
   
-  theme: number = 0;
-  nextTheme: number = 0;
+  theme: number = 2;
+  nextTheme: number = 2;
   themeProgress: number = 1.0;
   themeMorphFreq: number = 1.0;
   themeMorphSpeed: number = 5.0;

@@ -137,9 +137,16 @@ export function updateMeshSegments(
   const hashAttr = targetMesh.geometry.getAttribute(
     "instanceHash",
   ) as THREE.InstancedBufferAttribute;
+  const growthAttr = targetMesh.geometry.getAttribute(
+    "instanceGrowth",
+  ) as THREE.InstancedBufferAttribute;
   if (glowAttr && decayAttr && hashAttr) {
     glowAttr.setX(targetIndex, engine.enableGlow ? engine.glowSize : 0.0);
     decayAttr.setX(targetIndex, 0.0);
+    if (growthAttr) {
+      growthAttr.setX(targetIndex, 0.01);
+      growthAttr.needsUpdate = true;
+    }
     
     let h = 0;
     for(let i=0; i<genome.name.length; i++) {

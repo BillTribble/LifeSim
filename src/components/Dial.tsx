@@ -85,7 +85,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
 
   return (
     <div 
-      className="flex flex-col items-center gap-1 relative group min-w-[72px]"
+      className="flex flex-col items-center gap-1 relative group min-w-[56px]"
       onMouseEnter={onMouseEnter}
       onMouseLeave={() => setHover(false)}
     >

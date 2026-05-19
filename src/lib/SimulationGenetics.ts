@@ -31,9 +31,11 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
             attribute float instanceGlow;
             attribute float instanceDecay;
             attribute float instanceHash;
+            attribute float instanceGrowth;
             varying float vGlow;
             varying float vDecay;
             varying float vHash;
+            varying float vGrowth;
             varying vec3 vInstanceColor;
             ${shader.vertexShader}
         `.replace(
@@ -42,6 +44,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
              vGlow = instanceGlow;
              vDecay = instanceDecay;
              vHash = instanceHash;
+             vGrowth = instanceGrowth;
              #ifdef USE_INSTANCING_COLOR
                vInstanceColor = instanceColor;
              #else
@@ -61,6 +64,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
             varying float vGlow;
             varying float vDecay;
             varying float vHash;
+            varying float vGrowth;
             varying vec3 vInstanceColor;
             ${shader.fragmentShader}
         `.replace(
@@ -94,6 +98,11 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
+             if (vGrowth < 1.0) {
+                 float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
+                 if (ditherIn > vGrowth) discard;
+             }
+
              if (vDecay > 0.0) {
                  float fresnel = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
                  float outlineWidth = 0.6;
