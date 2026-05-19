@@ -70,6 +70,7 @@ export interface Agent {
   spiralAxis?: THREE.Vector3;
   isFeeler?: boolean;
   realGenome?: Genome;
+  growthBoost?: number;
 }
 
 export interface Segment {

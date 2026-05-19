@@ -92,8 +92,13 @@ export function processAgents(
     else if (agent.genome.archetype === "tree") baseSpeedMult = engine.treeSpeed;
     else if (agent.genome.archetype === "ginger") baseSpeedMult = engine.gingerSpeed;
     
+    agent.growthBoost = agent.growthBoost || 1.0;
+    if (agent.growthBoost > 1.0) {
+      agent.growthBoost = Math.max(1.0, agent.growthBoost - 0.03 * engine.timeScale);
+    }
+    
     // Blend smoothly from normal speed to heavily nerfed (0.2x) speed
-    const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8);
+    const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8) * agent.growthBoost;
     
     agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult * engine.timeScale;
     let iterations = Math.floor(agent.growthAccumulator);
