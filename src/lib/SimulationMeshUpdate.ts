@@ -142,17 +142,19 @@ export function updateMeshSegments(
     packAAttr.setY(targetIndex, genome.isGlowing ? 1.0 : 0.0);
     packAAttr.setZ(targetIndex, 0.0); // decay starts at 0
     
-    let genomeHash = 0;
-    if (genome.name.startsWith("Alpha")) {
-      genomeHash = 0.1;
-    } else if (genome.name.startsWith("Beta")) {
-      genomeHash = 0.9;
-    } else {
-      let h = 0;
-      for(let i=0; i<genome.name.length; i++) {
-          h = Math.imul(31, h) + genome.name.charCodeAt(i) | 0;
+    let genomeHash = genome.genomeHash;
+    if (genomeHash === undefined) {
+      if (genome.name.startsWith("Alpha")) {
+        genomeHash = 0.1;
+      } else if (genome.name.startsWith("Beta")) {
+        genomeHash = 0.9;
+      } else {
+        let h = 0;
+        for(let i=0; i<genome.name.length; i++) {
+            h = Math.imul(31, h) + genome.name.charCodeAt(i) | 0;
+        }
+        genomeHash = (Math.abs(h) % 1000) / 1000;
       }
-      genomeHash = (Math.abs(h) % 1000) / 1000;
     }
     packAAttr.setW(targetIndex, genomeHash);
     

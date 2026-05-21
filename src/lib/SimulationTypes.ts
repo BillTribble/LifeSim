@@ -59,6 +59,8 @@ export interface Genome {
   canopyZone: "wholeBody" | "terminal" | "basal";
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
   succulence: number;
+
+  genomeHash?: number;
 }
 
 export interface Agent {

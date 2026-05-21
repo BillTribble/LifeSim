@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 export const DEFAULTS = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.8,
-  "theme": 0,
-  "timeScale": 0.5,
+  "theme": 2,
+  "timeScale": 2.2,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -20,7 +20,7 @@ export const DEFAULTS = {
   "entropyThreshold": 1,
   "tideSpeed": 0.1,
   "tideColor": "#643707",
-  "bgColor": "#5e503e",
+  "bgColor": "#5e443e",
   "fogColor": "#000000",
   "tideThickness": 330,
   "tideOpacity": 0.1,
@@ -51,21 +51,23 @@ export const DEFAULTS = {
   "glowSize": 0.5,
   "fogVisibility": 800,
   "botanyRealism": true,
-  "windVelocity": 1.0,
+  "windVelocity": 0.2,
   "flutterIntensity": 0.5,
-  "leafScale": 1.0,
+  "leafScale": 0.14,
+  "leafDensity": 0.35000000000000003,
   "relativeLeafSizeDiff": 0.2,
-  "leafGrowthSpeed": 0.015,
+  "leafGrowthSpeed": 0.0045000000000000005,
   "phyllotaxisAngle": 137.5,
-  "leafProbability": 0.1,
+  "leafProbability": 1,
   "appendageSpawnRate": 0.7,
   "glowProbability": 0.1,
-  "stemCurviness": 1.0,
-  "veinStrength": 0.25,
+  "stemCurviness": 3,
+  "veinStrength": 15,
+  "veinGlow": 0.5,
   "traitProbs": {
     "flowers": 0.02,
     "lillyPads": 0.02,
-    "leaves": 0.78,
+    "leaves": 0.8500000000000001,
     "petals": 0.02,
     "needles": 0.02,
     "thorns": 0.02,
@@ -121,9 +123,9 @@ export const DEFAULTS = {
     }
   } as Record<string, {min: number, max: number}>,
   "cameraPosition": {
-    "x": 338.3537304509371,
-    "y": 66.42053119728962,
-    "z": -33.24253488237013,
+    "x": 187.35225499123052,
+    "y": 172.3313840168626,
+    "z": 234.94898729837848,
     "zoom": 1.916305230244903
   },
   "version": "1.0"
@@ -409,6 +411,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       localStorage.getItem("leafScale") || DEFAULTS.leafScale.toString(),
     ),
   );
+  const [leafDensity, setLeafDensity] = useState(() =>
+    parseFloat(
+      localStorage.getItem("leafDensity") || DEFAULTS.leafDensity.toString(),
+    ),
+  );
   const [relativeLeafSizeDiff, setRelativeLeafSizeDiff] = useState(() =>
     parseFloat(
       localStorage.getItem("relativeLeafSizeDiff") || DEFAULTS.relativeLeafSizeDiff.toString(),
@@ -422,6 +429,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
   const [veinStrength, setVeinStrength] = useState(() =>
     parseFloat(
       localStorage.getItem("veinStrength") || DEFAULTS.veinStrength.toString(),
+    ),
+  );
+  const [veinGlow, setVeinGlow] = useState(() =>
+    parseFloat(
+      localStorage.getItem("veinGlow") || DEFAULTS.veinGlow.toString(),
     ),
   );
   const [leafGrowthSpeed, setLeafGrowthSpeed] = useState(() =>
@@ -568,6 +580,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("windVelocity", windVelocity.toString());
     localStorage.setItem("flutterIntensity", flutterIntensity.toString());
     localStorage.setItem("leafScale", leafScale.toString());
+    localStorage.setItem("leafDensity", leafDensity.toString());
     localStorage.setItem("relativeLeafSizeDiff", relativeLeafSizeDiff.toString());
     localStorage.setItem("leafGrowthSpeed", leafGrowthSpeed.toString());
     localStorage.setItem("phyllotaxisAngle", phyllotaxisAngle.toString());
@@ -576,6 +589,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("glowProbability", glowProbability.toString());
     localStorage.setItem("stemCurviness", stemCurviness.toString());
     localStorage.setItem("veinStrength", veinStrength.toString());
+    localStorage.setItem("veinGlow", veinGlow.toString());
     localStorage.setItem("fogColor", fogColor);
     localStorage.setItem("maxLineWidth", maxLineWidth.toString());
     localStorage.setItem("globalPulseSpeed", globalPulseSpeed.toString());
@@ -627,6 +641,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     windVelocity,
     flutterIntensity,
     leafScale,
+    leafDensity,
     relativeLeafSizeDiff,
     leafGrowthSpeed,
     phyllotaxisAngle,
@@ -635,6 +650,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     glowProbability,
     stemCurviness,
     veinStrength,
+    veinGlow,
     traitProbs,
     dialLimits,
     hybridSize,
@@ -711,6 +727,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       windVelocity,
       flutterIntensity,
       leafScale,
+      leafDensity,
       relativeLeafSizeDiff,
       leafGrowthSpeed,
       phyllotaxisAngle,
@@ -719,6 +736,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       glowProbability,
       stemCurviness,
       veinStrength,
+      veinGlow,
       traitProbs,
       maxLineWidth,
       globalPulseSpeed,
@@ -786,9 +804,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setWindVelocity,
       setFlutterIntensity,
       setLeafScale,
+      setLeafDensity,
       setRelativeLeafSizeDiff,
       setStemCurviness,
       setVeinStrength,
+      setVeinGlow,
       setLeafGrowthSpeed,
       setPhyllotaxisAngle,
       setLeafProbability,

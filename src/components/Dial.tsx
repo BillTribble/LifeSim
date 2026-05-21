@@ -12,9 +12,10 @@ interface DialProps {
   tooltip?: string;
   onLimitsChange?: (min: number, max: number) => void;
   formatValue?: (val: number) => React.ReactNode;
+  hideValue?: boolean;
 }
 
-export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange, formatValue }: DialProps) {
+export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange, formatValue, hideValue }: DialProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
@@ -140,9 +141,11 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
           />
         </div>
       </div>
-      <span className="text-[8px] font-mono opacity-80" style={{ color }}>
-        {formatValue ? formatValue(value) : (Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1))}
-      </span>
+      {!hideValue && (
+        <span className="text-[8px] font-mono opacity-80" style={{ color }}>
+          {formatValue ? formatValue(value) : (Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1))}
+        </span>
+      )}
     </div>
   );
 }

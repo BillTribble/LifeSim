@@ -105,6 +105,7 @@ export class SimulationEngine {
   windVelocity: number = 1.0;
   flutterIntensity: number = 1.0;
   leafScale: number = 1.0;
+  leafDensity: number = 1.0;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.015;
   phyllotaxisAngle: number = 137.5;
@@ -112,7 +113,8 @@ export class SimulationEngine {
   appendageSpawnRate: number = 0.7;
   glowProbability: number = 0.1;
   stemCurviness: number = 1.0;
-  veinStrength: number = 0.25;
+  veinStrength: number = 1.0;
+  veinGlow: number = 0.5;
 
   hybridSize: number = 2.0;
 
@@ -476,6 +478,9 @@ export class SimulationEngine {
   setLeafScale(val: number) {
     this.leafScale = val;
   }
+  setLeafDensity(val: number) {
+    this.leafDensity = val;
+  }
   setRelativeLeafSizeDiff(val: number) {
     this.relativeLeafSizeDiff = val;
   }
@@ -499,6 +504,9 @@ export class SimulationEngine {
   }
   setVeinStrength(val: number) {
     this.veinStrength = val;
+  }
+  setVeinGlow(val: number) {
+    this.veinGlow = val;
   }
   setDiebackRate(d: number) {
     this.diebackRate = d;
@@ -585,17 +593,59 @@ export class SimulationEngine {
       betaArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
     }
 
+    const getHashForFamilyAndRange = (family: number, range: "alpha" | "beta"): number => {
+      const targetSelector = family === 5 
+        ? 0.8 + Math.random() * 0.2 
+        : family * 0.16 + Math.random() * 0.16;
+
+      const hMin = range === "alpha" ? 0.0 : 0.5;
+      const hMax = range === "alpha" ? 0.5 : 1.0;
+
+      const kMin = Math.ceil(hMin * 7.3 - targetSelector);
+      const kMax = Math.floor(hMax * 7.3 - targetSelector);
+
+      const k = kMin + Math.floor(Math.random() * (kMax - kMin + 1));
+      return (k + targetSelector) / 7.3;
+    };
+
+    const alphaFamily = Math.floor(Math.random() * 6);
+    let betaFamily = Math.floor(Math.random() * 6);
+    while (betaFamily === alphaFamily) {
+      betaFamily = Math.floor(Math.random() * 6);
+    }
+
     const alphaGenome = this.generateRandomGenome("Alpha", alphaArchetype);
+    alphaGenome.appendage = "leaves";
+    alphaGenome.genomeHash = getHashForFamilyAndRange(alphaFamily, "alpha");
+
     let betaGenome = this.generateRandomGenome("Beta", betaArchetype);
+    betaGenome.appendage = "leaves";
+    betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
 
     while (
-       betaGenome.appendage === alphaGenome.appendage &&
        betaGenome.geometryType === alphaGenome.geometryType &&
        betaGenome.movementType === alphaGenome.movementType &&
        betaGenome.pulseTarget === alphaGenome.pulseTarget
     ) {
       betaGenome = this.generateRandomGenome("Beta", betaArchetype);
+      betaGenome.appendage = "leaves";
+      betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
     }
+
+    // Assign distinct vernation and phyllotaxis modes
+    alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
+    let betaVern = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
+    while (betaVern === alphaGenome.vernationType) {
+      betaVern = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
+    }
+    betaGenome.vernationType = betaVern;
+
+    alphaGenome.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+    let betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+    while (betaPhyllo === alphaGenome.phyllotaxisMode) {
+      betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+    }
+    betaGenome.phyllotaxisMode = betaPhyllo;
 
     const alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
     betaGenome.color.setHSL((alphaHue + 1 / 3) % 1.0, 0.8, 0.5);

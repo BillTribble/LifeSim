@@ -449,7 +449,7 @@ export function processAgents(
         } else if (genome.appendage === "leaves") {
           if (engine.pointCount < MAX_POINTS - 10) {
             const baseInterval = genome.phyllotaxisMode === "whorled" ? 15 : 5;
-            const nodeInterval = Math.max(1, Math.round(baseInterval * Math.max(1.0, engine.leafScale)));
+            const nodeInterval = Math.max(1, Math.round((baseInterval * Math.max(1.0, engine.leafScale)) / engine.leafDensity));
             if (agent.age % nodeInterval === 0) {
               if (Math.random() < engine.leafProbability) {
                 const up = new THREE.Vector3(0, 1, 0);

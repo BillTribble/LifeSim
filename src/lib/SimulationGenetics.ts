@@ -27,6 +27,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
     shader.uniforms.themeColor2_B = material.userData.themeColor2_B;
 
     const leafUVDecl = isLeaf ? 'varying vec3 vLeafUV;' : '';
+    const leafFragDecl = isLeaf ? 'varying vec3 vLeafUV;\nuniform float veinStrength;\nuniform float veinGlow;' : '';
     const leafUVInit = isLeaf ? `
              float leafHash = instancePackA.w;
              float leafHash2 = fract(leafHash * 13.7);
@@ -86,11 +87,12 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
-            ${leafUVDecl}
+            ${leafFragDecl}
             ${shader.fragmentShader}
         `.replace(
       "#include <color_fragment>",
       `#include <color_fragment>
+             vec3 perturbedNormal = vec3(0.0, 1.0, 0.0);
              vec3 colorA = diffuseColor.rgb;
              if (theme1 == 1) { // Albino
                  float luminance = dot(colorA, vec3(0.299, 0.587, 0.114));
@@ -121,12 +123,17 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
 
              ${isLeaf ? `
              // === VEINS & CENTRAL SPINE (MIDRIB) ===
-             // Central midrib spine
-             float spineTaper = mix(0.028, 0.007, vLeafUV.z);
-             float midribVal = smoothstep(spineTaper, 0.0, abs(vLeafUV.x));
+             // Blend midrib between soft (veinGlow = 0.0) and crisp/bold (veinGlow = 1.0)
+             float midribWidthSoft = mix(0.12, 0.04, vLeafUV.z);
+             float midribWidthCrisp = mix(0.042, 0.015, vLeafUV.z) * (1.0 + veinStrength * 0.06);
+             float midribValSoft = smoothstep(midribWidthSoft, midribWidthSoft * 0.15, abs(vLeafUV.x));
+             float midribValCrisp = step(abs(vLeafUV.x), midribWidthCrisp);
+             float midribVal = mix(midribValSoft, midribValCrisp, veinGlow);
 
-             // Shadow next to the midrib for 3D pop
-             float midribShadow = smoothstep(spineTaper * 2.5, 0.0, abs(vLeafUV.x)) * (1.0 - midribVal);
+             // Blend midrib shadow
+             float midribShadowSoft = smoothstep(midribWidthSoft * 2.2, 0.0, abs(vLeafUV.x)) * (1.0 - midribValSoft);
+             float midribShadowCrisp = smoothstep(midribWidthCrisp * 3.2, midribWidthCrisp, abs(vLeafUV.x)) * (1.0 - midribValCrisp);
+             float midribShadow = mix(midribShadowSoft, midribShadowCrisp, veinGlow);
 
              float lateralVal = 0.0;
              float shadowMask = 0.0;
@@ -142,21 +149,26 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  // Distance to the vein line
                  float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
 
-                 // Taper thickness towards the edge and tip
-                 float latThick = mix(0.0045, 0.0015, vLeafUV.y) * (1.0 - 0.4 * abs(vLeafUV.x));
-                 lateralVal = smoothstep(latThick, 0.0, distToVeinLine);
+                 // Blend lateral veins between soft and crisp
+                 float latThickSoft = mix(0.012, 0.005, vLeafUV.y) * (1.0 - 0.3 * abs(vLeafUV.x));
+                 float latThickCrisp = mix(0.014, 0.006, vLeafUV.y) * (1.0 - 0.2 * abs(vLeafUV.x)) * (1.0 + veinStrength * 0.05);
+                 float lateralValSoft = smoothstep(latThickSoft, latThickSoft * 0.1, distToVeinLine);
+                 float lateralValCrisp = step(distToVeinLine, latThickCrisp);
+                 lateralVal = mix(lateralValSoft, lateralValCrisp, veinGlow);
 
-                 // Shadow thick (wider than vein for soft shadow border)
-                 float shadowThick = mix(0.011, 0.0045, vLeafUV.y);
-                 shadowMask = smoothstep(shadowThick, 0.0, distToVeinLine) * (1.0 - lateralVal);
+                 // Blend lateral shadows
+                 float shadowThickSoft = mix(0.022, 0.009, vLeafUV.y);
+                 float shadowMaskSoft = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValSoft);
+                 float shadowMaskCrisp = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValCrisp);
+                 shadowMask = mix(shadowMaskSoft, shadowMaskCrisp, veinGlow);
 
                  // Fade near margins so they don't run off harshly
-                 float edgeFade = smoothstep(1.0, 0.85, abs(vLeafUV.x));
+                 float edgeFade = smoothstep(1.0, 0.8, abs(vLeafUV.x));
                  lateralVal *= edgeFade;
                  shadowMask *= edgeFade;
 
                  // Fade near the tip and base of the blade
-                 float tipBaseFade = smoothstep(1.0, 0.88, vLeafUV.y) * smoothstep(0.0, 0.12, vLeafUV.y);
+                 float tipBaseFade = smoothstep(1.0, 0.85, vLeafUV.y) * smoothstep(0.0, 0.1, vLeafUV.y);
                  lateralVal *= tipBaseFade;
                  shadowMask *= tipBaseFade;
              }
@@ -164,18 +176,45 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              float finalVeinMask = max(midribVal, lateralVal);
              float finalShadow = max(shadowMask, midribShadow);
 
-             // Create a beautiful organic contrast color: slightly lighter and warmer yellow-green
+             perturbedNormal = normalize(vNormal);
+             #ifdef DOUBLE_SIDED
+                 perturbedNormal = perturbedNormal * ( float( gl_FrontFacing ) * 2.0 - 1.0 );
+             #endif
+
+             // === Screen-Space Normal Perturbation (Bump Mapping) ===
+             // Scale normal perturbation intensity by veinGlow morph slider
+             float bumpH = finalVeinMask * veinStrength * mix(0.18, 0.45, veinGlow); 
+             vec3 dpdx = dFdx(-vViewPosition);
+             vec3 dpdy = dFdy(-vViewPosition);
+             float dhdx = dFdx(bumpH);
+             float dhdy = dFdy(bumpH);
+             vec3 r1 = cross(dpdy, perturbedNormal);
+             vec3 r2 = cross(perturbedNormal, dpdx);
+             float denom = dot(dpdx, r2);
+             if (abs(denom) > 0.00001) {
+                 vec3 surfGrad = (r1 * dhdx + r2 * dhdy) / denom;
+                 perturbedNormal = normalize(perturbedNormal - surfGrad * mix(0.35, 0.6, veinGlow));
+             }
+
+             // Blend vein color from organic yellow-green to bright lime highlight
              vec3 baseLeafCol = diffuseColor.rgb;
-             vec3 veinCol = baseLeafCol * 1.28 + vec3(0.03, 0.07, -0.02);
-             veinCol = clamp(veinCol, 0.0, 1.0);
+             vec3 veinColSoft = clamp(baseLeafCol * 1.28 + vec3(0.03, 0.07, -0.02), 0.0, 1.0);
+             vec3 veinColCrisp = clamp(mix(baseLeafCol * 1.8, vec3(0.96, 1.0, 0.62), 0.58), 0.0, 1.0);
+             vec3 veinCol = mix(veinColSoft, veinColCrisp, veinGlow);
 
-             // Apply shadow (darken slightly around veins)
-             diffuseColor.rgb = mix(diffuseColor.rgb, baseLeafCol * 0.75, finalShadow * 0.45);
+             // Blend shadow depth and mix strength
+             float shadowDepth = mix(0.75, 0.35, veinGlow);
+             float shadowMixFactor = mix(0.45, 0.70, veinGlow);
+             diffuseColor.rgb = mix(diffuseColor.rgb, baseLeafCol * shadowDepth, finalShadow * shadowMixFactor * veinStrength);
 
-             // Apply vein color (lighten)
-             diffuseColor.rgb = mix(diffuseColor.rgb, veinCol, finalVeinMask * 0.75);
+             // Blend vein color mix strength
+             float veinMixFactor = mix(0.75, 0.88, veinGlow);
+             diffuseColor.rgb = mix(diffuseColor.rgb, veinCol, finalVeinMask * veinMixFactor * veinStrength);
              ` : ''}
             `
+    ).replace(
+      "#include <normal_fragment_maps>",
+      `#include <normal_fragment_maps>\n             ${isLeaf ? 'normal = perturbedNormal;' : ''}\n      `
     ).replace(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
@@ -231,6 +270,17 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
                  diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4);
              }
+             `
+    ).replace(
+      "#include <opaque_fragment>",
+      `#include <opaque_fragment>
+             ${isLeaf ? `
+             // Bypassing all lighting: Add pure emissive neon glow to the outgoing light!
+             if (veinStrength > 0.0 && veinGlow > 0.0) {
+                 vec3 glowingVeinColor = mix(diffuseColor.rgb * 2.2, vec3(0.98, 1.0, 0.72), 0.65);
+                 gl_FragColor.rgb += glowingVeinColor * finalVeinMask * 0.85 * veinStrength * veinGlow;
+             }
+             ` : ''}
             `
     );
   };
@@ -506,7 +556,8 @@ export function mutateBranchGenome(
   setupShaderMaterial(material, true);
   material.userData.botanyRealism = { value: 1.0 };
   material.userData.stemCurviness = { value: 1.0 };
-  material.userData.veinStrength = { value: 0.25 };
+  material.userData.veinStrength = { value: 1.0 };
+  material.userData.veinGlow = { value: 0.5 };
 
   const prevBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -515,6 +566,7 @@ export function mutateBranchGenome(
     shader.uniforms.botanyRealism = material.userData.botanyRealism;
     shader.uniforms.stemCurviness = material.userData.stemCurviness;
     shader.uniforms.veinStrength = material.userData.veinStrength;
+    shader.uniforms.veinGlow = material.userData.veinGlow;
 
     shader.vertexShader = `
       uniform float botanyRealism;
@@ -715,9 +767,11 @@ export function mutateBranchGenome(
 
        // === 3.5 VEIN 3D RIDGE DISPLACEMENT ===
        if (isBlade > 0.5 && veinStrength > 0.0) {
-           float spineTaper = mix(0.028, 0.007, spineT);
-           float midribVal = smoothstep(spineTaper, 0.0, abs(position.x * 2.0));
+           // --- Midrib: wide, tapered central ridge ---
+           float midribWidth = mix(0.12, 0.04, bladeT);
+           float midribVal = smoothstep(midribWidth, midribWidth * 0.2, abs(position.x * 2.0));
            
+           // --- Lateral veins: angled branches ---
            float lateralVal = 0.0;
            float veinDensity = 4.0 + floor(fract(instanceHash * 17.3) * 5.0);
            float veinAngle = 0.2 + fract(instanceHash * 29.7) * 0.4;
@@ -726,19 +780,28 @@ export function mutateBranchGenome(
            float cellCoord = fract(vCoord * veinDensity);
            float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
            
-           float latThick = mix(0.0045, 0.0015, bladeT) * (1.0 - 0.4 * abs(position.x * 2.0));
-           lateralVal = smoothstep(latThick, 0.0, distToVeinLine);
+           // Wide detection bands to reliably catch mesh vertices (32x48 grid)
+           float latThick = mix(0.035, 0.015, bladeT) * (1.0 - 0.3 * abs(position.x * 2.0));
+           lateralVal = smoothstep(latThick, latThick * 0.15, distToVeinLine);
            
-           lateralVal *= smoothstep(1.0, 0.85, abs(position.x * 2.0));
-           lateralVal *= smoothstep(1.0, 0.88, bladeT) * smoothstep(0.0, 0.12, bladeT);
+           // Fade near edges and tip/base
+           lateralVal *= smoothstep(1.0, 0.8, abs(position.x * 2.0));
+           lateralVal *= smoothstep(1.0, 0.85, bladeT) * smoothstep(0.0, 0.1, bladeT);
            
            float finalVeinMask = max(midribVal, lateralVal);
            
-           // Physical ridge protrusion: midrib stands out more, lateral veins stand out subtly
-           float displacement = (mix(0.08, 0.03, bladeT) * midribVal + 0.025 * lateralVal) * veinStrength * U;
+           // Valley depressions between veins for pocketed look
+           float valleyMask = (1.0 - finalVeinMask) * isBlade;
+           float valleyDepth = 0.04 * valleyMask * veinStrength * U;
            
-           // Symmetrical thickening on front and back faces
-           transformed.z += displacement * sign(position.z);
+           // Strong ridge protrusion: midrib stands out boldly, laterals clearly visible
+           float midribDisp = mix(0.12, 0.05, bladeT) * midribVal;
+           float lateralDisp = 0.05 * lateralVal;
+           float ridgeHeight = (midribDisp + lateralDisp) * veinStrength * U;
+           
+           // Push vein ridges outward on both faces, pull valleys inward
+           float zSign = sign(position.z + 0.001);
+           transformed.z += (ridgeHeight - valleyDepth) * zSign;
        }
 
        // Advanced Genetic Twisting & Curling (blade only)

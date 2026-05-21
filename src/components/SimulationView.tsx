@@ -79,6 +79,7 @@ export function SimulationView({
   windVelocity,
   flutterIntensity,
   leafScale,
+  leafDensity,
   relativeLeafSizeDiff,
   leafGrowthSpeed,
   phyllotaxisAngle,
@@ -87,6 +88,7 @@ export function SimulationView({
   glowProbability,
   stemCurviness,
   veinStrength,
+  veinGlow,
   onConfigChange,
 }: Props & {
   restartTrigger?: number;
@@ -155,6 +157,7 @@ export function SimulationView({
   windVelocity?: number;
   flutterIntensity?: number;
   leafScale?: number;
+  leafDensity?: number;
   relativeLeafSizeDiff?: number;
   leafGrowthSpeed?: number;
   phyllotaxisAngle?: number;
@@ -163,6 +166,7 @@ export function SimulationView({
   glowProbability?: number;
   stemCurviness?: number;
   veinStrength?: number;
+  veinGlow?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -410,6 +414,8 @@ export function SimulationView({
         engineRef.current.setFlutterIntensity(flutterIntensity);
       if (leafScale !== undefined)
         engineRef.current.setLeafScale(leafScale);
+      if (leafDensity !== undefined)
+        engineRef.current.setLeafDensity(leafDensity);
       if (relativeLeafSizeDiff !== undefined)
         engineRef.current.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
       if (leafGrowthSpeed !== undefined)
@@ -426,6 +432,8 @@ export function SimulationView({
         engineRef.current.setStemCurviness(stemCurviness);
       if (veinStrength !== undefined)
         engineRef.current.setVeinStrength(veinStrength);
+      if (veinGlow !== undefined)
+        engineRef.current.setVeinGlow(veinGlow);
     }
   }, [
     tideColor,
@@ -482,6 +490,7 @@ export function SimulationView({
     windVelocity,
     flutterIntensity,
     leafScale,
+    leafDensity,
     relativeLeafSizeDiff,
     leafGrowthSpeed,
     phyllotaxisAngle,
@@ -490,6 +499,7 @@ export function SimulationView({
     glowProbability,
     stemCurviness,
     veinStrength,
+    veinGlow,
   ]);
 
   useEffect(() => {
@@ -602,6 +612,7 @@ export function SimulationView({
     if (windVelocity !== undefined) engine.setWindVelocity(windVelocity);
     if (flutterIntensity !== undefined) engine.setFlutterIntensity(flutterIntensity);
     if (leafScale !== undefined) engine.setLeafScale(leafScale);
+    if (leafDensity !== undefined) engine.setLeafDensity(leafDensity);
     if (relativeLeafSizeDiff !== undefined) engine.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
     if (leafGrowthSpeed !== undefined) engine.setLeafGrowthSpeed(leafGrowthSpeed);
     if (phyllotaxisAngle !== undefined) engine.setPhyllotaxisAngle(phyllotaxisAngle);
@@ -610,6 +621,7 @@ export function SimulationView({
     if (glowProbability !== undefined) engine.setGlowProbability(glowProbability);
     if (stemCurviness !== undefined) engine.setStemCurviness(stemCurviness);
     if (veinStrength !== undefined) engine.setVeinStrength(veinStrength);
+    if (veinGlow !== undefined) engine.setVeinGlow(veinGlow);
 
     // Spawn initial creatures NOW, after all user settings have been applied.
     engine.initAgents();

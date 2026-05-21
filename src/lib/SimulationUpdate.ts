@@ -117,6 +117,9 @@ export function updateSimulation(engine: SimulationEngine) {
     if (mat && mat.userData.veinStrength) {
       mat.userData.veinStrength.value = engine.veinStrength;
     }
+    if (mat && mat.userData.veinGlow) {
+      mat.userData.veinGlow.value = engine.veinGlow;
+    }
   }
 
   if (engine.lastMaxDOMs !== undefined && engine.lastMaxDOMs > engine.maxDOMs) {

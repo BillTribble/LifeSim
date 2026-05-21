@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dial } from './Dial';
+import { SmartDial } from './SmartDial';
 
 interface MutationPanelProps {
   state: any;
@@ -17,7 +17,7 @@ export function MutationPanel({ state, setters }: MutationPanelProps) {
             <div className="grid grid-cols-3 gap-3">
                 {Object.entries(state.traitProbs).map(([trait, prob]) => (
                     <div key={trait}>
-                        <Dial tooltip={`TRAIT WEIGHT: Probability bias for the organism to grow specialized ${trait} ornaments during its lifecycle.`} label={trait.toUpperCase()} min={0.0} max={1.0} step={0.05} value={prob as number} onChange={(v) => {
+                        <SmartDial state={state} setters={setters} tooltip={`TRAIT WEIGHT: Probability bias for the organism to grow specialized ${trait} ornaments during its lifecycle.`} label={trait.toUpperCase()} min={0.0} max={1.0} step={0.05} value={prob as number} onChange={(v) => {
                             setters.setTraitProbs((prev: any) => ({ ...prev, [trait]: v }));
                         }} color="#a855f7" />
                     </div>
@@ -26,8 +26,9 @@ export function MutationPanel({ state, setters }: MutationPanelProps) {
             <span className="font-bold border-b border-[#87CEEB]/30 pb-1 mt-4">BIOLUMINESCENCE</span>
             <div className="grid grid-cols-3 gap-3">
                 <div>
-                    <Dial 
-                      tooltip="GLOW PROBABILITY&#10;Likelihood of a newly spawned creature having bioluminescent glow traits." 
+                    <SmartDial 
+                      state={state} setters={setters}
+                      tooltip={"GLOW PROBABILITY\nLikelihood of a newly spawned creature having bioluminescent glow traits."} 
                       label="GLOW_PROB" 
                       min={0.0} 
                       max={1.0} 

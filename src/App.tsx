@@ -153,6 +153,7 @@ export default function App() {
         windVelocity={state.windVelocity}
         flutterIntensity={state.flutterIntensity}
         leafScale={state.leafScale}
+        leafDensity={state.leafDensity}
         relativeLeafSizeDiff={state.relativeLeafSizeDiff}
         leafGrowthSpeed={state.leafGrowthSpeed}
         phyllotaxisAngle={state.phyllotaxisAngle}

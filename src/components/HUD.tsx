@@ -11,34 +11,7 @@ import {
   Search,
   Leaf,
 } from "lucide-react";
-import { Dial } from "./Dial";
-
-function SmartDial(props: any) {
-  const { label, min: defaultMin, max: defaultMax, state, setters, searchQuery, tooltip, ...rest } = props;
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    const match = label?.toLowerCase().includes(q) || tooltip?.toLowerCase().includes(q);
-    if (!match) return null;
-  }
-  const limits = state.dialLimits?.[label];
-  const min = limits?.min ?? defaultMin;
-  const max = limits?.max ?? defaultMax;
-  
-  return (
-    <Dial 
-      label={label}
-      min={min}
-      max={max}
-      tooltip={tooltip}
-      {...rest}
-      onLimitsChange={(newMin: number, newMax: number) => {
-        if (setters.setDialLimits) {
-          setters.setDialLimits((prev: any) => ({ ...prev, [label]: { min: newMin, max: newMax } }));
-        }
-      }}
-    />
-  );
-}
+import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
@@ -221,6 +194,16 @@ export function HUD({
                 className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
               />
               <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
+            </div>
+
+            <div className="pointer-events-auto flex items-center gap-1.5 border border-[#D2B48C]/50 px-2 py-0.5 rounded bg-[#001220]/60 shadow-sm opacity-80"
+              title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
+            >
+              <span className="text-[10px]">SLOW_MO</span>
+              <div className="scale-[0.65] origin-center -my-2 -mx-1">
+                <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={5.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
+              </div>
+              <span className="text-[9px] font-mono" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
             </div>
           </div>
           <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto">
@@ -561,14 +544,11 @@ export function HUD({
               >
                 
                 {/* SYSTEM */}
-                {hasMatch(['SLOW_MO', 'ROT_VEL', 'MAX_DOMS', 'MAX_AGENTS', 'MIN_AGENTS', 'MAX_SPECIES', 'RADIUS', 'TIME SCALE', 'ROTATION', 'MEMORY', 'ORGANISMS', 'SPECIES', 'BOUNDARY']) && (
+                {hasMatch(['ROT_VEL', 'MAX_DOMS', 'MAX_AGENTS', 'MIN_AGENTS', 'MAX_SPECIES', 'RADIUS', 'ROTATION', 'MEMORY', 'ORGANISMS', 'SPECIES', 'BOUNDARY']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">SYSTEM</span>
                   <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TIME SCALE
-Controls the simulation speed.
-High: Fast motion.
-Low: Slow motion." label="SLOW_MO" min={0.1} max={5.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" />
+
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="ROTATION VELOCITY
 Controls the base camera rotation speed.
 High: Fast spinning view.
