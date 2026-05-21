@@ -123,6 +123,9 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
 
              ${isLeaf ? `
              // === VEINS & CENTRAL SPINE (MIDRIB) ===
+             // Normalize veinStrength (0-15 range) to 0-1 for color/glow operations
+             float veinColorIntensity = clamp(veinStrength / 3.0, 0.0, 1.0);
+
              // Blend midrib between soft (veinGlow = 0.0) and crisp/bold (veinGlow = 1.0)
              float midribWidthSoft = mix(0.12, 0.04, vLeafUV.z);
              float midribWidthCrisp = mix(0.042, 0.015, vLeafUV.z) * (1.0 + veinStrength * 0.06);
@@ -205,11 +208,11 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              // Blend shadow depth and mix strength
              float shadowDepth = mix(0.75, 0.35, veinGlow);
              float shadowMixFactor = mix(0.45, 0.70, veinGlow);
-             diffuseColor.rgb = mix(diffuseColor.rgb, baseLeafCol * shadowDepth, finalShadow * shadowMixFactor * veinStrength);
+             diffuseColor.rgb = mix(diffuseColor.rgb, baseLeafCol * shadowDepth, finalShadow * shadowMixFactor * veinColorIntensity);
 
              // Blend vein color mix strength
              float veinMixFactor = mix(0.75, 0.88, veinGlow);
-             diffuseColor.rgb = mix(diffuseColor.rgb, veinCol, finalVeinMask * veinMixFactor * veinStrength);
+             diffuseColor.rgb = mix(diffuseColor.rgb, veinCol, finalVeinMask * veinMixFactor * veinColorIntensity);
              ` : ''}
             `
     ).replace(
@@ -278,7 +281,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              // Bypassing all lighting: Add pure emissive neon glow to the outgoing light!
              if (veinStrength > 0.0 && veinGlow > 0.0) {
                  vec3 glowingVeinColor = mix(diffuseColor.rgb * 2.2, vec3(0.98, 1.0, 0.72), 0.65);
-                 gl_FragColor.rgb += glowingVeinColor * finalVeinMask * 0.85 * veinStrength * veinGlow;
+                 gl_FragColor.rgb += glowingVeinColor * finalVeinMask * 0.85 * veinColorIntensity * veinGlow;
              }
              ` : ''}
             `
