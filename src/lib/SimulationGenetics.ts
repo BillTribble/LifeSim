@@ -8,7 +8,7 @@ import {
   MOVEMENT_TYPES,
 } from "./SimulationTypes";
 
-export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
+export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false) {
   material.userData.theme1 = { value: 0 };
   material.userData.theme2 = { value: 0 };
   material.userData.themeMix = { value: 0.0 };
@@ -26,13 +26,19 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
     shader.uniforms.themeColor1_B = material.userData.themeColor1_B;
     shader.uniforms.themeColor2_B = material.userData.themeColor2_B;
 
+    const leafUVDecl = isLeaf ? 'varying vec3 vLeafUV;' : '';
+    const leafUVInit = isLeaf ? `
+             float leafHash = instancePackA.w;
+             float leafHash2 = fract(leafHash * 13.7);
+             float leafStemLen = clamp(0.15 + leafHash * 0.20 + (leafHash2 - 0.5) * 0.06, 0.10, 0.42);
+             float leafBladeT = clamp((position.y - leafStemLen) / max(1.0 - leafStemLen, 0.001), 0.0, 1.0);
+             vLeafUV = vec3(position.x * 2.0, leafBladeT, position.y);
+    ` : '';
+
     // Expose Attributes
     shader.vertexShader = `
-            attribute float instanceGlow;
-            attribute float instanceGlowTrait;
-            attribute float instanceDecay;
-            attribute float instanceHash;
-            attribute float instanceGrowth;
+            attribute vec4 instancePackA;
+            attribute vec4 instancePackB;
             attribute vec3 instanceAmbientReflect;
             attribute vec3 instanceLightDir;
             varying float vGlow;
@@ -43,22 +49,24 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
+            ${leafUVDecl}
             ${shader.vertexShader}
         `.replace(
       "#include <color_vertex>",
       `#include <color_vertex>
-             vGlow = instanceGlow;
-             vGlowTrait = instanceGlowTrait;
-             vDecay = instanceDecay;
-             vHash = instanceHash;
-             vGrowth = instanceGrowth;
+             vGlow = instancePackA.x;
+             vGlowTrait = instancePackA.y;
+             vDecay = instancePackA.z;
+             vHash = instancePackA.w;
+             vGrowth = instancePackB.x;
              vAmbientReflect = instanceAmbientReflect;
              vLightDir = instanceLightDir;
              #ifdef USE_INSTANCING_COLOR
                vInstanceColor = instanceColor;
              #else
                vInstanceColor = diffuse;
-             #endif`
+             #endif
+             ${leafUVInit}`
     );
 
     // Inject Custom Discard & Glow Logic
@@ -78,6 +86,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
+            ${leafUVDecl}
             ${shader.fragmentShader}
         `.replace(
       "#include <color_fragment>",
@@ -109,15 +118,74 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
              }
 
              diffuseColor.rgb = mix(colorA, colorB, themeMix);
+
+             ${isLeaf ? `
+             // === VEINS & CENTRAL SPINE (MIDRIB) ===
+             // Central midrib spine
+             float spineTaper = mix(0.028, 0.007, vLeafUV.z);
+             float midribVal = smoothstep(spineTaper, 0.0, abs(vLeafUV.x));
+
+             // Shadow next to the midrib for 3D pop
+             float midribShadow = smoothstep(spineTaper * 2.5, 0.0, abs(vLeafUV.x)) * (1.0 - midribVal);
+
+             float lateralVal = 0.0;
+             float shadowMask = 0.0;
+
+             if (vLeafUV.y > 0.0) {
+                 // Genetic variations per species/leaf instance
+                 float veinDensity = 4.0 + floor(fract(vHash * 17.3) * 5.0); // 4 to 9 veins
+                 float veinAngle = 0.2 + fract(vHash * 29.7) * 0.4;        // 0.2 to 0.6 slope
+
+                 float vCoord = vLeafUV.y - veinAngle * abs(vLeafUV.x);
+                 float cellCoord = fract(vCoord * veinDensity);
+
+                 // Distance to the vein line
+                 float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
+
+                 // Taper thickness towards the edge and tip
+                 float latThick = mix(0.0045, 0.0015, vLeafUV.y) * (1.0 - 0.4 * abs(vLeafUV.x));
+                 lateralVal = smoothstep(latThick, 0.0, distToVeinLine);
+
+                 // Shadow thick (wider than vein for soft shadow border)
+                 float shadowThick = mix(0.011, 0.0045, vLeafUV.y);
+                 shadowMask = smoothstep(shadowThick, 0.0, distToVeinLine) * (1.0 - lateralVal);
+
+                 // Fade near margins so they don't run off harshly
+                 float edgeFade = smoothstep(1.0, 0.85, abs(vLeafUV.x));
+                 lateralVal *= edgeFade;
+                 shadowMask *= edgeFade;
+
+                 // Fade near the tip and base of the blade
+                 float tipBaseFade = smoothstep(1.0, 0.88, vLeafUV.y) * smoothstep(0.0, 0.12, vLeafUV.y);
+                 lateralVal *= tipBaseFade;
+                 shadowMask *= tipBaseFade;
+             }
+
+             float finalVeinMask = max(midribVal, lateralVal);
+             float finalShadow = max(shadowMask, midribShadow);
+
+             // Create a beautiful organic contrast color: slightly lighter and warmer yellow-green
+             vec3 baseLeafCol = diffuseColor.rgb;
+             vec3 veinCol = baseLeafCol * 1.28 + vec3(0.03, 0.07, -0.02);
+             veinCol = clamp(veinCol, 0.0, 1.0);
+
+             // Apply shadow (darken slightly around veins)
+             diffuseColor.rgb = mix(diffuseColor.rgb, baseLeafCol * 0.75, finalShadow * 0.45);
+
+             // Apply vein color (lighten)
+             diffuseColor.rgb = mix(diffuseColor.rgb, veinCol, finalVeinMask * 0.75);
+             ` : ''}
             `
     ).replace(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
+             ${isLeaf ? '' : `
              if (vGrowth < 1.0) {
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
                  if (ditherIn > vGrowth) discard;
              }
+             `}
 
              if (vDecay > 0.0) {
                  float fresnel = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
@@ -172,11 +240,20 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial) {
 export function getWeightedAppendage(
   traitProbs: Record<string, number>,
 ): (typeof APPENDAGES)[number] {
+  // If leaves is set to 1.0 (100% LEAF_WT), make it exclusive and bypass other weights
+  if (traitProbs.leaves === 1.0) {
+    return "leaves";
+  }
+
   let total = 0;
-  for (const v of Object.values(traitProbs)) total += v;
+  for (const [k, v] of Object.entries(traitProbs)) {
+    if (k === "glow") continue;
+    total += v;
+  }
   if (total <= 0) return "none";
   let r = Math.random() * total;
   for (const [k, v] of Object.entries(traitProbs)) {
+    if (k === "glow") continue;
     r -= v;
     if (r <= 0) return k as any;
   }
@@ -189,6 +266,8 @@ export function breedGenomes(
   traitProbs: Record<string, number>,
   multicolorAppProb: number = 0.5,
   sameColorAppProb: number = 0.5,
+  appendageSpawnRate: number = 0.7,
+  glowProbability: number = 0.1,
 ): Genome {
   const mutateGeo = (val: any, options: readonly any[]) =>
     Math.random() < 0.05
@@ -294,13 +373,9 @@ export function breedGenomes(
       Math.random() < 0.5 ? g1.geometryType : g2.geometryType,
       GEO_TYPES,
     ),
-    // High chance of completely new appendage
-    appendage:
-      Math.random() < 0.65
-        ? getWeightedAppendage(traitProbs)
-        : Math.random() < 0.5
-          ? g1.appendage
-          : g2.appendage,
+    // Appendage selected purely from the weighted trait pool, gated by appendageSpawnRate.
+    // No parent-inheritance bypass — so APP_SPAWN and LEAF_WT settings are fully respected.
+    appendage: Math.random() < appendageSpawnRate ? getWeightedAppendage(traitProbs) : "none",
     multicolorAppendage: Math.random() < multicolorAppProb,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
@@ -308,7 +383,34 @@ export function breedGenomes(
     pulseSpeed: 0.05 + Math.random() * 0.15,
     gradientGrowth: Math.random() < (traitProbs["gradient"] || 0.1),
     singleton: newArchetype === "snake" && Math.random() < 0.5,
-    isGlowing: Math.random() < 0.15 || !!(g1.isGlowing || g2.isGlowing) && Math.random() < 0.5,
+    isGlowing: Math.random() < glowProbability || !!(g1.isGlowing || g2.isGlowing) && Math.random() < 0.5,
+    
+    // Breed Procedural Leaf Genes
+    leafDivision: THREE.MathUtils.clamp(
+      ((g1.leafDivision ?? 0.5) + (g2.leafDivision ?? 0.5)) / 2 + (Math.random() - 0.5) * 0.1,
+      0,
+      1
+    ),
+    vernationType: (Math.random() < 0.05
+      ? (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)]
+      : Math.random() < 0.5
+        ? (g1.vernationType ?? "circinate")
+        : (g2.vernationType ?? "circinate")),
+    canopyZone: (Math.random() < 0.05
+      ? (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)]
+      : Math.random() < 0.5
+        ? (g1.canopyZone ?? "wholeBody")
+        : (g2.canopyZone ?? "wholeBody")),
+    phyllotaxisMode: (Math.random() < 0.05
+      ? (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)]
+      : Math.random() < 0.5
+        ? (g1.phyllotaxisMode ?? "spiral")
+        : (g2.phyllotaxisMode ?? "spiral")),
+    succulence: THREE.MathUtils.clamp(
+      ((g1.succulence ?? 0.5) + (g2.succulence ?? 0.5)) / 2 + (Math.random() - 0.5) * 0.1,
+      0,
+      1
+    ),
   };
   
   if (res.archetype === "ginger") {
@@ -325,6 +427,8 @@ export function mutateGenome(
   traitProbs: Record<string, number>,
   multicolorAppProb: number = 0.5,
   sameColorAppProb: number = 0.5,
+  appendageSpawnRate: number = 0.7,
+  glowProbability: number = 0.1,
 ): Genome {
   const res = breedGenomes(
     g,
@@ -332,6 +436,8 @@ export function mutateGenome(
     traitProbs,
     multicolorAppProb,
     sameColorAppProb,
+    appendageSpawnRate,
+    glowProbability,
   );
   res.name = `Mutant [${res.archetype.toUpperCase()}]-${Math.floor(Math.random() * 1000)
     .toString()
@@ -344,6 +450,8 @@ export function mutateBranchGenome(
   traitProbs: Record<string, number>,
   multicolorAppProb: number = 0.5,
   sameColorAppProb: number = 0.5,
+  appendageSpawnRate: number = 0.7,
+  glowProbability: number = 0.1,
 ): Genome {
   const res = { ...g };
   res.color = g.color.clone();
@@ -357,7 +465,8 @@ export function mutateBranchGenome(
   res.wavingSpeed = Math.max(0, res.wavingSpeed + (Math.random() - 0.5) * 0.03);
   res.wavingAmplitude = Math.max(0, res.wavingAmplitude + (Math.random() - 0.5) * 0.06);
 
-  if (Math.random() < 0.5) res.appendage = getWeightedAppendage(traitProbs);
+  // Always reassign appendage from the weighted pool so APP_SPAWN + LEAF_WT settings apply immediately.
+  res.appendage = Math.random() < appendageSpawnRate ? getWeightedAppendage(traitProbs) : "none";
   
   if (Math.random() < 0.05) {
      res.archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
@@ -372,11 +481,355 @@ export function mutateBranchGenome(
     res.multicolorAppendage = Math.random() < multicolorAppProb;
   if (Math.random() < 0.1)
     res.sameColorAppendage = Math.random() < sameColorAppProb;
-  if (Math.random() < 0.1)
+  if (Math.random() < glowProbability)
     res.isGlowing = true;
+
+  // Mutate Procedural Leaf Genes
+  res.leafDivision = THREE.MathUtils.clamp((res.leafDivision ?? 0.5) + (Math.random() - 0.5) * 0.15, 0, 1);
+  res.succulence = THREE.MathUtils.clamp((res.succulence ?? 0.5) + (Math.random() - 0.5) * 0.15, 0, 1);
+  if (Math.random() < 0.08) {
+    res.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
+  }
+  if (Math.random() < 0.08) {
+    res.canopyZone = (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)];
+  }
+  if (Math.random() < 0.08) {
+    res.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+  }
+
   res.name = `Branch-Mutant-${Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0")}`;
   res.stability = 0.4;
   return res;
+}export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
+  setupShaderMaterial(material, true);
+  material.userData.botanyRealism = { value: 1.0 };
+  material.userData.stemCurviness = { value: 1.0 };
+  material.userData.veinStrength = { value: 0.25 };
+
+  const prevBeforeCompile = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, renderer) => {
+    prevBeforeCompile(shader, renderer);
+    
+    shader.uniforms.botanyRealism = material.userData.botanyRealism;
+    shader.uniforms.stemCurviness = material.userData.stemCurviness;
+    shader.uniforms.veinStrength = material.userData.veinStrength;
+
+    shader.vertexShader = `
+      uniform float botanyRealism;
+      uniform float stemCurviness;
+      uniform float veinStrength;
+      ${shader.vertexShader}
+    `.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+       // --- Unpack instance attributes ---
+       float instanceGrowth = instancePackB.x;
+       float instanceDecay = instancePackA.z;
+       float instanceVernation = instancePackB.y;
+       float instanceSucculence = instancePackB.z;
+       float instanceLeafDiv = instancePackB.w;
+       float instanceHash = instancePackA.w;
+
+       // After .translate(0, 0.5, 0): Y runs 0 (attachment on creature) → 1 (leaf tip)
+       float spineT = position.y;
+
+       // === BOTANICAL STEM & BLADE DEFINITION ===
+       // Genetic stem length: 15%-35% of total leaf length (varies per species)
+       float hash2 = fract(instanceHash * 13.7);   // secondary hash for within-species variation
+       float stemLength = 0.15 + instanceHash * 0.20;  // 15%-35% (genetic/species level)
+       stemLength += (hash2 - 0.5) * 0.06;            // ±3% within-species per-leaf variation
+       stemLength = clamp(stemLength, 0.10, 0.42);
+
+       float isBlade = smoothstep(stemLength - 0.04, stemLength + 0.04, spineT);
+       float bladeT = clamp((spineT - stemLength) / max(1.0 - stemLength, 0.001), 0.0, 1.0);
+
+       // === PETIOLE BEND/TWIST PARAMETERS ===
+       float leanDir = (hash2 > 0.5) ? 1.0 : -1.0;
+       float leanAmount = hash2 * 0.3 * stemCurviness;
+       float arcAmount = (0.15 + instanceHash * 0.25) * stemCurviness;
+       float twistRate = (instanceHash * 2.0 - 1.0) * 0.5 * stemCurviness;  // -0.5 to +0.5 rad
+
+       // === 1. ORGANIC SILHOUETTE CONTOURING BY GENETIC FAMILY ===
+       float familySelector = fract(instanceHash * 7.3);
+       float targetWidth = sin(bladeT * 3.14159) * smoothstep(0.0, 0.15, bladeT);
+       
+       // --- Aspect Ratio & Scale Variation ---
+       float leafLengthScale = mix(0.35, 3.2, fract(instanceHash * 19.3));
+       float leafWidthScale = mix(0.3, 2.2, fract(instanceHash * 3.7));
+       
+       if (isBlade > 0.5) {
+           transformed.y = stemLength + (transformed.y - stemLength) * leafLengthScale;
+       }
+       
+       if (familySelector < 0.16) {
+           // Family 0: Lanceolate / Linear / Oval (Simple)
+           float fullness = mix(1.0, 0.25, instanceLeafDiv);
+           float widthFactor = pow(sin(bladeT * 3.14159), fullness);
+           float aspectWidth = mix(1.0, 0.15, instanceLeafDiv);
+           targetWidth = widthFactor * aspectWidth;
+       }
+       else if (familySelector < 0.32) {
+           // Family 1: Cordate / Sagittate (Heart / Arrowhead)
+           float baseWidth = sin(bladeT * 3.14159) * (1.2 - 0.6 * bladeT);
+           float cleftDepth = mix(0.06, 0.28, instanceLeafDiv);
+           float cleftDisplacement = cleftDepth * (1.0 - cos(position.x * 3.14159)) * (1.0 - bladeT);
+           transformed.y -= cleftDisplacement * isBlade;
+           
+           float flare = 1.0 + mix(0.0, 0.9, instanceLeafDiv) * pow(1.0 - bladeT, 3.0);
+           targetWidth = baseWidth * flare;
+       }
+       else if (familySelector < 0.48) {
+           // Family 2: Palmate / Fan / Star (Maple / Ginkgo)
+           vec2 polarVec = vec2(position.x * 2.0, bladeT);
+           float theta = atan(polarVec.x, max(polarVec.y, 0.001));
+           
+           float lobesCount = 3.0 + floor(fract(instanceHash * 43.2) * 3.0) * 2.0;
+           float lobeWave = cos(lobesCount * theta);
+           float lobeDepth = mix(0.08, 0.65, instanceLeafDiv);
+           float R = 1.0 - lobeDepth + lobeDepth * (0.5 + 0.5 * lobeWave);
+           
+           if (fract(instanceHash * 11.4) > 0.5) {
+               float fanNotch = mix(0.0, 0.25, instanceLeafDiv) * smoothstep(0.0, 0.2, abs(theta));
+               R = (1.0 - fanNotch) * smoothstep(1.4, 0.8, abs(theta));
+           }
+           
+           transformed.x *= R;
+           transformed.y = stemLength + (transformed.y - stemLength) * R;
+           targetWidth = sin(bladeT * 3.14159);
+       }
+       else if (familySelector < 0.64) {
+           // Family 3: Pinnate / Monstera (Deep lateral splits)
+           float baseWidth = sin(bladeT * 3.14159);
+           float splitsCount = 4.0 + floor(instanceLeafDiv * 6.0);
+           float splitWave = sin(splitsCount * bladeT * 6.28318 - 1.5708);
+           float splitDepth = mix(0.15, 0.92, instanceLeafDiv);
+           float splitFactor = 1.0 - splitDepth + splitDepth * smoothstep(-0.2, 0.2, splitWave);
+           targetWidth = baseWidth * splitFactor;
+       }
+       else if (familySelector < 0.80) {
+           // Family 4: Rosette / Succulent (Spatulate / Plump)
+           targetWidth = mix(0.15, 0.9, smoothstep(0.0, 0.65, bladeT)) * (1.0 - bladeT * 0.2);
+           float spoonDepth = mix(0.0, 0.35, instanceLeafDiv);
+           float cup = -spoonDepth * sin(bladeT * 3.14159) * (1.0 - abs(position.x) * 2.0);
+           transformed.z += cup * isBlade;
+       }
+       else {
+           // Family 5: Weird Fat Tube Leaf (Base contour placeholder)
+           targetWidth = sin(bladeT * 3.14159) * smoothstep(0.0, 0.12, bladeT);
+       }
+
+       // Thin stem (0.08 of scale), opens to broad targetWidth on the blade, scaled by genetic width aspect
+       float finalWidth = mix(0.08, targetWidth, isBlade) * leafWidthScale;
+       transformed.x *= finalWidth;
+
+       // === 1.5 SUCCULENCE THICKNESS ===
+       float bladeThick = mix(0.15, 1.0, 1.0 - abs(position.x) * 2.0);
+       float thicknessFactor = mix(1.0, bladeThick, isBlade);
+       float zSpineTaper = cos(spineT * 1.5708) * smoothstep(0.0, 0.05, spineT);
+       transformed.z *= (1.0 + instanceSucculence * 2.5) * thicknessFactor * zSpineTaper;
+
+       // === 1.75 SPECIAL SHAPE OVERRIDES ===
+       if (familySelector >= 0.80) {
+           if (isBlade > 0.5) {
+               float theta = position.x * 3.14159 * 2.0;
+               float tubeRadius = (0.28 + instanceSucculence * 0.40) * leafWidthScale;
+               float radius = tubeRadius * sin(bladeT * 3.14159) * smoothstep(0.0, 0.12, bladeT);
+               
+               transformed.x = radius * cos(theta);
+               transformed.z = radius * sin(theta);
+           }
+           vGlowTrait = 1.0;
+       }
+
+       // === 2. VERNATION GROWTH ANIMATION ===
+       float U = instanceGrowth * (1.0 - instanceDecay);
+
+       float growScale = 1.0;
+       float foldFactor = 1.0 - U;
+       if (botanyRealism > 0.5) {
+           foldFactor *= (1.0 - instanceSucculence * 0.45);
+       }
+
+       if (instanceVernation < 1.5) {
+           // Circinate & Convolute: spiralled blobs
+           // Fast pop/rise with overshoot and settle
+           if (U < 0.6) {
+               float t = U / 0.6;
+               growScale = mix(0.05, 1.08, sin(t * 1.5708));
+           } else {
+               float t = (U - 0.6) / 0.4;
+               growScale = mix(1.08, 1.0, smoothstep(0.0, 1.0, t));
+           }
+           // Make the fold factor unroll organically matching the pop
+           foldFactor = smoothstep(1.0, 0.0, pow(U, 0.85));
+       } else {
+           // Conduplicate: butterfly wings
+           // Grow steadily first, reaching full scale by U = 0.7
+           growScale = smoothstep(0.0, 0.7, U);
+       }
+
+       if (foldFactor > 0.01 || instanceVernation >= 1.5) {
+         if (instanceVernation < 0.5) {
+           // Circinate: fiddlehead coil along spine
+           float theta = spineT * 6.28318 * foldFactor * 1.5;
+           float r = 0.12 + spineT * 0.04;
+           transformed.y = mix(transformed.y, r * sin(theta), foldFactor);
+           transformed.z += r * (1.0 - cos(theta)) * foldFactor;
+         } else if (instanceVernation < 1.5) {
+           // Convolute: cigar roll (blade only)
+           float phi = position.x * 6.28318 * foldFactor * 2.0;
+           float r_conv = 0.06 * foldFactor + 0.01;
+           transformed.x = mix(transformed.x, mix(transformed.x, r_conv * sin(phi), isBlade), foldFactor);
+           transformed.z += r_conv * (1.0 - cos(phi)) * foldFactor * isBlade;
+         } else {
+           // Conduplicate: book fold (blade only)
+           // Stay folded until U = 0.4, then unfold with a gorgeous wing-flap bounce
+           float alpha = 1.5708;
+           float conduplicateFold = 1.0;
+           if (U > 0.4) {
+               float t = (U - 0.4) / 0.6;
+               float baseAlpha = 1.5708 * (1.0 - smoothstep(0.0, 1.0, t));
+               alpha = baseAlpha + 1.0 * sin(t * 3.14159 * 2.0) * (1.0 - t);
+               conduplicateFold = abs(alpha) / 1.5708;
+           }
+           float sx = sign(position.x);
+           float absx = abs(transformed.x);
+           transformed.x = mix(transformed.x, sx * absx * cos(alpha), isBlade);
+           transformed.z += absx * sin(alpha) * conduplicateFold * isBlade;
+         }
+       }
+
+       // === 3. PERMANENT 3D MATURE STRUCTURE (blade only) ===
+       // Deep Crease: sharp V-crease along the midrib seam
+       float creaseStrength = 0.38 * (1.0 - instanceSucculence * 0.6 * botanyRealism);
+       float midribFold = creaseStrength * (1.0 - abs(position.x) * 2.0);
+       transformed.z += midribFold * U * isBlade;
+
+       // Organic Edge Cupping: lateral margins curl upward or downward
+       float cupSign = (instanceHash > 0.5) ? 1.0 : -1.0;
+       float cupStrength = 0.32 * (1.0 - instanceSucculence * 0.7 * botanyRealism);
+       float cup = cupSign * cupStrength * (1.0 - cos(position.x * 3.14159)) * U * isBlade;
+       transformed.z += cup;
+
+       // === 3.5 VEIN 3D RIDGE DISPLACEMENT ===
+       if (isBlade > 0.5 && veinStrength > 0.0) {
+           float spineTaper = mix(0.028, 0.007, spineT);
+           float midribVal = smoothstep(spineTaper, 0.0, abs(position.x * 2.0));
+           
+           float lateralVal = 0.0;
+           float veinDensity = 4.0 + floor(fract(instanceHash * 17.3) * 5.0);
+           float veinAngle = 0.2 + fract(instanceHash * 29.7) * 0.4;
+           
+           float vCoord = bladeT - veinAngle * abs(position.x * 2.0);
+           float cellCoord = fract(vCoord * veinDensity);
+           float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
+           
+           float latThick = mix(0.0045, 0.0015, bladeT) * (1.0 - 0.4 * abs(position.x * 2.0));
+           lateralVal = smoothstep(latThick, 0.0, distToVeinLine);
+           
+           lateralVal *= smoothstep(1.0, 0.85, abs(position.x * 2.0));
+           lateralVal *= smoothstep(1.0, 0.88, bladeT) * smoothstep(0.0, 0.12, bladeT);
+           
+           float finalVeinMask = max(midribVal, lateralVal);
+           
+           // Physical ridge protrusion: midrib stands out more, lateral veins stand out subtly
+           float displacement = (mix(0.08, 0.03, bladeT) * midribVal + 0.025 * lateralVal) * veinStrength * U;
+           
+           // Symmetrical thickening on front and back faces
+           transformed.z += displacement * sign(position.z);
+       }
+
+       // Advanced Genetic Twisting & Curling (blade only)
+       if (isBlade > 0.5) {
+           // 1. Genetic central twist (propeller / ribbon twist around Y axis)
+           float twistAmt = mix(-3.14159 * 1.8, 3.14159 * 1.8, fract(instanceHash * 53.7));
+           float twistVal = (fract(instanceHash * 29.4) > 0.4) ? twistAmt : 0.0;
+           
+           // Dynamic twist overshoot for circinate/convolute
+           float dynamicTwistU = U;
+           if (instanceVernation < 1.5) {
+               dynamicTwistU = U + 0.25 * sin(U * 3.14159) * (1.0 - U);
+           }
+           float leafTwistAngle = bladeT * twistVal * dynamicTwistU;
+           
+           float cosTwist = cos(leafTwistAngle);
+           float sinTwist = sin(leafTwistAngle);
+           float rx = transformed.x * cosTwist - transformed.z * sinTwist;
+           float rz = transformed.x * sinTwist + transformed.z * cosTwist;
+           transformed.x = rx;
+           transformed.z = rz;
+           
+           // 2. Genetic spine curling / loop / scroll (X axis rotation)
+           float curlAmt = mix(-3.14159 * 0.6, 3.14159 * 0.3, fract(instanceHash * 83.9));
+           float curlVal = (fract(instanceHash * 61.2) > 0.4) ? curlAmt : 0.0;
+           // Add a base droop so leaves bend naturally
+           curlVal += -0.35 * (1.0 - instanceSucculence * 0.5 * botanyRealism);
+           
+           // Dynamic curl overshoot for circinate/convolute (the "curl move")
+           float dynamicCurlU = U;
+           if (instanceVernation < 1.5) {
+               dynamicCurlU = U + 0.22 * sin(U * 3.14159) * (1.0 - U);
+           }
+           float curlAngle = bladeT * curlVal * dynamicCurlU;
+           float cosCurl = cos(curlAngle);
+           float sinCurl = sin(curlAngle);
+           
+           float yLocal = transformed.y - stemLength;
+           float ry_curl = yLocal * cosCurl - transformed.z * sinCurl;
+           float rz_curl = yLocal * sinCurl + transformed.z * cosCurl;
+           transformed.y = stemLength + ry_curl;
+           transformed.z = rz_curl;
+       }
+
+       // Wavy Margin Wiggles: detailed ripples along the outer edges of the blade
+       float rippleFreq = 10.0 + instanceHash * 6.0;
+       float rippleWave = sin(bladeT * rippleFreq + instanceHash * 6.28) * 0.07 * abs(position.x);
+       transformed.z += rippleWave * U * isBlade;
+
+       // === STEM CURVING & RIGID BLADE ROTATION/TRANSLATION ===
+       // Compute stem-deformed position
+       float stemT = clamp(spineT / max(stemLength, 0.001), 0.0, 1.0);
+       float stemCurve = stemT * stemT;
+       vec3 stemPos = transformed.xyz;
+       stemPos.x += leanDir * leanAmount * stemCurve;
+       stemPos.z += arcAmount * stemCurve;
+       float stemTwistAngle = twistRate * stemT;
+       float cosStemT = cos(stemTwistAngle);
+       float sinStemT = sin(stemTwistAngle);
+       float stx = stemPos.x * cosStemT - stemPos.z * sinStemT;
+       float stz = stemPos.x * sinStemT + stemPos.z * cosStemT;
+       stemPos.x = stx;
+       stemPos.z = stz;
+
+       // Compute blade-deformed position (rigidly rotated & translated)
+       float dbx_dy = 2.0 * leanDir * leanAmount / max(stemLength, 0.001);
+       float dbz_dy = 2.0 * arcAmount / max(stemLength, 0.001);
+       vec3 tangent = normalize(vec3(dbx_dy, 1.0, dbz_dy));
+
+       vec3 newY = tangent;
+       vec3 newZ = normalize(cross(vec3(1.0, 0.0, 0.0), newY));
+       vec3 newX = cross(newY, newZ);
+       mat3 R_tilt = mat3(newX, newY, newZ);
+
+       vec3 localBladePos = vec3(transformed.x, transformed.y - stemLength, transformed.z);
+       vec3 rotatedLocal = R_tilt * localBladePos;
+       vec3 bladePos = vec3(rotatedLocal.x + leanDir * leanAmount, rotatedLocal.y + stemLength, rotatedLocal.z + arcAmount);
+
+       float cosBladeT = cos(twistRate);
+       float sinBladeT = sin(twistRate);
+       float btx = bladePos.x * cosBladeT - bladePos.z * sinBladeT;
+       float btz = bladePos.x * sinBladeT + bladePos.z * cosBladeT;
+       bladePos.x = btx;
+       bladePos.z = btz;
+
+       // Mix stem and blade smoothly
+       transformed.xyz = mix(stemPos, bladePos, isBlade);
+
+       // Apply overall growth scaling to the entire leaf geometry
+       transformed.xyz *= growScale;`
+    );
+  };
+  return material;
 }

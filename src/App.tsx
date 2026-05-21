@@ -149,6 +149,17 @@ export default function App() {
         glowTraitIntensity={state.glowTraitIntensity}
         glowTraitDistance={state.glowTraitDistance}
         glowTraitReflect={state.glowTraitReflect}
+        botanyRealism={state.botanyRealism}
+        windVelocity={state.windVelocity}
+        flutterIntensity={state.flutterIntensity}
+        leafScale={state.leafScale}
+        relativeLeafSizeDiff={state.relativeLeafSizeDiff}
+        leafGrowthSpeed={state.leafGrowthSpeed}
+        phyllotaxisAngle={state.phyllotaxisAngle}
+        leafProbability={state.leafProbability}
+        appendageSpawnRate={state.appendageSpawnRate}
+        glowProbability={state.glowProbability}
+        stemCurviness={state.stemCurviness}
       />
 
       <HUD

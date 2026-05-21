@@ -60,12 +60,18 @@ export function updateMeshSegments(
         scaleY = thickness * 1.5;
         scaleZ = thickness * 15;
       } else if (
-        genome.appendage === "leaves" ||
+        genome.appendage === "lillyPads" ||
         genome.appendage === "scales"
       ) {
         scaleX = thickness * 8;
         scaleY = thickness * 0.4;
         scaleZ = thickness * 10;
+      } else if (genome.appendage === "leaves") {
+        scaleX = thickness * 8;
+        scaleY = thickness * 10;
+        scaleZ = thickness * 12;
+        engine.dummy.rotateX(-Math.PI / 2);
+        engine.dummy.rotateY(Math.PI);
       } else if (genome.appendage === "petals") {
         scaleX = thickness * 10;
         scaleY = thickness * 0.2;
@@ -128,25 +134,13 @@ export function updateMeshSegments(
   targetMesh.setMatrixAt(targetIndex, engine.dummy.matrix);
   targetMesh.setColorAt(targetIndex, finalColor);
 
-  const glowAttr = targetMesh.geometry.getAttribute(
-    "instanceGlow",
-  ) as THREE.InstancedBufferAttribute;
-  const decayAttr = targetMesh.geometry.getAttribute(
-    "instanceDecay",
-  ) as THREE.InstancedBufferAttribute;
-  const hashAttr = targetMesh.geometry.getAttribute(
-    "instanceHash",
-  ) as THREE.InstancedBufferAttribute;
-  const growthAttr = targetMesh.geometry.getAttribute(
-    "instanceGrowth",
-  ) as THREE.InstancedBufferAttribute;
-  if (glowAttr && decayAttr && hashAttr) {
-    glowAttr.setX(targetIndex, engine.enableGlow ? engine.glowSize : 0.0);
-    decayAttr.setX(targetIndex, 0.0);
-    if (growthAttr) {
-      growthAttr.setX(targetIndex, 0.01);
-      growthAttr.needsUpdate = true;
-    }
+  const packAAttr = targetMesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+  const packBAttr = targetMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
+  if (packAAttr && packBAttr) {
+    // Pack A: [glow, glowTrait, decay, hash]
+    packAAttr.setX(targetIndex, engine.enableGlow ? engine.glowSize : 0.0);
+    packAAttr.setY(targetIndex, genome.isGlowing ? 1.0 : 0.0);
+    packAAttr.setZ(targetIndex, 0.0); // decay starts at 0
     
     let genomeHash = 0;
     if (genome.name.startsWith("Alpha")) {
@@ -160,19 +154,21 @@ export function updateMeshSegments(
       }
       genomeHash = (Math.abs(h) % 1000) / 1000;
     }
-    hashAttr.setX(targetIndex, genomeHash);
+    packAAttr.setW(targetIndex, genomeHash);
     
-    glowAttr.needsUpdate = true;
-    decayAttr.needsUpdate = true;
-    hashAttr.needsUpdate = true;
-
-    const glowTraitAttr = targetMesh.geometry.getAttribute(
-      "instanceGlowTrait",
-    ) as THREE.InstancedBufferAttribute;
-    if (glowTraitAttr) {
-      glowTraitAttr.setX(targetIndex, genome.isGlowing ? 1.0 : 0.0);
-      glowTraitAttr.needsUpdate = true;
-    }
+    // Pack B: [growth, vernation, succulence, leafDivision]
+    packBAttr.setX(targetIndex, 0.01); // growth starts at 0.01
+    
+    let vernVal = 0.0;
+    if (genome.vernationType === "convolute") vernVal = 1.0;
+    else if (genome.vernationType === "conduplicate") vernVal = 2.0;
+    
+    packBAttr.setY(targetIndex, vernVal);
+    packBAttr.setZ(targetIndex, genome.succulence ?? 0.5);
+    packBAttr.setW(targetIndex, genome.leafDivision ?? 0.5);
+    
+    packAAttr.needsUpdate = true;
+    packBAttr.needsUpdate = true;
   }
 
   if (targetMesh === engine.cylinderMesh) {
@@ -200,6 +196,7 @@ export function updateMeshSegments(
         strainName: genome.name,
         parentIndex: targetIndexStem,
         parentTimestamp: engine.time,
+        randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,
       };
     }
   }
@@ -253,22 +250,18 @@ export function processDyingSegments(
       dyingSet.delete(idx);
       changed = true;
 
-      const decayAttr = mesh.geometry.getAttribute(
-        "instanceDecay",
-      ) as THREE.InstancedBufferAttribute;
-      if (decayAttr) {
-        decayAttr.setX(idx, 0.0);
-        decayAttr.needsUpdate = true;
+      const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+      if (packAAttr) {
+        packAAttr.setZ(idx, 0.0);
+        packAAttr.needsUpdate = true;
       }
     } else {
       const shrink = fadeAge / wipeDuration;
 
-      const decayAttr = mesh.geometry.getAttribute(
-        "instanceDecay",
-      ) as THREE.InstancedBufferAttribute;
-      if (decayAttr) {
-        decayAttr.setX(idx, Math.min(shrink, 1.0));
-        decayAttr.needsUpdate = true;
+      const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+      if (packAAttr) {
+        packAAttr.setZ(idx, Math.min(shrink, 1.0));
+        packAAttr.needsUpdate = true;
       }
       
       if (isHybrid && seg && seg.matrix) {
@@ -281,7 +274,7 @@ export function processDyingSegments(
         engine.dummy.scale.multiplyScalar(Math.max(1.0 - shrink, 0.001));
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(idx, engine.dummy.matrix);
-      } else if (!decayAttr) {
+      } else if (!packAAttr) {
         if (seg && seg.matrix) {
           engine.dummy.matrix.copy(seg.matrix);
           engine.dummy.matrix.decompose(

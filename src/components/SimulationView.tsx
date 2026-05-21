@@ -75,6 +75,18 @@ export function SimulationView({
   glowTraitIntensity,
   glowTraitDistance,
   glowTraitReflect,
+  botanyRealism,
+  windVelocity,
+  flutterIntensity,
+  leafScale,
+  relativeLeafSizeDiff,
+  leafGrowthSpeed,
+  phyllotaxisAngle,
+  leafProbability,
+  appendageSpawnRate,
+  glowProbability,
+  stemCurviness,
+  veinStrength,
   onConfigChange,
 }: Props & {
   restartTrigger?: number;
@@ -139,6 +151,18 @@ export function SimulationView({
   glowTraitIntensity?: number;
   glowTraitDistance?: number;
   glowTraitReflect?: number;
+  botanyRealism?: boolean;
+  windVelocity?: number;
+  flutterIntensity?: number;
+  leafScale?: number;
+  relativeLeafSizeDiff?: number;
+  leafGrowthSpeed?: number;
+  phyllotaxisAngle?: number;
+  leafProbability?: number;
+  appendageSpawnRate?: number;
+  glowProbability?: number;
+  stemCurviness?: number;
+  veinStrength?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -147,6 +171,7 @@ export function SimulationView({
   const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{ age: number; tapering: boolean } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const lastRaycastTime = useRef<number>(0);
+  const pointerDownStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (
@@ -377,6 +402,30 @@ export function SimulationView({
         engineRef.current.glowTraitDistance = glowTraitDistance;
       if (glowTraitReflect !== undefined)
         engineRef.current.glowTraitReflect = glowTraitReflect;
+      if (botanyRealism !== undefined)
+        engineRef.current.setBotanyRealism(botanyRealism);
+      if (windVelocity !== undefined)
+        engineRef.current.setWindVelocity(windVelocity);
+      if (flutterIntensity !== undefined)
+        engineRef.current.setFlutterIntensity(flutterIntensity);
+      if (leafScale !== undefined)
+        engineRef.current.setLeafScale(leafScale);
+      if (relativeLeafSizeDiff !== undefined)
+        engineRef.current.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
+      if (leafGrowthSpeed !== undefined)
+        engineRef.current.setLeafGrowthSpeed(leafGrowthSpeed);
+      if (phyllotaxisAngle !== undefined)
+        engineRef.current.setPhyllotaxisAngle(phyllotaxisAngle);
+      if (leafProbability !== undefined)
+        engineRef.current.setLeafProbability(leafProbability);
+      if (appendageSpawnRate !== undefined)
+        engineRef.current.setAppendageSpawnRate(appendageSpawnRate);
+      if (glowProbability !== undefined)
+        engineRef.current.setGlowProbability(glowProbability);
+      if (stemCurviness !== undefined)
+        engineRef.current.setStemCurviness(stemCurviness);
+      if (veinStrength !== undefined)
+        engineRef.current.setVeinStrength(veinStrength);
     }
   }, [
     tideColor,
@@ -429,6 +478,18 @@ export function SimulationView({
     glowTraitIntensity,
     glowTraitDistance,
     glowTraitReflect,
+    botanyRealism,
+    windVelocity,
+    flutterIntensity,
+    leafScale,
+    relativeLeafSizeDiff,
+    leafGrowthSpeed,
+    phyllotaxisAngle,
+    leafProbability,
+    appendageSpawnRate,
+    glowProbability,
+    stemCurviness,
+    veinStrength,
   ]);
 
   useEffect(() => {
@@ -537,7 +598,21 @@ export function SimulationView({
       engine.glowTraitDistance = glowTraitDistance;
     if (glowTraitReflect !== undefined)
       engine.glowTraitReflect = glowTraitReflect;
+    if (botanyRealism !== undefined) engine.setBotanyRealism(botanyRealism);
+    if (windVelocity !== undefined) engine.setWindVelocity(windVelocity);
+    if (flutterIntensity !== undefined) engine.setFlutterIntensity(flutterIntensity);
+    if (leafScale !== undefined) engine.setLeafScale(leafScale);
+    if (relativeLeafSizeDiff !== undefined) engine.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
+    if (leafGrowthSpeed !== undefined) engine.setLeafGrowthSpeed(leafGrowthSpeed);
+    if (phyllotaxisAngle !== undefined) engine.setPhyllotaxisAngle(phyllotaxisAngle);
+    if (leafProbability !== undefined) engine.setLeafProbability(leafProbability);
+    if (appendageSpawnRate !== undefined) engine.setAppendageSpawnRate(appendageSpawnRate);
+    if (glowProbability !== undefined) engine.setGlowProbability(glowProbability);
+    if (stemCurviness !== undefined) engine.setStemCurviness(stemCurviness);
+    if (veinStrength !== undefined) engine.setVeinStrength(veinStrength);
 
+    // Spawn initial creatures NOW, after all user settings have been applied.
+    engine.initAgents();
     engine.start();
 
     const handleResize = () => {
@@ -560,7 +635,19 @@ export function SimulationView({
     };
   }, []);
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerDownStart.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handleClick = (e: React.MouseEvent) => {
+    if (pointerDownStart.current) {
+      const dx = e.clientX - pointerDownStart.current.x;
+      const dy = e.clientY - pointerDownStart.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      pointerDownStart.current = null;
+      if (dist > 5) return;
+    }
+
     if (!containerRef.current || !engineRef.current) return;
     const engine = engineRef.current;
     if (!engine.camera || !engine.cylinderMesh) return;
@@ -754,6 +841,7 @@ export function SimulationView({
       <canvas
         ref={canvasRef}
         onClick={handleClick}
+        onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerLeave={() => {
           if (engineRef.current) engineRef.current.hoveredStrainName = null;

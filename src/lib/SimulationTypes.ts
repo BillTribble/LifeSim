@@ -11,6 +11,7 @@ export const APPENDAGES = [
   "scales",
   "spirals",
   "flowers",
+  "lillyPads",
   "leaves",
   "petals",
   "needles",
@@ -51,6 +52,13 @@ export interface Genome {
   createdAt?: number;
   singleton?: boolean;
   isGlowing?: boolean;
+  
+  // Procedural Leaf Genes
+  leafDivision: number;
+  vernationType: "circinate" | "convolute" | "conduplicate";
+  canopyZone: "wholeBody" | "terminal" | "basal";
+  phyllotaxisMode: "spiral" | "decussate" | "whorled";
+  succulence: number;
 }
 
 export interface Agent {
@@ -85,6 +93,7 @@ export interface Segment {
   parentIndex?: number;
   parentTimestamp?: number;
   color?: THREE.Color;
+  randomFactor?: number;
 }
 
 export const MAX_POINTS = 240000;

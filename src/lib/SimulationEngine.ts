@@ -73,6 +73,7 @@ export class SimulationEngine {
   onStateUpdate: (state: any) => void = () => {};
   onConfigChange?: (config: any) => void;
 
+  rotationSpeed: number = 0.1;
   magnetism: number = 0.02;
   proximity: number = 400.0;
   desperation: number = 2.0;
@@ -99,6 +100,19 @@ export class SimulationEngine {
   branchingMultiplier: number = 1.0;
   branchTendencyVar: number = 10;
   desiccationSpeed: number = 1.0;
+
+  botanyRealism: boolean = true;
+  windVelocity: number = 1.0;
+  flutterIntensity: number = 1.0;
+  leafScale: number = 1.0;
+  relativeLeafSizeDiff: number = 0.2;
+  leafGrowthSpeed: number = 0.015;
+  phyllotaxisAngle: number = 137.5;
+  leafProbability: number = 0.1;
+  appendageSpawnRate: number = 0.7;
+  glowProbability: number = 0.1;
+  stemCurviness: number = 1.0;
+  veinStrength: number = 0.25;
 
   hybridSize: number = 2.0;
 
@@ -135,17 +149,18 @@ export class SimulationEngine {
   nextThemeColor2: string = "#ffffff";
 
   traitProbs: Record<string, number> = {
-    flowers: 0.1,
-    leaves: 0.1,
-    petals: 0.1,
-    needles: 0.1,
-    thorns: 0.1,
-    hair: 0.1,
-    curlyHair: 0.0,
-    crystals: 0.0,
-    spores: 0.0,
-    scales: 0.0,
-    spirals: 0.0,
+    flowers: 0.02,
+    lillyPads: 0.02,
+    leaves: 0.78,
+    petals: 0.02,
+    needles: 0.02,
+    thorns: 0.02,
+    hair: 0.02,
+    curlyHair: 0.02,
+    crystals: 0.02,
+    spores: 0.02,
+    scales: 0.02,
+    spirals: 0.02
   };
 
   dyingStems = new Set<number>();
@@ -172,11 +187,15 @@ export class SimulationEngine {
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
   lastHybridSize: number = 2.0;
+  lastLeafScale: number = 1.0;
+  lastRelativeLeafSizeDiff: number = 0.2;
+  lastStemCurviness: number = 1.0;
 
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.canvas = canvas;
     setupSimulationScene(this, width, height);
-    this.initAgents();
+    // initAgents() is NOT called here — it is called explicitly in SimulationView
+    // after all user settings have been applied to the engine.
   }
 
   private generateRandomGenome(baseName: string, forceArchetype?: any): Genome {
@@ -206,7 +225,7 @@ export class SimulationEngine {
       wavingSpeed: Math.random() * 0.05,
       wavingAmplitude: Math.random() * 0.08,
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
-      appendage: getWeightedAppendage(this.traitProbs),
+      appendage: Math.random() < this.appendageSpawnRate ? getWeightedAppendage(this.traitProbs) : "none",
       multicolorAppendage: Math.random() < this.multicolorAppProb,
       sameColorAppendage: Math.random() < this.sameColorAppProb,
       stability: 0.8,
@@ -220,7 +239,14 @@ export class SimulationEngine {
       gradientGrowth: Math.random() < (this.traitProbs["gradient"] || 0.1),
       createdAt: this.time,
       singleton: archetype === "snake" && Math.random() < 0.5,
-      isGlowing: Math.random() < 0.15,
+      isGlowing: Math.random() < (this.traitProbs.glow ?? 0.1),
+      
+      // Procedural Leaf Genes
+      leafDivision: Math.random(),
+      vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
+      canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
+      phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
+      succulence: Math.random(),
     };
   }
 
@@ -277,6 +303,7 @@ export class SimulationEngine {
   }
 
   setRotationSpeed(speed: number) {
+    this.rotationSpeed = speed;
     if (this.controls) this.controls.autoRotateSpeed = speed;
   }
   setMagnetism(val: number) {
@@ -436,6 +463,42 @@ export class SimulationEngine {
   }
   setGrowthSpeed(g: number) {
     this.growthSpeed = g;
+  }
+  setBotanyRealism(val: boolean) {
+    this.botanyRealism = val;
+  }
+  setWindVelocity(val: number) {
+    this.windVelocity = val;
+  }
+  setFlutterIntensity(val: number) {
+    this.flutterIntensity = val;
+  }
+  setLeafScale(val: number) {
+    this.leafScale = val;
+  }
+  setRelativeLeafSizeDiff(val: number) {
+    this.relativeLeafSizeDiff = val;
+  }
+  setLeafGrowthSpeed(val: number) {
+    this.leafGrowthSpeed = val;
+  }
+  setPhyllotaxisAngle(val: number) {
+    this.phyllotaxisAngle = val;
+  }
+  setLeafProbability(val: number) {
+    this.leafProbability = val;
+  }
+  setAppendageSpawnRate(val: number) {
+    this.appendageSpawnRate = val;
+  }
+  setGlowProbability(val: number) {
+    this.glowProbability = val;
+  }
+  setStemCurviness(val: number) {
+    this.stemCurviness = val;
+  }
+  setVeinStrength(val: number) {
+    this.veinStrength = val;
   }
   setDiebackRate(d: number) {
     this.diebackRate = d;

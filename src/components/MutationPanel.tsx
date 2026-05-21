@@ -23,6 +23,22 @@ export function MutationPanel({ state, setters }: MutationPanelProps) {
                     </div>
                 ))}
             </div>
+            <span className="font-bold border-b border-[#87CEEB]/30 pb-1 mt-4">BIOLUMINESCENCE</span>
+            <div className="grid grid-cols-3 gap-3">
+                <div>
+                    <Dial 
+                      tooltip="GLOW PROBABILITY&#10;Likelihood of a newly spawned creature having bioluminescent glow traits." 
+                      label="GLOW_PROB" 
+                      min={0.0} 
+                      max={1.0} 
+                      step={0.01} 
+                      value={state.glowProbability} 
+                      onChange={setters.setGlowProbability} 
+                      color="#4ADE80" 
+                      formatValue={(v: number) => `${(v * 100).toFixed(0)}%`}
+                    />
+                </div>
+            </div>
         </div>
     </div>
   );

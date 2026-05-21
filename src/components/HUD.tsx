@@ -9,6 +9,7 @@ import {
   Dna,
   ChevronDown,
   Search,
+  Leaf,
 } from "lucide-react";
 import { Dial } from "./Dial";
 
@@ -41,6 +42,7 @@ function SmartDial(props: any) {
 import { PresetPanel } from "./PresetPanel";
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
+import { LeafConfigPanel } from "./LeafConfigPanel";
 
 interface HUDProps {
   showHUD: boolean;
@@ -70,6 +72,7 @@ export function HUD({
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
   const [presetPanelOpen, setPresetPanelOpen] = useState(false);
+  const [leafPanelOpen, setLeafPanelOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(() => window.innerWidth < 640);
   const [isControlsExpanded, setIsControlsExpanded] = useState(false);
@@ -126,6 +129,7 @@ export function HUD({
       {cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
       {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
       {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} />}
+      {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
 
       <div
         className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
@@ -144,7 +148,14 @@ export function HUD({
             <div className="relative">
               <div
                 className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
-                onClick={() => setThemePanelOpen(!themePanelOpen)}
+                onClick={() => {
+                  setThemePanelOpen(!themePanelOpen);
+                  setCloudPanelOpen(false);
+                  setMutationPanelOpen(false);
+                  setPresetPanelOpen(false);
+                  setLeafPanelOpen(false);
+                  setIsControlsExpanded(false);
+                }}
                 title="Theme Settings"
               >
                 <Palette className="w-3.5 h-3.5 text-pink-400" />
@@ -220,7 +231,14 @@ export function HUD({
               </div>
               <div
                 className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => setPresetPanelOpen(!presetPanelOpen)}
+                onClick={() => {
+                  setPresetPanelOpen(!presetPanelOpen);
+                  setMutationPanelOpen(false);
+                  setCloudPanelOpen(false);
+                  setLeafPanelOpen(false);
+                  setThemePanelOpen(false);
+                  setIsControlsExpanded(false);
+                }}
                 title="Presets"
               >
                 <Database className="w-3 h-3 text-[#D2B48C]" />
@@ -229,7 +247,14 @@ export function HUD({
               </div>
               <div
                 className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => setMutationPanelOpen(!mutationPanelOpen)}
+                onClick={() => {
+                  setMutationPanelOpen(!mutationPanelOpen);
+                  setPresetPanelOpen(false);
+                  setCloudPanelOpen(false);
+                  setLeafPanelOpen(false);
+                  setThemePanelOpen(false);
+                  setIsControlsExpanded(false);
+                }}
                 title="Mutations"
               >
                 <Dna className="w-3 h-3 text-[#87CEEB]" />
@@ -238,7 +263,30 @@ export function HUD({
               </div>
               <div
                 className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => setCloudPanelOpen(!cloudPanelOpen)}
+                onClick={() => {
+                  setLeafPanelOpen(!leafPanelOpen);
+                  setPresetPanelOpen(false);
+                  setMutationPanelOpen(false);
+                  setCloudPanelOpen(false);
+                  setThemePanelOpen(false);
+                  setIsControlsExpanded(false);
+                }}
+                title="Leaf Controls"
+              >
+                <Leaf className="w-3.5 h-3.5 text-green-400" />
+                <span>LEAVES</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
+                onClick={() => {
+                  setCloudPanelOpen(!cloudPanelOpen);
+                  setPresetPanelOpen(false);
+                  setMutationPanelOpen(false);
+                  setLeafPanelOpen(false);
+                  setThemePanelOpen(false);
+                  setIsControlsExpanded(false);
+                }}
                 title="Configure Tide Cloud"
               >
                 <Cloud className="w-3 h-3 text-purple-400" />
@@ -465,6 +513,23 @@ export function HUD({
                   <span className="opacity-60 text-[8px] uppercase">Vectors</span>
                   <span>{stats.geometryCount.toLocaleString()}</span>
                 </div>
+                
+                <div
+                  className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded bg-[#001220]/60 pointer-events-auto ml-2"
+                  onClick={() => {
+                    setIsControlsExpanded(!isControlsExpanded);
+                    setPresetPanelOpen(false);
+                    setMutationPanelOpen(false);
+                    setCloudPanelOpen(false);
+                    setLeafPanelOpen(false);
+                    setThemePanelOpen(false);
+                  }}
+                  title="Toggle System Dials"
+                >
+                  <Cpu className="w-3 h-3 text-[#87CEEB]" />
+                  <span>DIALS</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isControlsExpanded ? "" : "rotate-180"}`} />
+                </div>
               </div>
               <div className="text-right flex flex-col gap-1 items-end w-[100px] sm:w-[150px]">
                 <div className="flex justify-between w-full text-[9px] opacity-60 uppercase">
@@ -488,7 +553,7 @@ export function HUD({
             </div>
 
             {/* Controls Area */}
-            <div className={`w-full transition-all duration-500 ${isControlsExpanded ? "max-h-[60vh] sm:max-h-[50vh]" : "max-h-0 sm:max-h-[50vh]"} overflow-hidden`}>
+            <div className={`w-full transition-all duration-500 ${isControlsExpanded ? "max-h-[60vh] sm:max-h-[50vh]" : "max-h-0"} overflow-hidden`}>
               <div 
                 ref={controlsRef}
                 onScroll={handleScroll}

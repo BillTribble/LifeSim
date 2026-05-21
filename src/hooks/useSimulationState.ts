@@ -50,19 +50,31 @@ export const DEFAULTS = {
   "enableGlow": false,
   "glowSize": 0.5,
   "fogVisibility": 800,
+  "botanyRealism": true,
+  "windVelocity": 1.0,
+  "flutterIntensity": 0.5,
+  "leafScale": 1.0,
+  "relativeLeafSizeDiff": 0.2,
+  "leafGrowthSpeed": 0.015,
+  "phyllotaxisAngle": 137.5,
+  "leafProbability": 0.1,
+  "appendageSpawnRate": 0.7,
+  "glowProbability": 0.1,
+  "stemCurviness": 1.0,
+  "veinStrength": 0.25,
   "traitProbs": {
-    "flowers": 0.45,
-    "leaves": 0.5,
-    "petals": 0.45,
-    "needles": 0.5,
-    "thorns": 0.4,
-    "hair": 0.6000000000000001,
-    "curlyHair": 0.5,
-    "crystals": 0.6000000000000001,
-    "spores": 0.5,
-    "scales": 0.5,
-    "spirals": 0.5,
-    "glow": 0.25
+    "flowers": 0.02,
+    "lillyPads": 0.02,
+    "leaves": 0.78,
+    "petals": 0.02,
+    "needles": 0.02,
+    "thorns": 0.02,
+    "hair": 0.02,
+    "curlyHair": 0.02,
+    "crystals": 0.02,
+    "spores": 0.02,
+    "scales": 0.02,
+    "spirals": 0.02
   },
   "glowTraitIntensity": 1.5,
   "glowTraitDistance": 50.0,
@@ -378,6 +390,66 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     parseFloat(localStorage.getItem("fogVisibility") || "800"),
   );
 
+  const [botanyRealism, setBotanyRealism] = useState(() => {
+    const stored = localStorage.getItem("botanyRealism");
+    return stored !== null ? stored === "true" : DEFAULTS.botanyRealism;
+  });
+  const [windVelocity, setWindVelocity] = useState(() =>
+    parseFloat(
+      localStorage.getItem("windVelocity") || DEFAULTS.windVelocity.toString(),
+    ),
+  );
+  const [flutterIntensity, setFlutterIntensity] = useState(() =>
+    parseFloat(
+      localStorage.getItem("flutterIntensity") || DEFAULTS.flutterIntensity.toString(),
+    ),
+  );
+  const [leafScale, setLeafScale] = useState(() =>
+    parseFloat(
+      localStorage.getItem("leafScale") || DEFAULTS.leafScale.toString(),
+    ),
+  );
+  const [relativeLeafSizeDiff, setRelativeLeafSizeDiff] = useState(() =>
+    parseFloat(
+      localStorage.getItem("relativeLeafSizeDiff") || DEFAULTS.relativeLeafSizeDiff.toString(),
+    ),
+  );
+  const [stemCurviness, setStemCurviness] = useState(() =>
+    parseFloat(
+      localStorage.getItem("stemCurviness") || DEFAULTS.stemCurviness.toString(),
+    ),
+  );
+  const [veinStrength, setVeinStrength] = useState(() =>
+    parseFloat(
+      localStorage.getItem("veinStrength") || DEFAULTS.veinStrength.toString(),
+    ),
+  );
+  const [leafGrowthSpeed, setLeafGrowthSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("leafGrowthSpeed") || DEFAULTS.leafGrowthSpeed.toString(),
+    ),
+  );
+  const [phyllotaxisAngle, setPhyllotaxisAngle] = useState(() =>
+    parseFloat(
+      localStorage.getItem("phyllotaxisAngle") || DEFAULTS.phyllotaxisAngle.toString(),
+    ),
+  );
+  const [leafProbability, setLeafProbability] = useState(() =>
+    parseFloat(
+      localStorage.getItem("leafProbability") || DEFAULTS.leafProbability.toString(),
+    ),
+  );
+  const [appendageSpawnRate, setAppendageSpawnRate] = useState(() =>
+    parseFloat(
+      localStorage.getItem("appendageSpawnRate") || DEFAULTS.appendageSpawnRate.toString(),
+    ),
+  );
+  const [glowProbability, setGlowProbability] = useState(() =>
+    parseFloat(
+      localStorage.getItem("glowProbability") || DEFAULTS.glowProbability.toString(),
+    ),
+  );
+
   const [maxLineWidth, setMaxLineWidth] = useState(() =>
     parseFloat(
       localStorage.getItem("maxLineWidth") || DEFAULTS.maxLineWidth.toString(),
@@ -434,10 +506,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
 
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
-      return (
-        JSON.parse(localStorage.getItem("traitProbs") || "null") ||
-        DEFAULTS.traitProbs
-      );
+      const stored = JSON.parse(localStorage.getItem("traitProbs") || "null");
+      if (stored && typeof stored === "object" && "leaves" in stored) {
+        return stored;
+      }
+      return DEFAULTS.traitProbs;
     } catch {
       return DEFAULTS.traitProbs;
     }
@@ -491,6 +564,18 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("enableGlow", enableGlow.toString());
     localStorage.setItem("glowSize", glowSize.toString());
     localStorage.setItem("fogVisibility", fogVisibility.toString());
+    localStorage.setItem("botanyRealism", botanyRealism.toString());
+    localStorage.setItem("windVelocity", windVelocity.toString());
+    localStorage.setItem("flutterIntensity", flutterIntensity.toString());
+    localStorage.setItem("leafScale", leafScale.toString());
+    localStorage.setItem("relativeLeafSizeDiff", relativeLeafSizeDiff.toString());
+    localStorage.setItem("leafGrowthSpeed", leafGrowthSpeed.toString());
+    localStorage.setItem("phyllotaxisAngle", phyllotaxisAngle.toString());
+    localStorage.setItem("leafProbability", leafProbability.toString());
+    localStorage.setItem("appendageSpawnRate", appendageSpawnRate.toString());
+    localStorage.setItem("glowProbability", glowProbability.toString());
+    localStorage.setItem("stemCurviness", stemCurviness.toString());
+    localStorage.setItem("veinStrength", veinStrength.toString());
     localStorage.setItem("fogColor", fogColor);
     localStorage.setItem("maxLineWidth", maxLineWidth.toString());
     localStorage.setItem("globalPulseSpeed", globalPulseSpeed.toString());
@@ -538,6 +623,18 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     enableGlow,
     glowSize,
     fogVisibility,
+    botanyRealism,
+    windVelocity,
+    flutterIntensity,
+    leafScale,
+    relativeLeafSizeDiff,
+    leafGrowthSpeed,
+    phyllotaxisAngle,
+    leafProbability,
+    appendageSpawnRate,
+    glowProbability,
+    stemCurviness,
+    veinStrength,
     traitProbs,
     dialLimits,
     hybridSize,
@@ -610,6 +707,18 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       enableGlow,
       glowSize,
       fogVisibility,
+      botanyRealism,
+      windVelocity,
+      flutterIntensity,
+      leafScale,
+      relativeLeafSizeDiff,
+      leafGrowthSpeed,
+      phyllotaxisAngle,
+      leafProbability,
+      appendageSpawnRate,
+      glowProbability,
+      stemCurviness,
+      veinStrength,
       traitProbs,
       maxLineWidth,
       globalPulseSpeed,
@@ -673,6 +782,18 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setEnableGlow,
       setGlowSize,
       setFogVisibility,
+      setBotanyRealism,
+      setWindVelocity,
+      setFlutterIntensity,
+      setLeafScale,
+      setRelativeLeafSizeDiff,
+      setStemCurviness,
+      setVeinStrength,
+      setLeafGrowthSpeed,
+      setPhyllotaxisAngle,
+      setLeafProbability,
+      setAppendageSpawnRate,
+      setGlowProbability,
       setTraitProbs,
       setMaxLineWidth,
       setGlobalPulseSpeed,

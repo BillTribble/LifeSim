@@ -61,12 +61,17 @@ export function updateSimulation(engine: SimulationEngine) {
       }
 
   // Update theme uniforms
+  const leafMat = engine.appendages.get('leaves')?.mesh.material as THREE.MeshPhysicalMaterial;
   const materialsToUpdate = [
     engine.cylinderMesh.material as THREE.MeshPhysicalMaterial,
   ];
   if (engine.hybridMeshes.length > 0) {
     materialsToUpdate.push(engine.hybridMeshes[0].material as THREE.MeshPhysicalMaterial);
   }
+  if (leafMat) {
+    materialsToUpdate.push(leafMat);
+  }
+
   for (const mat of materialsToUpdate) {
     if (mat && mat.userData.theme1) {
       mat.userData.theme1.value = engine.theme;
@@ -101,6 +106,16 @@ export function updateSimulation(engine: SimulationEngine) {
       }
       adjustSat(mat.userData.themeColor1_B.value);
       adjustSat(mat.userData.themeColor2_B.value);
+    }
+
+    if (mat && mat.userData.botanyRealism) {
+      mat.userData.botanyRealism.value = engine.botanyRealism ? 1.0 : 0.0;
+    }
+    if (mat && mat.userData.stemCurviness) {
+      mat.userData.stemCurviness.value = engine.stemCurviness;
+    }
+    if (mat && mat.userData.veinStrength) {
+      mat.userData.veinStrength.value = engine.veinStrength;
     }
   }
 
@@ -146,6 +161,18 @@ export function updateSimulation(engine: SimulationEngine) {
     appendagesChanged = true;
     engine.lastHybridSize = engine.hybridSize;
   }
+  if (engine.lastLeafScale !== engine.leafScale) {
+    appendagesChanged = true;
+    engine.lastLeafScale = engine.leafScale;
+  }
+  if (engine.lastRelativeLeafSizeDiff !== engine.relativeLeafSizeDiff) {
+    appendagesChanged = true;
+    engine.lastRelativeLeafSizeDiff = engine.relativeLeafSizeDiff;
+  }
+  if (engine.lastStemCurviness !== engine.stemCurviness) {
+    appendagesChanged = true;
+    engine.lastStemCurviness = engine.stemCurviness;
+  }
 
   const growthDuration = 40;
 
@@ -179,13 +206,27 @@ export function updateSimulation(engine: SimulationEngine) {
         let sizePulseEffect = 1.0;
         let colorPulseEffect = 1.0;
 
-        const growthAttr = mesh.geometry.getAttribute("instanceGrowth") as THREE.InstancedBufferAttribute;
-        if (growthAttr) {
-           const val = growthAttr.getX(i);
+        const isLeaf = mesh === engine.appendages.get("leaves")?.mesh;
+
+        const packBAttr = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
+        if (isLeaf && !packBAttr) {
+           throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
+        }
+
+        let currentGrowth = 1.0;
+        if (packBAttr) {
+           const val = packBAttr.getX(i);
            if (val < 1.0) {
-              growthAttr.setX(i, Math.min(1.0, val + 0.05 * engine.timeScale));
-              growthAttr.needsUpdate = true;
+              const growthSpeed = isLeaf ? engine.leafGrowthSpeed : 0.05;
+              const newVal = Math.min(1.0, val + growthSpeed * engine.timeScale);
+              packBAttr.setX(i, newVal);
+              packBAttr.needsUpdate = true;
+              currentGrowth = newVal;
+           } else {
+              currentGrowth = 1.0;
            }
+        } else {
+           currentGrowth = age <= growthDuration ? age / growthDuration : 1.0;
         }
 
         if (isHybrid) {
@@ -225,9 +266,10 @@ export function updateSimulation(engine: SimulationEngine) {
           appendagesChanged ||
           sizePulseEffect !== 1.0 ||
           colorPulseEffect !== 1.0 ||
-          isHybrid
+          isHybrid ||
+          isLeaf
         ) {
-          const growth = age <= growthDuration ? age / growthDuration : 1.0;
+          const growth = isLeaf ? 1.0 : (age <= growthDuration ? age / growthDuration : 1.0);
           engine.dummy.matrix.copy(seg.matrix);
           engine.dummy.matrix.decompose(
             engine.dummy.position,
@@ -242,6 +284,22 @@ export function updateSimulation(engine: SimulationEngine) {
                 new THREE.Euler(slowRot, slowRot * 1.1, slowRot * 0.8),
               ),
             );
+          } else if (mesh === engine.appendages.get("leaves")?.mesh && engine.windVelocity > 0) {
+            const windVel = engine.windVelocity;
+            const flutter = engine.flutterIntensity;
+            const t = engine.unscaledTime * 0.1 * windVel;
+            
+            const phaseOffset = i * 0.2;
+            const wave = Math.sin(t + phaseOffset) * 0.05 * flutter;
+            const waveCos = Math.cos(t * 0.7 + phaseOffset) * 0.03 * flutter;
+            
+            const qFlutter = new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(wave, waveCos, wave * 0.5)
+            );
+            engine.dummy.quaternion.multiply(qFlutter);
+            
+            engine.dummy.position.x += wave * 2.0;
+            engine.dummy.position.y += waveCos * 1.5;
           }
 
           const sizeMult =
@@ -249,7 +307,9 @@ export function updateSimulation(engine: SimulationEngine) {
               ? 1.0
               : isHybrid
                 ? engine.hybridSize || 2.0
-                : engine.flowerSize;
+                : mesh === engine.appendages.get("leaves")?.mesh
+                  ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
+                  : engine.flowerSize;
           engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -280,8 +340,8 @@ export function updateSimulation(engine: SimulationEngine) {
     updateMeshGrowth(mesh, engine.hybridSegments);
   }
 
-  const stemGrowthAttr = engine.cylinderMesh.geometry.getAttribute("instanceGrowth") as THREE.InstancedBufferAttribute;
-  if (stemGrowthAttr) {
+  const stemPackBAttr = engine.cylinderMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
+  if (stemPackBAttr) {
     const limit = Math.min(engine.pointCount, engine.maxDOMs);
     let updated = false;
     const currentHead = engine.pointCount % engine.maxDOMs;
@@ -289,14 +349,14 @@ export function updateSimulation(engine: SimulationEngine) {
     for (let i = 0; i < windowSize; i++) {
        const idx = (currentHead - i + engine.maxDOMs) % engine.maxDOMs;
        if (idx < limit) {
-          const val = stemGrowthAttr.getX(idx);
+          const val = stemPackBAttr.getX(idx);
           if (val < 1.0) {
-             stemGrowthAttr.setX(idx, Math.min(1.0, val + 0.05 * engine.timeScale));
+             stemPackBAttr.setX(idx, Math.min(1.0, val + 0.05 * engine.timeScale));
              updated = true;
           }
        }
     }
-    if (updated) stemGrowthAttr.needsUpdate = true;
+    if (updated) stemPackBAttr.needsUpdate = true;
   }
 
   if (
@@ -331,29 +391,29 @@ export function updateSimulation(engine: SimulationEngine) {
 
   if (engine.hoveredStrainName !== engine.lastHoveredStrainName) {
     engine.lastHoveredStrainName = engine.hoveredStrainName;
-    const glowAttr = engine.cylinderMesh.geometry.getAttribute("instanceGlow") as THREE.InstancedBufferAttribute;
-    if (glowAttr) {
+    const packAAttr = engine.cylinderMesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+    if (packAAttr) {
       const activeRange = Math.min(engine.pointCount, engine.maxDOMs);
       for (let i = 0; i < activeRange; i++) {
         const seg = engine.segments[i];
         if (seg) {
-          glowAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
+          packAAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
         }
       }
-      glowAttr.needsUpdate = true;
+      packAAttr.needsUpdate = true;
     }
     
     for (const app of engine.appendages.values()) {
-      const appGlowAttr = app.mesh.geometry.getAttribute("instanceGlow") as THREE.InstancedBufferAttribute;
-      if (appGlowAttr) {
+      const appPackAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+      if (appPackAAttr) {
         const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
         for (let i = 0; i < appLim; i++) {
           const seg = app.segments[i];
           if (seg) {
-            appGlowAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
+            appPackAAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
           }
         }
-        appGlowAttr.needsUpdate = true;
+        appPackAAttr.needsUpdate = true;
       }
     }
   }

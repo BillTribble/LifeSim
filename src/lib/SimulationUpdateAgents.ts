@@ -384,11 +384,14 @@ export function processAgents(
             .add(ax2.multiplyScalar(Math.sin(rad)))
             .normalize();
 
-          const hairEnd = agent.position
+          const hairStart = agent.position
             .clone()
-            .add(dir.multiplyScalar(5 + Math.random() * 5));
+            .add(dir.clone().multiplyScalar(renderThickness));
+          const hairEnd = hairStart
+            .clone()
+            .add(dir.clone().multiplyScalar(5 + Math.random() * 5));
           engine.addLineSegment(
-            agent.position,
+            hairStart,
             hairEnd,
             genome,
             renderThickness * 0.1,
@@ -410,11 +413,14 @@ export function processAgents(
             .applyAxisAngle(agent.direction, rad)
             .normalize();
 
-          const thornEnd = agent.position
+          const thornStart = agent.position
             .clone()
-            .add(dir.multiplyScalar(2 + Math.random() * 2));
+            .add(dir.clone().multiplyScalar(renderThickness));
+          const thornEnd = thornStart
+            .clone()
+            .add(dir.clone().multiplyScalar(2 + Math.random() * 2));
           engine.addLineSegment(
-            agent.position,
+            thornStart,
             thornEnd,
             genome,
             renderThickness * 0.7,
@@ -425,25 +431,77 @@ export function processAgents(
           Math.random() < 0.03 * engine.ornamentFrequency &&
           engine.pointCount < MAX_POINTS - 10
         ) {
-          const floatPos = agent.position
-            .clone()
-            .add(
-              new THREE.Vector3(
-                (Math.random() - 0.5) * 8,
-                (Math.random() - 0.5) * 8,
-                (Math.random() - 0.5) * 8,
-              ),
-            );
+          const randomOffset = new THREE.Vector3(
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 8,
+          );
+          const dir = randomOffset.clone().normalize();
+          const sporeStart = agent.position.clone().add(dir.clone().multiplyScalar(renderThickness));
+          const floatPos = sporeStart.clone().add(randomOffset);
           engine.addLineSegment(
-            agent.position,
+            sporeStart,
             floatPos,
             genome,
             renderThickness * 1.5,
             true,
           );
+        } else if (genome.appendage === "leaves") {
+          if (engine.pointCount < MAX_POINTS - 10) {
+            const baseInterval = genome.phyllotaxisMode === "whorled" ? 15 : 5;
+            const nodeInterval = Math.max(1, Math.round(baseInterval * Math.max(1.0, engine.leafScale)));
+            if (agent.age % nodeInterval === 0) {
+              if (Math.random() < engine.leafProbability) {
+                const up = new THREE.Vector3(0, 1, 0);
+                let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
+                if (normal.lengthSq() < 0.001) {
+                  normal.set(1, 0, 0);
+                }
+                
+                const nodeIdx = Math.floor(agent.age / nodeInterval);
+                
+                const spawnLeaf = (dir: THREE.Vector3) => {
+                  // Tilt the leaf direction slightly upwards along the stem's growth direction
+                  const tiltedDir = new THREE.Vector3()
+                    .addScaledVector(dir, 0.75)
+                    .addScaledVector(agent.direction, 0.25)
+                    .normalize();
+                  const leafStart = agent.position.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
+                  const leafEnd = leafStart.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
+                  engine.addLineSegment(
+                    leafStart,
+                    leafEnd,
+                    genome,
+                    renderThickness * 1.2,
+                    true,
+                  );
+                };
+
+                if (genome.phyllotaxisMode === "spiral") {
+                  const divAngle = THREE.MathUtils.degToRad(engine.phyllotaxisAngle);
+                  const theta = nodeIdx * divAngle;
+                  const leafDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+                  spawnLeaf(leafDir);
+                } else if (genome.phyllotaxisMode === "decussate") {
+                  const theta = nodeIdx * (Math.PI / 2);
+                  const leafDir1 = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+                  const leafDir2 = normal.clone().applyAxisAngle(agent.direction, theta + Math.PI).normalize();
+                  spawnLeaf(leafDir1);
+                  spawnLeaf(leafDir2);
+                } else if (genome.phyllotaxisMode === "whorled") {
+                  const numLeaves = 5;
+                  for (let i = 0; i < numLeaves; i++) {
+                    const theta = (i * 2 * Math.PI) / numLeaves;
+                    const leafDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+                    spawnLeaf(leafDir);
+                  }
+                }
+              }
+            }
+          }
         } else if (
           (genome.appendage === "flowers" ||
-            genome.appendage === "leaves" ||
+            genome.appendage === "lillyPads" ||
             genome.appendage === "petals" ||
             genome.appendage === "needles" ||
             genome.appendage === "ferns" ||
@@ -456,9 +514,11 @@ export function processAgents(
             .crossVectors(agent.direction, new THREE.Vector3(0, 1, 0))
             .normalize()
             .multiplyScalar(renderThickness);
+          const flowerStart = spawnPos.clone().add(offset);
+          const flowerEnd = flowerStart.clone().add(offset);
           engine.addLineSegment(
-            spawnPos,
-            spawnPos.clone().add(offset),
+            flowerStart,
+            flowerEnd,
             genome,
             renderThickness * 1.2,
             true,
@@ -537,6 +597,8 @@ export function processAgents(
             engine.traitProbs,
             engine.multicolorAppProb,
             engine.sameColorAppProb,
+            engine.appendageSpawnRate,
+            engine.glowProbability,
           );
           branchGenome.createdAt = engine.time;
           projectedSpeciesCount++;
@@ -735,6 +797,8 @@ export function processAgents(
                   engine.traitProbs,
                   engine.multicolorAppProb,
                   engine.sameColorAppProb,
+                  engine.appendageSpawnRate,
+                  engine.glowProbability,
                 );
                childGenome.createdAt = engine.time;
                const childDir = agent.direction

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SimulationEngine } from './SimulationEngine';
 import { MAX_POINTS } from './SimulationTypes';
-import { setupShaderMaterial } from './SimulationGenetics';
+import { setupShaderMaterial, setupLeafShaderMaterial } from './SimulationGenetics';
 
 export function setupSimulationScene(engine: SimulationEngine, width: number, height: number) {
     engine.scene = new THREE.Scene();
@@ -64,37 +64,34 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       }
       mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
       
-      const glowArray = new Float32Array(count).fill(0.0);
-      const decayArray = new Float32Array(count).fill(0.0);
-      const growthArray = new Float32Array(count).fill(1.0);
-      const hashArray = new Float32Array(count);
-      for (let i = 0; i < count; i++) hashArray[i] = Math.random();
+      const packAArray = new Float32Array(count * 4);
+      const packBArray = new Float32Array(count * 4);
+      for (let i = 0; i < count; i++) {
+        packAArray[i * 4] = 0.0;     // glow
+        packAArray[i * 4 + 1] = 0.0; // glowTrait
+        packAArray[i * 4 + 2] = 0.0; // decay
+        packAArray[i * 4 + 3] = Math.random(); // hash
+        
+        packBArray[i * 4] = 1.0;     // growth
+        packBArray[i * 4 + 1] = 0.0; // vernation
+        packBArray[i * 4 + 2] = 0.0; // succulence
+        packBArray[i * 4 + 3] = 0.0; // unused
+      }
       
-      const glowAttr = new THREE.InstancedBufferAttribute(glowArray, 1);
-      const decayAttr = new THREE.InstancedBufferAttribute(decayArray, 1);
-      const growthAttr = new THREE.InstancedBufferAttribute(growthArray, 1);
-      const hashAttr = new THREE.InstancedBufferAttribute(hashArray, 1);
-      
-      glowAttr.setUsage(THREE.DynamicDrawUsage);
-      decayAttr.setUsage(THREE.DynamicDrawUsage);
-      growthAttr.setUsage(THREE.DynamicDrawUsage);
-      hashAttr.setUsage(THREE.DynamicDrawUsage);
+      const packAAttr = new THREE.InstancedBufferAttribute(packAArray, 4);
+      const packBAttr = new THREE.InstancedBufferAttribute(packBArray, 4);
+      packAAttr.setUsage(THREE.DynamicDrawUsage);
+      packBAttr.setUsage(THREE.DynamicDrawUsage);
 
-      const glowTraitArray = new Float32Array(count).fill(0.0);
       const ambientReflectArray = new Float32Array(count * 3).fill(0.0);
       const lightDirArray = new Float32Array(count * 3).fill(0.0);
-      const glowTraitAttr = new THREE.InstancedBufferAttribute(glowTraitArray, 1);
       const ambientReflectAttr = new THREE.InstancedBufferAttribute(ambientReflectArray, 3);
       const lightDirAttr = new THREE.InstancedBufferAttribute(lightDirArray, 3);
-      glowTraitAttr.setUsage(THREE.DynamicDrawUsage);
       ambientReflectAttr.setUsage(THREE.DynamicDrawUsage);
       lightDirAttr.setUsage(THREE.DynamicDrawUsage);
       
-      mesh.geometry.setAttribute('instanceGlow', glowAttr);
-      mesh.geometry.setAttribute('instanceDecay', decayAttr);
-      mesh.geometry.setAttribute('instanceGrowth', growthAttr);
-      mesh.geometry.setAttribute('instanceHash', hashAttr);
-      mesh.geometry.setAttribute('instanceGlowTrait', glowTraitAttr);
+      mesh.geometry.setAttribute('instancePackA', packAAttr);
+      mesh.geometry.setAttribute('instancePackB', packBAttr);
       mesh.geometry.setAttribute('instanceAmbientReflect', ambientReflectAttr);
       mesh.geometry.setAttribute('instanceLightDir', lightDirAttr);
     };
@@ -102,9 +99,21 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);
     initMeshAttributes(engine.cylinderMesh, MAX_POINTS);
 
+    const leafMaterial = setupLeafShaderMaterial(new THREE.MeshPhysicalMaterial({
+      transparent: false,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      color: 0xffffff,
+      roughness: 0.6,
+      metalness: 0.3,
+      clearcoat: 0.5,
+      reflectivity: 1.0
+    }));
+
     const appendagesConfig: Record<string, THREE.BufferGeometry> = {
       flowers: new THREE.ConeGeometry(0.5, 1, 12).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
-      leaves: new THREE.SphereGeometry(0.5, 8, 8),
+      lillyPads: new THREE.SphereGeometry(0.5, 8, 8),
+      leaves: new THREE.BoxGeometry(1, 1, 0.05, 32, 48, 1).translate(0, 0.5, 0),
       petals: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       needles: new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
       thorns: new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(-Math.PI / 2),
@@ -118,9 +127,11 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
 
     const appendageCount = Math.floor(MAX_POINTS / 4);
     for (const [key, geo] of Object.entries(appendagesConfig)) {
-        const mesh = new THREE.InstancedMesh(geo, material, appendageCount);
+        const useMat = key === 'leaves' ? leafMaterial : material;
+        const mesh = new THREE.InstancedMesh(geo, useMat, appendageCount);
         initMeshAttributes(mesh, appendageCount);
-        engine.scene.add(mesh);
+        
+      engine.scene.add(mesh);
         engine.appendages.set(key, { mesh, segments: [], dyingSet: new Set(), count: 0 });
     }
 
