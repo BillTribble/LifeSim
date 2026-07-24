@@ -239,10 +239,12 @@ export function processDyingSegments(
       changed = true;
       continue;
     }
-    const fadeAge = engine.time - seg.dyingStart;
+    const fadeAge = engine.unscaledTime - seg.dyingStart;
     const desiccationSpeed = engine.desiccationSpeed || 1.0;
-    const wipeDuration =
-      (isHybrid ? engine.hybridStickiness * 12 : 600) / desiccationSpeed;
+    const wipeDuration = Math.max(
+      3,
+      (isHybrid ? engine.hybridStickiness * 12 : 300) / (desiccationSpeed * 1.5)
+    );
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

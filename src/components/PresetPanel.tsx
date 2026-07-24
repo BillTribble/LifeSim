@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Minus, Dices, RotateCcw } from 'lucide-react';
 import { DEFAULTS } from '../hooks/useSimulationState';
+import { hslToHex } from '../utils/colors';
+import { triggerRandomize } from '../utils/randomize';
 
 interface PresetPanelProps {
   state: any;
@@ -48,7 +50,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
             branchMutationRate: 0.0,
             branchBigger: 0.75,
             branchSplitSizeProb: 0.95,
-            timeScale: 2.2,
+            timeScale: 0.8,
             snakeSpeed: 1.5,
             bushSpeed: 1.0,
             treeSpeed: 1.0,
@@ -117,74 +119,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
   };
 
   const handleRandomize = () => {
-    const r = () => Math.random();
-    const rRange = (min: number, max: number) => min + r() * (max - min);
-    
-    // Core parameters
-    if (setters.setMagnetism) setters.setMagnetism(rRange(0, 0.1));
-    if (setters.setProximity) setters.setProximity(rRange(1, 2000));
-    if (setters.setDesperation) setters.setDesperation(rRange(1, 10));
-    if (setters.setDespairAge) setters.setDespairAge(rRange(100, 5000));
-    if (setters.setFlowerSize) setters.setFlowerSize(rRange(0.05, 1.0));
-    if (setters.setEntropyThreshold) setters.setEntropyThreshold(rRange(0.0, 1.0));
-    if (setters.setGrowthSpeed) setters.setGrowthSpeed(rRange(0.1, 5.0));
-    if (setters.setDiebackRate) setters.setDiebackRate(rRange(0.0, 10.0));
-    
-    // Tides & Environment
-    if (setters.setTideSpeed) setters.setTideSpeed(rRange(0.1, 5.0));
-    if (setters.setTideThickness) setters.setTideThickness(rRange(10, 500));
-    if (setters.setTideOpacity) setters.setTideOpacity(rRange(0.0, 1.0));
-    if (setters.setTideSaturation) setters.setTideSaturation(rRange(0.0, 1.0));
-    if (setters.setFogVisibility) setters.setFogVisibility(rRange(100, 2000));
-    if (setters.setDesiccationSpeed) setters.setDesiccationSpeed(rRange(0.1, 15.0));
-    if (setters.setGlobalPulseSpeed) setters.setGlobalPulseSpeed(rRange(0.1, 1.0));
-    if (setters.setMaxSaturation) setters.setMaxSaturation(rRange(0.0, 1.0));
-    if (setters.setMaxLineWidth) setters.setMaxLineWidth(rRange(1.0, 20.0));
-    
-    // Hybrids & Branching
-    if (setters.setHybridCooldown) setters.setHybridCooldown(rRange(10, 2000));
-    if (setters.setHybridStickiness) setters.setHybridStickiness(rRange(1, 50));
-    if (setters.setBranchTendencyVar) setters.setBranchTendencyVar(rRange(1, 50));
-    if (setters.setOrnamentFrequency) setters.setOrnamentFrequency(rRange(0.1, 10));
-    if (setters.setBranchingMultiplier) setters.setBranchingMultiplier(rRange(0.1, 500));
-    if (setters.setBranchBigger) setters.setBranchBigger(rRange(0.0, 1.0));
-    if (setters.setBranchSplitSizeProb) setters.setBranchSplitSizeProb(rRange(0.0, 1.0));
-    if (setters.setBranchMutationRate) setters.setBranchMutationRate(rRange(0.0, 1.0));
-    if (setters.setHybridSize) setters.setHybridSize(rRange(0.5, 10.0));
-    if (setters.setTermProbPostBranch) setters.setTermProbPostBranch(rRange(0.5, 10.0));
-    
-    // Limits
-    if (setters.setMaxAgents) setters.setMaxAgents(Math.floor(rRange(1, 200)));
-    if (setters.setMaxSpecies) setters.setMaxSpecies(Math.floor(rRange(1, 20)));
-    if (setters.setMinAgents) setters.setMinAgents(Math.floor(rRange(2, 20)));
-    if (setters.setEcoFade) setters.setEcoFade(rRange(0.0, 1.0));
-    if (setters.setTerminationProb) setters.setTerminationProb(rRange(0.0, 1.0));
-    if (setters.setTaperDuration) setters.setTaperDuration(rRange(0.5, 3.0));
-    if (setters.setDiebackAgeBias) setters.setDiebackAgeBias(rRange(0.5, 5.0));
-    if (setters.setMulticolorAppProb) setters.setMulticolorAppProb(rRange(0.0, 1.0));
-    if (setters.setSameColorAppProb) setters.setSameColorAppProb(rRange(0.0, 1.0));
-
-    // Colors
-    const randomHex = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-    if (setters.setTideColor) setters.setTideColor(randomHex());
-    if (setters.setBgColor) setters.setBgColor(randomHex());
-    if (setters.setFogColor) setters.setFogColor(randomHex());
-
-    // Trait Probs
-    if (setters.setTraitProbs && state.traitProbs) {
-      const newTraits: Record<string, number> = {};
-      Object.keys(state.traitProbs).forEach(key => {
-        newTraits[key] = rRange(0.0, 1.0);
-      });
-      setters.setTraitProbs(newTraits);
-    }
-    
-    if (setRandomizeKey) {
-        setRandomizeKey((prev: number) => prev + 1);
-    }
-    if (handleRestart) {
-        handleRestart();
-    }
+    triggerRandomize(setters, state, setRandomizeKey, handleRestart);
   };
 
   return (

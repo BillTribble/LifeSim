@@ -60,6 +60,7 @@ export class SimulationEngine {
   suppressedStrains: Set<string> = new Set();
   speciesAbove5Percent: Set<string> = new Set();
   time: number = 0;
+  lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
   timeScale: number = 1.0;
@@ -133,6 +134,13 @@ export class SimulationEngine {
   glowSize: number = 0.0;
   fogVisibility: number = 800;
   tideCullIndex: number = 0;
+
+  kioskMode: boolean = true;
+  lastKioskTime: number = 0;
+  lastKioskRealTime: number = 0;
+  kioskFadeProgress: number = 0;
+  kioskFadingOut: boolean = false;
+  onKioskTrigger?: () => void;
 
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
@@ -249,6 +257,19 @@ export class SimulationEngine {
       canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
       phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
       succulence: Math.random(),
+
+      // Recessive Gene Carriers
+      recessive: {
+        archetype: ARCHETYPES.find(a => a !== archetype) || ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)],
+        movementType: MOVEMENT_TYPES.find(m => m !== movementType) || MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)],
+        geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
+        appendage: getWeightedAppendage(this.traitProbs),
+        color: new THREE.Color().setHSL((color.getHSL({h:0,s:0,l:0}).h + 0.33 + Math.random() * 0.34) % 1.0, 0.8, 0.5),
+        isGlowing: Math.random() < 0.3,
+        vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
+        canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
+        phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
+      },
     };
   }
 
@@ -622,14 +643,25 @@ export class SimulationEngine {
     betaGenome.appendage = "leaves";
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
 
+    let attempts = 0;
     while (
-       betaGenome.geometryType === alphaGenome.geometryType &&
-       betaGenome.movementType === alphaGenome.movementType &&
-       betaGenome.pulseTarget === alphaGenome.pulseTarget
+      attempts < 50 &&
+      (betaGenome.geometryType === alphaGenome.geometryType ||
+       betaGenome.movementType === alphaGenome.movementType ||
+       betaGenome.archetype === alphaGenome.archetype ||
+       betaGenome.canopyZone === alphaGenome.canopyZone)
     ) {
+      attempts++;
       betaGenome = this.generateRandomGenome("Beta", betaArchetype);
       betaGenome.appendage = "leaves";
       betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
+    }
+
+    // Force contrasting thickness base so one is stout/thick and the other is slender
+    if (alphaGenome.thicknessBase > 3.0) {
+      betaGenome.thicknessBase = 1.0 + Math.random() * 1.2;
+    } else {
+      betaGenome.thicknessBase = 3.5 + Math.random() * 1.5;
     }
 
     // Assign distinct vernation and phyllotaxis modes
@@ -648,7 +680,7 @@ export class SimulationEngine {
     betaGenome.phyllotaxisMode = betaPhyllo;
 
     const alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-    betaGenome.color.setHSL((alphaHue + 1 / 3) % 1.0, 0.8, 0.5);
+    betaGenome.color.setHSL((alphaHue + 0.4 + Math.random() * 0.2) % 1.0, 0.85, 0.5);
 
     const bgHue = (alphaHue + 2 / 3) % 1.0;
     const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
@@ -702,6 +734,11 @@ export class SimulationEngine {
   }
 
   restart() {
+    this.time = 0;
+    this.lastKioskTime = 0;
+    this.lastKioskRealTime = performance.now();
+    this.kioskFadeProgress = 0;
+    this.kioskFadingOut = false;
     this.initAgents();
   }
 
@@ -729,7 +766,7 @@ export class SimulationEngine {
   markDying(segments: any[], dyingSet: Set<number>, idx: number) {
     const seg = segments[idx];
     if (seg && !seg.dyingStart) {
-      seg.dyingStart = this.time;
+      seg.dyingStart = this.unscaledTime;
       dyingSet.add(idx);
       const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
       if (prevBiomass > 0) {
@@ -854,6 +891,7 @@ export class SimulationEngine {
         this.onStateUpdate({
           geometryCount: totalActiveGeometries,
           totalAgents: activeCount,
+          kioskFadeProgress: this.kioskFadeProgress,
           strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
           tideValue: this.tideValue,
           cameraPosition: {

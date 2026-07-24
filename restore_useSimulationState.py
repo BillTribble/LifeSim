@@ -70,7 +70,7 @@ new_defaults = {
   "bushSpeed": 1,
   "treeSpeed": 1,
   "gingerSpeed": 1,
-  "timeScale": 2.12,
+  "timeScale": 0.8,
   "dialLimits": {
     "DEATH RATE": { "min": 0, "max": 1 },
     "MAGNET": { "min": 0, "max": 10 },

@@ -10,12 +10,15 @@ import {
   ChevronDown,
   Search,
   Leaf,
+  Dices,
+  Tv,
 } from "lucide-react";
 import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
 import { LeafConfigPanel } from "./LeafConfigPanel";
+import { triggerRandomize } from "../utils/randomize";
 
 interface HUDProps {
   showHUD: boolean;
@@ -196,22 +199,40 @@ export function HUD({
               <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
             </div>
 
+            <div
+              className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border border-purple-500/40 px-2 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition-colors"
+              onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+              title="Randomize all simulation settings and theme"
+            >
+              <Dices className="w-3.5 h-3.5 text-purple-400" />
+              <span>RANDOM</span>
+            </div>
+
+            <div
+              className={`flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border px-2 py-0.5 rounded transition-colors ${
+                state.kioskMode
+                  ? "bg-purple-500/20 border-purple-400 text-purple-300"
+                  : "bg-[#001220]/60 border-[#D2B48C]/30 text-[#D2B48C]/60 hover:text-[#D2B48C]"
+              }`}
+              onClick={() => setters.setKioskMode && setters.setKioskMode(!state.kioskMode)}
+              title="KIOSK MODE — Periodically fades out and randomizes the ecosystem"
+            >
+              <Tv className={`w-3.5 h-3.5 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
+              <span>KIOSK: {state.kioskMode ? "ON" : "OFF"}</span>
+            </div>
+
             <div className="pointer-events-auto flex items-center gap-1.5 border border-[#D2B48C]/50 px-2 py-0.5 rounded bg-[#001220]/60 shadow-sm opacity-80"
               title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
             >
               <span className="text-[10px]">SLOW_MO</span>
               <div className="scale-[0.65] origin-center -my-2 -mx-1">
-                <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={5.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
+                <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
               </div>
               <span className="text-[9px] font-mono" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
             </div>
           </div>
           <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto">
             <div className={`flex flex-wrap items-center gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
-              <div className="flex items-center gap-2 border border-[#D2B48C]/30 px-3 py-1 rounded bg-[#001220]/60">
-                <span className="text-[#D2B48C]">UPTIME:</span>
-                <span className="text-white">{formatUptime(uptime)}</span>
-              </div>
               <div
                 className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
                 onClick={() => {
@@ -514,15 +535,6 @@ export function HUD({
                   <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isControlsExpanded ? "" : "rotate-180"}`} />
                 </div>
               </div>
-              <div className="text-right flex flex-col gap-1 items-end w-[100px] sm:w-[150px]">
-                <div className="flex justify-between w-full text-[9px] opacity-60 uppercase">
-                  <span>Tide</span>
-                  <span>{(stats.tideValue * 100).toFixed(0)}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-white/5 border border-[#D2B48C]/20 overflow-hidden relative">
-                  <div className="h-full bg-gradient-to-r from-orange-600 to-red-600 transition-all duration-75" style={{ width: `${stats.tideValue * 100}%` }} />
-                </div>
-              </div>
             </div>
 
           <div className={`w-full flex flex-col bg-[#001220]/95 sm:bg-[#001220]/60 backdrop-blur-md border-t border-[#D2B48C]/30 transition-all duration-500 origin-bottom`}>
@@ -622,7 +634,7 @@ Low: Slow, gradual culling." label="CULL_RATE" min={0.0} max={50.0} step={0.01} 
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="EXTRUSION SPEED
 Growth rate of organisms.
 High: Fast, explosive growth.
-Low: Slow, deliberate growth." label="GROW_SPD" min={0.1} max={5.0} step={0.1} value={state.growthSpeed} onChange={setters.setGrowthSpeed} color="#87CEEB" />
+Low: Slow, deliberate growth." label="GROW_SPD" min={0.01} max={5.0} step={0.01} value={state.growthSpeed} onChange={setters.setGrowthSpeed} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="DECAY VELOCITY
 Speed of organism deterioration.
 High: Rapid decay and death.

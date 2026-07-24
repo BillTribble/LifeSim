@@ -313,6 +313,22 @@ export function getWeightedAppendage(
   return "none";
 }
 
+export function selectMendelianAlleles<T>(
+  p1Expressed: T,
+  p1Recessive: T | undefined,
+  p2Expressed: T,
+  p2Recessive: T | undefined
+): { expressed: T; recessive: T } {
+  const allele1 = Math.random() < 0.5 ? p1Expressed : (p1Recessive ?? p1Expressed);
+  const allele2 = Math.random() < 0.5 ? p2Expressed : (p2Recessive ?? p2Expressed);
+
+  if (Math.random() < 0.5) {
+    return { expressed: allele1, recessive: allele2 };
+  } else {
+    return { expressed: allele2, recessive: allele1 };
+  }
+}
+
 export function breedGenomes(
   g1: Genome,
   g2: Genome,
@@ -322,35 +338,63 @@ export function breedGenomes(
   appendageSpawnRate: number = 0.7,
   glowProbability: number = 0.1,
 ): Genome {
-  const mutateGeo = (val: any, options: readonly any[]) =>
-    Math.random() < 0.05
-      ? options[Math.floor(Math.random() * options.length)]
-      : val;
-  const mutateApp = (val: any) =>
-    Math.random() < 0.05 ? getWeightedAppendage(traitProbs) : val;
+  const archInheritance = selectMendelianAlleles(
+    g1.archetype, g1.recessive?.archetype,
+    g2.archetype, g2.recessive?.archetype
+  );
+  const newArchetype = archInheritance.expressed;
 
-  const h1 = g1.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-  const h2 = g2.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-  
-  let resultH: number;
-  if (Math.random() < 0.1) {
-    const avgH = (h1 + h2) / 2;
-    resultH =
-      (avgH +
-        (Math.random() > 0.5 ? 0.333 : 0.666) +
-        (Math.random() - 0.5) * 0.2) %
-      1.0;
-  } else {
-    if (Math.random() < 0.3) {
-      resultH = (h1 + h2) / 2 + (Math.random() - 0.5) * 0.05;
-    } else {
-      resultH = (Math.random() < 0.5 ? h1 : h2) + (Math.random() - 0.5) * 0.05;
-    }
-  }
-  if (resultH < 0) resultH += 1.0;
-  else resultH %= 1.0;
+  const moveInheritance = selectMendelianAlleles(
+    g1.movementType, g1.recessive?.movementType,
+    g2.movementType, g2.recessive?.movementType
+  );
+  const newMovementType = moveInheritance.expressed;
 
-  // Thickness trend can now be thicker or thinner
+  const geoInheritance = selectMendelianAlleles(
+    g1.geometryType, g1.recessive?.geometryType,
+    g2.geometryType, g2.recessive?.geometryType
+  );
+  const newGeometryType = geoInheritance.expressed;
+
+  const appInheritance = selectMendelianAlleles(
+    g1.appendage, g1.recessive?.appendage,
+    g2.appendage, g2.recessive?.appendage
+  );
+
+  const colorInheritance = selectMendelianAlleles(
+    g1.color, g1.recessive?.color,
+    g2.color, g2.recessive?.color
+  );
+
+  const glowInheritance = selectMendelianAlleles(
+    !!g1.isGlowing, !!g1.recessive?.isGlowing,
+    !!g2.isGlowing, !!g2.recessive?.isGlowing
+  );
+
+  const vernInheritance = selectMendelianAlleles(
+    g1.vernationType ?? "circinate", g1.recessive?.vernationType,
+    g2.vernationType ?? "circinate", g2.recessive?.vernationType
+  );
+
+  const canopyInheritance = selectMendelianAlleles(
+    g1.canopyZone ?? "wholeBody", g1.recessive?.canopyZone,
+    g2.canopyZone ?? "wholeBody", g2.recessive?.canopyZone
+  );
+
+  const phylloInheritance = selectMendelianAlleles(
+    g1.phyllotaxisMode ?? "spiral", g1.recessive?.phyllotaxisMode,
+    g2.phyllotaxisMode ?? "spiral", g2.recessive?.phyllotaxisMode
+  );
+
+  // Slight color mutation/blend
+  const baseColor = colorInheritance.expressed.clone();
+  const h = baseColor.getHSL({ h: 0, s: 0, l: 0 }).h;
+  const isAlbino = Math.random() < 0.08;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
+  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
+  const resultH = (h + (Math.random() - 0.5) * 0.08 + 1.0) % 1.0;
+  baseColor.setHSL(resultH, resultS, resultL);
+
   const inheritedDecay = (g1.thicknessDecay + g2.thicknessDecay) / 2;
   const thicknessDecay = inheritedDecay + (Math.random() - 0.5) * 0.002;
 
@@ -361,19 +405,6 @@ export function breedGenomes(
         ]
       : "none";
 
-  const isCrossBreed = g1.archetype !== g2.archetype;
-  const newArchetype = isCrossBreed ?
-    (Math.random() < 0.7 ? ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)] : (Math.random() < 0.5 ? g1.archetype : g2.archetype) || ARCHETYPES[0]) :
-    (Math.random() < 0.3 ? ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)] : (Math.random() < 0.5 ? g1.archetype : g2.archetype) || ARCHETYPES[0]);
-  
-  const newMovementType = isCrossBreed ? 
-    (Math.random() < 0.5 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]) :
-    (Math.random() < 0.3 ? MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)] : (Math.random() < 0.5 ? g1.movementType : g2.movementType) || MOVEMENT_TYPES[0]);
-
-  const isAlbino = Math.random() < 0.1;
-  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
-  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
-
   const res: any = {
     name: `Hybrid [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
       Math.random() * 1000,
@@ -382,7 +413,7 @@ export function breedGenomes(
       .padStart(3, "0")}`,
     archetype: newArchetype,
     movementType: newMovementType,
-    color: new THREE.Color().setHSL(resultH, resultS, resultL),
+    color: baseColor,
     thicknessBase: Math.max(
       0.5,
       ((g1.thicknessBase + g2.thicknessBase) / 2) *
@@ -422,13 +453,8 @@ export function breedGenomes(
       (g1.wavingAmplitude + g2.wavingAmplitude) / 2 +
         (Math.random() - 0.5) * 0.1,
     ),
-    geometryType: mutateGeo(
-      Math.random() < 0.5 ? g1.geometryType : g2.geometryType,
-      GEO_TYPES,
-    ),
-    // Appendage selected purely from the weighted trait pool, gated by appendageSpawnRate.
-    // No parent-inheritance bypass — so APP_SPAWN and LEAF_WT settings are fully respected.
-    appendage: Math.random() < appendageSpawnRate ? getWeightedAppendage(traitProbs) : "none",
+    geometryType: newGeometryType,
+    appendage: Math.random() < appendageSpawnRate ? appInheritance.expressed : "none",
     multicolorAppendage: Math.random() < multicolorAppProb,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
@@ -436,7 +462,7 @@ export function breedGenomes(
     pulseSpeed: 0.05 + Math.random() * 0.15,
     gradientGrowth: Math.random() < (traitProbs["gradient"] || 0.1),
     singleton: newArchetype === "snake" && Math.random() < 0.5,
-    isGlowing: Math.random() < glowProbability || !!(g1.isGlowing || g2.isGlowing) && Math.random() < 0.5,
+    isGlowing: glowInheritance.expressed || Math.random() < glowProbability,
     
     // Breed Procedural Leaf Genes
     leafDivision: THREE.MathUtils.clamp(
@@ -444,26 +470,27 @@ export function breedGenomes(
       0,
       1
     ),
-    vernationType: (Math.random() < 0.05
-      ? (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)]
-      : Math.random() < 0.5
-        ? (g1.vernationType ?? "circinate")
-        : (g2.vernationType ?? "circinate")),
-    canopyZone: (Math.random() < 0.05
-      ? (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)]
-      : Math.random() < 0.5
-        ? (g1.canopyZone ?? "wholeBody")
-        : (g2.canopyZone ?? "wholeBody")),
-    phyllotaxisMode: (Math.random() < 0.05
-      ? (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)]
-      : Math.random() < 0.5
-        ? (g1.phyllotaxisMode ?? "spiral")
-        : (g2.phyllotaxisMode ?? "spiral")),
+    vernationType: vernInheritance.expressed,
+    canopyZone: canopyInheritance.expressed,
+    phyllotaxisMode: phylloInheritance.expressed,
     succulence: THREE.MathUtils.clamp(
       ((g1.succulence ?? 0.5) + (g2.succulence ?? 0.5)) / 2 + (Math.random() - 0.5) * 0.1,
       0,
       1
     ),
+
+    // Carried Recessive Genes (passed to future generations)
+    recessive: {
+      archetype: archInheritance.recessive,
+      movementType: moveInheritance.recessive,
+      geometryType: geoInheritance.recessive,
+      appendage: appInheritance.recessive,
+      color: colorInheritance.recessive.clone(),
+      isGlowing: glowInheritance.recessive,
+      vernationType: vernInheritance.recessive,
+      canopyZone: canopyInheritance.recessive,
+      phyllotaxisMode: phylloInheritance.recessive,
+    },
   };
   
   if (res.archetype === "ginger") {
@@ -508,6 +535,12 @@ export function mutateBranchGenome(
 ): Genome {
   const res = { ...g };
   res.color = g.color.clone();
+  if (g.recessive) {
+    res.recessive = {
+      ...g.recessive,
+      color: g.recessive.color.clone(),
+    };
+  }
   const h = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
   const isAlbino = Math.random() < 0.05;
   const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;

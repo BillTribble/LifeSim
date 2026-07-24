@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
 import { useSimulationState } from "./hooks/useSimulationState";
+import { triggerRandomize } from "./utils/randomize";
 
 export default function App() {
   const [showHUD, setShowHUD] = useState(false);
@@ -54,7 +55,15 @@ export default function App() {
   };
 
   useEffect(() => {
-    const timer = setInterval(() => setUptime((prev) => prev + 1), 1000);
+    const timer = setInterval(() => {
+      setUptime((prev) => {
+        const next = prev + 1;
+        if (next % 10 === 0) {
+          console.log(`[LifeSim] Uptime: ${Math.floor(next / 60)}m ${next % 60}s (${next}s)`);
+        }
+        return next;
+      });
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -161,6 +170,8 @@ export default function App() {
         appendageSpawnRate={state.appendageSpawnRate}
         glowProbability={state.glowProbability}
         stemCurviness={state.stemCurviness}
+        kioskMode={state.kioskMode}
+        onKioskTrigger={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
       />
 
       <HUD

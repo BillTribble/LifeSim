@@ -8,8 +8,55 @@ export function updateSimulation(engine: SimulationEngine) {
   engine.time += engine.timeScale;
   engine.unscaledTime += 1;
   engine.frameCount++;
-  if (engine.controls) {
-    engine.controls.autoRotateSpeed = engine.rotationSpeed || 0.1;
+
+  // Kiosk Mode Interval & Smooth Fade Handling (Real wall-clock time: exactly 7.0s at 100 slow_mo)
+  if (engine.kioskMode) {
+    if (!engine.lastKioskRealTime) engine.lastKioskRealTime = performance.now();
+    const targetRealSeconds = 7.0 * (100 / (engine.timeScale || 1.0));
+    const elapsedRealSeconds = (performance.now() - engine.lastKioskRealTime) / 1000;
+
+    if (elapsedRealSeconds >= targetRealSeconds && !engine.kioskFadingOut) {
+      engine.kioskFadingOut = true;
+    }
+
+    if (engine.kioskFadingOut) {
+      engine.kioskFadeProgress = Math.min(1.0, (engine.kioskFadeProgress || 0) + 0.033);
+      if (engine.kioskFadeProgress >= 1.0) {
+        engine.lastKioskRealTime = performance.now();
+        engine.kioskFadingOut = false;
+        if (engine.onKioskTrigger) {
+          engine.onKioskTrigger();
+        }
+      }
+    } else if (engine.kioskFadeProgress > 0) {
+      engine.kioskFadeProgress = Math.max(0.0, engine.kioskFadeProgress - 0.033);
+    }
+  } else {
+    engine.kioskFadeProgress = 0;
+    engine.kioskFadingOut = false;
+    engine.lastKioskRealTime = performance.now();
+  }
+
+  if (engine.controls && engine.camera) {
+    const rotSpeed = engine.rotationSpeed ?? 0.1;
+    if (rotSpeed > 0) {
+      engine.controls.autoRotate = false;
+      const angleStep = (Math.PI / 1800) * rotSpeed;
+      const target = engine.controls.target || new THREE.Vector3(0, 0, 0);
+      const offset = new THREE.Vector3().subVectors(engine.camera.position, target);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+
+      // Rotate horizontally (yaw) and pitch counter-clockwise towards viewer at exact same speed
+      spherical.theta -= angleStep;
+      spherical.phi -= angleStep;
+      if (spherical.phi <= 0.05) {
+        spherical.phi = Math.PI - 0.05;
+      }
+
+      offset.setFromSpherical(spherical);
+      engine.camera.position.copy(target).add(offset);
+      engine.camera.lookAt(target);
+    }
     engine.controls.update();
   }
 
@@ -152,7 +199,7 @@ export function updateSimulation(engine: SimulationEngine) {
     mat.uniforms.tideOpacity.value = engine.tideOpacity;
     mat.uniforms.tideSaturation.value = engine.tideSaturation;
     engine.tideMesh.position.y = pulseOffset;
-    engine.tideMesh.visible = engine.tideValue > 0.01;
+    engine.tideMesh.visible = false;
   }
 
   let appendagesChanged = false;
@@ -499,12 +546,12 @@ export function updateSimulation(engine: SimulationEngine) {
         
         let activeDieback = effectiveDieback;
         if (isDyingStrain) {
-          activeDieback = (engine.cullRate / 100.0) * speedFactor;
+          activeDieback = (engine.cullRate / 100.0) * speedFactor * engine.timeScale;
           prob = Math.min(1.0, Math.pow(age / 500, bias) * Math.max(0.000001, activeDieback) * 0.5);
         }
         
         if (Math.random() < prob) {
-          const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(100, engine.diebackRate * engine.timeScale * 2 + 1)));
+          const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(100, engine.diebackRate * 2 + 1)));
           for (let j = 0; j < chunkSize; j++) {
             const chunkIdx = (idx + j) % engine.maxDOMs;
             const cSeg = engine.segments[chunkIdx];
@@ -522,19 +569,16 @@ export function updateSimulation(engine: SimulationEngine) {
     for (const app of engine.appendages.values()) {
       const appLim = Math.floor(engine.maxDOMs / 4);
       if (appLim > 0) {
-        const appBatchSize = Math.floor(appLim / 20); // Faster sweep for appendages since they just check parents
-        const appSweepStart = (engine.frameCount * appBatchSize) % appLim;
-        for (let i = 0; i < appBatchSize; i++) {
-          const idx = (appSweepStart + i) % appLim;
-          const seg = app.segments[idx];
-          if (seg && !app.dyingSet.has(idx)) {
+        for (let i = 0; i < appLim; i++) {
+          const seg = app.segments[i];
+          if (seg && !app.dyingSet.has(i)) {
             const parentSeg = engine.segments[seg.parentIndex];
             const parentDead =
               !parentSeg ||
               parentSeg.timestamp !== seg.parentTimestamp ||
               engine.dyingStems.has(seg.parentIndex);
             if (parentDead) {
-              engine.markDying(app.segments, app.dyingSet, idx);
+              engine.markDying(app.segments, app.dyingSet, i);
             }
           }
         }
@@ -588,7 +632,7 @@ export function updateSimulation(engine: SimulationEngine) {
         let alpha = 1.0;
         if (engine.dyingHybrids.has(seg.index)) {
           if (seg.dyingStart) {
-            const fadeAge = engine.time - seg.dyingStart;
+            const fadeAge = engine.unscaledTime - seg.dyingStart;
             const desiccationSpeed = engine.desiccationSpeed || 1.0;
             const wipeDuration = (engine.hybridStickiness * 12) / desiccationSpeed;
             if (fadeAge > wipeDuration) continue;
@@ -696,7 +740,8 @@ export function updateSimulation(engine: SimulationEngine) {
   }
   engine.agents = activeAgents;
 
-  if (engine.frameCount % 120 === 0) {
+  if (engine.lastBiomassCheckTime === undefined || engine.time - engine.lastBiomassCheckTime >= 120) {
+    engine.lastBiomassCheckTime = engine.time;
     let totalBiomass = 0;
     engine.biomassMap.forEach((v) => (totalBiomass += v));
 
@@ -714,7 +759,7 @@ export function updateSimulation(engine: SimulationEngine) {
           for (let i = 0; i < engine.maxDOMs; i++) {
             const seg = engine.segments[i];
             if (seg && seg.strainName === strainName) {
-              if (!seg.dyingStart) seg.dyingStart = engine.time;
+              if (!seg.dyingStart) seg.dyingStart = engine.unscaledTime;
               engine.dyingStems.add(i);
             }
           }
@@ -724,7 +769,7 @@ export function updateSimulation(engine: SimulationEngine) {
             for (let i = 0; i < lim; i++) {
               const seg = app.segments[i];
               if (seg && seg.strainName === strainName) {
-                if (!seg.dyingStart) seg.dyingStart = engine.time;
+                if (!seg.dyingStart) seg.dyingStart = engine.unscaledTime;
                 app.dyingSet.add(i);
               }
             }
@@ -833,34 +878,32 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
-  if (engine.frameCount % 15 === 0) {
-    for (let i = 0; i < activeAgents.length; i++) {
-      const a1 = activeAgents[i];
-      if (!a1.active || a1.tapering) continue;
+  for (let i = 0; i < activeAgents.length; i++) {
+    const a1 = activeAgents[i];
+    if (!a1.active || a1.tapering) continue;
 
-      for (let j = i + 1; j < activeAgents.length; j++) {
-        const a2 = activeAgents[j];
-        if (!a2.active || a2.tapering) continue;
+    for (let j = i + 1; j < activeAgents.length; j++) {
+      const a2 = activeAgents[j];
+      if (!a2.active || a2.tapering) continue;
 
-        if (a1.genome.name === a2.genome.name) {
-          const dSq = a1.position.distanceToSquared(a2.position);
-          if (dSq < 25) {
-            const activeStrainsCount = strainCounts.size || 1;
-            const minPerStrain = Math.max(1, Math.floor(engine.minAgents / activeStrainsCount));
-            const myStrainCount = strainCounts.get(a2.genome.name) || 1;
+      if (a1.genome.name === a2.genome.name) {
+        const dSq = a1.position.distanceToSquared(a2.position);
+        if (dSq < 25) {
+          const activeStrainsCount = strainCounts.size || 1;
+          const minPerStrain = Math.max(1, Math.floor(engine.minAgents / activeStrainsCount));
+          const myStrainCount = strainCounts.get(a2.genome.name) || 1;
 
-            if (currentActiveCount > engine.minAgents && myStrainCount > minPerStrain) {
-              const combinedThickness = a1.thickness + a2.thickness * 0.4;
-              a1.thickness = Math.min(
-                combinedThickness,
-                a1.genome.thicknessBase * 3.0,
-              );
-              a1.direction.add(a2.direction).normalize();
-              a2.tapering = true;
-              a2.forceTapering = true;
-              engine.onLog(`Branch Merge: ${a1.genome.name}`);
-              break;
-            }
+          if (currentActiveCount > engine.minAgents && myStrainCount > minPerStrain) {
+            const combinedThickness = a1.thickness + a2.thickness * 0.4;
+            a1.thickness = Math.min(
+              combinedThickness,
+              a1.genome.thicknessBase * 3.0,
+            );
+            a1.direction.add(a2.direction).normalize();
+            a2.tapering = true;
+            a2.forceTapering = true;
+            engine.onLog(`Branch Merge: ${a1.genome.name}`);
+            break;
           }
         }
       }

@@ -280,5 +280,6 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
         tMat.compose(new THREE.Vector3(0, (i - 12) * 15, 0), q, new THREE.Vector3(1,1,1));
         tideInstMesh.setMatrixAt(i, tMat);
     }
+    engine.tideMesh.visible = false;
     engine.scene.add(engine.tideMesh);
 }

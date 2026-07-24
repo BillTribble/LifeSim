@@ -4,7 +4,7 @@ export const DEFAULTS = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.8,
   "theme": 2,
-  "timeScale": 2.2,
+  "timeScale": 0.8,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -17,6 +17,7 @@ export const DEFAULTS = {
   "desperation": 9.5,
   "despairAge": 1000,
   "flowerSize": 0.25,
+  "kioskMode": true,
   "entropyThreshold": 1,
   "tideSpeed": 0.1,
   "tideColor": "#643707",
@@ -462,6 +463,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     ),
   );
 
+  const [kioskMode, setKioskMode] = useState(() => {
+    const item = localStorage.getItem("kioskMode");
+    return item !== null ? item === "true" : true;
+  });
+
   const [maxLineWidth, setMaxLineWidth] = useState(() =>
     parseFloat(
       localStorage.getItem("maxLineWidth") || DEFAULTS.maxLineWidth.toString(),
@@ -573,6 +579,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("taperDuration", taperDuration.toString());
     localStorage.setItem("diebackAgeBias", diebackAgeBias.toString());
     localStorage.setItem("branchMutationRate", branchMutationRate.toString());
+    localStorage.setItem("kioskMode", kioskMode.toString());
     localStorage.setItem("enableGlow", enableGlow.toString());
     localStorage.setItem("glowSize", glowSize.toString());
     localStorage.setItem("fogVisibility", fogVisibility.toString());
@@ -674,6 +681,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
 
   return {
     state: {
+      kioskMode,
       themeMorphSpeed,
       themeMorphFreq,
       theme,
@@ -825,6 +833,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setGlowTraitIntensity,
       setGlowTraitDistance,
       setGlowTraitReflect,
+      setKioskMode,
       setDialLimits,
     },
   };

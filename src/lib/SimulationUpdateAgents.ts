@@ -81,9 +81,9 @@ export function processAgents(
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     agent.suppressionFade = agent.suppressionFade || 0;
     if (isSuppressed) {
-      agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02 * engine.timeScale); // 50 frames to fully suppress (about 1 second)
+      agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02); // 50 frames to fully suppress (~0.8s real time, independent of slowmo)
     } else {
-      agent.suppressionFade = Math.max(0.0, agent.suppressionFade - 0.02 * engine.timeScale);
+      agent.suppressionFade = Math.max(0.0, agent.suppressionFade - 0.02);
     }
     
     let baseSpeedMult = 1.0;
@@ -142,39 +142,37 @@ export function processAgents(
       const isYoungHybrid = isHybrid && agent.age < 2400;
       const onCooldown = agent.cooldown > 0;
 
-      if (engine.frameCount % 4 === 0) {
-        for (let j = 0; j < activeAgents.length; j++) {
-          const other = activeAgents[j];
-          if (other === agent) continue;
+      for (let j = 0; j < activeAgents.length; j++) {
+        const other = activeAgents[j];
+        if (other === agent) continue;
 
-          const dSq = agent.position.distanceToSquared(other.position);
+        const dSq = agent.position.distanceToSquared(other.position);
 
-          if (isYoungHybrid || onCooldown) {
+        if (isYoungHybrid || onCooldown) {
+          if (dSq < 10000) {
+            avoidanceForce.add(
+              new THREE.Vector3()
+                .subVectors(agent.position, other.position)
+                .normalize(),
+            );
+            avoidanceCount++;
+          }
+        } else {
+          const isSame = other.genome.name === agent.genome.name;
+          const isSimilar = isSame || (other.genome.archetype === agent.genome.archetype && other.genome.movementType === agent.genome.movementType);
+
+          if (!isSimilar && other.cooldown <= 0) {
+            if (dSq < nearestDistSq) {
+              nearestDistSq = dSq;
+              nearestTarget = other;
+            }
+          } else if (isSimilar) {
+            // Same or similar species repel each other
             if (dSq < 10000) {
               avoidanceForce.add(
-                new THREE.Vector3()
-                  .subVectors(agent.position, other.position)
-                  .normalize(),
+                new THREE.Vector3().subVectors(agent.position, other.position).normalize()
               );
               avoidanceCount++;
-            }
-          } else {
-            const isSame = other.genome.name === agent.genome.name;
-            const isSimilar = isSame || (other.genome.archetype === agent.genome.archetype && other.genome.movementType === agent.genome.movementType);
-
-            if (!isSimilar && other.cooldown <= 0) {
-              if (dSq < nearestDistSq) {
-                nearestDistSq = dSq;
-                nearestTarget = other;
-              }
-            } else if (isSimilar) {
-              // Same or similar species repel each other
-              if (dSq < 10000) {
-                avoidanceForce.add(
-                  new THREE.Vector3().subVectors(agent.position, other.position).normalize()
-                );
-                avoidanceCount++;
-              }
             }
           }
         }
@@ -297,16 +295,24 @@ export function processAgents(
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
 
       const b = engine.boundarySize;
+      const aspectX = 1.6; // Oblong/Ovoid aspect scaling for rectangular screens
       let bounced = false;
 
       if (engine.boundaryShape === "sphere") {
-        const distSq = agent.position.lengthSq();
+        // Ovoid Ellipsoid: (x / (1.6 * b))^2 + (y / b)^2 + (z / b)^2 <= 1.0
+        const scaledX = agent.position.x / aspectX;
+        const distSq = scaledX * scaledX + agent.position.y * agent.position.y + agent.position.z * agent.position.z;
         if (distSq > b * b) {
           const dist = Math.sqrt(distSq);
-          const normal = agent.position.clone().divideScalar(dist);
+          const scale = b / dist;
           
-          // Push agent back to the sphere surface
-          agent.position.copy(normal).multiplyScalar(b);
+          // Outward normal vector for ellipsoid
+          const normal = new THREE.Vector3(agent.position.x / (aspectX * aspectX), agent.position.y, agent.position.z).normalize();
+          
+          // Push agent back to ovoid surface
+          agent.position.x = scaledX * scale * aspectX;
+          agent.position.y = agent.position.y * scale;
+          agent.position.z = agent.position.z * scale;
           
           // Reflect direction: R = D - 2(D.N)N
           const dot = agent.direction.dot(normal);
@@ -315,12 +321,14 @@ export function processAgents(
           bounced = true;
         }
       } else {
-        if (agent.position.x > b) {
-          agent.position.x = b;
+        // Oblong Cube
+        const bx = b * aspectX;
+        if (agent.position.x > bx) {
+          agent.position.x = bx;
           agent.direction.x *= -1;
           bounced = true;
-        } else if (agent.position.x < -b) {
-          agent.position.x = -b;
+        } else if (agent.position.x < -bx) {
+          agent.position.x = -bx;
           agent.direction.x *= -1;
           bounced = true;
         }
@@ -696,7 +704,7 @@ export function processAgents(
                agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
            }
            
-           if (!agent.isFeeler && distSq < reach && (isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier) {
+           if (!agent.isFeeler && distSq < reach && (isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
@@ -725,7 +733,9 @@ export function processAgents(
                     }
                }
            
-            const breedReach = engine.proximity * engine.proximity * (isDesperate ? 0.2 : 0.05) * reachMultiplier;
+            // Require physical touching based on agent thicknesses to breed
+            const touchDist = (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
+            const breedReach = touchDist * touchDist;
             if (distSq < breedReach) {
                 const nearestPartner = bestPartner;
                 

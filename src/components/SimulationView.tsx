@@ -89,8 +89,12 @@ export function SimulationView({
   stemCurviness,
   veinStrength,
   veinGlow,
+  kioskMode,
+  onKioskTrigger,
   onConfigChange,
 }: Props & {
+  kioskMode?: boolean;
+  onKioskTrigger?: () => void;
   restartTrigger?: number;
   randomizeTrigger?: number;
   rotationSpeed?: number;
@@ -503,6 +507,12 @@ export function SimulationView({
   ]);
 
   useEffect(() => {
+    if (engineRef.current && kioskMode !== undefined) {
+      engineRef.current.kioskMode = kioskMode;
+    }
+  }, [kioskMode]);
+
+  useEffect(() => {
     if (engineRef.current && restartTrigger !== undefined) {
       engineRef.current.restart();
     }
@@ -517,6 +527,8 @@ export function SimulationView({
     const engine = new SimulationEngine(canvasRef.current, width, height);
     engine.onLog = onLog;
     engine.onStateUpdate = onStateUpdate;
+    if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
+    if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (onConfigChange) {
       engine.onConfigChange = onConfigChange;
       onConfigChange({ bgColor: engine.bgColor });
@@ -861,6 +873,13 @@ export function SimulationView({
           setHoveredAgentInfo(null);
         }}
         className="block w-full h-full cursor-pointer pointer-events-auto"
+      />
+      <div
+        className="absolute inset-0 pointer-events-none transition-opacity duration-150 z-20"
+        style={{
+          backgroundColor: bgColor || "#001220",
+          opacity: stats?.kioskFadeProgress || 0,
+        }}
       />
       {hoveredStrain && (
         <div

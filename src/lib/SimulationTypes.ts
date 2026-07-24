@@ -27,6 +27,18 @@ export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"]
 
 export const PULSE_TARGETS = ["none", "stem", "appendage", "all"] as const;
 
+export interface RecessiveGenes {
+  archetype: Archetype;
+  movementType: MovementType;
+  geometryType: (typeof GEO_TYPES)[number];
+  appendage: (typeof APPENDAGES)[number];
+  color: THREE.Color;
+  isGlowing: boolean;
+  vernationType: "circinate" | "convolute" | "conduplicate";
+  canopyZone: "wholeBody" | "terminal" | "basal";
+  phyllotaxisMode: "spiral" | "decussate" | "whorled";
+}
+
 export interface Genome {
   name: string;
   archetype: Archetype;
@@ -60,6 +72,7 @@ export interface Genome {
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
   succulence: number;
 
+  recessive?: RecessiveGenes;
   genomeHash?: number;
 }
 
