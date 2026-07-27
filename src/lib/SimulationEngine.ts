@@ -77,9 +77,9 @@ export class SimulationEngine {
   onConfigChange?: (config: any) => void;
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
   onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
-  onFeelerEvent?: (event: { parent: Genome; feeler: Genome }) => void;
+  onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
   matingCount: number = 0;
-  hasEmittedFirstFeeler: boolean = false;
+  feelerCount: number = 0;
   lastMatingWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.1;
@@ -712,37 +712,37 @@ export class SimulationEngine {
     }
 
     this.agents.push({
-      position: new THREE.Vector3(-40, 0, 0),
-      direction: new THREE.Vector3(
-        -1,
-        (Math.random() - 0.5) * 0.2,
-        (Math.random() - 0.5) * 0.2,
-      ).normalize(),
-      genome: alphaGenome,
-      active: true,
-      age: 0,
-      lastPosition: new THREE.Vector3(-40, 0, 0),
-      thickness: alphaGenome.thicknessBase * 2.0,
-      cooldown: 0,
-    });
-
-    this.agents.push({
       position: new THREE.Vector3(40, 0, 0),
       direction: new THREE.Vector3(
         1,
         (Math.random() - 0.5) * 0.2,
         (Math.random() - 0.5) * 0.2,
       ).normalize(),
-      genome: betaGenome,
+      genome: alphaGenome,
       active: true,
       age: 0,
       lastPosition: new THREE.Vector3(40, 0, 0),
+      thickness: alphaGenome.thicknessBase * 2.0,
+      cooldown: 0,
+    });
+
+    this.agents.push({
+      position: new THREE.Vector3(-40, 0, 0),
+      direction: new THREE.Vector3(
+        -1,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2,
+      ).normalize(),
+      genome: betaGenome,
+      active: true,
+      age: 0,
+      lastPosition: new THREE.Vector3(-40, 0, 0),
       thickness: betaGenome.thicknessBase * 2.0,
       cooldown: 0,
     });
 
     this.matingCount = 0;
-    this.hasEmittedFirstFeeler = false;
+    this.feelerCount = 0;
     if (this.onInitOrganisms) {
       this.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
     }
@@ -938,9 +938,9 @@ export class SimulationEngine {
       return { x, y, isBehind: v.z > 1 };
     };
 
-    // Fixed initial spawn locations so vector lines indicate the first position without crossing over
-    const alphaPos = new THREE.Vector3(-40, 0, 0);
-    const betaPos = new THREE.Vector3(40, 0, 0);
+    // Fixed initial spawn locations (Alpha on screen left, Beta on screen right) so vector lines indicate the first position without crossing over
+    const alphaPos = new THREE.Vector3(40, 0, 0);
+    const betaPos = new THREE.Vector3(-40, 0, 0);
 
     return {
       org1: projectPos(alphaPos),

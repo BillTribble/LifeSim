@@ -48,12 +48,13 @@ export default function App() {
     setPopupQueue((prev) => [...prev, matingItem]);
   };
 
-  const handleFeelerEvent = (event: { parent: any; feeler: any }) => {
+  const handleFeelerEvent = (event: { parent: any; feeler: any; count?: number }) => {
     const dur = getScaledDuration();
+    const countText = event.count ? ` #${event.count}` : "";
     const feelerItem: PopupItem = {
       id: `feeler-${Date.now()}`,
       type: "feeler",
-      title: "First Feeler Extended!",
+      title: `Feeler Extended${countText}!`,
       subtitle: "Hybridization Tendril",
       feelerData: event,
       duration: dur,

@@ -704,7 +704,7 @@ export function processAgents(
                agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
            }
            
-           if (!agent.isFeeler && distSq < reach && (isSuppressed || isDesperate) && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
+           if (!agent.isFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
@@ -725,7 +725,7 @@ export function processAgents(
                         isFeeler: true,
                         realGenome: agent.genome,
                     });
-                   agent.cooldown = 150; if (!engine.hasEmittedFirstFeeler) { engine.hasEmittedFirstFeeler = true; if (engine.onFeelerEvent) engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome }); } // Prevent spamming feelers too fast
+                   agent.cooldown = 150; if (engine.feelerCount < 3) { engine.feelerCount++; if (engine.onFeelerEvent) engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome, count: engine.feelerCount }); } // Prevent spamming feelers too fast
                    if (isDesperate && !isSuppressed) {
                        engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} desperately hunting for a mate!`);
                    } else {
