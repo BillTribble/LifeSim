@@ -274,9 +274,12 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 180 unscaled frame ticks = 3.0 seconds of real-time fade OUT
-    const wipeDuration = 180.0;
-    if (fadeAge >= wipeDuration) {
+    // 120 frame ticks (2s) grace period + 180 frame ticks (3s) fade out = 300 total frame ticks (5.0s)
+    const graceDuration = 120.0;
+    const fadeDuration = 180.0;
+    const totalDuration = graceDuration + fadeDuration;
+
+    if (fadeAge >= totalDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);
       engine.dummy.updateMatrix();
@@ -291,7 +294,9 @@ export function processDyingSegments(
         packAAttr.needsUpdate = true;
       }
     } else {
-      const dissolveProgress = Math.min(1.0, fadeAge / wipeDuration);
+      const dissolveProgress = fadeAge < graceDuration 
+        ? 0.0 
+        : Math.min(1.0, (fadeAge - graceDuration) / fadeDuration);
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
