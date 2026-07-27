@@ -672,12 +672,9 @@ export class SimulationEngine {
       betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
     }
 
-    // Force contrasting thickness base so one is stout/thick and the other is slender
-    if (alphaGenome.thicknessBase > 3.0) {
-      betaGenome.thicknessBase = 1.0 + Math.random() * 1.2;
-    } else {
-      betaGenome.thicknessBase = 3.5 + Math.random() * 1.5;
-    }
+    // Provide bold contrasting thickness base so organisms grow thick, lush, and distinct
+    alphaGenome.thicknessBase = 5.0 + Math.random() * 3.5;
+    betaGenome.thicknessBase = 3.5 + Math.random() * 2.5;
 
     // Assign distinct vernation and phyllotaxis modes
     alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
@@ -695,7 +692,10 @@ export class SimulationEngine {
     betaGenome.phyllotaxisMode = betaPhyllo;
 
     let alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-    if (this.theme !== 1) {
+    if (this.theme === 1) { // Albino theme: Ensure bright contrasting color
+      alphaGenome.color.setHSL(0.1, 0.02, 0.95); // Pure white albino
+      betaGenome.color.setHSL(0.55, 1.0, 0.55);  // Bright vivid cyan/teal contrast
+    } else {
       alphaHue = Math.random();
       alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
       betaGenome.color.setHSL((alphaHue + 0.5) % 1.0, 0.9, 0.52);
