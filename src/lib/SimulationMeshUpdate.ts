@@ -12,15 +12,37 @@ export function updateMeshSegments(
 ) {
   const targetIndexStem = engine.pointCount % engine.maxDOMs;
 
-  const distance = p1.distanceTo(p2);
-  engine.dummy.position.copy(p1);
   if (isAppendage) {
-    // Shift appendage position outwards to the surface of the creature so it is never hidden inside fat stems
+    const appendageLimit = Math.floor(engine.maxDOMs / 4);
+    const config = engine.appendages.get(genome.appendage);
+    const appIndex = config ? config.count % appendageLimit : targetIndexStem;
+
+    const forward = new THREE.Vector3().subVectors(p2, p1).normalize();
+    if (forward.lengthSq() < 0.0001) forward.set(0, 0, 1);
+
+    // Build perpendicular reference vector
+    const ref = Math.abs(forward.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    const right = new THREE.Vector3().crossVectors(forward, ref).normalize();
+
+    // 360-degree radial divergence angle around spine centerline (Golden ratio ~137.5° = 2.39996 rad)
+    const phiAngle = appIndex * (engine.phyllotaxisAngle ? (engine.phyllotaxisAngle * Math.PI / 180) : 2.39996323);
+    const radialDir = right.clone().applyAxisAngle(forward, phiAngle).normalize();
+
+    // Stem outer radius
     const stemRadius = Math.max(0.5, thickness * 0.45);
-    const outwardDir = new THREE.Vector3(0, 1, 0).applyQuaternion(engine.dummy.quaternion);
-    engine.dummy.position.addScaledVector(outwardDir, stemRadius);
+
+    // Position dummy on outer surface along radial direction
+    engine.dummy.position.copy(p1).addScaledVector(radialDir, stemRadius);
+
+    // Orient appendage to point directly outwards along radialDir away from spine core
+    const targetPoint = engine.dummy.position.clone().add(radialDir);
+    engine.dummy.lookAt(targetPoint);
+  } else {
+    engine.dummy.position.copy(p1);
+    engine.dummy.lookAt(p2);
   }
 
+  const distance = p1.distanceTo(p2);
   let scaleX = thickness;
   let scaleY = thickness;
   let scaleZ = distance;
