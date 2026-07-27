@@ -17,7 +17,7 @@ const newDefaults = {
   "proximity": 80.62478258463184,
   "desperation": 8.659824757074798,
   "despairAge": 2005.5339943951117,
-  "flowerSize": 0.25,
+  "flowerSize": 10.0,
   "entropyThreshold": 0.95,
   "tideSpeed": 3.381581873622713,
   "tideColor": "#56e025",

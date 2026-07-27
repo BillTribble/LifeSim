@@ -92,7 +92,7 @@ export class SimulationEngine {
   proximity: number = 400.0;
   desperation: number = 2.0;
   despairAge: number = 1000;
-  flowerSize: number = 1.0;
+  flowerSize: number = 10.0;
   entropyThreshold: number = 0.95;
   globalPulseSpeed: number = 1.0;
   maxLineWidth: number = 8.0;

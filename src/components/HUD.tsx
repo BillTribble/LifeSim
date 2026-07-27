@@ -772,7 +772,7 @@ Low: Slow, drifting gingers." label="GINGER" min={0.1} max={10.0} step={0.1} val
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="APPENDAGE SIZE
 Scale of structural appendages.
 High: Massive, prominent appendages.
-Low: Tiny, subtle appendages." label="APPENDAGE SIZE" min={0.05} max={1.0} step={0.01} value={state.flowerSize} onChange={setters.setFlowerSize} color="#87CEEB" />
+Low: Tiny, subtle appendages." label="APPENDAGE SIZE" min={0.1} max={100.0} step={0.5} value={state.flowerSize} onChange={setters.setFlowerSize} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TAPER DUR
 Duration of line thickness tapering.
 High: Long, smooth tapers.
