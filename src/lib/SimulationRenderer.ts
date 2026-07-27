@@ -41,9 +41,37 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
-    const grid = new THREE.GridHelper(500, 50, 0x334155, 0x1e293b);
+    const grid = new THREE.GridHelper(1200, 60, 0x475569, 0x1e293b);
     grid.position.y = -50;
     engine.scene.add(grid);
+
+    // Horizon Rays extending out to infinity/horizon
+    const horizonRayGeo = new THREE.BufferGeometry();
+    const rayPositions: number[] = [];
+    const rayCount = 16;
+    const rayRadius = 1200;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (i / rayCount) * Math.PI * 2;
+      rayPositions.push(Math.sin(angle) * 20, -50, Math.cos(angle) * 20);
+      rayPositions.push(Math.sin(angle) * rayRadius, -50, Math.cos(angle) * rayRadius);
+    }
+    horizonRayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
+    const rayMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.5 });
+    const horizonRays = new THREE.LineSegments(horizonRayGeo, rayMat);
+    engine.scene.add(horizonRays);
+
+    // Crisp Luminous Cyan Horizon Line Ring
+    const horizonRingGeo = new THREE.BufferGeometry();
+    const ringPositions: number[] = [];
+    const ringSegments = 64;
+    for (let i = 0; i <= ringSegments; i++) {
+      const angle = (i / ringSegments) * Math.PI * 2;
+      ringPositions.push(Math.sin(angle) * rayRadius, -50, Math.cos(angle) * rayRadius);
+    }
+    horizonRingGeo.setAttribute('position', new THREE.Float32BufferAttribute(ringPositions, 3));
+    const horizonLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
+    const horizonLine = new THREE.LineLoop(horizonRingGeo, horizonLineMat);
+    engine.scene.add(horizonLine);
 
     engine.dummy = new THREE.Object3D();
 
