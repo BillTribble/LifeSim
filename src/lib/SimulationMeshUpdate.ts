@@ -53,42 +53,51 @@ export function updateMeshSegments(
       targetIndex = config.count % appendageLimit;
 
       if (genome.appendage === "flowers") {
-        scaleX = thickness * 5 * engine.flowerSize;
-        scaleY = thickness * 5 * engine.flowerSize;
-        scaleZ = thickness * 6 * engine.flowerSize;
+        scaleX = thickness * 3.5 * engine.flowerSize;
+        scaleY = thickness * 3.5 * engine.flowerSize;
+        scaleZ = thickness * 4.0 * engine.flowerSize;
+      } else if (genome.appendage === "spores") {
+        // Shrink spores by 70% so they match the exact size of other ornaments
+        scaleX = thickness * 1.0;
+        scaleY = thickness * 1.0;
+        scaleZ = thickness * 1.0;
+      } else if (genome.appendage === "crystals") {
+        scaleX = thickness * 2.0;
+        scaleY = thickness * 2.0;
+        scaleZ = thickness * 2.5;
       } else if (genome.appendage === "needles") {
-        scaleX = thickness * 1.5;
-        scaleY = thickness * 1.5;
-        scaleZ = thickness * 15;
+        scaleX = thickness * 1.2;
+        scaleY = thickness * 1.2;
+        scaleZ = thickness * 4.5;
       } else if (
         genome.appendage === "lillyPads" ||
         genome.appendage === "scales"
       ) {
         scaleX = thickness * 3.5;
         scaleY = thickness * 0.3;
-        scaleZ = thickness * 4.0;
+        scaleZ = thickness * 3.5;
       } else if (genome.appendage === "leaves") {
-        scaleX = thickness * 4.0;
-        scaleY = thickness * 4.5;
-        scaleZ = thickness * 5.0;
+        scaleX = thickness * 3.5;
+        scaleY = thickness * 3.5;
+        scaleZ = thickness * 4.0;
         engine.dummy.rotateX(-Math.PI / 2);
         engine.dummy.rotateY(Math.PI);
       } else if (genome.appendage === "petals") {
         scaleX = thickness * 3.5;
         scaleY = thickness * 0.2;
-        scaleZ = thickness * 2.5;
+        scaleZ = thickness * 3.0;
       } else if (genome.appendage === "thorns") {
-        scaleX = thickness * 7.5;
-        scaleY = thickness * 7.5;
-        scaleZ = thickness * 15.0;
+        scaleX = thickness * 3.5;
+        scaleY = thickness * 3.5;
+        scaleZ = thickness * 4.5;
       } else if (
         genome.appendage === "hair" ||
         genome.appendage === "curlyHair" ||
         genome.appendage === "spirals"
       ) {
-        scaleX = thickness * 2;
-        scaleY = thickness * 2;
-        scaleZ = thickness * 2;
+        scaleX = thickness * 2.5;
+        scaleY = thickness * 2.5;
+        scaleZ = thickness * 2.5;
       } else {
         scaleX = thickness * 3;
         scaleY = thickness * 3;
