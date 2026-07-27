@@ -6,7 +6,16 @@ import {
   PULSE_TARGETS,
   ARCHETYPES,
   MOVEMENT_TYPES,
+  Archetype,
 } from "./SimulationTypes";
+
+export function getRandomWeightedArchetype(): Archetype {
+  const r = Math.random();
+  if (r < 0.40) return "ginger";
+  if (r < 0.80) return "bush";
+  if (r < 0.95) return "tree";
+  return "snake";
+}
 
 export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false) {
   material.userData.theme1 = { value: 0 };
@@ -554,7 +563,7 @@ export function mutateBranchGenome(
   res.appendage = (res.appendage && res.appendage !== "none") ? res.appendage : getWeightedAppendage(traitProbs);
   
   if (Math.random() < 0.05) {
-     res.archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+     res.archetype = getRandomWeightedArchetype();
      if (res.archetype === "snake") res.singleton = Math.random() < 0.5;
   }
   if (Math.random() < 0.1) res.movementType = MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)];

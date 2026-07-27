@@ -46,8 +46,8 @@ export function updateSimulation(engine: SimulationEngine) {
       const offset = new THREE.Vector3().subVectors(engine.camera.position, target);
       const spherical = new THREE.Spherical().setFromVector3(offset);
 
-      // Continuous horizontal yaw rotation and vertical pitch rotation at half speed (smooth ping-ponging)
-      spherical.theta -= angleStep;
+      // Continuous horizontal yaw rotation (doubled speed) and vertical pitch rotation at half speed
+      spherical.theta -= angleStep * 2.0;
       if (engine.phiDirection === undefined) engine.phiDirection = -1;
       spherical.phi += angleStep * 0.5 * engine.phiDirection;
 

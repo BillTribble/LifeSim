@@ -12,7 +12,7 @@ export const DEFAULTS: Record<string, any> = {
   "snakeWander": 1,
   "snakeStepSize": 1,
   "snakeSpeed": 1,
-  "rotationSpeed": 0.1,
+  "rotationSpeed": 0.2,
   "magnetism": 0.01674453139194959,
   "proximity": 80.62478258463184,
   "desperation": 8.659824757074798,

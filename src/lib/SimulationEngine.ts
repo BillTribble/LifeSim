@@ -15,6 +15,7 @@ import {
   getWeightedAppendage,
   breedGenomes,
   mutateGenome,
+  getRandomWeightedArchetype,
 } from "./SimulationGenetics";
 import { updateSimulation } from "./SimulationUpdate";
 import { setupSimulationScene } from "./SimulationRenderer";
@@ -86,7 +87,7 @@ export class SimulationEngine {
   lastFeelerWorldPos?: THREE.Vector3;
   lastBranchMutationWorldPos?: THREE.Vector3;
 
-  rotationSpeed: number = 0.1;
+  rotationSpeed: number = 0.2;
   phiDirection: number = -1;
   magnetism: number = 0.02;
   proximity: number = 400.0;
@@ -229,7 +230,7 @@ export class SimulationEngine {
       0.4 + Math.random() * 0.4,
     );
     
-    const archetype = forceArchetype || ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+    const archetype = forceArchetype || getRandomWeightedArchetype();
     const movementType = MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)];
 
     return {
