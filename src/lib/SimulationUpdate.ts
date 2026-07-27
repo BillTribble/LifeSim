@@ -701,17 +701,12 @@ export function updateSimulation(engine: SimulationEngine) {
         const ratio = biomass / totalBiomass;
         const isDying = engine.dyingStrains && engine.dyingStrains.has(strainName);
 
-        if (isDying && ratio < 0.03) {
-          engine.biomassMap.delete(strainName);
-          engine.dyingStrains.delete(strainName);
-          if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
-          if (engine.suppressedStrains) engine.suppressedStrains.delete(strainName);
-          
+        if (isDying) {
+          const now = engine.unscaledTime;
           for (let i = 0; i < engine.maxDOMs; i++) {
             const seg = engine.segments[i];
             if (seg && seg.strainName === strainName) {
-              if (!seg.dyingStart) seg.dyingStart = engine.unscaledTime;
-              engine.dyingStems.add(i);
+              if (!seg.dyingStart) engine.markDying(engine.segments, engine.dyingStems, i, now);
             }
           }
           
@@ -720,8 +715,7 @@ export function updateSimulation(engine: SimulationEngine) {
             for (let i = 0; i < lim; i++) {
               const seg = app.segments[i];
               if (seg && seg.strainName === strainName) {
-                if (!seg.dyingStart) seg.dyingStart = engine.unscaledTime;
-                app.dyingSet.add(i);
+                if (!seg.dyingStart) engine.markDying(app.segments, app.dyingSet, i, now);
               }
             }
           }
@@ -731,7 +725,14 @@ export function updateSimulation(engine: SimulationEngine) {
               activeAgents[i].active = false;
             }
           }
-          engine.onLog(`Species ${strainName.split(' ')[0]} was fully eradicated.`);
+
+          if (ratio < 0.01) {
+            engine.biomassMap.delete(strainName);
+            engine.dyingStrains.delete(strainName);
+            if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
+            if (engine.suppressedStrains) engine.suppressedStrains.delete(strainName);
+            engine.onLog(`Species ${strainName.split(' ')[0]} was fully eradicated.`);
+          }
           return;
         }
 

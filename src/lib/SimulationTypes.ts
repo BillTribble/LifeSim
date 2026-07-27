@@ -94,12 +94,14 @@ export interface Agent {
   isFeeler?: boolean;
   realGenome?: Genome;
   growthBoost?: number;
+  id?: number;
 }
 
 export interface Segment {
   index: number;
   timestamp: number;
   strainName: string;
+  agentId?: number;
   matrix: THREE.Matrix4;
   thickness: number;
   dyingStart?: number;
@@ -110,4 +112,4 @@ export interface Segment {
   randomFactor?: number;
 }
 
-export const MAX_POINTS = 240000;
+export const MAX_POINTS = 24000;
