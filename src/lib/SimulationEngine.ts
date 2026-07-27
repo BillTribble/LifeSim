@@ -65,7 +65,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 0.6;
+  timeScale: number = 1.8;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -76,8 +76,10 @@ export class SimulationEngine {
   onStateUpdate: (state: any) => void = () => {};
   onConfigChange?: (config: any) => void;
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
-  onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome }) => void;
-  hasEmittedFirstMating: boolean = false;
+  onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
+  onFeelerEvent?: (event: { parent: Genome; feeler: Genome }) => void;
+  matingCount: number = 0;
+  hasEmittedFirstFeeler: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.1;
@@ -739,7 +741,8 @@ export class SimulationEngine {
       cooldown: 0,
     });
 
-    this.hasEmittedFirstMating = false;
+    this.matingCount = 0;
+    this.hasEmittedFirstFeeler = false;
     if (this.onInitOrganisms) {
       this.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
     }
@@ -935,11 +938,9 @@ export class SimulationEngine {
       return { x, y, isBehind: v.z > 1 };
     };
 
-    const alphaAgent = this.agents.find((a) => a.genome.name.startsWith("Alpha"));
-    const betaAgent = this.agents.find((a) => a.genome.name.startsWith("Beta"));
-
-    const alphaPos = alphaAgent ? alphaAgent.position : new THREE.Vector3(-40, 0, 0);
-    const betaPos = betaAgent ? betaAgent.position : new THREE.Vector3(40, 0, 0);
+    // Fixed initial spawn locations so vector lines indicate the first position without crossing over
+    const alphaPos = new THREE.Vector3(-40, 0, 0);
+    const betaPos = new THREE.Vector3(40, 0, 0);
 
     return {
       org1: projectPos(alphaPos),

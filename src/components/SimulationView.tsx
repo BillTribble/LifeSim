@@ -8,6 +8,7 @@ interface Props {
   onConfigChange?: (config: any) => void;
   onInitOrganisms?: (event: { alpha: any; beta: any }) => void;
   onMatingEvent?: (event: { parent1: any; parent2: any; child: any }) => void;
+  onFeelerEvent?: (event: { parent: any; feeler: any }) => void;
   stats?: any;
   [key: string]: any;
 }
@@ -534,6 +535,7 @@ export function SimulationView({
     engine.onStateUpdate = onStateUpdate;
     if (onInitOrganisms) engine.onInitOrganisms = onInitOrganisms;
     if (onMatingEvent) engine.onMatingEvent = onMatingEvent;
+    if (onFeelerEvent) engine.onFeelerEvent = onFeelerEvent;
     if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (onConfigChange) {

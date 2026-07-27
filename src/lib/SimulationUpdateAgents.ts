@@ -725,7 +725,7 @@ export function processAgents(
                         isFeeler: true,
                         realGenome: agent.genome,
                     });
-                   agent.cooldown = 150; // Prevent spamming feelers too fast
+                   agent.cooldown = 150; if (!engine.hasEmittedFirstFeeler) { engine.hasEmittedFirstFeeler = true; if (engine.onFeelerEvent) engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome }); } // Prevent spamming feelers too fast
                    if (isDesperate && !isSuppressed) {
                        engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} desperately hunting for a mate!`);
                    } else {
@@ -832,8 +832,8 @@ export function processAgents(
     
                engine.spawnHybridArtifact(midPoint, childGenome.color);
 
-               if (!engine.hasEmittedFirstMating) {
-                 engine.hasEmittedFirstMating = true;
+               if (engine.matingCount < 3) {
+                 engine.matingCount++;
                  engine.lastMatingWorldPos = midPoint.clone();
                  if (engine.onMatingEvent) {
                    engine.onMatingEvent({

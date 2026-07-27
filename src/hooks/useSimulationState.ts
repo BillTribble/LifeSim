@@ -4,7 +4,7 @@ export const DEFAULTS = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.8,
   "theme": 0,
-  "timeScale": 0.6,
+  "timeScale": 1.8,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,

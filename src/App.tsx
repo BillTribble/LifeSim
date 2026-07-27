@@ -11,16 +11,17 @@ export default function App() {
   const { state, setters } = useSimulationState();
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
 
+  const getScaledDuration = () => Math.round(8000 * (1.8 / Math.max(0.1, state.timeScale)));
+
   const handleInitOrganisms = ({ alpha, beta }: { alpha: any; beta: any }) => {
+    const dur = getScaledDuration();
     const org1Item: PopupItem = {
       id: `org1-${Date.now()}`,
       type: "organism1",
       title: "Organism 1 (Alpha Strain)",
       subtitle: "Founder Phenotype 1",
       genome: alpha,
-      duration: 8000,
-      angleDeg: -135,
-      distancePx: 200,
+      duration: dur,
     };
     const org2Item: PopupItem = {
       id: `org2-${Date.now()}`,
@@ -28,25 +29,36 @@ export default function App() {
       title: "Organism 2 (Beta Strain)",
       subtitle: "Founder Phenotype 2",
       genome: beta,
-      duration: 8000,
-      angleDeg: -45,
-      distancePx: 200,
+      duration: dur,
     };
     setPopupQueue([org1Item, org2Item]);
   };
 
-  const handleMatingEvent = (event: { parent1: any; parent2: any; child: any }) => {
+  const handleMatingEvent = (event: { parent1: any; parent2: any; child: any; count?: number }) => {
+    const dur = getScaledDuration();
+    const countText = event.count ? ` #${event.count}` : "";
     const matingItem: PopupItem = {
       id: `mating-${Date.now()}`,
       type: "mating",
-      title: "First Mating Event Detected!",
+      title: `Mating Event Detected${countText}!`,
       subtitle: "Cross-Species Hybridization",
       matingData: event,
-      duration: 8000,
-      angleDeg: -90,
-      distancePx: 200,
+      duration: dur,
     };
     setPopupQueue((prev) => [...prev, matingItem]);
+  };
+
+  const handleFeelerEvent = (event: { parent: any; feeler: any }) => {
+    const dur = getScaledDuration();
+    const feelerItem: PopupItem = {
+      id: `feeler-${Date.now()}`,
+      type: "feeler",
+      title: "First Feeler Extended!",
+      subtitle: "Hybridization Tendril",
+      feelerData: event,
+      duration: dur,
+    };
+    setPopupQueue((prev) => [...prev, feelerItem]);
   };
 
   const handleDismissPopup = (id: string) => {
@@ -218,6 +230,7 @@ export default function App() {
         onKioskTrigger={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
+        onFeelerEvent={handleFeelerEvent}
       />
 
       <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Dna, Heart, X } from "lucide-react";
+import { Dna, Heart, Sparkles, X } from "lucide-react";
 import { Genome } from "../lib/SimulationTypes";
 
 export interface PopupItem {
   id: string;
-  type: "organism1" | "organism2" | "mating";
+  type: "organism1" | "organism2" | "mating" | "feeler";
   title: string;
   subtitle: string;
   genome?: Genome;
@@ -12,6 +12,10 @@ export interface PopupItem {
     parent1: Genome;
     parent2: Genome;
     child: Genome;
+  };
+  feelerData?: {
+    parent: Genome;
+    feeler: Genome;
   };
   duration?: number;
 }
@@ -42,6 +46,8 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
           targetPos = trackedPositions?.org2 || null;
         } else if (item.type === "mating") {
           targetPos = trackedPositions?.mating || null;
+        } else if (item.type === "feeler") {
+          targetPos = trackedPositions?.org1 || trackedPositions?.org2 || null;
         }
 
         return (
@@ -67,20 +73,26 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
+    // Trigger entry transition on mount
+    const entryTimer = setTimeout(() => setVisible(true), 20);
+
     const duration = item.duration || 8000;
 
+    // Smooth exit transition before dismiss
     const dismissTimer = setTimeout(() => {
       setVisible(false);
-      setTimeout(() => onDismiss(item.id), 450);
+      setTimeout(() => onDismiss(item.id), 750); // 750ms matches smooth CSS fade duration
     }, duration);
 
-    return () => clearTimeout(dismissTimer);
+    return () => {
+      clearTimeout(entryTimer);
+      clearTimeout(dismissTimer);
+    };
   }, [item.id]);
 
   const handleClose = () => {
     setVisible(false);
-    setTimeout(() => onDismiss(item.id), 450);
+    setTimeout(() => onDismiss(item.id), 750);
   };
 
   const getHexColor = (colorObj?: any) => {
@@ -92,34 +104,13 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
   const strokeColor =
     item.type === "mating"
       ? "#ec4899"
+      : item.type === "feeler"
+      ? "#00e5ff"
       : item.genome
       ? getHexColor(item.genome.color)
       : "#a855f7";
 
-  // Position calculation: Organism 1 on bottom-left, Organism 2 on bottom-right, Mating on bottom-center
-  let cardX = window.innerWidth / 2;
-  let cardY = window.innerHeight - 110;
-  let anchorPointX = cardX;
-  let anchorPointY = cardY - 45;
-
-  if (item.type === "organism1") {
-    cardX = Math.min(185, window.innerWidth * 0.25);
-    cardY = window.innerHeight - 110;
-    anchorPointX = cardX + 110;
-    anchorPointY = cardY - 30;
-  } else if (item.type === "organism2") {
-    cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
-    cardY = window.innerHeight - 110;
-    anchorPointX = cardX - 110;
-    anchorPointY = cardY - 30;
-  } else if (item.type === "mating") {
-    cardX = window.innerWidth / 2;
-    cardY = window.innerHeight - 110;
-    anchorPointX = cardX;
-    anchorPointY = cardY - 45;
-  }
-
-  // 3D creature target point on screen (cx, cy)
+  // Validate 3D-to-2D projected creature target point (cx, cy)
   const isValidTarget =
     targetPos &&
     Number.isFinite(targetPos.x) &&
@@ -127,14 +118,46 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
     !targetPos.isBehind &&
     (targetPos.x > 5 || targetPos.y > 5);
 
-  const cx = isValidTarget ? targetPos.x : cardX;
-  const cy = isValidTarget ? targetPos.y : cardY - 150;
+  // Default creature screen X position estimate
+  const defaultCx = item.type === "organism1" ? window.innerWidth * 0.75 : window.innerWidth * 0.25;
+  const cx = isValidTarget ? targetPos.x : defaultCx;
+  const cy = isValidTarget ? targetPos.y : window.innerHeight / 2;
+
+  // Uncrossed card positioning: place card on screen left if creature is on left half, screen right if creature is on right half
+  const isLeftHalf = cx < window.innerWidth / 2;
+  let cardX = window.innerWidth / 2;
+  let cardY = window.innerHeight - 110;
+  let anchorPointX = cardX;
+  let anchorPointY = cardY - 45;
+
+  if (item.type === "organism1" || item.type === "organism2") {
+    if (isLeftHalf) {
+      cardX = Math.min(185, window.innerWidth * 0.25);
+      cardY = window.innerHeight - 110;
+      anchorPointX = cardX + 110;
+      anchorPointY = cardY - 30;
+    } else {
+      cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
+      cardY = window.innerHeight - 110;
+      anchorPointX = cardX - 110;
+      anchorPointY = cardY - 30;
+    }
+  } else if (item.type === "mating" || item.type === "feeler") {
+    cardX = window.innerWidth / 2;
+    cardY = window.innerHeight - 110;
+    anchorPointX = cardX;
+    anchorPointY = cardY - 45;
+  }
 
   return (
     <>
-      {/* Clean Vector Line Indicator */}
+      {/* Clean Vector Line Indicator with Smooth Fade */}
       {isValidTarget && (
-        <svg className="fixed inset-0 w-full h-full pointer-events-none z-40 overflow-visible">
+        <svg
+          className={`fixed inset-0 w-full h-full pointer-events-none z-40 overflow-visible transition-opacity duration-700 ease-in-out ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
+        >
           <defs>
             <linearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor={strokeColor} stopOpacity="0.85" />
@@ -142,7 +165,7 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
             </linearGradient>
           </defs>
 
-          {/* Clean Solid Vector Line connecting creature target (cx, cy) to card edge anchor */}
+          {/* Solid Vector Line connecting creature target (cx, cy) to card edge anchor */}
           <line
             x1={cx}
             y1={cy}
@@ -161,14 +184,14 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
         </svg>
       )}
 
-      {/* Pop-up Window Card */}
+      {/* Pop-up Window Card with Smooth Fade */}
       <div
         style={{
           left: `${cardX}px`,
           top: `${cardY}px`,
           transform: "translate(-50%, -50%)",
         }}
-        className={`fixed z-50 w-[270px] sm:w-[300px] transition-all duration-500 ease-out pointer-events-auto ${
+        className={`fixed z-50 w-[270px] sm:w-[300px] transition-all duration-700 ease-in-out pointer-events-auto ${
           visible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
@@ -261,7 +284,7 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
 
     return (
       <div className="flex items-start gap-2.5">
-        <div className="p-1.5 rounded-lg bg-pink-500/20 border border-pink-400/50 text-pink-300 shrink-0 mt-0.5 animate-bounce">
+        <div className="p-1.5 rounded-lg bg-pink-500/20 border border-pink-400/50 text-pink-300 shrink-0 mt-0.5">
           <Heart className="w-4 h-4 text-pink-400 fill-pink-400/40" />
         </div>
         <div className="flex-1 pr-3">
@@ -294,11 +317,42 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
             <span className="text-pink-400 font-bold">➔</span>
             <div className="flex items-center gap-1 border border-pink-400/50 px-1 py-0.5 rounded bg-pink-500/20">
               <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40 animate-pulse"
+                className="w-2.5 h-2.5 rounded-full border border-white/40"
                 style={{ backgroundColor: childHex }}
               />
               <span className="text-pink-200 font-bold">{item.matingData.child.name}</span>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (item.type === "feeler" && item.feelerData) {
+    const parentHex = getHexColor(item.feelerData.parent.color);
+
+    return (
+      <div className="flex items-start gap-2.5">
+        <div className="p-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 shrink-0 mt-0.5">
+          <Sparkles className="w-4 h-4 text-cyan-400" />
+        </div>
+        <div className="flex-1 pr-3">
+          <div className="text-[9px] font-bold tracking-widest text-cyan-400 uppercase">
+            {item.subtitle}
+          </div>
+          <h3 className="text-xs font-bold text-white mb-0.5">
+            {item.title}
+          </h3>
+          <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
+            {item.feelerData.parent.name.split(' ')[0]} extended a fast feeler tendril seeking a mate to hybridize!
+          </p>
+
+          <div className="flex items-center gap-1 text-[9px] bg-black/40 p-1.5 rounded border border-cyan-500/30">
+            <span
+              className="w-2.5 h-2.5 rounded-full border border-white/40"
+              style={{ backgroundColor: parentHex }}
+            />
+            <span className="text-white font-bold">{item.feelerData.parent.name}</span>
           </div>
         </div>
       </div>
