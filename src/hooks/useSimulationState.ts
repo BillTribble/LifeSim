@@ -145,7 +145,20 @@ export const DEFAULTS: Record<string, any> = {
 };
 
 export function useSimulationState() {
-    const [snakeSpeed, setSnakeSpeed] = useState(() =>
+  if (typeof window !== "undefined") {
+    const CURRENT_SCHEMA = "2026-07-27-v5";
+    if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
+      localStorage.removeItem("entropyThreshold");
+      localStorage.removeItem("timeScale");
+      localStorage.removeItem("slowMotion");
+      localStorage.removeItem("flowerSize");
+      localStorage.removeItem("leafScale");
+      localStorage.removeItem("appendageSize");
+      localStorage.setItem("lifesim_schema_ver", CURRENT_SCHEMA);
+    }
+  }
+
+  const [snakeSpeed, setSnakeSpeed] = useState(() =>
     parseFloat(
       localStorage.getItem("snakeSpeed") || DEFAULTS.snakeSpeed.toString(),
     ),

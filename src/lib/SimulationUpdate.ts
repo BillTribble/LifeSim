@@ -772,11 +772,12 @@ export function updateSimulation(engine: SimulationEngine) {
           engine.onLog(`Species ${strainName} dropped below 3% and was culled to make space.`);
         }
 
-        const justSuppressed = ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
+        const entropyEnabled = engine.entropyThreshold > 0.001;
+        const justSuppressed = entropyEnabled && ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
         
-        if (ratio > engine.entropyThreshold) {
+        if (entropyEnabled && ratio > engine.entropyThreshold) {
           engine.suppressedStrains.add(strainName);
-        } else if (ratio < 0.5) {
+        } else {
           engine.suppressedStrains.delete(strainName);
         }
 

@@ -67,9 +67,10 @@ export function processAgents(
   // so we don't accidentally eradicate healthy species just because old trails haven't faded yet.
   let projectedSpeciesCount = nonTaperingStrains.size;
 
-  const monopolyThreshold = Math.max(10, totalBiomass * engine.entropyThreshold);
+  const entropyEnabled = engine.entropyThreshold > 0.001;
+  const monopolyThreshold = entropyEnabled ? Math.max(10, totalBiomass * engine.entropyThreshold) : Infinity;
   const monopolyStrains = new Set<string>();
-  if (totalBiomass > 0) {
+  if (entropyEnabled && totalBiomass > 0) {
      engine.biomassMap.forEach((v, k) => {
         if (v > monopolyThreshold) monopolyStrains.add(k);
      });
