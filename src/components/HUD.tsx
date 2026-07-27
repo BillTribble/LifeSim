@@ -57,6 +57,12 @@ export function HUD({
   const [searchQuery, setSearchQuery] = useState("");
   const controlsRef = useRef<HTMLDivElement>(null);
 
+  React.useEffect(() => {
+    if (showHUD) {
+      setIsControlsExpanded(true);
+    }
+  }, [showHUD]);
+
   const hasMatch = (labels: string[]) => !searchQuery || labels.some(l => l.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const handleScroll = () => {
@@ -307,7 +313,13 @@ export function HUD({
               </div>
             </div>
             <button
-              onClick={() => setShowHUD(!showHUD)}
+              onClick={() => {
+                const nextHUD = !showHUD;
+                setShowHUD(nextHUD);
+                if (nextHUD) {
+                  setIsControlsExpanded(true);
+                }
+              }}
               className={`flex items-center gap-2 bg-[#001220]/60 border border-[#D2B48C]/30 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-500 overflow-hidden shrink-0 ${
                 showHUD ? "w-6 h-6 p-0 justify-center hover:bg-white/20" : "px-3 py-1 hover:bg-white/10 pr-3.5"
               }`}

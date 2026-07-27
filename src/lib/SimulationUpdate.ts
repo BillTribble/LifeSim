@@ -535,9 +535,10 @@ export function updateSimulation(engine: SimulationEngine) {
 
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
+  const desiccationFactor = (engine.desiccationSpeed || 1.0) / 10.0;
 
-  if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
-    const batchSize = Math.floor(engine.maxDOMs / 20); // Full sweep every ~20 frames
+  if (effectiveDieback > 0.000001 || desiccationFactor > 0.2 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
+    const batchSize = Math.floor((engine.maxDOMs / 20) * Math.max(1.0, desiccationFactor * 2.0));
     const sweepStart = (engine.frameCount * batchSize) % engine.maxDOMs;
 
     for (let i = 0; i < batchSize; i++) {
@@ -549,23 +550,23 @@ export function updateSimulation(engine: SimulationEngine) {
         const isDyingStrain = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
         let prob = Math.min(
           1.0,
-          Math.pow(age / 500, bias) * Math.max(0.000001, effectiveDieback) * 0.5,
+          Math.pow(age / 300, bias) * Math.max(0.000001, effectiveDieback + desiccationFactor * 0.02) * 0.8,
         );
         
         let activeDieback = effectiveDieback;
         if (isDyingStrain) {
           activeDieback = (engine.cullRate / 100.0) * speedFactor * engine.timeScale;
-          prob = Math.min(1.0, Math.pow(age / 500, bias) * Math.max(0.000001, activeDieback) * 0.5);
+          prob = Math.min(1.0, Math.pow(age / 300, bias) * Math.max(0.000001, activeDieback + desiccationFactor * 0.05) * 0.8);
         }
         
         if (Math.random() < prob) {
-          const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(100, engine.diebackRate * 2 + 1)));
+          const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(200, (engine.diebackRate + engine.desiccationSpeed * 2) * 2 + 1)));
           for (let j = 0; j < chunkSize; j++) {
             const chunkIdx = (idx + j) % engine.maxDOMs;
             const cSeg = engine.segments[chunkIdx];
             if (cSeg && !engine.dyingStems.has(chunkIdx)) {
               const cAge = engine.time - cSeg.timestamp;
-              if (cAge > 60) {
+              if (cAge > 30 || desiccationFactor > 1.0) {
                 engine.markDying(engine.segments, engine.dyingStems, chunkIdx);
               }
             }

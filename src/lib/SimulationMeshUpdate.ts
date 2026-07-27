@@ -242,8 +242,8 @@ export function processDyingSegments(
     const fadeAge = engine.unscaledTime - seg.dyingStart;
     const desiccationSpeed = engine.desiccationSpeed || 1.0;
     const wipeDuration = Math.max(
-      0.2,
-      (isHybrid ? engine.hybridStickiness * 12 : 120) / (desiccationSpeed * 3.0)
+      0.05,
+      (isHybrid ? engine.hybridStickiness * 12 : 60) / (desiccationSpeed * 10.0)
     );
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
@@ -268,34 +268,20 @@ export function processDyingSegments(
         packAAttr.needsUpdate = true;
       }
       
-      if (isHybrid && seg && seg.matrix) {
+      if (seg && seg.matrix) {
         engine.dummy.matrix.copy(seg.matrix);
         engine.dummy.matrix.decompose(
           engine.dummy.position,
           engine.dummy.quaternion,
           engine.dummy.scale,
         );
-        engine.dummy.scale.multiplyScalar(Math.max(1.0 - shrink, 0.001));
+        let baseScale = 1.0;
+        if (isFlower) baseScale = engine.flowerSize;
+
+        engine.dummy.scale.multiplyScalar(Math.max((1.0 - shrink) * baseScale, 0.0));
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(idx, engine.dummy.matrix);
-      } else if (!packAAttr) {
-        if (seg && seg.matrix) {
-          engine.dummy.matrix.copy(seg.matrix);
-          engine.dummy.matrix.decompose(
-            engine.dummy.position,
-            engine.dummy.quaternion,
-            engine.dummy.scale,
-          );
-
-          let baseScale = 1.0;
-          if (isFlower) baseScale = engine.flowerSize;
-
-          engine.dummy.scale.multiplyScalar(
-            Math.max((1.0 - shrink) * baseScale, 0.001),
-          );
-          engine.dummy.updateMatrix();
-          mesh.setMatrixAt(idx, engine.dummy.matrix);
-        } else {
+      } else {
           mesh.getMatrixAt(idx, engine.dummy.matrix);
           engine.dummy.matrix.decompose(
             engine.dummy.position,
@@ -306,7 +292,6 @@ export function processDyingSegments(
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(idx, engine.dummy.matrix);
         }
-      }
       changed = true;
     }
   }
