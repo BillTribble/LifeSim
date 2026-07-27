@@ -95,6 +95,8 @@ export interface Agent {
   realGenome?: Genome;
   growthBoost?: number;
   id?: number;
+  mateCount?: number;
+  hasBred?: boolean;
 }
 
 export interface Segment {

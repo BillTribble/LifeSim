@@ -154,6 +154,11 @@ export default function App() {
     setUptime(0);
   };
 
+  const handleKioskTrigger = () => {
+    setPopupQueue([]);
+    triggerRandomize(setters, state, setRandomizeKey, handleRestart);
+  };
+
   return (
     <div className="relative w-screen h-screen bg-[#001220] text-[#D2B48C] font-sans overflow-hidden select-none">
       <div
@@ -250,7 +255,7 @@ export default function App() {
         glowProbability={state.glowProbability}
         stemCurviness={state.stemCurviness}
         kioskMode={state.kioskMode}
-        onKioskTrigger={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+        onKioskTrigger={handleKioskTrigger}
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
         onFeelerEvent={handleFeelerEvent}

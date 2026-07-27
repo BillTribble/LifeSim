@@ -80,6 +80,12 @@ export function processAgents(
     const agent = activeAgents[i];
     
     const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
+    if (isDying && !agent.tapering) {
+      agent.tapering = true;
+      agent.recovering = false;
+      agent.targetThickness = undefined;
+      engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
+    }
     agent.suppressionFade = agent.suppressionFade || 0;
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     if (isSuppressed) {
@@ -607,8 +613,8 @@ export function processAgents(
       }
 
       const isMonopoly = monopolyStrains.has(evalGenome.name);
-      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has bred
-      if (!agent.isFeeler && !agent.hasBred && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
+      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has mated 3 times
+      if (!agent.isFeeler && (agent.mateCount || 0) < 3 && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
         const feelerChance = Math.min(0.85, (agent.age - 15) * 0.04 * engine.timeScale);
         if (Math.random() < feelerChance) {
           const feelerGenome = { ...agent.genome };
@@ -632,11 +638,11 @@ export function processAgents(
             realGenome: agent.genome,
           });
           agent.cooldown = 25;
-          engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Age ${agent.age}).`);
+          engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Mated ${agent.mateCount || 0}/3).`);
         }
       }
 
-      const isFertile = !agent.tapering && !agent.hasBred && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
+      const isFertile = !agent.tapering && (agent.mateCount || 0) < 3 && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
       const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
       if (canBreed) {
