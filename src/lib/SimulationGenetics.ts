@@ -222,12 +222,10 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
-             ${isLeaf ? '' : `
              if (vGrowth < 1.0) {
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
                  if (ditherIn > vGrowth) discard;
              }
-             `}
 
              if (vDecay > 0.0) {
                  float fresnel = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);

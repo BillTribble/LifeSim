@@ -135,14 +135,14 @@ export class SimulationEngine {
   maxDOMs: number = 80000;
   lastMaxDOMs: number = 80000;
   minAgents: number = 2;
-  boundarySize: number = 150;
+  boundarySize: number = 84;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
   maxSpecies: number = 6;
   ecoFade: number = 0.5;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.2;
   branchBigger: number = 0.5;
-  branchMutationRate: number = 0.001;
+  branchMutationRate: number = 0.012;
   enableGlow: boolean = false;
   glowSize: number = 0.0;
   fogVisibility: number = 800;
