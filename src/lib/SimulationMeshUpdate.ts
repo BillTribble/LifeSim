@@ -79,11 +79,11 @@ export function updateMeshSegments(
       targetMesh = config.mesh;
       targetIndex = config.count % appendageLimit;
 
-      const baseScale = Math.max(1.5, thickness) * (engine.flowerSize || 1.0);
+      const baseScale = 2.0 * (engine.flowerSize || 1.0);
       if (genome.appendage === "flowers") {
-        scaleX = baseScale * 1.5 * engine.flowerSize;
-        scaleY = baseScale * 1.5 * engine.flowerSize;
-        scaleZ = baseScale * 1.8 * engine.flowerSize;
+        scaleX = baseScale * 1.5;
+        scaleY = baseScale * 1.5;
+        scaleZ = baseScale * 1.8;
       } else if (genome.appendage === "spores") {
         scaleX = baseScale * 1.2;
         scaleY = baseScale * 1.2;
