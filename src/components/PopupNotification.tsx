@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Sparkles, Dna, Heart, X } from "lucide-react";
+import { Dna, Heart, X } from "lucide-react";
 import { Genome } from "../lib/SimulationTypes";
 
 export interface PopupItem {
   id: string;
-  type: "welcome" | "organism1" | "organism2" | "mating";
+  type: "organism1" | "organism2" | "mating";
   title: string;
   subtitle: string;
   genome?: Genome;
@@ -14,8 +14,6 @@ export interface PopupItem {
     child: Genome;
   };
   duration?: number;
-  angleDeg?: number;
-  distancePx?: number;
 }
 
 export interface TrackedPositions {
@@ -37,18 +35,13 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
     <>
       {queue.map((item) => {
         let targetPos: { x: number; y: number } | null = null;
-        let angleDeg = item.angleDeg ?? -90;
-        const distancePx = item.distancePx ?? 200;
 
         if (item.type === "organism1") {
           targetPos = trackedPositions?.org1 || null;
-          angleDeg = item.angleDeg ?? -135;
         } else if (item.type === "organism2") {
           targetPos = trackedPositions?.org2 || null;
-          angleDeg = item.angleDeg ?? -45;
         } else if (item.type === "mating") {
           targetPos = trackedPositions?.mating || null;
-          angleDeg = item.angleDeg ?? -90;
         }
 
         return (
@@ -56,8 +49,6 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
             key={item.id}
             item={item}
             targetPos={targetPos}
-            angleDeg={angleDeg}
-            distancePx={distancePx}
             onDismiss={onDismiss}
           />
         );
@@ -69,36 +60,22 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
 interface PopupCardItemProps {
   item: PopupItem;
   targetPos: { x: number; y: number } | null;
-  angleDeg: number;
-  distancePx: number;
   onDismiss: (id: string) => void;
 }
 
-function PopupCardItem({ item, targetPos, angleDeg, distancePx, onDismiss }: PopupCardItemProps) {
+function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
   const [visible, setVisible] = useState(false);
-  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     setVisible(true);
-    setProgress(100);
-
     const duration = item.duration || 8000;
-    const intervalTime = 50;
-    const step = (intervalTime / duration) * 100;
-
-    const timer = setInterval(() => {
-      setProgress((prev) => Math.max(0, prev - step));
-    }, intervalTime);
 
     const dismissTimer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(item.id), 450);
     }, duration);
 
-    return () => {
-      clearInterval(timer);
-      clearTimeout(dismissTimer);
-    };
+    return () => clearTimeout(dismissTimer);
   }, [item.id]);
 
   const handleClose = () => {
@@ -119,51 +96,61 @@ function PopupCardItem({ item, targetPos, angleDeg, distancePx, onDismiss }: Pop
       ? getHexColor(item.genome.color)
       : "#a855f7";
 
-  // Position calculation: creature target point (cx, cy)
-  const cx = targetPos ? targetPos.x : window.innerWidth / 2;
-  const cy = targetPos ? targetPos.y : window.innerHeight / 2;
+  // Position calculation: Organism 1 on bottom-left, Organism 2 on bottom-right, Mating on bottom-center
+  let cardX = window.innerWidth / 2;
+  let cardY = window.innerHeight - 110;
+  let anchorPointX = cardX;
+  let anchorPointY = cardY - 45;
 
-  // Offset 200px away on desktop
-  const rad = (angleDeg * Math.PI) / 180;
-  const preferredX = cx + distancePx * Math.cos(rad);
-  const preferredY = cy + distancePx * Math.sin(rad);
+  if (item.type === "organism1") {
+    cardX = Math.min(185, window.innerWidth * 0.25);
+    cardY = window.innerHeight - 110;
+    anchorPointX = cardX + 110;
+    anchorPointY = cardY - 30;
+  } else if (item.type === "organism2") {
+    cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
+    cardY = window.innerHeight - 110;
+    anchorPointX = cardX - 110;
+    anchorPointY = cardY - 30;
+  } else if (item.type === "mating") {
+    cardX = window.innerWidth / 2;
+    cardY = window.innerHeight - 110;
+    anchorPointX = cardX;
+    anchorPointY = cardY - 45;
+  }
 
-  // Clamp card center inside screen bounds with padding
-  const cardWidth = 300;
-  const cardHeight = 170;
-  const cardX = Math.max(cardWidth / 2 + 12, Math.min(window.innerWidth - cardWidth / 2 - 12, preferredX));
-  const cardY = Math.max(cardHeight / 2 + 50, Math.min(window.innerHeight - cardHeight / 2 - 16, preferredY));
+  // 3D creature target point on screen (cx, cy)
+  const cx = targetPos ? targetPos.x : cardX;
+  const cy = targetPos ? targetPos.y : cardY - 150;
 
   return (
     <>
-      {/* Real-time Vector Line Indicator */}
+      {/* Clean Vector Line Indicator */}
       {targetPos && (
         <svg className="fixed inset-0 w-full h-full pointer-events-none z-40 overflow-visible">
           <defs>
             <linearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={strokeColor} stopOpacity="0.3" />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.85" />
+              <stop offset="100%" stopColor={strokeColor} stopOpacity="0.4" />
             </linearGradient>
           </defs>
 
-          {/* Connecting Vector Line from Creature Target (cx, cy) to Card Center (cardX, cardY) */}
+          {/* Clean Solid Vector Line connecting creature target (cx, cy) to card edge anchor */}
           <line
             x1={cx}
             y1={cy}
-            x2={cardX}
-            y2={cardY}
+            x2={anchorPointX}
+            y2={anchorPointY}
             stroke={`url(#grad-${item.id})`}
-            strokeWidth="2"
-            strokeDasharray="6 3"
+            strokeWidth="1.5"
           />
 
-          {/* Pulsing Target Point on 3D Creature */}
-          <circle cx={cx} cy={cy} r="12" fill="none" stroke={strokeColor} strokeWidth="1.5" className="animate-ping opacity-75" />
-          <circle cx={cx} cy={cy} r="6" fill={strokeColor} fillOpacity="0.3" stroke={strokeColor} strokeWidth="1.5" />
-          <circle cx={cx} cy={cy} r="2.5" fill="#ffffff" />
+          {/* Clean Target Dot on Creature */}
+          <circle cx={cx} cy={cy} r="8" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity="0.6" />
+          <circle cx={cx} cy={cy} r="4" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
 
-          {/* Anchor Dot at Card Center */}
-          <circle cx={cardX} cy={cardY} r="3.5" fill={strokeColor} />
+          {/* Anchor Dot at Card */}
+          <circle cx={anchorPointX} cy={anchorPointY} r="3" fill={strokeColor} />
         </svg>
       )}
 
@@ -174,25 +161,14 @@ function PopupCardItem({ item, targetPos, angleDeg, distancePx, onDismiss }: Pop
           top: `${cardY}px`,
           transform: "translate(-50%, -50%)",
         }}
-        className={`fixed z-50 w-[280px] sm:w-[310px] transition-all duration-500 ease-out pointer-events-auto ${
+        className={`fixed z-50 w-[270px] sm:w-[300px] transition-all duration-500 ease-out pointer-events-auto ${
           visible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
         <div
-          className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3.5 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
+          className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
           style={{ borderColor: `${strokeColor}70` }}
         >
-          {/* 8-second Progress Bar */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-black/50">
-            <div
-              className="h-full transition-all duration-75 ease-linear"
-              style={{
-                width: `${progress}%`,
-                backgroundColor: strokeColor,
-              }}
-            />
-          </div>
-
           {/* Close Button */}
           <button
             onClick={handleClose}
@@ -211,27 +187,6 @@ function PopupCardItem({ item, targetPos, angleDeg, distancePx, onDismiss }: Pop
 }
 
 function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
-  if (item.type === "welcome") {
-    return (
-      <div className="flex items-start gap-2.5">
-        <div className="p-1.5 rounded-lg bg-purple-500/20 border border-purple-400/40 text-purple-300 shrink-0 mt-0.5">
-          <Sparkles className="w-4 h-4 animate-pulse text-purple-300" />
-        </div>
-        <div className="flex-1 pr-3">
-          <div className="text-[9px] font-bold tracking-widest text-purple-400 uppercase">
-            {item.subtitle}
-          </div>
-          <h3 className="text-xs font-bold text-white mb-0.5">
-            {item.title}
-          </h3>
-          <p className="text-[10px] text-[#D2B48C]/80 leading-snug">
-            Welcome to LifeSim! Founder organisms established. Real-time vector indicators link phenotypes to creatures 200px away.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if ((item.type === "organism1" || item.type === "organism2") && item.genome) {
     const hex = getHexColor(item.genome.color);
     return (
