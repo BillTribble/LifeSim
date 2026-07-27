@@ -597,7 +597,7 @@ export function processAgents(
         let branchGenome = agent.genome;
         if (
           engine.branchMutationRate > 0 &&
-          Math.random() < engine.branchMutationRate * 0.02 &&
+          Math.random() < engine.branchMutationRate * 0.005 &&
           projectedSpeciesCount < engine.maxSpecies
         ) {
           branchGenome = mutateBranchGenome(
@@ -612,6 +612,7 @@ export function processAgents(
           projectedSpeciesCount++;
           if (engine.branchMutationCount < 3) {
             engine.branchMutationCount++;
+            engine.lastBranchMutationWorldPos = agent.position.clone();
             if (engine.onBranchMutationEvent) {
               engine.onBranchMutationEvent({
                 parent: agent.genome,

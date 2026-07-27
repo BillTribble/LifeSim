@@ -55,6 +55,8 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
           targetPos = trackedPositions?.mating || null;
         } else if (item.type === "feeler") {
           targetPos = trackedPositions?.org1 || trackedPositions?.org2 || null;
+        } else if (item.type === "branchMutation") {
+          targetPos = (trackedPositions as any)?.branchMutation || null;
         }
 
         const isLeft = item.type === "organism1";
@@ -92,7 +94,7 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
     // Trigger entry transition on mount
     const entryTimer = setTimeout(() => setVisible(true), 20);
 
-    const duration = item.duration || 4000;
+    const duration = Math.max(5000, item.duration || 5000);
 
     // Smooth exit transition before dismiss
     const dismissTimer = setTimeout(() => {
