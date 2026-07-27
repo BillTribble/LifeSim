@@ -240,11 +240,9 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    const desiccationSpeed = engine.desiccationSpeed || 1.0;
-    const wipeDuration = Math.max(
-      0.8,
-      (isHybrid ? engine.hybridStickiness * 4 : 2.5) / Math.max(0.1, desiccationSpeed * 0.1)
-    );
+    // 150 unscaled frame ticks = 2.5 seconds of real-time Gaussian dither dissolve
+    // completely independent of slow-motion timeScale
+    const wipeDuration = 150.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

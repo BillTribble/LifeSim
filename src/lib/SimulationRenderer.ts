@@ -13,8 +13,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const aspect = width / height;
     const d = 180;
     engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-    engine.camera.position.set(-138.72339373186549, 66.42053119728962, -310.39351324888355);
-    engine.camera.zoom = 1.916305230244903;
+    engine.camera.position.set(85.63730363681164, 181.12416818756873, -282.595626158962);
+    engine.camera.zoom = 1.7917714317777194;
     engine.camera.updateProjectionMatrix();
     engine.camera.lookAt(engine.scene.position);
     
