@@ -39,6 +39,9 @@ interface PopupNotificationProps {
 export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupNotificationProps) {
   if (!queue || queue.length === 0) return null;
 
+  const leftItems = queue.filter(item => item.type === "organism1");
+  const rightItems = queue.filter(item => item.type !== "organism1");
+
   return (
     <>
       {queue.map((item) => {
@@ -54,12 +57,19 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
           targetPos = trackedPositions?.org1 || trackedPositions?.org2 || null;
         }
 
+        const isLeft = item.type === "organism1";
+        const sideList = isLeft ? leftItems : rightItems;
+        const indexInSideList = sideList.indexOf(item);
+        const stackIndex = sideList.length - 1 - indexInSideList;
+
         return (
           <PopupCardItem
             key={item.id}
             item={item}
             targetPos={targetPos}
             onDismiss={onDismiss}
+            stackIndex={stackIndex}
+            side={isLeft ? "left" : "right"}
           />
         );
       })}
@@ -71,9 +81,11 @@ interface PopupCardItemProps {
   item: PopupItem;
   targetPos: { x: number; y: number } | null;
   onDismiss: (id: string) => void;
+  stackIndex: number;
+  side: "left" | "right";
 }
 
-function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
+function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCardItemProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -127,46 +139,35 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
   const cx = isValidTarget ? targetPos.x : defaultCx;
   const cy = isValidTarget ? targetPos.y : window.innerHeight / 2;
 
-  // Uncrossed card positioning: place card on screen left if creature is on left half, screen right if creature is on right half
-  const isLeftHalf = cx < window.innerWidth / 2;
-  let cardX = window.innerWidth / 2;
-  let cardY = window.innerHeight - 110;
-  let anchorPointX = cardX;
-  let anchorPointY = cardY - 45;
+  // Compute cascading stack positioning and scaling
+  const baseCardY = window.innerHeight - 110;
+  const verticalShift = stackIndex <= 1 ? stackIndex * 52 : 52 + (stackIndex - 1) * 46;
+  const cardY = baseCardY - verticalShift;
+  const scale = Math.max(0.75, 1 - stackIndex * 0.05);
+  const stackOpacity = Math.max(0.35, 1 - stackIndex * 0.15);
+  const zIndex = Math.max(10, 50 - stackIndex * 10);
 
-  if (item.type === "organism1" || item.type === "organism2") {
-    if (isLeftHalf) {
-      cardX = Math.min(185, window.innerWidth * 0.25);
-      cardY = window.innerHeight - 110;
-      anchorPointX = cardX + 110;
-      anchorPointY = cardY - 30;
-    } else {
-      cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
-      cardY = window.innerHeight - 110;
-      anchorPointX = cardX - 110;
-      anchorPointY = cardY - 30;
-    }
-  } else {
-    // After introduction, show all event pop-ups in bottom right of screen
-    cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
-    cardY = window.innerHeight - 110;
-    anchorPointX = cardX - 110;
-    anchorPointY = cardY - 30;
-  }
+  const cardX = side === "left"
+    ? Math.min(185, window.innerWidth * 0.25)
+    : Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
+
+  const anchorPointX = side === "left" ? cardX + 110 : cardX - 110;
+  const anchorPointY = cardY - 30;
 
   return (
     <>
       {/* Clean Vector Line Indicator with Smooth Fade */}
       {isValidTarget && (
         <svg
-          className={`fixed inset-0 w-full h-full pointer-events-none z-40 overflow-visible transition-opacity duration-700 ease-in-out ${
+          style={{ zIndex: zIndex - 1 }}
+          className={`fixed inset-0 w-full h-full pointer-events-none overflow-visible transition-all duration-500 ease-in-out ${
             visible ? "opacity-100" : "opacity-0"
           }`}
         >
           <defs>
             <linearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.85" />
-              <stop offset="100%" stopColor={strokeColor} stopOpacity="0.4" />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity={stackOpacity * 0.85} />
+              <stop offset="100%" stopColor={strokeColor} stopOpacity={stackOpacity * 0.35} />
             </linearGradient>
           </defs>
 
@@ -181,7 +182,7 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
           />
 
           {/* Clean Target Dot on Creature */}
-          <circle cx={cx} cy={cy} r="8" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity="0.6" />
+          <circle cx={cx} cy={cy} r="8" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity={stackOpacity * 0.6} />
           <circle cx={cx} cy={cy} r="4" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
 
           {/* Anchor Dot at Card */}
@@ -189,16 +190,17 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
         </svg>
       )}
 
-      {/* Pop-up Window Card with Smooth Fade */}
+      {/* Pop-up Window Card with Cascading Stack Shift and Scale */}
       <div
         style={{
           left: `${cardX}px`,
           top: `${cardY}px`,
-          transform: "translate(-50%, -50%)",
+          zIndex,
+          transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
+          opacity: visible ? stackOpacity : 0,
+          transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
         }}
-        className={`fixed z-50 w-[270px] sm:w-[300px] transition-all duration-700 ease-in-out pointer-events-auto ${
-          visible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-        }`}
+        className="fixed w-[270px] sm:w-[300px] pointer-events-auto"
       >
         <div
           className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
@@ -207,7 +209,7 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
           {/* Close Button */}
           <button
             onClick={handleClose}
-            className="absolute top-2 right-2 p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="absolute top-2 right-2 p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors z-10"
             title="Dismiss notification"
           >
             <X className="w-3.5 h-3.5" />
