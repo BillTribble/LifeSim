@@ -864,14 +864,24 @@ export function processAgents(
                  cooldown: engine.hybridCooldown,
                });
     
-               // Post-Breeding Transition: Once parents breed, mark them as bred so they taper out and die neatly
-               agent.hasBred = true;
-               agent.tapering = true;
-               nearestPartner.hasBred = true;
-               nearestPartner.tapering = true;
+               // Organisms mate 3 times before individual tapering death
+               agent.mateCount = (agent.mateCount || 0) + 1;
+               nearestPartner.mateCount = (nearestPartner.mateCount || 0) + 1;
+
+               if (agent.mateCount >= 3) {
+                 agent.hasBred = true;
+                 agent.tapering = true;
+                 agent.dyingStart = engine.unscaledTime;
+               }
+
+               if (nearestPartner.mateCount >= 3) {
+                 nearestPartner.hasBred = true;
+                 nearestPartner.tapering = true;
+                 nearestPartner.dyingStart = engine.unscaledTime;
+               }
 
                engine.spawnHybridArtifact(midPoint, childGenome.color);
-               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned from successful breeding.`);
+               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned (Parent Matings: ${agent.mateCount}/3 & ${nearestPartner.mateCount}/3).`);
 
                if (engine.matingCount < 3) {
                  engine.matingCount++;
@@ -892,18 +902,6 @@ export function processAgents(
                bredThisFrame.add(nearestPartner);
                
                projectedSpeciesCount++;
-               
-               // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
-               if (engine.postMatingDieoff !== false) {
-                 agent.tapering = true;
-                 agent.forceTapering = true;
-                 nearestPartner.tapering = true;
-                 nearestPartner.forceTapering = true;
-
-                 if (!engine.dyingStrains) engine.dyingStrains = new Set();
-                 engine.dyingStrains.add(agent.genome.name);
-                 engine.dyingStrains.add(nearestPartner.genome.name);
-               }
 
                if (isMonopoly) {
                  agent.tapering = true;
