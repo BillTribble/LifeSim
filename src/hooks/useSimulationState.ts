@@ -126,7 +126,7 @@ export const DEFAULTS: Record<string, any> = {
   "appendageSize": 0.25,
   "hybridDecay": 4.185099627445749,
   "deathRate": 3.8934543793261156,
-  "slowMotion": 1.8,
+  "slowMotion": 0.6,
   "rotationVelocity": 0.1,
   "swarmCohesion": 0.01674453139194959,
   "detectionRange": 80.62478258463184,
@@ -175,11 +175,14 @@ export function useSimulationState() {
       localStorage.getItem("gingerSpeed") || DEFAULTS.gingerSpeed.toString(),
     ),
   );
-  const [timeScale, setTimeScale] = useState(() =>
-    parseFloat(
-      localStorage.getItem("timeScale") || localStorage.getItem("slowMotion") || DEFAULTS.timeScale.toString(),
-    ),
-  );
+  const [timeScale, setTimeScale] = useState(() => {
+    const savedTs = localStorage.getItem("timeScale") || localStorage.getItem("slowMotion");
+    if (savedTs && savedTs !== "1.8") {
+      const val = parseFloat(savedTs);
+      if (!isNaN(val)) return val;
+    }
+    return DEFAULTS.timeScale;
+  });
   const [theme, setTheme] = useState(0); // Always start in normal theme
   const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
     parseFloat(
