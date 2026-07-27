@@ -197,7 +197,7 @@ export function HUD({
                 <Database
                   className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
                 />
-                <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
+                <span>{copied ? "SETTINGS_COPIED" : "COPY_SETTINGS"}</span>
               </div>
 
               <div

@@ -295,7 +295,7 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
             {item.title}
           </h3>
           <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
-            Organisms touched and cross-bred, producing a new hybrid species!
+            Organism contact established. New hybrid species formed.
           </p>
 
           <div className="flex flex-wrap items-center gap-1.5 text-[9px] bg-black/40 p-1.5 rounded border border-pink-500/30">
@@ -344,7 +344,7 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
             {item.title}
           </h3>
           <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
-            {item.feelerData.parent.name.split(' ')[0]} extended a fast feeler tendril seeking a mate to hybridize!
+            {item.feelerData.parent.name.split(' ')[0]} extended a sensory feeler to initiate hybridization.
           </p>
 
           <div className="flex items-center gap-1 text-[9px] bg-black/40 p-1.5 rounded border border-cyan-500/30">

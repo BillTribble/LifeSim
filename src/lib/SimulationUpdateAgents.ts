@@ -44,7 +44,7 @@ export function processAgents(
     if (oldestGenomeName) {
       if (!engine.dyingStrains) engine.dyingStrains = new Set();
       if (!engine.dyingStrains.has(oldestGenomeName)) {
-        engine.onLog(`Maximum species exceeded! Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
+        engine.onLog(`Maximum species capacity reached. Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
       }
       engine.dyingStrains.add(oldestGenomeName);
       for (const a of activeAgents) {
@@ -727,9 +727,9 @@ export function processAgents(
                     });
                    agent.cooldown = 150; if (engine.feelerCount < 3) { engine.feelerCount++; if (engine.onFeelerEvent) engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome, count: engine.feelerCount }); } // Prevent spamming feelers too fast
                    if (isDesperate && !isSuppressed) {
-                       engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} desperately hunting for a mate!`);
+                       engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} seeking hybridization partner.`);
                    } else {
-                       engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} sent out a feeler!`);
+                       engine.onLog(`Suppressed ${agent.genome.name.split(' ')[0]} extended sensory feeler.`);
                     }
                }
            
@@ -787,11 +787,11 @@ export function processAgents(
                         }
                         
                         if (isFeelerSacrifice) {
-                            engine.onLog(`Sacrificed a feeler to make room for hybrid!`);
+                            engine.onLog(`Feeler terminated for hybrid creation.`);
                         } else {
                             if (!engine.dyingStrains) engine.dyingStrains = new Set();
                             if (!engine.dyingStrains.has(victimSpeciesName)) {
-                                engine.onLog(`Hybridization occurred! Gradual die-off of oldest species: ${victimSpeciesName.split(' ')[0]} to make room!`);
+                                engine.onLog(`Hybridization recorded. Culling oldest species: ${victimSpeciesName.split(' ')[0]}.`);
                             }
                             engine.dyingStrains.add(victimSpeciesName);
                         }

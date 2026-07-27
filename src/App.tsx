@@ -11,7 +11,7 @@ export default function App() {
   const { state, setters } = useSimulationState();
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
 
-  const getScaledDuration = () => Math.round(8000 * (1.8 / Math.max(0.1, state.timeScale)));
+  const getScaledDuration = () => Math.round(8000 * (0.4 / Math.max(0.1, state.timeScale)));
 
   const handleInitOrganisms = ({ alpha, beta }: { alpha: any; beta: any }) => {
     const dur = getScaledDuration();
@@ -40,7 +40,7 @@ export default function App() {
     const matingItem: PopupItem = {
       id: `mating-${Date.now()}`,
       type: "mating",
-      title: `Mating Event Detected${countText}!`,
+      title: `Mating Event Detected${countText}`,
       subtitle: "Cross-Species Hybridization",
       matingData: event,
       duration: dur,
@@ -54,7 +54,7 @@ export default function App() {
     const feelerItem: PopupItem = {
       id: `feeler-${Date.now()}`,
       type: "feeler",
-      title: `Feeler Extended${countText}!`,
+      title: `Feeler Extended${countText}`,
       subtitle: "Hybridization Tendril",
       feelerData: event,
       duration: dur,
