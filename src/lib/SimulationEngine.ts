@@ -361,6 +361,7 @@ export class SimulationEngine {
   }
   setFlowerSize(val: number) {
     this.flowerSize = val;
+    this.leafScale = val;
   }
   setEntropyThreshold(val: number) {
     this.entropyThreshold = val;

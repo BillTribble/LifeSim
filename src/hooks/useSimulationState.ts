@@ -810,7 +810,10 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setProximity,
       setDesperation,
       setDespairAge,
-      setFlowerSize,
+      setFlowerSize: (v: number) => {
+        setFlowerSize(v);
+        setLeafScale(v);
+      },
       setEntropyThreshold,
       setTideSpeed,
       setTideColor,

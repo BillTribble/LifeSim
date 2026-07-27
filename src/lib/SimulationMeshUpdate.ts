@@ -81,54 +81,52 @@ export function updateMeshSegments(
 
       const baseScale = 2.0 * (engine.flowerSize || 1.0);
       if (genome.appendage === "flowers") {
-        scaleX = baseScale * 1.5;
-        scaleY = baseScale * 1.5;
-        scaleZ = baseScale * 1.8;
+        scaleX = baseScale * 1.8;
+        scaleY = baseScale * 1.8;
+        scaleZ = baseScale * 2.2;
       } else if (genome.appendage === "spores") {
-        scaleX = baseScale * 1.2;
-        scaleY = baseScale * 1.2;
-        scaleZ = baseScale * 1.2;
+        scaleX = baseScale * 2.0;
+        scaleY = baseScale * 2.0;
+        scaleZ = baseScale * 2.0;
       } else if (genome.appendage === "crystals") {
-        scaleX = baseScale * 1.2;
-        scaleY = baseScale * 1.2;
-        scaleZ = baseScale * 1.5;
+        scaleX = baseScale * 1.8;
+        scaleY = baseScale * 1.8;
+        scaleZ = baseScale * 2.2;
       } else if (genome.appendage === "needles") {
-        scaleX = baseScale * 0.8;
-        scaleY = baseScale * 0.8;
-        scaleZ = baseScale * 2.5;
+        scaleX = baseScale * 2.2;
+        scaleY = baseScale * 2.2;
+        scaleZ = baseScale * 2.8;
       } else if (
         genome.appendage === "lillyPads" ||
         genome.appendage === "scales"
       ) {
-        scaleX = baseScale * 1.8;
-        scaleY = baseScale * 0.2;
-        scaleZ = baseScale * 1.8;
-      } else if (genome.appendage === "leaves") {
-        scaleX = baseScale * 1.8;
-        scaleY = baseScale * 1.8;
-        scaleZ = baseScale * 2.0;
-        engine.dummy.rotateX(-Math.PI / 2);
-        engine.dummy.rotateY(Math.PI);
-      } else if (genome.appendage === "petals") {
-        scaleX = baseScale * 1.8;
-        scaleY = baseScale * 0.2;
-        scaleZ = baseScale * 1.8;
-      } else if (genome.appendage === "thorns") {
-        scaleX = baseScale * 1.6;
-        scaleY = baseScale * 1.6;
+        scaleX = baseScale * 2.2;
+        scaleY = baseScale * 0.4;
         scaleZ = baseScale * 2.2;
+      } else if (genome.appendage === "leaves") {
+        scaleX = baseScale * 2.0;
+        scaleY = baseScale * 2.0;
+        scaleZ = baseScale * 2.2;
+      } else if (genome.appendage === "petals") {
+        scaleX = baseScale * 2.0;
+        scaleY = baseScale * 0.4;
+        scaleZ = baseScale * 2.0;
+      } else if (genome.appendage === "thorns") {
+        scaleX = baseScale * 2.2;
+        scaleY = baseScale * 2.2;
+        scaleZ = baseScale * 2.8;
       } else if (
         genome.appendage === "hair" ||
         genome.appendage === "curlyHair" ||
         genome.appendage === "spirals"
       ) {
-        scaleX = baseScale * 1.4;
-        scaleY = baseScale * 1.4;
-        scaleZ = baseScale * 1.4;
+        scaleX = baseScale * 2.2;
+        scaleY = baseScale * 2.2;
+        scaleZ = baseScale * 2.2;
       } else {
-        scaleX = baseScale * 1.5;
-        scaleY = baseScale * 1.5;
-        scaleZ = baseScale * 1.5;
+        scaleX = baseScale * 2.0;
+        scaleY = baseScale * 2.0;
+        scaleZ = baseScale * 2.0;
       }
 
       if (genome.multicolorAppendage) {
