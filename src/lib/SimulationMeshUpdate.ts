@@ -274,8 +274,8 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 300 unscaled frame ticks = 5.0 seconds of real-time fade OUT
-    const wipeDuration = 300.0;
+    // 180 unscaled frame ticks = 3.0 seconds of real-time fade OUT
+    const wipeDuration = 180.0;
     if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

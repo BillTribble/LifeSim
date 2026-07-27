@@ -896,8 +896,8 @@ export function processAgents(
 
 
       // 4-STAGE LIFESPAN MODEL:
-      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (300 ticks ~ 5s), it starts fading!
-      const maxGrowthAge = 300 * Math.max(0.5, engine.timeScale);
+      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (180 ticks ~ 3s), it starts fading!
+      const maxGrowthAge = 180 * Math.max(0.5, engine.timeScale);
       if (!agent.tapering && (agent.hasBred || agent.age > maxGrowthAge)) {
         agent.tapering = true;
         agent.fadeAge = 0;
@@ -905,18 +905,18 @@ export function processAgents(
         engine.dyingStrains.add(agent.genome.name);
       }
 
-      // Stage 3 & 4: 5-Second Transparency Fade -> Retain 100% shape/size, fade transparently, then vanish
+      // Stage 3 & 4: 3-Second Transparency Fade -> Retain 100% shape/size, fade transparently, then vanish
       if (agent.tapering) {
         agent.fadeAge = (agent.fadeAge || 0) + 1;
-        // 300 ticks = 5.0 seconds of real-time fade
-        if (agent.fadeAge >= 300) {
+        // 180 ticks = 3.0 seconds of real-time fade
+        if (agent.fadeAge >= 180) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after 5.0s fade.`
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after 3.0s fade.`
           );
         }
       } 
