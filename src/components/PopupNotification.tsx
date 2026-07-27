@@ -92,7 +92,7 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
     // Trigger entry transition on mount
     const entryTimer = setTimeout(() => setVisible(true), 20);
 
-    const duration = item.duration || 8000;
+    const duration = item.duration || 4000;
 
     // Smooth exit transition before dismiss
     const dismissTimer = setTimeout(() => {
@@ -141,7 +141,7 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
 
   // Compute cascading stack positioning and scaling
   const baseCardY = window.innerHeight - 110;
-  const verticalShift = stackIndex <= 1 ? stackIndex * 52 : 52 + (stackIndex - 1) * 46;
+  const verticalShift = stackIndex * 75;
   const cardY = baseCardY - verticalShift;
   const scale = Math.max(0.75, 1 - stackIndex * 0.05);
   const stackOpacity = Math.max(0.35, 1 - stackIndex * 0.15);

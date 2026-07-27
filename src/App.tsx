@@ -11,7 +11,7 @@ export default function App() {
   const { state, setters } = useSimulationState();
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
 
-  const getScaledDuration = () => Math.round(8000 * (0.4 / Math.max(0.1, state.timeScale)));
+  const getScaledDuration = () => Math.round(4000 * (0.4 / Math.max(0.1, state.timeScale)));
 
   const handleInitOrganisms = ({ alpha, beta }: { alpha: any; beta: any }) => {
     const dur = getScaledDuration();
