@@ -349,7 +349,8 @@ export function updateSimulation(engine: SimulationEngine) {
                   ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
                   : engine.flowerSize;
 
-          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : new THREE.Vector3(1, 1, 1);
+          const defaultStemScale = seg.thickness ? new THREE.Vector3(seg.thickness, seg.thickness, 1.0) : new THREE.Vector3(3.5, 3.5, 1.0);
+          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : (mesh === engine.cylinderMesh ? defaultStemScale : new THREE.Vector3(1, 1, 1));
           engine.dummy.scale.copy(baseScaleVec).multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
