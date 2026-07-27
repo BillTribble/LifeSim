@@ -46,7 +46,8 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
     if (!isDragging.current) return;
     const deltaY = startY.current - e.clientY;
     const range = max - min;
-    const deltaVal = (deltaY / 100) * range;
+    const precisionMultiplier = e.shiftKey ? 0.1 : 1.0;
+    const deltaVal = (deltaY / 100) * range * precisionMultiplier;
     let newVal = startVal.current + deltaVal;
     
     newVal = Math.round(newVal / step) * step;
