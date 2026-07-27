@@ -147,7 +147,7 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
   const cardY = baseCardY - verticalShift;
   const scale = Math.max(0.75, 1 - stackIndex * 0.05);
   const stackOpacity = Math.max(0.35, 1 - stackIndex * 0.15);
-  const zIndex = Math.max(10, 50 - stackIndex * 10);
+  const zIndex = Math.max(5, 20 - stackIndex * 5);
 
   const cardX = side === "left"
     ? Math.min(185, window.innerWidth * 0.25)

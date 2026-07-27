@@ -65,7 +65,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 0.7;
+  timeScale: number = 0.6;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -92,8 +92,8 @@ export class SimulationEngine {
   proximity: number = 400.0;
   desperation: number = 2.0;
   despairAge: number = 1000;
-  flowerSize: number = 10.0;
-  entropyThreshold: number = 0.95;
+  flowerSize: number = 3.0;
+  entropyThreshold: number = 0.0;
   globalPulseSpeed: number = 1.0;
   maxLineWidth: number = 8.0;
   multicolorAppProb: number = 0.5;
@@ -118,7 +118,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 1.0;
   flutterIntensity: number = 1.0;
-  leafScale: number = 10.0;
+  leafScale: number = 3.0;
   leafDensity: number = 1.0;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.015;

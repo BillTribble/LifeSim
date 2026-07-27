@@ -115,7 +115,7 @@ export function HUD({
       {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
 
       <div
-        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-2 sm:p-4 m-1 sm:m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
+        className={`absolute inset-0 z-40 pointer-events-none flex flex-col p-2 sm:p-4 m-1 sm:m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
         <header className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 pointer-events-none">
@@ -772,7 +772,7 @@ Low: Slow, drifting gingers." label="GINGER" min={0.1} max={10.0} step={0.1} val
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="APPENDAGE SIZE
 Scale of structural appendages.
 High: Massive, prominent appendages.
-Low: Tiny, subtle appendages." label="APPENDAGE SIZE" min={0.1} max={100.0} step={0.5} value={state.flowerSize} onChange={setters.setFlowerSize} color="#87CEEB" />
+Low: Tiny, subtle appendages." label="APPENDAGE SIZE" min={0.1} max={3.0} step={0.1} value={state.flowerSize} onChange={setters.setFlowerSize} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TAPER DUR
 Duration of line thickness tapering.
 High: Long, smooth tapers.
