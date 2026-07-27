@@ -76,6 +76,7 @@ export class SimulationEngine {
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
   onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome }) => void;
   hasEmittedFirstMating: boolean = false;
+  lastMatingWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.1;
   phiDirection: number = -1;
@@ -912,9 +913,34 @@ export class SimulationEngine {
           theme: this.theme,
           nextTheme: this.nextTheme,
           themeProgress: this.themeProgress,
+          trackedPositions: this.getTrackedPositions(),
         });
     }
   };
+
+  getTrackedPositions() {
+    if (!this.camera) return null;
+
+    const projectPos = (pos: THREE.Vector3) => {
+      const v = pos.clone();
+      v.project(this.camera);
+      const x = (v.x * 0.5 + 0.5) * this.width;
+      const y = (-v.y * 0.5 + 0.5) * this.height;
+      return { x, y, isBehind: v.z > 1 };
+    };
+
+    const alphaAgent = this.agents.find((a) => a.genome.name.startsWith("Alpha"));
+    const betaAgent = this.agents.find((a) => a.genome.name.startsWith("Beta"));
+
+    const alphaPos = alphaAgent ? alphaAgent.position : new THREE.Vector3(-40, 0, 0);
+    const betaPos = betaAgent ? betaAgent.position : new THREE.Vector3(40, 0, 0);
+
+    return {
+      org1: projectPos(alphaPos),
+      org2: projectPos(betaPos),
+      mating: this.lastMatingWorldPos ? projectPos(this.lastMatingWorldPos) : null,
+    };
+  }
 
   start() {
     this.animate();

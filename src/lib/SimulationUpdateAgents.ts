@@ -834,6 +834,7 @@ export function processAgents(
 
                if (!engine.hasEmittedFirstMating) {
                  engine.hasEmittedFirstMating = true;
+                 engine.lastMatingWorldPos = midPoint.clone();
                  if (engine.onMatingEvent) {
                    engine.onMatingEvent({
                      parent1: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome,

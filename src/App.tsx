@@ -12,13 +12,6 @@ export default function App() {
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
 
   const handleInitOrganisms = ({ alpha, beta }: { alpha: any; beta: any }) => {
-    const welcomeItem: PopupItem = {
-      id: `welcome-${Date.now()}`,
-      type: "welcome",
-      title: "Ecosystem Simulation Initialized",
-      subtitle: "Foundational Strains",
-      duration: 8000,
-    };
     const org1Item: PopupItem = {
       id: `org1-${Date.now()}`,
       type: "organism1",
@@ -26,6 +19,8 @@ export default function App() {
       subtitle: "Founder Phenotype 1",
       genome: alpha,
       duration: 8000,
+      angleDeg: -135,
+      distancePx: 200,
     };
     const org2Item: PopupItem = {
       id: `org2-${Date.now()}`,
@@ -34,8 +29,10 @@ export default function App() {
       subtitle: "Founder Phenotype 2",
       genome: beta,
       duration: 8000,
+      angleDeg: -45,
+      distancePx: 200,
     };
-    setPopupQueue([welcomeItem, org1Item, org2Item]);
+    setPopupQueue([org1Item, org2Item]);
   };
 
   const handleMatingEvent = (event: { parent1: any; parent2: any; child: any }) => {
@@ -46,6 +43,8 @@ export default function App() {
       subtitle: "Cross-Species Hybridization",
       matingData: event,
       duration: 8000,
+      angleDeg: -90,
+      distancePx: 200,
     };
     setPopupQueue((prev) => [...prev, matingItem]);
   };
@@ -221,7 +220,7 @@ export default function App() {
         onMatingEvent={handleMatingEvent}
       />
 
-      <PopupNotification queue={popupQueue} onDismiss={handleDismissPopup} />
+      <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
 
       <HUD
         showHUD={showHUD}
