@@ -256,7 +256,7 @@ export class SimulationEngine {
               Math.floor(Math.random() * (PULSE_TARGETS.length - 1)) + 1
             ]
           : "none",
-      pulseSpeed: 0.05 + Math.random() * 0.15,
+      pulseSpeed: 0.003 + Math.random() * 0.007,
       gradientGrowth: Math.random() < (this.traitProbs["gradient"] || 0.1),
       createdAt: this.time,
       singleton: archetype === "snake" && Math.random() < 0.5,

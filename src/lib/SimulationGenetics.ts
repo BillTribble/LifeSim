@@ -459,7 +459,7 @@ export function breedGenomes(
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
     pulseTarget: pulseTarget as any,
-    pulseSpeed: 0.05 + Math.random() * 0.15,
+    pulseSpeed: 0.003 + Math.random() * 0.007,
     gradientGrowth: Math.random() < (traitProbs["gradient"] || 0.1),
     singleton: newArchetype === "snake" && Math.random() < 0.5,
     isGlowing: glowInheritance.expressed || Math.random() < glowProbability,

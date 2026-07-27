@@ -303,16 +303,19 @@ export function updateSimulation(engine: SimulationEngine) {
             (!isStem && tp === "appendage");
 
           if (match) {
-            const pulseVal = Math.sin(
-                engine.unscaledTime *
-                  genome.pulseSpeed *
-                  (engine.globalPulseSpeed || 1.0),
-              );
+            const rawSin = Math.sin(
+              engine.unscaledTime *
+                genome.pulseSpeed *
+                (engine.globalPulseSpeed || 1.0) *
+                10.0,
+            );
+            // Smooth heartbeat pulse curve: slow expansion, gentle contraction, quiet rest
+            const pulseVal = Math.pow(Math.max(0, rawSin), 2.5);
               
-            colorPulseEffect = 1.0 + pulseVal * 0.4;
+            colorPulseEffect = 1.0 + pulseVal * 0.25;
             
             if (isStem) {
-                sizePulseEffect = 1.0 + pulseVal * 0.4;
+                sizePulseEffect = 1.0 + pulseVal * 0.25;
             }
           }
         }
@@ -429,14 +432,13 @@ export function updateSimulation(engine: SimulationEngine) {
           genome &&
           (genome.pulseTarget === "stem" || genome.pulseTarget === "all")
         ) {
-          const pulseEffect =
-            1.0 +
-            Math.sin(
-              engine.unscaledTime *
-                genome.pulseSpeed *
-                (engine.globalPulseSpeed || 1.0),
-            ) *
-              0.4;
+          const rawSin = Math.sin(
+            engine.unscaledTime *
+              genome.pulseSpeed *
+              (engine.globalPulseSpeed || 1.0) *
+              10.0,
+          );
+          const pulseEffect = 1.0 + Math.pow(Math.max(0, rawSin), 2.5) * 0.25;
           const c = genome.color.clone().multiplyScalar(pulseEffect);
           engine.cylinderMesh.setColorAt(i, c);
         }
