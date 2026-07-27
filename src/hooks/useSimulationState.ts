@@ -66,18 +66,18 @@ export const DEFAULTS: Record<string, any> = {
   "veinStrength": 15,
   "veinGlow": 0.5,
   "traitProbs": {
-    "flowers": 0.0638022517646668,
-    "lillyPads": 0.47294645777507915,
-    "leaves": 0.2357912424707298,
-    "petals": 0.1987341443598849,
-    "needles": 0.016469964628715306,
-    "thorns": 0.6724747569586736,
-    "hair": 0.42298749222003407,
-    "curlyHair": 0.6225397295825881,
-    "crystals": 0.4472672952522295,
-    "spores": 0.07274359743689784,
-    "scales": 0.6339349319067804,
-    "spirals": 0.05334989261417411
+    "flowers": 0.5,
+    "lillyPads": 0.5,
+    "leaves": 0.5,
+    "petals": 0.5,
+    "needles": 0.5,
+    "thorns": 0.5,
+    "hair": 0.5,
+    "curlyHair": 0.5,
+    "crystals": 0.5,
+    "spores": 0.5,
+    "scales": 0.5,
+    "spirals": 0.5
   },
   "maxLineWidth": 7.191209283996436,
   "globalPulseSpeed": 0.9291218050541217,
@@ -537,7 +537,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("traitProbs") || "null");
-      if (stored && typeof stored === "object" && "leaves" in stored) {
+      if (stored && typeof stored === "object" && stored.flowers === 0.5) {
         return stored;
       }
       return DEFAULTS.traitProbs;
