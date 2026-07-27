@@ -634,10 +634,10 @@ export class SimulationEngine {
     this.cylinderMesh.instanceMatrix.needsUpdate = true;
     this.cylinderMesh.count = 0;
 
-    const alphaArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
-    let betaArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
-    while (betaArchetype === alphaArchetype) {
-      betaArchetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+    const alphaArchetype = "ginger";
+    let betaArchetype = getRandomWeightedArchetype();
+    while (betaArchetype === "ginger") {
+      betaArchetype = getRandomWeightedArchetype();
     }
 
     const getHashForFamilyAndRange = (family: number, range: "alpha" | "beta"): number => {
