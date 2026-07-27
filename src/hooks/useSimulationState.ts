@@ -60,7 +60,7 @@ export const DEFAULTS: Record<string, any> = {
   "leafGrowthSpeed": 0.0045000000000000005,
   "phyllotaxisAngle": 137.5,
   "leafProbability": 1,
-  "appendageSpawnRate": 0.7,
+  "appendageSpawnRate": 1.0,
   "glowProbability": 0.1,
   "stemCurviness": 3,
   "veinStrength": 15,

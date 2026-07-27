@@ -291,14 +291,14 @@ export function getWeightedAppendage(
   for (const k of otherAppendages) {
     total += traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
   }
-  if (total <= 0) return "none";
+  if (total <= 0) return "leaves";
   let r = Math.random() * total;
   for (const k of otherAppendages) {
     const v = traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
     r -= v;
     if (r <= 0) return k as any;
   }
-  return "none";
+  return "leaves";
 }
 
 export function selectMendelianAlleles<T>(
@@ -448,7 +448,7 @@ export function breedGenomes(
         (Math.random() - 0.5) * 0.1,
     ),
     geometryType: newGeometryType,
-    appendage: Math.random() < appendageSpawnRate ? appInheritance.expressed : "none",
+    appendage: (appInheritance.expressed && appInheritance.expressed !== "none") ? appInheritance.expressed : getWeightedAppendage(traitProbs),
     multicolorAppendage: Math.random() < multicolorAppProb,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
@@ -550,8 +550,8 @@ export function mutateBranchGenome(
   res.wavingSpeed = Math.max(0, res.wavingSpeed + (Math.random() - 0.5) * 0.03);
   res.wavingAmplitude = Math.max(0, res.wavingAmplitude + (Math.random() - 0.5) * 0.06);
 
-  // Always reassign appendage from the weighted pool so APP_SPAWN + LEAF_WT settings apply immediately.
-  res.appendage = Math.random() < appendageSpawnRate ? getWeightedAppendage(traitProbs) : "none";
+  // Always assign valid appendage from weighted pool
+  res.appendage = (res.appendage && res.appendage !== "none") ? res.appendage : getWeightedAppendage(traitProbs);
   
   if (Math.random() < 0.05) {
      res.archetype = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];

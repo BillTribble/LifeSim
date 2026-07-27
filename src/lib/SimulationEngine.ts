@@ -249,7 +249,7 @@ export class SimulationEngine {
       wavingSpeed: Math.random() * 0.05,
       wavingAmplitude: Math.random() * 0.08,
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
-      appendage: Math.random() < this.appendageSpawnRate ? getWeightedAppendage(this.traitProbs) : "none",
+      appendage: getWeightedAppendage(this.traitProbs),
       multicolorAppendage: Math.random() < this.multicolorAppProb,
       sameColorAppendage: Math.random() < this.sameColorAppProb,
       stability: 0.8,
