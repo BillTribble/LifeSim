@@ -41,26 +41,79 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
-    const grid = new THREE.GridHelper(1200, 60, 0x475569, 0x1e293b);
+    // Distance-Fading Horizon Grid Shader
+    const gridShaderMat = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: {
+        gridColor: { value: new THREE.Color(0x38bdf8) },
+        fadeDistance: { value: 2000.0 },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 gridColor;
+        uniform float fadeDistance;
+        varying vec3 vWorldPosition;
+        void main() {
+          float dist = length(vWorldPosition.xz);
+          float alpha = 1.0 - smoothstep(100.0, fadeDistance, dist);
+          if (alpha <= 0.001) discard;
+          gl_FragColor = vec4(gridColor, alpha * 0.40);
+        }
+      `
+    });
+
+    const grid = new THREE.GridHelper(4000, 80);
+    grid.material = gridShaderMat;
     grid.position.y = -160;
     engine.scene.add(grid);
 
-    // Horizon Rays extending out to infinity/horizon
+    // Horizon Rays extending out to 2500 units with smooth distance fade
+    const rayShaderMat = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: {
+        rayColor: { value: new THREE.Color(0x1e293b) },
+        fadeDistance: { value: 2500.0 },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 rayColor;
+        uniform float fadeDistance;
+        varying vec3 vWorldPosition;
+        void main() {
+          float dist = length(vWorldPosition.xz);
+          float alpha = 1.0 - smoothstep(200.0, fadeDistance, dist);
+          if (alpha <= 0.001) discard;
+          gl_FragColor = vec4(rayColor, alpha * 0.60);
+        }
+      `
+    });
+
     const horizonRayGeo = new THREE.BufferGeometry();
     const rayPositions: number[] = [];
-    const rayCount = 16;
-    const rayRadius = 1200;
+    const rayCount = 24;
+    const rayRadius = 2500;
     for (let i = 0; i < rayCount; i++) {
       const angle = (i / rayCount) * Math.PI * 2;
       rayPositions.push(Math.sin(angle) * 20, -160, Math.cos(angle) * 20);
       rayPositions.push(Math.sin(angle) * rayRadius, -160, Math.cos(angle) * rayRadius);
     }
     horizonRayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
-    const rayMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.5 });
-    const horizonRays = new THREE.LineSegments(horizonRayGeo, rayMat);
+    const horizonRays = new THREE.LineSegments(horizonRayGeo, rayShaderMat);
     engine.scene.add(horizonRays);
 
-    // Crisp Luminous Cyan Horizon Line Ring
+    // Crisp Luminous Cyan Horizon Line Ring Loop
     const horizonRingGeo = new THREE.BufferGeometry();
     const ringPositions: number[] = [];
     const ringSegments = 64;
@@ -69,7 +122,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       ringPositions.push(Math.sin(angle) * rayRadius, -160, Math.cos(angle) * rayRadius);
     }
     horizonRingGeo.setAttribute('position', new THREE.Float32BufferAttribute(ringPositions, 3));
-    const horizonLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
+    const horizonLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
     const horizonLine = new THREE.LineLoop(horizonRingGeo, horizonLineMat);
     engine.scene.add(horizonLine);
 
