@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 const newDefaults = {
-  "theme": 1,
+  "theme": 0,
   "themeMorphFreq": 0.61,
   "themeMorphSpeed": 5,
   "rotationSpeed": 0.1,
@@ -67,7 +67,7 @@ const newDefaults = {
   "bushSpeed": 1,
   "treeSpeed": 1,
   "gingerSpeed": 1,
-  "timeScale": 0.8,
+  "timeScale": 0.6,
   "dialLimits": {
     "DEATH RATE": {
       "min": 0,

@@ -50,7 +50,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
             branchMutationRate: 0.0,
             branchBigger: 0.75,
             branchSplitSizeProb: 0.95,
-            timeScale: 0.8,
+            timeScale: 0.6,
             snakeSpeed: 1.5,
             bushSpeed: 1.0,
             treeSpeed: 1.0,

@@ -55,14 +55,9 @@ export const triggerRandomize = (
   if (setters.setBgColor) setters.setBgColor(randomHex());
   if (setters.setFogColor) setters.setFogColor('#000000');
 
-  // Theme (70% NORMAL, 10% ALBINO, 10% COMPLEMENTARY, 10% DUOTONE)
+  // Maintain NORMAL theme (0) — theme is excluded from randomization
   if (setters.setTheme) {
-    const roll = Math.random();
-    let randomTheme = 0;
-    if (roll >= 0.70 && roll < 0.80) randomTheme = 1;
-    else if (roll >= 0.80 && roll < 0.90) randomTheme = 2;
-    else if (roll >= 0.90) randomTheme = 3;
-    setters.setTheme(randomTheme);
+    setters.setTheme(0);
   }
 
   // Trait Probs

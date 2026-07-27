@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 export const DEFAULTS = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.8,
-  "theme": 2,
-  "timeScale": 0.8,
+  "theme": 0,
+  "timeScale": 0.6,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -168,7 +168,7 @@ export function useSimulationState() {
       localStorage.getItem("timeScale") || DEFAULTS.timeScale.toString(),
     ),
   );
-  const [theme, setTheme] = useState(2); // Always start in complementary theme
+  const [theme, setTheme] = useState(0); // Always start in normal theme
   const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
     parseFloat(
       localStorage.getItem("themeMorphFreq") || DEFAULTS.themeMorphFreq.toString(),

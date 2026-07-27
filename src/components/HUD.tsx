@@ -108,131 +108,135 @@ export function HUD({
       {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
 
       <div
-        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-4 m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
+        className={`absolute inset-0 z-10 pointer-events-none flex flex-col p-2 sm:p-4 m-1 sm:m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
-        <header className="flex justify-between items-start mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
-          <div className={`flex gap-3 sm:gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
-            <div
-              className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
-              onClick={handleRestart}
-              title="Re-initialize system"
-            >
-              <Activity className="w-3.5 h-3.5 text-green-400" />
-              <span>RESTART_SIM</span>
-            </div>
-            
-            <div className="relative">
+        <header className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 pointer-events-none">
+            <div className={`flex flex-wrap items-center gap-2 sm:gap-3 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
               <div
-                className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
-                onClick={() => {
-                  setThemePanelOpen(!themePanelOpen);
-                  setCloudPanelOpen(false);
-                  setMutationPanelOpen(false);
-                  setPresetPanelOpen(false);
-                  setLeafPanelOpen(false);
-                  setIsControlsExpanded(false);
-                }}
-                title="Theme Settings"
+                className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 shrink-0 ${showHUD ? "opacity-80" : "opacity-100"}`}
+                onClick={handleRestart}
+                title="Re-initialize system"
               >
-                <Palette className="w-3.5 h-3.5 text-pink-400" />
-                <span>{["NORMAL", "ALBINO", "COMPLEMENT", "DUOTONE"][state.theme] || "THEME"}</span>
-                <ChevronDown className="w-3 h-3" />
+                <Activity className="w-3.5 h-3.5 text-green-400" />
+                <span>RESTART_SIM</span>
               </div>
               
-              {themePanelOpen && (
-                <div className="absolute top-full left-0 mt-2 bg-[#001220]/90 border border-purple-500/50 p-4 rounded w-56 backdrop-blur-md z-50 pointer-events-auto shadow-lg shadow-purple-900/20">
-                  <div className="flex flex-col gap-4 text-[9px]">
-                    <div className="flex flex-col gap-1.5 border-b border-purple-500/30 pb-3">
-                        <div className="grid grid-cols-2 gap-2">
-                            {[
-                                { id: 0, label: "NORMAL" },
-                                { id: 1, label: "ALBINO" },
-                                { id: 2, label: "COMPLEMENT" },
-                                { id: 3, label: "DUOTONE" }
-                            ].map(theme => {
-                                const isSelected = state.theme === theme.id;
-                                const isPulsing = isSelected && (stats.themeProgress !== undefined && stats.themeProgress < 1.0 && stats.nextTheme === theme.id);
-                                return (
-                                    <button
-                                        key={theme.id}
-                                        onClick={() => setters.setTheme(theme.id)}
-                                        className={`p-1 border rounded transition-colors ${
-                                            isSelected 
-                                                ? (isPulsing ? 'bg-purple-500/50 border-purple-400 text-white animate-pulse' : 'bg-purple-500/50 border-purple-400 text-white')
-                                                : 'bg-transparent border-purple-500/30 hover:border-purple-400/80 text-[#D2B48C]/70 hover:text-[#D2B48C]'
-                                        }`}
-                                    >
-                                        {theme.label}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex justify-between items-center gap-2 border-b border-purple-500/20 pb-3">
-                        <span className="text-[#D2B48C]">AUTO MORPH</span>
-                        <button
-                          onClick={() => setters.setThemeMorphFreq(state.themeMorphFreq >= 1.0 ? 0.8 : 1.0)}
-                          className={`px-3 py-1 border rounded font-mono font-bold transition-colors ${state.themeMorphFreq < 1.0 ? 'bg-green-500/30 border-green-400 text-green-300' : 'bg-red-500/30 border-red-400 text-red-300'}`}
-                        >
-                          {state.themeMorphFreq < 1.0 ? 'ON' : 'OFF'}
-                        </button>
+              <div className="relative shrink-0">
+                <div
+                  className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
+                  onClick={() => {
+                    setThemePanelOpen(!themePanelOpen);
+                    setCloudPanelOpen(false);
+                    setMutationPanelOpen(false);
+                    setPresetPanelOpen(false);
+                    setLeafPanelOpen(false);
+                    setIsControlsExpanded(false);
+                  }}
+                  title="Theme Settings"
+                >
+                  <Palette className="w-3.5 h-3.5 text-pink-400" />
+                  <span>{["NORMAL", "ALBINO", "COMPLEMENT", "DUOTONE"][state.theme] || "THEME"}</span>
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+                
+                {themePanelOpen && (
+                  <div className="absolute top-full left-0 mt-2 bg-[#001220]/90 border border-purple-500/50 p-4 rounded w-56 backdrop-blur-md z-50 pointer-events-auto shadow-lg shadow-purple-900/20">
+                    <div className="flex flex-col gap-4 text-[9px]">
+                      <div className="flex flex-col gap-1.5 border-b border-purple-500/30 pb-3">
+                          <div className="grid grid-cols-2 gap-2">
+                              {[
+                                  { id: 0, label: "NORMAL" },
+                                  { id: 1, label: "ALBINO" },
+                                  { id: 2, label: "COMPLEMENT" },
+                                  { id: 3, label: "DUOTONE" }
+                              ].map(theme => {
+                                  const isSelected = state.theme === theme.id;
+                                  const isPulsing = isSelected && (stats.themeProgress !== undefined && stats.themeProgress < 1.0 && stats.nextTheme === theme.id);
+                                  return (
+                                      <button
+                                          key={theme.id}
+                                          onClick={() => setters.setTheme(theme.id)}
+                                          className={`p-1 border rounded transition-colors ${
+                                              isSelected 
+                                                  ? (isPulsing ? 'bg-purple-500/50 border-purple-400 text-white animate-pulse' : 'bg-purple-500/50 border-purple-400 text-white')
+                                                  : 'bg-transparent border-purple-500/30 hover:border-purple-400/80 text-[#D2B48C]/70 hover:text-[#D2B48C]'
+                                          }`}
+                                      >
+                                          {theme.label}
+                                      </button>
+                                  )
+                              })}
+                          </div>
                       </div>
-                      <div className="flex justify-between gap-2">
-                          <SmartDial state={state} setters={setters} tooltip="How often the theme automatically changes. Max value = OFF." label="MORPH_FREQ" min={0} max={1} step={0.01} value={state.themeMorphFreq} onChange={setters.setThemeMorphFreq} color="#a855f7" formatValue={formatMorphFreq} />
-                          <SmartDial state={state} setters={setters} tooltip="The duration of the transition between themes in seconds." label="TRANS_SPEED" min={1} max={20} step={0.5} value={state.themeMorphSpeed} onChange={setters.setThemeMorphSpeed} color="#a855f7" formatValue={(v: number) => `${v.toFixed(1)}s`} />
+                      <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-center gap-2 border-b border-purple-500/20 pb-3">
+                          <span className="text-[#D2B48C]">AUTO MORPH</span>
+                          <button
+                            onClick={() => setters.setThemeMorphFreq(state.themeMorphFreq >= 1.0 ? 0.8 : 1.0)}
+                            className={`px-3 py-1 border rounded font-mono font-bold transition-colors ${state.themeMorphFreq < 1.0 ? 'bg-green-500/30 border-green-400 text-green-300' : 'bg-red-500/30 border-red-400 text-red-300'}`}
+                          >
+                            {state.themeMorphFreq < 1.0 ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                            <SmartDial state={state} setters={setters} tooltip="How often the theme automatically changes. Max value = OFF." label="MORPH_FREQ" min={0} max={1} step={0.01} value={state.themeMorphFreq} onChange={setters.setThemeMorphFreq} color="#a855f7" formatValue={formatMorphFreq} />
+                            <SmartDial state={state} setters={setters} tooltip="The duration of the transition between themes in seconds." label="TRANS_SPEED" min={1} max={20} step={0.5} value={state.themeMorphSpeed} onChange={setters.setThemeMorphSpeed} color="#a855f7" formatValue={(v: number) => `${v.toFixed(1)}s`} />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div
-              className="flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto opacity-80"
-              onClick={handleCopySettings}
-              title="Copy all settings to clipboard"
-            >
-              <Database
-                className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
-              />
-              <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
-            </div>
-
-            <div
-              className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border border-purple-500/40 px-2 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition-colors"
-              onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
-              title="Randomize all simulation settings and theme"
-            >
-              <Dices className="w-3.5 h-3.5 text-purple-400" />
-              <span>RANDOM</span>
-            </div>
-
-            <div
-              className={`flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border px-2 py-0.5 rounded transition-colors ${
-                state.kioskMode
-                  ? "bg-purple-500/20 border-purple-400 text-purple-300"
-                  : "bg-[#001220]/60 border-[#D2B48C]/30 text-[#D2B48C]/60 hover:text-[#D2B48C]"
-              }`}
-              onClick={() => setters.setKioskMode && setters.setKioskMode(!state.kioskMode)}
-              title="KIOSK MODE — Periodically fades out and randomizes the ecosystem"
-            >
-              <Tv className={`w-3.5 h-3.5 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
-              <span>KIOSK: {state.kioskMode ? "ON" : "OFF"}</span>
-            </div>
-
-            <div className="pointer-events-auto flex items-center gap-1.5 border border-[#D2B48C]/50 px-2 py-0.5 rounded bg-[#001220]/60 shadow-sm opacity-80"
-              title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
-            >
-              <span className="text-[10px]">SLOW_MO</span>
-              <div className="scale-[0.65] origin-center -my-2 -mx-1">
-                <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
+                )}
               </div>
-              <span className="text-[9px] font-mono" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
+
+              <div
+                className="flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto opacity-80 shrink-0"
+                onClick={handleCopySettings}
+                title="Copy all settings to clipboard"
+              >
+                <Database
+                  className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
+                />
+                <span>{copied ? "SETTINGS_COPIED!" : "COPY_SETTINGS"}</span>
+              </div>
+
+              <div
+                className={`flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border px-2 py-0.5 rounded transition-colors shrink-0 ${
+                  state.kioskMode
+                    ? "bg-purple-500/20 border-purple-400 text-purple-300"
+                    : "bg-[#001220]/60 border-[#D2B48C]/30 text-[#D2B48C]/60 hover:text-[#D2B48C]"
+                }`}
+                onClick={() => setters.setKioskMode && setters.setKioskMode(!state.kioskMode)}
+                title="KIOSK MODE — Periodically fades out and randomizes the ecosystem"
+              >
+                <Tv className={`w-3.5 h-3.5 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
+                <span>KIOSK: {state.kioskMode ? "ON" : "OFF"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-purple-500/50 px-2 py-0.5 sm:py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
+                onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+                title="Randomize all simulation settings and theme"
+              >
+                <Dices className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-bold">RANDOM</span>
+              </div>
+
+              <div className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 border border-[#D2B48C]/50 px-1.5 sm:px-2 py-0.5 rounded bg-[#001220]/70 backdrop-blur-md shadow-sm opacity-90 hover:opacity-100 transition-opacity shrink-0"
+                title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
+              >
+                <span className="text-[9px] sm:text-[10px] font-mono text-[#D2B48C]">SLOW_MO</span>
+                <div className="scale-[0.65] origin-center -my-2 -mx-1 shrink-0">
+                  <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
+                </div>
+                <span className="text-[9px] font-mono shrink-0" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
+              </div>
             </div>
           </div>
-          <div className="flex gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto">
-            <div className={`flex flex-wrap items-center gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
+          <div className="flex gap-2 sm:gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto shrink-0">
+            <div className={`flex flex-wrap items-center gap-2 sm:gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
               <div
                 className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
                 onClick={() => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
+import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
 import { triggerRandomize } from "./utils/randomize";
 
@@ -8,6 +9,50 @@ export default function App() {
   const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
   const { state, setters } = useSimulationState();
+  const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
+
+  const handleInitOrganisms = ({ alpha, beta }: { alpha: any; beta: any }) => {
+    const welcomeItem: PopupItem = {
+      id: `welcome-${Date.now()}`,
+      type: "welcome",
+      title: "Ecosystem Simulation Initialized",
+      subtitle: "Foundational Strains",
+      duration: 8000,
+    };
+    const org1Item: PopupItem = {
+      id: `org1-${Date.now()}`,
+      type: "organism1",
+      title: "Organism 1 (Alpha Strain)",
+      subtitle: "Founder Phenotype 1",
+      genome: alpha,
+      duration: 8000,
+    };
+    const org2Item: PopupItem = {
+      id: `org2-${Date.now()}`,
+      type: "organism2",
+      title: "Organism 2 (Beta Strain)",
+      subtitle: "Founder Phenotype 2",
+      genome: beta,
+      duration: 8000,
+    };
+    setPopupQueue([welcomeItem, org1Item, org2Item]);
+  };
+
+  const handleMatingEvent = (event: { parent1: any; parent2: any; child: any }) => {
+    const matingItem: PopupItem = {
+      id: `mating-${Date.now()}`,
+      type: "mating",
+      title: "First Mating Event Detected!",
+      subtitle: "Cross-Species Hybridization",
+      matingData: event,
+      duration: 8000,
+    };
+    setPopupQueue((prev) => [...prev, matingItem]);
+  };
+
+  const handleDismissPopup = (id: string) => {
+    setPopupQueue((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const [stats, setStats] = useState({
     geometryCount: 0,
@@ -172,7 +217,11 @@ export default function App() {
         stemCurviness={state.stemCurviness}
         kioskMode={state.kioskMode}
         onKioskTrigger={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+        onInitOrganisms={handleInitOrganisms}
+        onMatingEvent={handleMatingEvent}
       />
+
+      <PopupNotification queue={popupQueue} onDismiss={handleDismissPopup} />
 
       <HUD
         showHUD={showHUD}

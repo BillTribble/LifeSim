@@ -6,12 +6,17 @@ interface Props {
   onLog: (msg: string) => void;
   onStateUpdate: (state: any) => void;
   onConfigChange?: (config: any) => void;
+  onInitOrganisms?: (event: { alpha: any; beta: any }) => void;
+  onMatingEvent?: (event: { parent1: any; parent2: any; child: any }) => void;
   stats?: any;
+  [key: string]: any;
 }
 
 export function SimulationView({
   onLog,
   onStateUpdate,
+  onInitOrganisms,
+  onMatingEvent,
   stats,
   restartTrigger,
   randomizeTrigger,
@@ -527,6 +532,8 @@ export function SimulationView({
     const engine = new SimulationEngine(canvasRef.current, width, height);
     engine.onLog = onLog;
     engine.onStateUpdate = onStateUpdate;
+    if (onInitOrganisms) engine.onInitOrganisms = onInitOrganisms;
+    if (onMatingEvent) engine.onMatingEvent = onMatingEvent;
     if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (onConfigChange) {

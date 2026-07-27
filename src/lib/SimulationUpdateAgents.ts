@@ -831,6 +831,17 @@ export function processAgents(
                });
     
                engine.spawnHybridArtifact(midPoint, childGenome.color);
+
+               if (!engine.hasEmittedFirstMating) {
+                 engine.hasEmittedFirstMating = true;
+                 if (engine.onMatingEvent) {
+                   engine.onMatingEvent({
+                     parent1: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome,
+                     parent2: nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome : nearestPartner.genome,
+                     child: childGenome,
+                   });
+                 }
+               }
     
                agent.cooldown = engine.hybridCooldown;
                nearestPartner.cooldown = engine.hybridCooldown;

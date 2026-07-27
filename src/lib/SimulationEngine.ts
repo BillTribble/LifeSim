@@ -63,7 +63,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 1.0;
+  timeScale: number = 0.6;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -73,8 +73,12 @@ export class SimulationEngine {
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
   onConfigChange?: (config: any) => void;
+  onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
+  onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome }) => void;
+  hasEmittedFirstMating: boolean = false;
 
   rotationSpeed: number = 0.1;
+  phiDirection: number = -1;
   magnetism: number = 0.02;
   proximity: number = 400.0;
   desperation: number = 2.0;
@@ -145,8 +149,8 @@ export class SimulationEngine {
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
   
-  theme: number = 2;
-  nextTheme: number = 2;
+  theme: number = 0;
+  nextTheme: number = 0;
   themeProgress: number = 1.0;
   themeMorphFreq: number = 1.0;
   themeMorphSpeed: number = 5.0;
@@ -731,6 +735,11 @@ export class SimulationEngine {
       thickness: betaGenome.thicknessBase * 2.0,
       cooldown: 0,
     });
+
+    this.hasEmittedFirstMating = false;
+    if (this.onInitOrganisms) {
+      this.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
+    }
   }
 
   restart() {
