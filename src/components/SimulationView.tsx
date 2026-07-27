@@ -18,6 +18,7 @@ export function SimulationView({
   onStateUpdate,
   onInitOrganisms,
   onMatingEvent,
+  onFeelerEvent,
   stats,
   restartTrigger,
   randomizeTrigger,
