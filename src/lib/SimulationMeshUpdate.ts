@@ -276,8 +276,8 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 240 unscaled frame ticks = 4.0 seconds of real-time Gaussian dither dissolve fade OUT (unaffected by slow-mo)
-    const wipeDuration = 240.0;
+    // 480 unscaled frame ticks = 8.0 seconds of real-time Gaussian dither dissolve fade OUT (unaffected by slow-mo)
+    const wipeDuration = 480.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);
