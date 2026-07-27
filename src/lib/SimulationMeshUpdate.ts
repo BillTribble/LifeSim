@@ -29,11 +29,12 @@ export function updateMeshSegments(
     }
   }
 
+  const isRainbow = genome.multicolorAppendage || genome.gradientGrowth;
   const finalColor = genome.color.clone();
   
-  // Apply real-time saturation limit
+  // Apply low saturation limit only to rainbow/multicolor creatures; all other creatures have full saturation
   const hsl = finalColor.getHSL({ h: 0, s: 0, l: 0 });
-  if (hsl.s > engine.maxSaturation) {
+  if (isRainbow && hsl.s > engine.maxSaturation) {
     finalColor.setHSL(hsl.h, engine.maxSaturation, hsl.l);
   }
 
@@ -102,10 +103,9 @@ export function updateMeshSegments(
         finalColor.offsetHSL(0.5, 0, 0);
       }
       
-      // Re-apply saturation limit after offsetHSL which might alter or preserve it 
-      // depending on implementation, or just to be safe.
+      // Re-apply saturation limit after offsetHSL only if rainbow creature
       const appHsl = finalColor.getHSL({ h: 0, s: 0, l: 0 });
-      if (appHsl.s > engine.maxSaturation) {
+      if (isRainbow && appHsl.s > engine.maxSaturation) {
         finalColor.setHSL(appHsl.h, engine.maxSaturation, appHsl.l);
       }
     } else {
