@@ -282,6 +282,9 @@ export function processDyingSegments(
       engine.dummy.updateMatrix();
       mesh.setMatrixAt(idx, engine.dummy.matrix);
       mesh.instanceMatrix.needsUpdate = true;
+      if (seg && seg.strainName) {
+        engine.onLog(`🧹 Purged dissolved segment ${idx} for strain ${seg.strainName.split(' ')[0]}.`);
+      }
       segments[idx] = undefined as any;
       dyingSet.delete(idx);
       changed = true;

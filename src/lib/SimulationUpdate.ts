@@ -216,13 +216,24 @@ export function updateSimulation(engine: SimulationEngine) {
 
     for (let i = 0; i < (mesh.count || 0); i++) {
       const seg = segments[i];
-      if (seg) {
-        if (isHybrid && seg.variant !== hybridVariantId) {
-          engine.dummy.matrix.makeScale(0, 0, 0);
-          mesh.setMatrixAt(i, engine.dummy.matrix);
-          changed = true;
-          continue;
+      if (!seg) {
+        engine.dummy.matrix.makeScale(0, 0, 0);
+        mesh.setMatrixAt(i, engine.dummy.matrix);
+        const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+        if (packAAttr) {
+          packAAttr.setZ(i, 1.0);
+          packAAttr.needsUpdate = true;
         }
+        changed = true;
+        continue;
+      }
+      
+      if (isHybrid && seg.variant !== hybridVariantId) {
+        engine.dummy.matrix.makeScale(0, 0, 0);
+        mesh.setMatrixAt(i, engine.dummy.matrix);
+        changed = true;
+        continue;
+      }
 
         const age = engine.time - seg.timestamp;
         const genome = uniqueGenomes.get(seg.strainName);
@@ -353,13 +364,13 @@ export function updateSimulation(engine: SimulationEngine) {
           changed = true;
         }
       }
-    }
     if (changed) {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
   };
 
+  updateMeshGrowth(engine.cylinderMesh, engine.segments);
   for (const app of engine.appendages.values()) {
     updateMeshGrowth(app.mesh, app.segments);
   }
