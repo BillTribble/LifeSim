@@ -367,6 +367,8 @@ export function updateSimulation(engine: SimulationEngine) {
     if (changed) {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      const packA = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+      if (packA) packA.needsUpdate = true;
     }
   };
 

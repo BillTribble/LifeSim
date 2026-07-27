@@ -236,6 +236,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  if (ditherIn > vGrowth) discard;
              }
 
+             if (vDecay >= 0.95) discard;
              if (vDecay > 0.0) {
                  float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
                  if (ditherLimit < vDecay) discard;
