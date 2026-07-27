@@ -65,7 +65,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 0.4;
+  timeScale: number = 0.7;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;

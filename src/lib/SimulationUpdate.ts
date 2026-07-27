@@ -537,28 +537,14 @@ export function updateSimulation(engine: SimulationEngine) {
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
-    // Rapid whole-organism sweep: Once an organism finishes its lifecycle or gets culled,
-    // dissolve the entire organism sequentially from base to tip to clear space for new organisms.
+    // All-at-once whole-organism decay: Mark all segments of dying strains immediately
+    // so the entire organism (stems & appendages) smoothly dissolves all at once in 0.5s.
     const activeTotal = Math.min(engine.pointCount, engine.maxDOMs);
     if (activeTotal > 0) {
-      const ringOffset = engine.pointCount > engine.maxDOMs ? engine.pointCount % engine.maxDOMs : 0;
-      const batchSize = Math.floor(activeTotal / 10);
-
-      for (let i = 0; i < batchSize; i++) {
-        const idx = (ringOffset + ((engine.frameCount * 8 + i) % activeTotal)) % activeTotal;
-        const seg = engine.segments[idx];
-        if (seg && !engine.dyingStems.has(idx)) {
-          if (engine.dyingStrains.has(seg.strainName)) {
-            // Rapid sequential dissolve across the strain's segments
-            const chunkSize = 25;
-            for (let j = 0; j < chunkSize; j++) {
-              const chunkIdx = (idx + j) % activeTotal;
-              const cSeg = engine.segments[chunkIdx];
-              if (cSeg && cSeg.strainName === seg.strainName && !engine.dyingStems.has(chunkIdx)) {
-                engine.markDying(engine.segments, engine.dyingStems, chunkIdx);
-              }
-            }
-          }
+      for (let i = 0; i < activeTotal; i++) {
+        const seg = engine.segments[i];
+        if (seg && !engine.dyingStems.has(i) && engine.dyingStrains.has(seg.strainName)) {
+          engine.markDying(engine.segments, engine.dyingStems, i);
         }
       }
     }

@@ -5,7 +5,7 @@ export const DEFAULTS: Record<string, any> = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 0.8,
   "theme": 0,
-  "timeScale": 1.8,
+  "timeScale": 0.7,
   "gingerSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
@@ -177,7 +177,7 @@ export function useSimulationState() {
   );
   const [timeScale, setTimeScale] = useState(() =>
     parseFloat(
-      localStorage.getItem("timeScale") || DEFAULTS.timeScale.toString(),
+      localStorage.getItem("timeScale") || localStorage.getItem("slowMotion") || DEFAULTS.timeScale.toString(),
     ),
   );
   const [theme, setTheme] = useState(0); // Always start in normal theme
@@ -554,6 +554,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("treeSpeed", treeSpeed.toString());
     localStorage.setItem("gingerSpeed", gingerSpeed.toString());
     localStorage.setItem("timeScale", timeScale.toString());
+    localStorage.setItem("slowMotion", timeScale.toString());
     localStorage.setItem("themeMorphFreq", themeMorphFreq.toString());
     localStorage.setItem("themeMorphSpeed", themeMorphSpeed.toString());
     localStorage.setItem("rotationSpeed", rotationSpeed.toString());
