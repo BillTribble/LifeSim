@@ -732,7 +732,10 @@ export function updateSimulation(engine: SimulationEngine) {
           
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
-              activeAgents[i].active = false;
+              if (!activeAgents[i].tapering) {
+                activeAgents[i].tapering = true;
+                activeAgents[i].dyingStart = engine.unscaledTime;
+              }
             }
           }
 
