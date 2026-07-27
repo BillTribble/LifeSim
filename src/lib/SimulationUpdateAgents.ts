@@ -865,13 +865,14 @@ export function processAgents(
 
 
       let currentTermProb = 0;
-      if (agent.age > 90) {
-        currentTermProb = Math.min(1.0, engine.terminationProb * 0.4 + (agent.age - 90) * 0.02);
+      const maxGrowthAge = 180 * Math.max(0.5, engine.timeScale);
+      if (agent.age > maxGrowthAge * 0.5) {
+        currentTermProb = Math.min(1.0, engine.terminationProb * 0.4 + (agent.age - maxGrowthAge * 0.5) * 0.03);
       }
 
-      // Hard aging cap: once an organism reaches age 180 (~3s growth) or if screen fill > 40%, force 100% death
+      // Hard aging cap: once an organism reaches full growth limit or if screen fill > 40%, force 100% death
       const isScreenFull = (engine.pointCount / engine.maxDOMs) > 0.40;
-      if (agent.age > 180 || isScreenFull) {
+      if (agent.age > maxGrowthAge || isScreenFull) {
         currentTermProb = 1.0;
       }
 

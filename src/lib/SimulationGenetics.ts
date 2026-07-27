@@ -11,10 +11,10 @@ import {
 
 export function getRandomWeightedArchetype(): Archetype {
   const r = Math.random();
-  if (r < 0.40) return "ginger";
-  if (r < 0.80) return "bush";
-  if (r < 0.95) return "tree";
-  return "snake";
+  if (r < 0.70) return "ginger"; // Dominant 70%!
+  if (r < 0.90) return "bush";   // 20%
+  if (r < 0.98) return "tree";   // 8%
+  return "snake";                // 2%
 }
 
 export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false) {
