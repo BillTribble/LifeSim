@@ -242,8 +242,8 @@ export function processDyingSegments(
     const fadeAge = engine.unscaledTime - seg.dyingStart;
     const desiccationSpeed = engine.desiccationSpeed || 1.0;
     const wipeDuration = Math.max(
-      0.05,
-      (isHybrid ? engine.hybridStickiness * 12 : 60) / (desiccationSpeed * 10.0)
+      0.8,
+      (isHybrid ? engine.hybridStickiness * 4 : 2.5) / Math.max(0.1, desiccationSpeed * 0.1)
     );
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
@@ -260,38 +260,17 @@ export function processDyingSegments(
         packAAttr.needsUpdate = true;
       }
     } else {
-      const shrink = fadeAge / wipeDuration;
+      const dissolveProgress = Math.min(1.0, fadeAge / wipeDuration);
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
-        packAAttr.setZ(idx, Math.min(shrink, 1.0));
+        packAAttr.setZ(idx, dissolveProgress);
         packAAttr.needsUpdate = true;
       }
       
       if (seg && seg.matrix) {
-        engine.dummy.matrix.copy(seg.matrix);
-        engine.dummy.matrix.decompose(
-          engine.dummy.position,
-          engine.dummy.quaternion,
-          engine.dummy.scale,
-        );
-        let baseScale = 1.0;
-        if (isFlower) baseScale = engine.flowerSize;
-
-        engine.dummy.scale.multiplyScalar(Math.max((1.0 - shrink) * baseScale, 0.0));
-        engine.dummy.updateMatrix();
-        mesh.setMatrixAt(idx, engine.dummy.matrix);
-      } else {
-          mesh.getMatrixAt(idx, engine.dummy.matrix);
-          engine.dummy.matrix.decompose(
-            engine.dummy.position,
-            engine.dummy.quaternion,
-            engine.dummy.scale,
-          );
-          engine.dummy.scale.multiplyScalar(0.9);
-          engine.dummy.updateMatrix();
-          mesh.setMatrixAt(idx, engine.dummy.matrix);
-        }
+        mesh.setMatrixAt(idx, seg.matrix);
+      }
       changed = true;
     }
   }

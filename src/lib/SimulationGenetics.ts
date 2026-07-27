@@ -228,24 +228,8 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              }
 
              if (vDecay > 0.0) {
-                 float fresnel = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
-                 float outlineWidth = 0.6;
-                 
                  float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-                 
-                 if (vDecay < 0.5) {
-                     float fillFade = vDecay * 2.0;
-                     if (fresnel < outlineWidth) {
-                         if (ditherLimit < fillFade) discard;
-                     }
-                 } else {
-                     if (fresnel < outlineWidth) {
-                         discard; // Core completely invisible
-                     } else {
-                         float outlineFade = (vDecay - 0.5) * 2.0;
-                         if (ditherLimit < outlineFade) discard;
-                     }
-                 }
+                 if (ditherLimit < vDecay) discard;
              }
              
              // Subtle selecting highlight outline glow across all themes
