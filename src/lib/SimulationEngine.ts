@@ -614,10 +614,24 @@ export class SimulationEngine {
     for (let i = 0; i < MAX_POINTS; i++) {
       this.cylinderMesh.setMatrixAt(i, idm);
     }
+    const cylPackAAttr = this.cylinderMesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+    if (cylPackAAttr) {
+      for (let i = 0; i < MAX_POINTS; i++) {
+        cylPackAAttr.setZ(i, 0.0); // 0.0 = Fully opaque, 0% decay
+      }
+      cylPackAAttr.needsUpdate = true;
+    }
 
     for (const app of this.appendages.values()) {
       for (let i = 0; i < app.mesh.count; i++) {
         app.mesh.setMatrixAt(i, idm);
+      }
+      const appPackAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+      if (appPackAAttr) {
+        for (let i = 0; i < app.mesh.count; i++) {
+          appPackAAttr.setZ(i, 0.0);
+        }
+        appPackAAttr.needsUpdate = true;
       }
       app.mesh.instanceMatrix.needsUpdate = true;
       app.mesh.count = 0;
