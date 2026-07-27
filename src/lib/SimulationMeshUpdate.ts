@@ -274,13 +274,14 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 480 unscaled frame ticks = 8.0 seconds of real-time Gaussian dither dissolve fade OUT (unaffected by slow-mo)
-    const wipeDuration = 480.0;
+    // 60 unscaled frame ticks = 1.0 second fast Gaussian dither dissolve fade OUT
+    const wipeDuration = 60.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);
       engine.dummy.updateMatrix();
       mesh.setMatrixAt(idx, engine.dummy.matrix);
+      mesh.instanceMatrix.needsUpdate = true;
       segments[idx] = undefined as any;
       dyingSet.delete(idx);
       changed = true;
