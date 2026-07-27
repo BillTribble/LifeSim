@@ -83,8 +83,10 @@ export function processAgents(
     if (isDying) {
       if (!agent.tapering) {
         agent.tapering = true;
-        engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
+        agent.dyingStart = engine.unscaledTime;
+        engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering 4-second smooth dissolve (Thickness: ${agent.thickness.toFixed(2)}).`);
       }
+      if (!agent.dyingStart) agent.dyingStart = engine.unscaledTime;
       agent.recovering = false;
       agent.targetThickness = undefined;
       if (!engine.dyingStrains) engine.dyingStrains = new Set();
@@ -912,24 +914,20 @@ export function processAgents(
         agent.tapering = true;
       }
 
-      // Stage 3: Tapering Branches -> Shrink thickness neatly to 0.15
+      // Stage 3 & 4: Dissolving & Removal -> Maintain original thickness; stem & appendages dissolve together over 4 seconds
       if (agent.tapering) {
-        let duration = engine.taperDuration;
-        if (agent.isFeeler) duration /= engine.feelerFade;
-        let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
+        if (!agent.dyingStart) agent.dyingStart = engine.unscaledTime;
+        const fadeAge = engine.unscaledTime - agent.dyingStart;
+        const wipeDuration = 240.0; // 4.0 seconds smooth dissolve fade OUT
         
-        agent.thickness *= shrinkRate;
-        // Stage 4: Vanishing & Removal -> Mark inactive, trigger 8-second dissolve
-        if (agent.thickness <= 0.15) {
+        if (fadeAge > wipeDuration) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
-          if (!engine.dyingStrains) engine.dyingStrains = new Set();
-          engine.dyingStrains.add(agent.genome.name);
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after ${lifespanSecs}s.`
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished 4s dissolve and vanished after ${lifespanSecs}s.`
           );
         }
       } 
