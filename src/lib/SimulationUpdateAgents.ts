@@ -80,12 +80,6 @@ export function processAgents(
     const agent = activeAgents[i];
     
     const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
-    if (isDying && !agent.tapering) {
-      agent.tapering = true;
-      agent.recovering = false;
-      agent.targetThickness = undefined;
-      engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
-    }
     agent.suppressionFade = agent.suppressionFade || 0;
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     if (isSuppressed) {
@@ -613,8 +607,8 @@ export function processAgents(
       }
 
       const isMonopoly = monopolyStrains.has(evalGenome.name);
-      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has mated 3 times
-      if (!agent.isFeeler && (agent.mateCount || 0) < 3 && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
+      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has bred
+      if (!agent.isFeeler && !agent.hasBred && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
         const feelerChance = Math.min(0.85, (agent.age - 15) * 0.04 * engine.timeScale);
         if (Math.random() < feelerChance) {
           const feelerGenome = { ...agent.genome };
@@ -638,11 +632,11 @@ export function processAgents(
             realGenome: agent.genome,
           });
           agent.cooldown = 25;
-          engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Mated ${agent.mateCount || 0}/3).`);
+          engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Age ${agent.age}).`);
         }
       }
 
-      const isFertile = !agent.tapering && (agent.mateCount || 0) < 3 && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
+      const isFertile = !agent.tapering && !agent.hasBred && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
       const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
       if (canBreed) {
@@ -902,30 +896,27 @@ export function processAgents(
 
 
       // 4-STAGE LIFESPAN MODEL:
-      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (300 ticks ~ 5s), it tapers!
+      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (300 ticks ~ 5s), it starts fading!
       const maxGrowthAge = 300 * Math.max(0.5, engine.timeScale);
       if (!agent.tapering && (agent.hasBred || agent.age > maxGrowthAge)) {
         agent.tapering = true;
+        agent.fadeAge = 0;
+        if (!engine.dyingStrains) engine.dyingStrains = new Set();
+        engine.dyingStrains.add(agent.genome.name);
       }
 
-      // Stage 3: Tapering Branches -> Shrink thickness neatly to 0.15
+      // Stage 3 & 4: 5-Second Transparency Fade -> Retain 100% shape/size, fade transparently, then vanish
       if (agent.tapering) {
-        let duration = engine.taperDuration;
-        if (agent.isFeeler) duration /= engine.feelerFade;
-        let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
-        
-        agent.thickness *= shrinkRate;
-        // Stage 4: Vanishing & Removal -> Mark inactive, trigger 8-second dissolve
-        if (agent.thickness <= 0.15) {
+        agent.fadeAge = (agent.fadeAge || 0) + 1;
+        // 300 ticks = 5.0 seconds of real-time fade
+        if (agent.fadeAge >= 300) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
-          if (!engine.dyingStrains) engine.dyingStrains = new Set();
-          engine.dyingStrains.add(agent.genome.name);
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after ${lifespanSecs}s.`
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after 5.0s fade.`
           );
         }
       } 

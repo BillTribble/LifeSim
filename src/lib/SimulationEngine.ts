@@ -634,11 +634,6 @@ export class SimulationEngine {
     this.cylinderMesh.instanceMatrix.needsUpdate = true;
     this.cylinderMesh.count = 0;
 
-    this.feelerCount = 0;
-    this.matingCount = 0;
-    this.lastFeelerWorldPos = undefined;
-    this.lastMatingWorldPos = undefined;
-
     const alphaArchetype = "ginger";
     let betaArchetype = getRandomWeightedArchetype();
     while (betaArchetype === "ginger") {

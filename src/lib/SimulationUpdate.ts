@@ -216,24 +216,13 @@ export function updateSimulation(engine: SimulationEngine) {
 
     for (let i = 0; i < (mesh.count || 0); i++) {
       const seg = segments[i];
-      if (!seg) {
-        engine.dummy.matrix.makeScale(0, 0, 0);
-        mesh.setMatrixAt(i, engine.dummy.matrix);
-        const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-        if (packAAttr) {
-          packAAttr.setZ(i, 1.0);
-          packAAttr.needsUpdate = true;
+      if (seg) {
+        if (isHybrid && seg.variant !== hybridVariantId) {
+          engine.dummy.matrix.makeScale(0, 0, 0);
+          mesh.setMatrixAt(i, engine.dummy.matrix);
+          changed = true;
+          continue;
         }
-        changed = true;
-        continue;
-      }
-      
-      if (isHybrid && seg.variant !== hybridVariantId) {
-        engine.dummy.matrix.makeScale(0, 0, 0);
-        mesh.setMatrixAt(i, engine.dummy.matrix);
-        changed = true;
-        continue;
-      }
 
         const age = engine.time - seg.timestamp;
         const genome = uniqueGenomes.get(seg.strainName);
@@ -348,9 +337,7 @@ export function updateSimulation(engine: SimulationEngine) {
                 : mesh === engine.appendages.get("leaves")?.mesh
                   ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
                   : engine.flowerSize;
-
-          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : new THREE.Vector3(1, 1, 1);
-          engine.dummy.scale.copy(baseScaleVec).multiplyScalar(growth * sizeMult * sizePulseEffect);
+          engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
 
@@ -366,15 +353,13 @@ export function updateSimulation(engine: SimulationEngine) {
           changed = true;
         }
       }
+    }
     if (changed) {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      const packA = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-      if (packA) packA.needsUpdate = true;
     }
   };
 
-  updateMeshGrowth(engine.cylinderMesh, engine.segments);
   for (const app of engine.appendages.values()) {
     updateMeshGrowth(app.mesh, app.segments);
   }
@@ -554,7 +539,7 @@ export function updateSimulation(engine: SimulationEngine) {
             parentSeg.timestamp !== seg.parentTimestamp ||
             engine.dyingStems.has(seg.parentIndex);
           if (parentDead) {
-            const parentDyingStart = (parentSeg && parentSeg.dyingStart) ? parentSeg.dyingStart : engine.unscaledTime;
+            const parentDyingStart = parentSeg ? parentSeg.dyingStart : undefined;
             engine.markDying(app.segments, app.dyingSet, i, parentDyingStart);
           }
         }

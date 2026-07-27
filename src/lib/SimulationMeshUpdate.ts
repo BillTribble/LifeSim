@@ -151,8 +151,7 @@ export function updateMeshSegments(
     finalColor.multiplyScalar(2.0);
   }
 
-  const scaleVec = new THREE.Vector3(scaleX, scaleY, scaleZ);
-  engine.dummy.scale.set(1, 1, 1);
+  engine.dummy.scale.set(scaleX, scaleY, scaleZ);
   engine.dummy.updateMatrix();
   const fullMatrix = engine.dummy.matrix.clone();
 
@@ -214,7 +213,6 @@ export function updateMeshSegments(
       index: targetIndex,
       timestamp: engine.time,
       matrix: fullMatrix,
-      scaleVec,
       thickness,
       strainName: genome.name,
     };
@@ -230,7 +228,6 @@ export function updateMeshSegments(
         index: targetIndex,
         timestamp: engine.time,
         matrix: fullMatrix,
-        scaleVec,
         thickness,
         strainName: genome.name,
         parentIndex: targetIndexStem,
@@ -277,17 +274,13 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 240 unscaled frame ticks = 4.0 seconds of smooth, graceful Gaussian dither dissolve fade OUT
-    const wipeDuration = 240.0;
-    if (fadeAge > wipeDuration) {
+    // 300 unscaled frame ticks = 5.0 seconds of real-time fade OUT
+    const wipeDuration = 300.0;
+    if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);
       engine.dummy.updateMatrix();
       mesh.setMatrixAt(idx, engine.dummy.matrix);
-      mesh.instanceMatrix.needsUpdate = true;
-      if (seg && seg.strainName) {
-        engine.onLog(`🧹 Purged dissolved segment ${idx} for strain ${seg.strainName.split(' ')[0]}.`);
-      }
       segments[idx] = undefined as any;
       dyingSet.delete(idx);
       changed = true;
