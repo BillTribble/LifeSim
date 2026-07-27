@@ -242,8 +242,8 @@ export function processDyingSegments(
     const fadeAge = engine.unscaledTime - seg.dyingStart;
     const desiccationSpeed = engine.desiccationSpeed || 1.0;
     const wipeDuration = Math.max(
-      3,
-      (isHybrid ? engine.hybridStickiness * 12 : 300) / (desiccationSpeed * 1.5)
+      0.2,
+      (isHybrid ? engine.hybridStickiness * 12 : 120) / (desiccationSpeed * 3.0)
     );
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
