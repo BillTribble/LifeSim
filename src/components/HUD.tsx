@@ -12,6 +12,7 @@ import {
   Leaf,
   Dices,
   Tv,
+  RotateCcw,
 } from "lucide-react";
 import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
