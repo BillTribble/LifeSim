@@ -86,6 +86,7 @@ export function processAgents(
       continue;
     }
     agent.suppressionFade = agent.suppressionFade || 0;
+    const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     if (isSuppressed) {
       agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02); // 50 frames to fully suppress (~0.8s real time, independent of slowmo)
     } else {
