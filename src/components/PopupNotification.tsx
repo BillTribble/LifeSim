@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Dna, Heart, Sparkles, X } from "lucide-react";
+import { Dna, Heart, Sparkles, GitBranch, X } from "lucide-react";
 import { Genome } from "../lib/SimulationTypes";
 
 export interface PopupItem {
   id: string;
-  type: "organism1" | "organism2" | "mating" | "feeler";
+  type: "organism1" | "organism2" | "mating" | "feeler" | "branchMutation";
   title: string;
   subtitle: string;
   genome?: Genome;
@@ -16,6 +16,10 @@ export interface PopupItem {
   feelerData?: {
     parent: Genome;
     feeler: Genome;
+  };
+  branchData?: {
+    parent: Genome;
+    child: Genome;
   };
   duration?: number;
 }
@@ -353,6 +357,48 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
               style={{ backgroundColor: parentHex }}
             />
             <span className="text-white font-bold">{item.feelerData.parent.name}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (item.type === "branchMutation" && item.branchData) {
+    const parentHex = getHexColor(item.branchData.parent.color);
+    const childHex = getHexColor(item.branchData.child.color);
+
+    return (
+      <div className="flex items-start gap-2.5">
+        <div className="p-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0 mt-0.5">
+          <GitBranch className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div className="flex-1 pr-3">
+          <div className="text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
+            {item.subtitle}
+          </div>
+          <h3 className="text-xs font-bold text-white mb-0.5">
+            {item.title}
+          </h3>
+          <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
+            A lateral branch diverged genetically from {item.branchData.parent.name.split(' ')[0]}.
+          </p>
+
+          <div className="flex items-center gap-1.5 text-[9px] bg-black/40 p-1.5 rounded border border-emerald-500/30">
+            <div className="flex items-center gap-1">
+              <span
+                className="w-2.5 h-2.5 rounded-full border border-white/40"
+                style={{ backgroundColor: parentHex }}
+              />
+              <span className="text-white">{item.branchData.parent.name.split(' ')[0]}</span>
+            </div>
+            <span className="text-emerald-400 font-bold">➔</span>
+            <div className="flex items-center gap-1 border border-emerald-400/50 px-1 py-0.5 rounded bg-emerald-500/20">
+              <span
+                className="w-2.5 h-2.5 rounded-full border border-white/40"
+                style={{ backgroundColor: childHex }}
+              />
+              <span className="text-emerald-200 font-bold">{item.branchData.child.name}</span>
+            </div>
           </div>
         </div>
       </div>

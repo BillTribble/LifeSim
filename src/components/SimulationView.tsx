@@ -9,6 +9,7 @@ interface Props {
   onInitOrganisms?: (event: { alpha: any; beta: any }) => void;
   onMatingEvent?: (event: { parent1: any; parent2: any; child: any }) => void;
   onFeelerEvent?: (event: { parent: any; feeler: any }) => void;
+  onBranchMutationEvent?: (event: { parent: any; child: any }) => void;
   stats?: any;
   [key: string]: any;
 }
@@ -19,6 +20,7 @@ export function SimulationView({
   onInitOrganisms,
   onMatingEvent,
   onFeelerEvent,
+  onBranchMutationEvent,
   stats,
   restartTrigger,
   randomizeTrigger,
@@ -537,6 +539,7 @@ export function SimulationView({
     if (onInitOrganisms) engine.onInitOrganisms = onInitOrganisms;
     if (onMatingEvent) engine.onMatingEvent = onMatingEvent;
     if (onFeelerEvent) engine.onFeelerEvent = onFeelerEvent;
+    if (onBranchMutationEvent) engine.onBranchMutationEvent = onBranchMutationEvent;
     if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (onConfigChange) {

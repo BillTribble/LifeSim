@@ -712,7 +712,7 @@ Low: Safe, frequent branching." label="TERM_BRANCH" min={0.5} max={10.0} step={0
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH MUTATION
 Chance of mutation upon branching.
 High: Rapid evolution on new branches.
-Low: Stable genetic clones." label="B_MUTATE" min={0.0} max={1.0} step={0.01} value={state.branchMutationRate} onChange={setters.setBranchMutationRate} color="#87CEEB" />
+Low: Stable genetic clones." label="B_MUTATE" min={0.0} max={1.0} step={0.001} value={state.branchMutationRate} onChange={setters.setBranchMutationRate} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH BIGGER
 Chance for branches to be thicker.
 High: Thick, heavy secondary branches.

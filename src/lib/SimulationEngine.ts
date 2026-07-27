@@ -78,8 +78,10 @@ export class SimulationEngine {
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
   onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
   onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
+  onBranchMutationEvent?: (event: { parent: Genome; child: Genome; count?: number }) => void;
   matingCount: number = 0;
   feelerCount: number = 0;
+  branchMutationCount: number = 0;
   lastMatingWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.1;
@@ -138,7 +140,7 @@ export class SimulationEngine {
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.2;
   branchBigger: number = 0.5;
-  branchMutationRate: number = 0.05;
+  branchMutationRate: number = 0.001;
   enableGlow: boolean = false;
   glowSize: number = 0.0;
   fogVisibility: number = 800;

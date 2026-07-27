@@ -610,6 +610,16 @@ export function processAgents(
           );
           branchGenome.createdAt = engine.time;
           projectedSpeciesCount++;
+          if (engine.branchMutationCount < 3) {
+            engine.branchMutationCount++;
+            if (engine.onBranchMutationEvent) {
+              engine.onBranchMutationEvent({
+                parent: agent.genome,
+                child: branchGenome,
+                count: engine.branchMutationCount,
+              });
+            }
+          }
         }
 
         newAgents.push({

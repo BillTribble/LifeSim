@@ -62,6 +62,20 @@ export default function App() {
     setPopupQueue((prev) => [...prev, feelerItem]);
   };
 
+  const handleBranchMutationEvent = (event: { parent: any; child: any; count?: number }) => {
+    const dur = getScaledDuration();
+    const countText = event.count ? ` #${event.count}` : "";
+    const branchItem: PopupItem = {
+      id: `branch-${Date.now()}`,
+      type: "branchMutation",
+      title: `Branch Mutation${countText}`,
+      subtitle: "Vegetative Divergence",
+      branchData: event,
+      duration: dur,
+    };
+    setPopupQueue((prev) => [...prev, branchItem]);
+  };
+
   const handleDismissPopup = (id: string) => {
     setPopupQueue((prev) => prev.filter((item) => item.id !== id));
   };
@@ -232,6 +246,7 @@ export default function App() {
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
         onFeelerEvent={handleFeelerEvent}
+        onBranchMutationEvent={handleBranchMutationEvent}
       />
 
       <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />

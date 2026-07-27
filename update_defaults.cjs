@@ -47,7 +47,7 @@ const newDefaults = {
   "termProbPostBranch": 4.197484913107235,
   "taperDuration": 2.8319689168338855,
   "diebackAgeBias": 2.2591955721722714,
-  "branchMutationRate": 0.02,
+  "branchMutationRate": 0.001,
   "enableGlow": false,
   "glowSize": 0.5,
   "fogVisibility": 842.5548245648578,
