@@ -83,6 +83,7 @@ export class SimulationEngine {
   feelerCount: number = 0;
   branchMutationCount: number = 0;
   lastMatingWorldPos?: THREE.Vector3;
+  lastFeelerWorldPos?: THREE.Vector3;
   lastBranchMutationWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.1;
@@ -955,6 +956,7 @@ export class SimulationEngine {
       org1: projectPos(alphaPos),
       org2: projectPos(betaPos),
       mating: this.lastMatingWorldPos ? projectPos(this.lastMatingWorldPos) : null,
+      feeler: this.lastFeelerWorldPos ? projectPos(this.lastFeelerWorldPos) : null,
       branchMutation: this.lastBranchMutationWorldPos ? projectPos(this.lastBranchMutationWorldPos) : null,
     };
   }

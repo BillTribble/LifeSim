@@ -736,7 +736,14 @@ export function processAgents(
                         isFeeler: true,
                         realGenome: agent.genome,
                     });
-                   agent.cooldown = 150; if (engine.feelerCount < 3) { engine.feelerCount++; if (engine.onFeelerEvent) engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome, count: engine.feelerCount }); } // Prevent spamming feelers too fast
+                    agent.cooldown = 150;
+                    if (engine.feelerCount < 3) {
+                      engine.feelerCount++;
+                      engine.lastFeelerWorldPos = agent.position.clone();
+                      if (engine.onFeelerEvent) {
+                        engine.onFeelerEvent({ parent: agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome, feeler: feelerGenome, count: engine.feelerCount });
+                      }
+                    } // Prevent spamming feelers too fast
                    if (isDesperate && !isSuppressed) {
                        engine.onLog(`Aging ${agent.genome.name.split(' ')[0]} seeking hybridization partner.`);
                    } else {
