@@ -299,10 +299,6 @@ export function processDyingSegments(
         packAAttr.setZ(idx, dissolveProgress);
         packAAttr.needsUpdate = true;
       }
-      
-      if (seg && seg.matrix) {
-        mesh.setMatrixAt(idx, seg.matrix);
-      }
       changed = true;
     }
   }
