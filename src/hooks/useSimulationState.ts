@@ -537,7 +537,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("traitProbs") || "null");
-      if (stored && typeof stored === "object" && stored.flowers === 0.5) {
+      if (stored && typeof stored === "object" && stored.leaves === 0.8) {
         return stored;
       }
       return DEFAULTS.traitProbs;

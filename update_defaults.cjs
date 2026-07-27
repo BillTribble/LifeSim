@@ -60,7 +60,7 @@ const newDefaults = {
   "leafGrowthSpeed": 0.0045000000000000005,
   "phyllotaxisAngle": 137.5,
   "leafProbability": 0.65,
-  "appendageSpawnRate": 0.91,
+  "appendageSpawnRate": 1.0,
   "glowProbability": 0.1,
   "stemCurviness": 3,
   "veinStrength": 15,
@@ -68,7 +68,7 @@ const newDefaults = {
   "traitProbs": {
     "flowers": 0.5,
     "lillyPads": 0.5,
-    "leaves": 0.5,
+    "leaves": 0.8,
     "petals": 0.5,
     "needles": 0.5,
     "thorns": 0.5,

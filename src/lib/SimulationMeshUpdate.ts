@@ -256,7 +256,7 @@ export function processDyingSegments(
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
-        packAAttr.setZ(idx, 0.0);
+        packAAttr.setZ(idx, 1.0);
         packAAttr.needsUpdate = true;
       }
     } else {

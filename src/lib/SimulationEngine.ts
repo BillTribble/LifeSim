@@ -124,7 +124,7 @@ export class SimulationEngine {
   leafGrowthSpeed: number = 0.015;
   phyllotaxisAngle: number = 137.5;
   leafProbability: number = 0.65;
-  appendageSpawnRate: number = 0.91;
+  appendageSpawnRate: number = 1.0;
   glowProbability: number = 0.1;
   stemCurviness: number = 1.0;
   veinStrength: number = 1.0;
@@ -174,7 +174,7 @@ export class SimulationEngine {
   traitProbs: Record<string, number> = {
     flowers: 0.5,
     lillyPads: 0.5,
-    leaves: 0.5,
+    leaves: 0.8,
     petals: 0.5,
     needles: 0.5,
     thorns: 0.5,
@@ -651,11 +651,11 @@ export class SimulationEngine {
     }
 
     const alphaGenome = this.generateRandomGenome("Alpha", alphaArchetype);
-    alphaGenome.appendage = "leaves";
+    alphaGenome.appendage = getWeightedAppendage(this.traitProbs);
     alphaGenome.genomeHash = getHashForFamilyAndRange(alphaFamily, "alpha");
 
     let betaGenome = this.generateRandomGenome("Beta", betaArchetype);
-    betaGenome.appendage = "leaves";
+    betaGenome.appendage = getWeightedAppendage(this.traitProbs);
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
 
     let attempts = 0;
@@ -668,7 +668,7 @@ export class SimulationEngine {
     ) {
       attempts++;
       betaGenome = this.generateRandomGenome("Beta", betaArchetype);
-      betaGenome.appendage = "leaves";
+      betaGenome.appendage = getWeightedAppendage(this.traitProbs);
       betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
     }
 
