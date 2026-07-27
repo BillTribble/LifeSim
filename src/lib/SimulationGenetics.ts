@@ -280,15 +280,21 @@ export function getWeightedAppendage(
     return "leaves";
   }
 
+  // Dedicated 40% probability for leaves relative to all other appendages
+  const leafProb = traitProbs.leaves !== undefined ? Math.min(0.95, traitProbs.leaves) : 0.40;
+  if (Math.random() < leafProb) {
+    return "leaves";
+  }
+
+  const otherAppendages = APPENDAGES.filter((a) => a !== "leaves");
   let total = 0;
-  for (const [k, v] of Object.entries(traitProbs)) {
-    if (k === "glow") continue;
-    total += v;
+  for (const k of otherAppendages) {
+    total += traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
   }
   if (total <= 0) return "none";
   let r = Math.random() * total;
-  for (const [k, v] of Object.entries(traitProbs)) {
-    if (k === "glow") continue;
+  for (const k of otherAppendages) {
+    const v = traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
     r -= v;
     if (r <= 0) return k as any;
   }

@@ -717,7 +717,7 @@ export function processAgents(
                agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
            }
            
-           if (!agent.isFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
+           if (entropyEnabled && !agent.isFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!

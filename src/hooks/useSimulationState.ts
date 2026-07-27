@@ -68,7 +68,7 @@ export const DEFAULTS: Record<string, any> = {
   "traitProbs": {
     "flowers": 0.5,
     "lillyPads": 0.5,
-    "leaves": 0.5,
+    "leaves": 0.4,
     "petals": 0.5,
     "needles": 0.5,
     "thorns": 0.5,

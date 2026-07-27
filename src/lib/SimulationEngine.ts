@@ -175,7 +175,7 @@ export class SimulationEngine {
   traitProbs: Record<string, number> = {
     flowers: 0.5,
     lillyPads: 0.5,
-    leaves: 0.8,
+    leaves: 0.4,
     petals: 0.5,
     needles: 0.5,
     thorns: 0.5,
@@ -364,6 +364,11 @@ export class SimulationEngine {
   }
   setEntropyThreshold(val: number) {
     this.entropyThreshold = val;
+    if (val <= 0.001) {
+      this.onLog("ENTROPY: Set to 0.0 (0% Chance - Self-hybridization & Feelers OFF)");
+    } else {
+      this.onLog(`ENTROPY: Set to ${(val * 100).toFixed(0)}% threshold.`);
+    }
   }
   setMinAgents(val: number) {
     this.minAgents = val;

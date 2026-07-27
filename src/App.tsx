@@ -4,12 +4,19 @@ import { HUD } from "./components/HUD";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
 import { triggerRandomize } from "./utils/randomize";
+import { ActivityLog, LogEntry } from "./components/ActivityLog";
 
 export default function App() {
   const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
   const { state, setters } = useSimulationState();
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  const handleLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLogs((prev) => [{ id: Date.now() + Math.random(), text: msg, time }, ...prev.slice(0, 49)]);
+  };
 
   const getScaledDuration = () => Math.max(10000, Math.round(10000 * (0.4 / Math.max(0.1, state.timeScale))));
 
