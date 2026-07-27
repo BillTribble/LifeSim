@@ -119,7 +119,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       petals: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       needles: new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
       thorns: new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(-Math.PI / 2),
-      hair: new THREE.CylinderGeometry(0.04, 0.04, 3, 5).translate(0, 1.5, 0).rotateX(-Math.PI / 2),
+      hair: new THREE.CylinderGeometry(0.04, 0.04, 1, 5).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
       curlyHair: new THREE.TorusKnotGeometry(0.4, 0.08, 64, 8),
       crystals: new THREE.OctahedronGeometry(0.6),
       spores: new THREE.DodecahedronGeometry(0.5),
