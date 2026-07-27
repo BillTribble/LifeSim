@@ -53,9 +53,9 @@ export function updateMeshSegments(
       targetIndex = config.count % appendageLimit;
 
       if (genome.appendage === "flowers") {
-        scaleX = thickness * 6 * engine.flowerSize;
-        scaleY = thickness * 6 * engine.flowerSize;
-        scaleZ = thickness * 8 * engine.flowerSize;
+        scaleX = thickness * 5 * engine.flowerSize;
+        scaleY = thickness * 5 * engine.flowerSize;
+        scaleZ = thickness * 6 * engine.flowerSize;
       } else if (genome.appendage === "needles") {
         scaleX = thickness * 1.5;
         scaleY = thickness * 1.5;
@@ -64,23 +64,23 @@ export function updateMeshSegments(
         genome.appendage === "lillyPads" ||
         genome.appendage === "scales"
       ) {
-        scaleX = thickness * 8;
-        scaleY = thickness * 0.4;
-        scaleZ = thickness * 10;
+        scaleX = thickness * 3.5;
+        scaleY = thickness * 0.3;
+        scaleZ = thickness * 4.0;
       } else if (genome.appendage === "leaves") {
-        scaleX = thickness * 8;
-        scaleY = thickness * 10;
-        scaleZ = thickness * 12;
+        scaleX = thickness * 4.0;
+        scaleY = thickness * 4.5;
+        scaleZ = thickness * 5.0;
         engine.dummy.rotateX(-Math.PI / 2);
         engine.dummy.rotateY(Math.PI);
       } else if (genome.appendage === "petals") {
-        scaleX = thickness * 10;
+        scaleX = thickness * 3.5;
         scaleY = thickness * 0.2;
-        scaleZ = thickness * 6;
+        scaleZ = thickness * 2.5;
       } else if (genome.appendage === "thorns") {
-        scaleX = thickness * 3;
-        scaleY = thickness * 3;
-        scaleZ = thickness * 6;
+        scaleX = thickness * 7.5;
+        scaleY = thickness * 7.5;
+        scaleZ = thickness * 15.0;
       } else if (
         genome.appendage === "hair" ||
         genome.appendage === "curlyHair" ||
@@ -90,9 +90,9 @@ export function updateMeshSegments(
         scaleY = thickness * 2;
         scaleZ = thickness * 2;
       } else {
-        scaleX = thickness * 4;
-        scaleY = thickness * 4;
-        scaleZ = thickness * 4;
+        scaleX = thickness * 3;
+        scaleY = thickness * 3;
+        scaleZ = thickness * 3;
       }
 
       if (genome.multicolorAppendage) {
@@ -240,9 +240,8 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 150 unscaled frame ticks = 2.5 seconds of real-time Gaussian dither dissolve
-    // completely independent of slow-motion timeScale
-    const wipeDuration = 150.0;
+    // 30 unscaled frame ticks = 0.5 seconds of real-time Gaussian dither dissolve fade OUT
+    const wipeDuration = 30.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

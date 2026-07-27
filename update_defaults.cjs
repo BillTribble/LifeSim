@@ -40,7 +40,7 @@ const newDefaults = {
   "maxSpecies": 19,
   "ecoFade": 0.09835534619763375,
   "minAgents": 11,
-  "boundarySize": 84,
+  "boundarySize": 58.8,
   "desiccationSpeed": 10.562491679923507,
   "hybridSize": 2,
   "terminationProb": 0.3373915948495838,
