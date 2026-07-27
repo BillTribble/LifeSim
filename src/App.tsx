@@ -167,7 +167,7 @@ export default function App() {
         stats={stats}
         onLog={(msg) => {
           console.log(msg);
-          fetch('/api/log', { method: 'POST', body: msg }).catch(() => {});
+          handleLog(msg);
         }}
         onStateUpdate={handleStateUpdate}
         onConfigChange={(config) => {
