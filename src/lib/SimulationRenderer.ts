@@ -11,10 +11,10 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.scene.fog = new THREE.Fog('#001220', 200, 800);
     
     const aspect = width / height;
-    const d = 180;
-    engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-    engine.camera.position.set(85.63730363681164, 181.12416818756873, -282.595626158962);
-    engine.camera.zoom = 1.7917714317777194;
+    const d = 260;
+    engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1500);
+    engine.camera.position.set(120, 220, -320);
+    engine.camera.zoom = 1.15;
     engine.camera.updateProjectionMatrix();
     engine.camera.lookAt(engine.scene.position);
     
@@ -41,8 +41,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
-    const grid = new THREE.GridHelper(200, 40, 0x1e293b, 0x0f172a);
-    grid.position.y = -1;
+    const grid = new THREE.GridHelper(500, 50, 0x334155, 0x1e293b);
+    grid.position.y = -50;
     engine.scene.add(grid);
 
     engine.dummy = new THREE.Object3D();
