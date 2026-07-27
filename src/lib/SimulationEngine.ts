@@ -39,6 +39,8 @@ export class SimulationEngine {
   hybridConnectionMesh!: THREE.LineSegments;
   dummy!: THREE.Object3D;
   canvas!: HTMLCanvasElement;
+  width: number = 0;
+  height: number = 0;
 
   pointCount: number = 0;
   segments: Segment[] = [];
@@ -753,6 +755,8 @@ export class SimulationEngine {
   }
 
   resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
     const aspect = width / height;
     const d = 180;
     this.camera.left = -d * aspect;
@@ -919,7 +923,9 @@ export class SimulationEngine {
   };
 
   getTrackedPositions() {
-    if (!this.camera) return null;
+    if (!this.camera || !this.width || !this.height) return null;
+
+    this.camera.updateMatrixWorld();
 
     const projectPos = (pos: THREE.Vector3) => {
       const v = pos.clone();

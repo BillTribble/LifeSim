@@ -120,13 +120,20 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
   }
 
   // 3D creature target point on screen (cx, cy)
-  const cx = targetPos ? targetPos.x : cardX;
-  const cy = targetPos ? targetPos.y : cardY - 150;
+  const isValidTarget =
+    targetPos &&
+    Number.isFinite(targetPos.x) &&
+    Number.isFinite(targetPos.y) &&
+    !targetPos.isBehind &&
+    (targetPos.x > 5 || targetPos.y > 5);
+
+  const cx = isValidTarget ? targetPos.x : cardX;
+  const cy = isValidTarget ? targetPos.y : cardY - 150;
 
   return (
     <>
       {/* Clean Vector Line Indicator */}
-      {targetPos && (
+      {isValidTarget && (
         <svg className="fixed inset-0 w-full h-full pointer-events-none z-40 overflow-visible">
           <defs>
             <linearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">

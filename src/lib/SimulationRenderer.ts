@@ -5,6 +5,8 @@ import { MAX_POINTS } from './SimulationTypes';
 import { setupShaderMaterial, setupLeafShaderMaterial } from './SimulationGenetics';
 
 export function setupSimulationScene(engine: SimulationEngine, width: number, height: number) {
+    engine.width = width;
+    engine.height = height;
     engine.scene = new THREE.Scene();
     engine.scene.fog = new THREE.Fog('#001220', 200, 800);
     
