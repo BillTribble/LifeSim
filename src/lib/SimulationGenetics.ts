@@ -383,19 +383,25 @@ export function breedGenomes(
     g2.phyllotaxisMode ?? "spiral", g2.recessive?.phyllotaxisMode
   );
 
-  // Inheritance-focused color with subtle complementary/triadic alignment
+  // Inheritance-focused color: Smooth lerp between parent colors + complementary harmony
   const baseColor = colorInheritance.expressed.clone();
-  const parentH = baseColor.getHSL({ h: 0, s: 0, l: 0 }).h;
-  const isAlbino = Math.random() < 0.05;
-  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.88;
-  const resultL = isAlbino ? 0.92 + Math.random() * 0.08 : 0.55;
+  const h1 = g1.color.getHSL({ h: 0, s: 0, l: 0 });
+  const h2 = g2.color.getHSL({ h: 0, s: 0, l: 0 });
   
-  // 85% tight parent inheritance, 15% complementary/triadic shift for high-contrast harmony
-  let resultH = (parentH + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
-  if (Math.random() < 0.15) {
-    const shift = (Math.floor(Math.random() * 3) + 1.0) * (1.0 / 3.0);
-    resultH = (parentH + shift + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0;
+  let hueDiff = h2.h - h1.h;
+  if (hueDiff > 0.5) hueDiff -= 1.0;
+  if (hueDiff < -0.5) hueDiff += 1.0;
+  
+  let resultH = (h1.h + hueDiff * (0.3 + Math.random() * 0.4) + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
+  
+  // 20% chance of exact 180° complementary color shift for aesthetic contrast
+  if (Math.random() < 0.20) {
+    resultH = (resultH + 0.50 + (Math.random() - 0.5) * 0.02 + 1.0) % 1.0;
   }
+
+  const isAlbino = Math.random() < 0.03;
+  const resultS = isAlbino ? 0.02 : Math.min(0.95, Math.max(0.65, (h1.s + h2.s) * 0.5));
+  const resultL = isAlbino ? 0.95 : Math.min(0.65, Math.max(0.45, (h1.l + h2.l) * 0.5));
   baseColor.setHSL(resultH, resultS, resultL);
 
   const inheritedDecay = (g1.thicknessDecay + g2.thicknessDecay) / 2;

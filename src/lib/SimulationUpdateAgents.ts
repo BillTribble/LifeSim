@@ -896,8 +896,8 @@ export function processAgents(
 
 
       // 4-STAGE LIFESPAN MODEL:
-      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (180 ticks ~ 3s), growth stops & dying begins!
-      const maxGrowthAge = 180 * Math.max(0.5, engine.timeScale);
+      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
+      const maxGrowthAge = 600 * Math.max(0.5, engine.timeScale);
       if (!agent.tapering && (agent.hasBred || agent.age > maxGrowthAge)) {
         agent.tapering = true;
         agent.fadeAge = 0;

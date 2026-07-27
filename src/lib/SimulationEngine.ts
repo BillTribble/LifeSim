@@ -587,6 +587,10 @@ export class SimulationEngine {
     this.segments = [];
     this.hybridSegments = [];
     this.hybridCount = 0;
+    if (this.dyingStrains) this.dyingStrains.clear();
+    if (this.dyingStems) this.dyingStems.clear();
+    if (this.suppressedStrains) this.suppressedStrains.clear();
+    if (this.speciesAbove5Percent) this.speciesAbove5Percent.clear();
     this.time = 0;
     this.frameCount = 0;
     const idm = new THREE.Matrix4().set(
