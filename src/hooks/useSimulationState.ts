@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 export const DEFAULTS: Record<string, any> = {
   "kioskMode": true,
   "themeMorphSpeed": 5,
-  "themeMorphFreq": 0.8,
+  "themeMorphFreq": 1.0,
   "theme": 0,
   "timeScale": 0.6,
   "gingerSpeed": 1,

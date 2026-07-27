@@ -66,40 +66,8 @@ export function updateSimulation(engine: SimulationEngine) {
     engine.controls.update();
   }
 
-  // Handle automatic theme morphing
-  if (engine.themeMorphFreq < 1.0) {
-    // scale from 3s to 10 minutes (600s). Max morphFreq (1.0) is OFF, so calculate up to 0.99
-    const freq = Math.min(0.99, engine.themeMorphFreq);
-    const intervalSecs = 3 * Math.pow(600 / 3, freq / 0.99);
-    // 60 frames per second
-    const intervalFrames = intervalSecs * 60;
-    
-    if (engine.frameCount - engine.lastThemeMorphTime > intervalFrames && engine.themeProgress >= 1.0) {
-      engine.lastThemeMorphTime = engine.frameCount;
-      
-      // Pick random next theme different from current, biasing towards complementary (2) x2
-      const candidates: number[] = [];
-      for (let t = 0; t < 4; t++) {
-        if (t !== engine.theme) {
-          candidates.push(t);
-          if (t === 2) candidates.push(t);
-        }
-      }
-      const next = candidates[Math.floor(Math.random() * candidates.length)];
-      
-      engine.setTheme(next, false);
-          // We don't want the React layer to overwrite this automatically, 
-          // but it will if the React state has its own 'theme'. 
-          // To properly sync this, the engine should emit an event or React should just not force theme if it hasn't changed.
-          // We will handle it locally.
-          if (engine.onConfigChange) {
-            engine.onConfigChange({ theme: next });
-          }
-        }
-      }
-    
-      // Handle theme transition progress
-      if (engine.themeProgress < 1.0) {
+  // Handle theme transition progress when manually triggered by user
+  if (engine.themeProgress < 1.0) {
         // themeMorphSpeed is in seconds (1 to 20)
         const transitionSpeed = engine.manualThemeTransition ? 0.5 : engine.themeMorphSpeed;
         const progressInc = 1.0 / (transitionSpeed * 60);
