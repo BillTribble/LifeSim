@@ -573,34 +573,37 @@ export function updateSimulation(engine: SimulationEngine) {
         }
       }
     }
+  }
 
-    for (const app of engine.appendages.values()) {
-      const appLim = Math.floor(engine.maxDOMs / 4);
-      if (appLim > 0) {
-        for (let i = 0; i < appLim; i++) {
-          const seg = app.segments[i];
-          if (seg && !app.dyingSet.has(i)) {
-            const parentSeg = engine.segments[seg.parentIndex];
-            const parentDead =
-              !parentSeg ||
-              parentSeg.timestamp !== seg.parentTimestamp ||
-              engine.dyingStems.has(seg.parentIndex);
-            if (parentDead) {
-              engine.markDying(app.segments, app.dyingSet, i);
-            }
+  // UNCONDITIONAL ORPHAN CLEANUP: Check every frame to ensure any leaf, flower, or appendage
+  // whose parent stem is missing, overwritten, or dying gets marked dying immediately.
+  for (const app of engine.appendages.values()) {
+    const appLim = Math.floor(engine.maxDOMs / 4);
+    if (appLim > 0) {
+      for (let i = 0; i < appLim; i++) {
+        const seg = app.segments[i];
+        if (seg && !app.dyingSet.has(i)) {
+          const parentSeg = engine.segments[seg.parentIndex];
+          const parentDead =
+            !parentSeg ||
+            parentSeg.timestamp !== seg.parentTimestamp ||
+            engine.dyingStems.has(seg.parentIndex);
+          if (parentDead) {
+            engine.markDying(app.segments, app.dyingSet, i);
           }
         }
       }
     }
+  }
 
-    const sweepDist = 50 + Math.floor(engine.growthSpeed * 10);
-    const overwriteHead = engine.pointCount % engine.maxDOMs;
-    for (let j = 0; j < sweepDist; j++) {
-      const idx = (overwriteHead + j) % engine.maxDOMs;
-      if (engine.segments[idx] && !engine.dyingStems.has(idx)) {
-        if (engine.time - engine.segments[idx].timestamp > 100) {
-          engine.markDying(engine.segments, engine.dyingStems, idx);
-        }
+  // UNCONDITIONAL RING BUFFER OVERWRITE SWEEP: Mark overwritten/stale stem segments as dying.
+  const sweepDist = 50 + Math.floor(engine.growthSpeed * 10);
+  const overwriteHead = engine.pointCount % engine.maxDOMs;
+  for (let j = 0; j < sweepDist; j++) {
+    const idx = (overwriteHead + j) % engine.maxDOMs;
+    if (engine.segments[idx] && !engine.dyingStems.has(idx)) {
+      if (engine.time - engine.segments[idx].timestamp > 100) {
+        engine.markDying(engine.segments, engine.dyingStems, idx);
       }
     }
   }
@@ -609,17 +612,14 @@ export function updateSimulation(engine: SimulationEngine) {
   for (const app of engine.appendages.values()) {
     engine.processDying(app.segments, app.dyingSet, app.mesh, true);
 
-    if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
-      const sweepDist = 50 + Math.floor(engine.growthSpeed * 10);
-      const appLimit = Math.floor(engine.maxDOMs / 4);
-      if (appLimit > 0) {
-        const appHead = app.count % appLimit;
-        for (let j = 0; j < sweepDist; j++) {
-          const idx = (appHead + j) % appLimit;
-          if (app.segments[idx] && !app.dyingSet.has(idx)) {
-            if (engine.time - app.segments[idx].timestamp > 100) {
-              engine.markDying(app.segments, app.dyingSet, idx);
-            }
+    const appLimit = Math.floor(engine.maxDOMs / 4);
+    if (appLimit > 0) {
+      const appHead = app.count % appLimit;
+      for (let j = 0; j < sweepDist; j++) {
+        const idx = (appHead + j) % appLimit;
+        if (app.segments[idx] && !app.dyingSet.has(idx)) {
+          if (engine.time - app.segments[idx].timestamp > 100) {
+            engine.markDying(app.segments, app.dyingSet, idx);
           }
         }
       }
