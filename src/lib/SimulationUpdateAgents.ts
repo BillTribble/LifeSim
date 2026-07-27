@@ -25,6 +25,22 @@ export function processAgents(
         nonTaperingStrains.add(a.genome.name);
       }
     }
+  // MINIMUM POPULATION IMMUNITY (NO DEATH IF ≤ 3 CREATURES LEFT):
+  // When active main organisms <= 3, suspend natural death to prevent total population extinction.
+  const activeMainOrganisms = activeAgents.filter(a => a.active && !a.isFeeler);
+  const minThreshold = engine.minAgents || 3;
+  if (activeMainOrganisms.length <= minThreshold) {
+    if (!engine.immunityLogged) {
+      engine.onLog(`🛡️ MINIMUM POPULATION IMMUNITY (≤ ${minThreshold} creatures): Natural death suspended until offspring breed.`);
+      engine.immunityLogged = true;
+    }
+    for (const agent of activeMainOrganisms) {
+      agent.tapering = false;
+      agent.dyingStart = undefined;
+      if (engine.dyingStrains) engine.dyingStrains.delete(agent.genome.name);
+    }
+  } else {
+    engine.immunityLogged = false;
   }
 
   // Cap maximum species by tapering the oldest variant
@@ -372,13 +388,13 @@ export function processAgents(
         agent.direction.normalize();
       }
 
-      const minAllowed = agent.isFeeler ? 0.1 : 1.8;
+      const minAllowed = agent.isFeeler ? 0.1 : Math.max(3.5, (genome.thicknessBase || 4.0) * 0.75);
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         minAllowed,
-        Math.max(8.0, engine.maxLineWidth),
+        Math.max(12.0, engine.maxLineWidth * 1.5),
       );
-      const renderThickness = Math.max(minAllowed, agent.thickness * 0.9);
+      const renderThickness = Math.max(minAllowed, agent.thickness);
 
       engine.addLineSegment(
         agent.lastPosition,
@@ -933,28 +949,13 @@ export function processAgents(
       } 
       
       if (!agent.tapering && agent.active) {
-        if (!agent.recovering) {
-          agent.thickness *= genome.thicknessDecay;
-          // Natural recovery: if they get too thin, they bounce back and get thick again
-          if (agent.thickness <= genome.minThickness * 1.5 && Math.random() < 0.05) {
-             agent.recovering = true;
-             agent.targetThickness = genome.thicknessBase;
-             engine.onLog(`Strain ${genome.name.split(' ')[0]} recovered its thickness!`);
-          }
-        }
-        agent.thickness = Math.max(agent.thickness, genome.minThickness);
-
-        if (agent.targetThickness !== undefined) {
-          const recoverySpeed = agent.recovering ? 0.008 : 0.05;
-          agent.thickness += (agent.targetThickness - agent.thickness) * recoverySpeed;
-          if (Math.abs(agent.targetThickness - agent.thickness) < 0.05) {
-            agent.targetThickness = undefined;
-            agent.recovering = false;
-          }
-        }
+        // Maintain bold lush thickness near thicknessBase without decaying into thin sticks
+        const targetThick = genome.thicknessBase || 4.0;
+        agent.thickness += (targetThick - agent.thickness) * 0.05;
       }
     }
   }
+}
 
   // Purge dead inactive agents from simulation memory array
   engine.agents = activeAgents.filter(a => a.active);

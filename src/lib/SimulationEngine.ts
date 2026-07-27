@@ -156,6 +156,7 @@ export class SimulationEngine {
   kioskFadeProgress: number = 0;
   kioskFadingOut: boolean = false;
   onKioskTrigger?: () => void;
+  immunityLogged?: boolean;
 
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
@@ -894,7 +895,7 @@ export class SimulationEngine {
         isDying?: boolean;
       }[] = [];
       this.biomassMap.forEach((v, k) => {
-        if (v > 0) {
+        if (v > 0 && !k.startsWith("Feeler-")) {
           const genome = this.genomeMap.get(k);
           if (genome) {
             const color2 = genome.gradientGrowth

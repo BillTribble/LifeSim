@@ -238,11 +238,13 @@ export function updateMeshSegments(
 
   targetMesh.instanceMatrix.needsUpdate = true;
   if (targetMesh.instanceColor) targetMesh.instanceColor.needsUpdate = true;
-  engine.biomassMap.set(
-    genome.name,
-    (engine.biomassMap.get(genome.name) || 0) + 1,
-  );
-  engine.genomeMap.set(genome.name, genome);
+  if (!genome.name.startsWith("Feeler-")) {
+    engine.biomassMap.set(
+      genome.name,
+      (engine.biomassMap.get(genome.name) || 0) + 1,
+    );
+    engine.genomeMap.set(genome.name, genome);
+  }
 }
 
 export function processDyingSegments(
