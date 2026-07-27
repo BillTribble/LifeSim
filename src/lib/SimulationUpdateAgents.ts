@@ -26,7 +26,7 @@ export function processAgents(
       }
     }
   // MINIMUM POPULATION IMMUNITY (NO DEATH IF ≤ 3 CREATURES LEFT):
-  // When active main organisms <= 3, suspend natural death and clear all 3D dissolve sets.
+  // When active main organisms <= 3, suspend natural death to preserve ecosystem.
   const activeMainOrganisms = activeAgents.filter(a => a.active && !a.isFeeler);
   const minThreshold = engine.minAgents || 3;
   if (activeMainOrganisms.length <= minThreshold) {
@@ -38,19 +38,6 @@ export function processAgents(
       agent.tapering = false;
       agent.dyingStart = undefined;
       if (engine.dyingStrains) engine.dyingStrains.delete(agent.genome.name);
-    }
-    if (engine.dyingStems) engine.dyingStems.clear();
-    for (const app of engine.appendages.values()) {
-      if (app.dyingSet) app.dyingSet.clear();
-    }
-    for (let sIdx = 0; sIdx < engine.maxDOMs; sIdx++) {
-      if (engine.segments[sIdx]) engine.segments[sIdx].dyingStart = undefined;
-    }
-    for (const app of engine.appendages.values()) {
-      const appLim = Math.floor(engine.maxDOMs / 4);
-      for (let aIdx = 0; aIdx < appLim; aIdx++) {
-        if (app.segments[aIdx]) app.segments[aIdx].dyingStart = undefined;
-      }
     }
   } else {
     engine.immunityLogged = false;
