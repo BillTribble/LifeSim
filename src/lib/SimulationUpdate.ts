@@ -348,7 +348,9 @@ export function updateSimulation(engine: SimulationEngine) {
                 : mesh === engine.appendages.get("leaves")?.mesh
                   ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
                   : engine.flowerSize;
-          engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulseEffect);
+
+          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : new THREE.Vector3(1, 1, 1);
+          engine.dummy.scale.copy(baseScaleVec).multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
 

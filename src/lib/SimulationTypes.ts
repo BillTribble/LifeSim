@@ -110,6 +110,7 @@ export interface Segment {
   parentTimestamp?: number;
   color?: THREE.Color;
   randomFactor?: number;
+  scaleVec?: THREE.Vector3;
 }
 
 export const MAX_POINTS = 24000;

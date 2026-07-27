@@ -151,7 +151,8 @@ export function updateMeshSegments(
     finalColor.multiplyScalar(2.0);
   }
 
-  engine.dummy.scale.set(scaleX, scaleY, scaleZ);
+  const scaleVec = new THREE.Vector3(scaleX, scaleY, scaleZ);
+  engine.dummy.scale.set(1, 1, 1);
   engine.dummy.updateMatrix();
   const fullMatrix = engine.dummy.matrix.clone();
 
@@ -213,6 +214,7 @@ export function updateMeshSegments(
       index: targetIndex,
       timestamp: engine.time,
       matrix: fullMatrix,
+      scaleVec,
       thickness,
       strainName: genome.name,
     };
@@ -228,6 +230,7 @@ export function updateMeshSegments(
         index: targetIndex,
         timestamp: engine.time,
         matrix: fullMatrix,
+        scaleVec,
         thickness,
         strainName: genome.name,
         parentIndex: targetIndexStem,
