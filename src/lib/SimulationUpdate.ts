@@ -921,18 +921,25 @@ export function updateSimulation(engine: SimulationEngine) {
   // Periodic archetype census breakdown logged every 300 frames (~5s)
   if (engine.frameCount % 300 === 0 && activeNotTapering.length > 0) {
     const archetypeCounts: Record<string, number> = { ginger: 0, bush: 0, tree: 0, snake: 0 };
+    let totalAge = 0;
+    let maxAge = 0;
     for (const agent of activeNotTapering) {
       const arch = agent.genome.archetype || "bush";
       archetypeCounts[arch] = (archetypeCounts[arch] || 0) + 1;
+      totalAge += agent.age;
+      if (agent.age > maxAge) maxAge = agent.age;
     }
     const total = activeNotTapering.length;
+    const avgAgeSecs = (totalAge / total / 60.0).toFixed(1);
+    const maxAgeSecs = (maxAge / 60.0).toFixed(1);
+
     const gPct = Math.round(((archetypeCounts.ginger || 0) / total) * 100);
     const bPct = Math.round(((archetypeCounts.bush || 0) / total) * 100);
     const tPct = Math.round(((archetypeCounts.tree || 0) / total) * 100);
     const sPct = Math.round(((archetypeCounts.snake || 0) / total) * 100);
 
     engine.onLog(
-      `📊 [CENSUS] Total: ${total} | Ginger: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
+      `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Ginger: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
     );
   }
 }

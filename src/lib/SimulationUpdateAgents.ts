@@ -952,6 +952,10 @@ export function processAgents(
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
             if (!engine.dyingStrains) engine.dyingStrains = new Set();
             engine.dyingStrains.add(agent.genome.name);
+            const lifespanSecs = (agent.age / 60.0).toFixed(1);
+            engine.onLog(
+              `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] expired after ${lifespanSecs}s (${agent.age} ticks).`
+            );
           }
         }
       } 
