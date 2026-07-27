@@ -536,42 +536,26 @@ export function updateSimulation(engine: SimulationEngine) {
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 
-  if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
-    // Sequential sweep: Start at the oldest active base segment in the ring buffer
+  if (engine.dyingStrains && engine.dyingStrains.size > 0) {
+    // Rapid whole-organism sweep: Once an organism finishes its lifecycle or gets culled,
+    // dissolve the entire organism sequentially from base to tip to clear space for new organisms.
     const activeTotal = Math.min(engine.pointCount, engine.maxDOMs);
     if (activeTotal > 0) {
       const ringOffset = engine.pointCount > engine.maxDOMs ? engine.pointCount % engine.maxDOMs : 0;
-      const batchSize = Math.floor(activeTotal / 15);
+      const batchSize = Math.floor(activeTotal / 10);
 
       for (let i = 0; i < batchSize; i++) {
-        // Step sequentially from oldest base segment forward towards tip
-        const idx = (ringOffset + ((engine.frameCount * 5 + i) % activeTotal)) % activeTotal;
+        const idx = (ringOffset + ((engine.frameCount * 8 + i) % activeTotal)) % activeTotal;
         const seg = engine.segments[idx];
         if (seg && !engine.dyingStems.has(idx)) {
-          const age = engine.time - seg.timestamp;
-          const bias = engine.diebackAgeBias || 1.0;
-          const isDyingStrain = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
-          
-          let prob = Math.min(
-            1.0,
-            Math.pow(age / 400, bias) * Math.max(0.000001, effectiveDieback) * 0.7,
-          );
-          
-          if (isDyingStrain) {
-            const activeDieback = (engine.cullRate / 100.0) * speedFactor * engine.timeScale;
-            prob = Math.min(1.0, Math.pow(age / 300, bias) * Math.max(0.000001, activeDieback) * 0.8);
-          }
-          
-          if (Math.random() < prob) {
-            // Mark sequentially up the stem from base towards tip
-            const chunkSize = Math.max(1, Math.floor(Math.random() * Math.min(120, engine.diebackRate * 3 + 2)));
+          if (engine.dyingStrains.has(seg.strainName)) {
+            // Rapid sequential dissolve across the strain's segments
+            const chunkSize = 25;
             for (let j = 0; j < chunkSize; j++) {
               const chunkIdx = (idx + j) % activeTotal;
               const cSeg = engine.segments[chunkIdx];
-              if (cSeg && !engine.dyingStems.has(chunkIdx)) {
-                if (engine.time - cSeg.timestamp > 30) {
-                  engine.markDying(engine.segments, engine.dyingStems, chunkIdx);
-                }
+              if (cSeg && cSeg.strainName === seg.strainName && !engine.dyingStems.has(chunkIdx)) {
+                engine.markDying(engine.segments, engine.dyingStems, chunkIdx);
               }
             }
           }

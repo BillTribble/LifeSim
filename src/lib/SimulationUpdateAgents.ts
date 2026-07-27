@@ -946,6 +946,8 @@ export function processAgents(
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
             if (newCount <= 0) {
               strainCounts.delete(agent.genome.name);
+              if (!engine.dyingStrains) engine.dyingStrains = new Set();
+              engine.dyingStrains.add(agent.genome.name);
             } else {
               strainCounts.set(agent.genome.name, newCount);
             }
