@@ -794,10 +794,10 @@ export class SimulationEngine {
     updateMeshSegments(this, p1, p2, genome, thickness, isAppendage);
   }
 
-  markDying(segments: any[], dyingSet: Set<number>, idx: number) {
+  markDying(segments: any[], dyingSet: Set<number>, idx: number, dyingStartOverride?: number) {
     const seg = segments[idx];
     if (seg && !seg.dyingStart) {
-      seg.dyingStart = this.unscaledTime;
+      seg.dyingStart = dyingStartOverride !== undefined ? dyingStartOverride : this.unscaledTime;
       dyingSet.add(idx);
       const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
       if (prevBiomass > 0) {

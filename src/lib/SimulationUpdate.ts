@@ -537,21 +537,33 @@ export function updateSimulation(engine: SimulationEngine) {
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
 
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
-    // All-at-once whole-organism decay: Mark all segments of dying strains immediately
-    // so the entire organism (stems & appendages) smoothly dissolves all at once in 0.5s.
+    // All-at-once whole-organism decay: Mark all stem and appendage segments of dying strains with the exact same timestamp
+    const now = engine.unscaledTime;
     const activeTotal = Math.min(engine.pointCount, engine.maxDOMs);
     if (activeTotal > 0) {
       for (let i = 0; i < activeTotal; i++) {
         const seg = engine.segments[i];
         if (seg && !engine.dyingStems.has(i) && engine.dyingStrains.has(seg.strainName)) {
-          engine.markDying(engine.segments, engine.dyingStems, i);
+          engine.markDying(engine.segments, engine.dyingStems, i, now);
+        }
+      }
+    }
+
+    for (const app of engine.appendages.values()) {
+      const appLim = Math.floor(engine.maxDOMs / 4);
+      if (appLim > 0) {
+        for (let i = 0; i < appLim; i++) {
+          const seg = app.segments[i];
+          if (seg && !app.dyingSet.has(i) && engine.dyingStrains.has(seg.strainName)) {
+            engine.markDying(app.segments, app.dyingSet, i, now);
+          }
         }
       }
     }
   }
 
   // UNCONDITIONAL ORPHAN CLEANUP: Check every frame to ensure any leaf, flower, or appendage
-  // whose parent stem is missing, overwritten, or dying gets marked dying immediately.
+  // whose parent stem is missing, overwritten, or dying gets marked dying immediately with parent's timestamp.
   for (const app of engine.appendages.values()) {
     const appLim = Math.floor(engine.maxDOMs / 4);
     if (appLim > 0) {
@@ -564,7 +576,8 @@ export function updateSimulation(engine: SimulationEngine) {
             parentSeg.timestamp !== seg.parentTimestamp ||
             engine.dyingStems.has(seg.parentIndex);
           if (parentDead) {
-            engine.markDying(app.segments, app.dyingSet, i);
+            const parentDyingStart = parentSeg ? parentSeg.dyingStart : undefined;
+            engine.markDying(app.segments, app.dyingSet, i, parentDyingStart);
           }
         }
       }
