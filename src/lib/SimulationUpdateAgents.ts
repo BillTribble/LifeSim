@@ -358,12 +358,13 @@ export function processAgents(
         agent.direction.normalize();
       }
 
+      const minAllowed = agent.isFeeler ? 0.1 : 1.8;
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
-        0.1,
-        engine.maxLineWidth,
+        minAllowed,
+        Math.max(8.0, engine.maxLineWidth),
       );
-      const renderThickness = Math.max(0.1, agent.thickness * 0.9);
+      const renderThickness = Math.max(minAllowed, agent.thickness * 0.9);
 
       engine.addLineSegment(
         agent.lastPosition,

@@ -238,7 +238,7 @@ export class SimulationEngine {
       color: color,
       thicknessBase: 1.5 + Math.random() * 4,
       minThickness: 0.1 + Math.random() * 1.5,
-      thicknessDecay: 0.995 + Math.random() * 0.01,
+      thicknessDecay: 0.9995 + Math.random() * 0.0005,
       stepSize: 0.8 + Math.random() * 0.8,
       bifurcationRate: 0.01 + Math.random() * 0.03,
       wanderIntensity: 0.01 + Math.random() * 0.05,

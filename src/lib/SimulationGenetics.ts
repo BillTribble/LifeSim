@@ -406,7 +406,7 @@ export function breedGenomes(
       ((g1.minThickness + g2.minThickness) / 2) *
         (1 + (Math.random() - 0.5) * 0.2),
     ),
-    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay, 0.998, 1.002),
+    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay, 0.9995, 1.0),
     stepSize: Math.max(
       0.5,
       ((g1.stepSize + g2.stepSize) / 2) * (1 + (Math.random() - 0.5) * 0.2),
