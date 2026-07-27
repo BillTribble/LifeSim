@@ -597,7 +597,7 @@ export function processAgents(
         let branchGenome = agent.genome;
         if (
           engine.branchMutationRate > 0 &&
-          Math.random() < engine.branchMutationRate &&
+          Math.random() < engine.branchMutationRate * 0.02 &&
           projectedSpeciesCount < engine.maxSpecies
         ) {
           branchGenome = mutateBranchGenome(

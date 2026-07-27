@@ -113,6 +113,27 @@ export function HUD({
       >
         <header className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 pointer-events-none">
+            {/* Top-Left Persistent Buttons */}
+            <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-cyan-500/50 px-2 py-0.5 sm:py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
+                onClick={handleRestart}
+                title="Restart ecosystem"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-bold">Restart</span>
+              </div>
+
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-purple-500/50 px-2 py-0.5 sm:py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
+                onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+                title="Randomize all simulation settings and theme"
+              >
+                <Dices className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="text-[9px] sm:text-[10px] font-bold">RANDOM</span>
+              </div>
+            </div>
+
             <div className={`flex flex-wrap items-center gap-2 sm:gap-3 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
               <div className="relative shrink-0">
                 <div
@@ -207,24 +228,6 @@ export function HUD({
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
-              <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-cyan-500/50 px-2 py-0.5 sm:py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
-                onClick={handleRestart}
-                title="Restart ecosystem"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="text-[9px] sm:text-[10px] font-bold">Restart</span>
-              </div>
-
-              <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-purple-500/50 px-2 py-0.5 sm:py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
-                onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
-                title="Randomize all simulation settings and theme"
-              >
-                <Dices className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="text-[9px] sm:text-[10px] font-bold">RANDOM</span>
-              </div>
-
               <div className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 border border-[#D2B48C]/50 px-1.5 sm:px-2 py-0.5 rounded bg-[#001220]/70 backdrop-blur-md shadow-sm opacity-90 hover:opacity-100 transition-opacity shrink-0"
                 title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
               >

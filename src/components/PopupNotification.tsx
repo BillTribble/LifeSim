@@ -146,11 +146,12 @@ function PopupCardItem({ item, targetPos, onDismiss }: PopupCardItemProps) {
       anchorPointX = cardX - 110;
       anchorPointY = cardY - 30;
     }
-  } else if (item.type === "mating" || item.type === "feeler") {
-    cardX = window.innerWidth / 2;
+  } else {
+    // After introduction, show all event pop-ups in bottom right of screen
+    cardX = Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
     cardY = window.innerHeight - 110;
-    anchorPointX = cardX;
-    anchorPointY = cardY - 45;
+    anchorPointX = cardX - 110;
+    anchorPointY = cardY - 30;
   }
 
   return (
