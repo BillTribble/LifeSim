@@ -79,7 +79,12 @@ export function processAgents(
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
     
-    const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
+    // Stop growth immediately if the agent is tapering, dying, or deleting
+    const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
+    if (isDying) {
+      agent.growthAccumulator = 0;
+      continue;
+    }
     agent.suppressionFade = agent.suppressionFade || 0;
     if (isSuppressed) {
       agent.suppressionFade = Math.min(1.0, agent.suppressionFade + 0.02); // 50 frames to fully suppress (~0.8s real time, independent of slowmo)
