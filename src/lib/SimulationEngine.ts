@@ -123,8 +123,8 @@ export class SimulationEngine {
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.015;
   phyllotaxisAngle: number = 137.5;
-  leafProbability: number = 0.1;
-  appendageSpawnRate: number = 0.7;
+  leafProbability: number = 0.65;
+  appendageSpawnRate: number = 0.91;
   glowProbability: number = 0.1;
   stemCurviness: number = 1.0;
   veinStrength: number = 1.0;
@@ -172,18 +172,18 @@ export class SimulationEngine {
   nextThemeColor2: string = "#ffffff";
 
   traitProbs: Record<string, number> = {
-    flowers: 0.02,
-    lillyPads: 0.02,
-    leaves: 0.78,
-    petals: 0.02,
-    needles: 0.02,
-    thorns: 0.02,
-    hair: 0.02,
-    curlyHair: 0.02,
-    crystals: 0.02,
-    spores: 0.02,
-    scales: 0.02,
-    spirals: 0.02
+    flowers: 0.5,
+    lillyPads: 0.5,
+    leaves: 0.5,
+    petals: 0.5,
+    needles: 0.5,
+    thorns: 0.5,
+    hair: 0.5,
+    curlyHair: 0.5,
+    crystals: 0.5,
+    spores: 0.5,
+    scales: 0.5,
+    spirals: 0.5
   };
 
   dyingStems = new Set<number>();
