@@ -600,19 +600,6 @@ export function updateSimulation(engine: SimulationEngine) {
   engine.processDying(engine.segments, engine.dyingStems, engine.cylinderMesh);
   for (const app of engine.appendages.values()) {
     engine.processDying(app.segments, app.dyingSet, app.mesh, true);
-
-    const appLimit = Math.floor(engine.maxDOMs / 4);
-    if (appLimit > 0) {
-      const appHead = app.count % appLimit;
-      for (let j = 0; j < sweepDist; j++) {
-        const idx = (appHead + j) % appLimit;
-        if (app.segments[idx] && !app.dyingSet.has(idx)) {
-          if (engine.time - app.segments[idx].timestamp > 100) {
-            engine.markDying(app.segments, app.dyingSet, idx);
-          }
-        }
-      }
-    }
   }
 
   for (const mesh of engine.hybridMeshes) {
