@@ -107,6 +107,7 @@ export function processAgents(
 
     for (let iter = 0; iter < iterations; iter++) {
       if (!agent.active) break;
+      const { genome } = agent;
       const isHybrid = genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin");
 
       let effectiveBifurcationRate = genome.bifurcationRate;
