@@ -238,10 +238,10 @@ export class SimulationEngine {
       archetype: archetype,
       movementType: movementType,
       color: color,
-      thicknessBase: 1.5 + Math.random() * 4,
-      minThickness: 0.1 + Math.random() * 1.5,
+      thicknessBase: (1.5 + Math.random() * 4) * 0.70,
+      minThickness: (0.1 + Math.random() * 1.5) * 0.70,
       thicknessDecay: 0.9995 + Math.random() * 0.0005,
-      stepSize: 0.8 + Math.random() * 0.8,
+      stepSize: (0.8 + Math.random() * 0.8) * 0.70,
       bifurcationRate: 0.01 + Math.random() * 0.03,
       wanderIntensity: 0.01 + Math.random() * 0.05,
       branchTendency:
@@ -684,8 +684,8 @@ export class SimulationEngine {
     }
 
     // Provide bold contrasting thickness base so organisms grow thick, lush, and distinct
-    alphaGenome.thicknessBase = 5.0 + Math.random() * 3.5;
-    betaGenome.thicknessBase = 3.5 + Math.random() * 2.5;
+    alphaGenome.thicknessBase = (5.0 + Math.random() * 3.5) * 0.70;
+    betaGenome.thicknessBase = (3.5 + Math.random() * 2.5) * 0.70;
 
     // Assign distinct vernation and phyllotaxis modes
     alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];

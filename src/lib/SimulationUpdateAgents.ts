@@ -905,24 +905,18 @@ export function processAgents(
         engine.dyingStrains.add(agent.genome.name);
       }
 
-      // Stage 3 & 4: 2s Tapering Grace Period + 3s Transparency Fade
+      // Stage 3 & 4: 3-Second Transparency Fade -> Retain 100% exact shape & size, NO changes, zero jolt, fade transparently & vanish
       if (agent.tapering) {
         agent.fadeAge = (agent.fadeAge || 0) + 1;
-
-        // 2-Second Grace Period (ticks 0 to 120): Taper tip thickness gracefully while fully opaque
-        if (agent.fadeAge <= 120) {
-          agent.thickness *= 0.98;
-        }
-
-        // Total 300 ticks (2.0s grace + 3.0s fade = 5.0s total): Complete deletion
-        if (agent.fadeAge >= 300) {
+        // 180 ticks = 3.0 seconds of real-time transparency fade
+        if (agent.fadeAge >= 180) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] completed 2s grace + 3s fade cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after ${lifespanSecs}s.`
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after 3.0s fade.`
           );
         }
       } 

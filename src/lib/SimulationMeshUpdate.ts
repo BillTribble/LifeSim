@@ -79,7 +79,7 @@ export function updateMeshSegments(
       targetMesh = config.mesh;
       targetIndex = config.count % appendageLimit;
 
-      const baseScale = 2.0 * (engine.flowerSize || 1.0);
+      const baseScale = 2.0 * (engine.flowerSize || 1.0) * 0.70;
       if (genome.appendage === "flowers") {
         scaleX = baseScale * 1.8;
         scaleY = baseScale * 1.8;
@@ -274,12 +274,10 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 120 frame ticks (2s) grace period + 180 frame ticks (3s) fade out = 300 total frame ticks (5.0s)
-    const graceDuration = 120.0;
-    const fadeDuration = 180.0;
-    const totalDuration = graceDuration + fadeDuration;
+    // 180 unscaled frame ticks = 3.0 seconds of real-time transparency fade OUT
+    const wipeDuration = 180.0;
 
-    if (fadeAge >= totalDuration) {
+    if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);
       engine.dummy.updateMatrix();
@@ -294,9 +292,7 @@ export function processDyingSegments(
         packAAttr.needsUpdate = true;
       }
     } else {
-      const dissolveProgress = fadeAge < graceDuration 
-        ? 0.0 
-        : Math.min(1.0, (fadeAge - graceDuration) / fadeDuration);
+      const dissolveProgress = Math.min(1.0, fadeAge / wipeDuration);
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
