@@ -41,6 +41,10 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
+    const grid = new THREE.GridHelper(400, 60, 0x1e293b, 0x0f172a);
+    grid.position.y = -60;
+    engine.scene.add(grid);
+
     engine.dummy = new THREE.Object3D();
 
     const cylinderGeo = new THREE.CylinderGeometry(1, 1, 1, 7);
