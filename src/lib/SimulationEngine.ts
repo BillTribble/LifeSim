@@ -93,11 +93,11 @@ export class SimulationEngine {
   proximity: number = 400.0;
   desperation: number = 2.0;
   despairAge: number = 1000;
-  flowerSize: number = 1.2;
+  flowerSize: number = 3.0;
   entropyThreshold: number = 0.0;
   globalPulseSpeed: number = 1.0;
   maxLineWidth: number = 8.0;
-  multicolorAppProb: number = 0.0;
+  multicolorAppProb: number = 0.5;
   sameColorAppProb: number = 0.5;
   tideSpeed: number = 1.0;
   tideValue: number = 0;
@@ -156,7 +156,6 @@ export class SimulationEngine {
   kioskFadeProgress: number = 0;
   kioskFadingOut: boolean = false;
   onKioskTrigger?: () => void;
-  immunityLogged?: boolean;
 
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
@@ -252,7 +251,7 @@ export class SimulationEngine {
       wavingAmplitude: Math.random() * 0.08,
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
       appendage: getWeightedAppendage(this.traitProbs),
-      multicolorAppendage: false,
+      multicolorAppendage: Math.random() < this.multicolorAppProb,
       sameColorAppendage: Math.random() < this.sameColorAppProb,
       stability: 0.8,
       pulseTarget:
@@ -895,7 +894,7 @@ export class SimulationEngine {
         isDying?: boolean;
       }[] = [];
       this.biomassMap.forEach((v, k) => {
-        if (v > 0 && !k.startsWith("Feeler-")) {
+        if (v > 0) {
           const genome = this.genomeMap.get(k);
           if (genome) {
             const color2 = genome.gradientGrowth

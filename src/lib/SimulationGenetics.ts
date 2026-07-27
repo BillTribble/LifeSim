@@ -419,23 +419,19 @@ export function breedGenomes(
     movementType: newMovementType,
     color: baseColor,
     thicknessBase: Math.max(
-      2.5,
-      Number.isFinite((g1.thicknessBase || 4.0) + (g2.thicknessBase || 4.0))
-        ? (((g1.thicknessBase || 4.0) + (g2.thicknessBase || 4.0)) / 2) * (1 + (Math.random() - 0.5) * 0.2)
-        : 4.0,
+      0.5,
+      ((g1.thicknessBase + g2.thicknessBase) / 2) *
+        (1 + (Math.random() - 0.5) * 0.2),
     ),
     minThickness: Math.max(
-      0.5,
-      Number.isFinite((g1.minThickness || 1.0) + (g2.minThickness || 1.0))
-        ? (((g1.minThickness || 1.0) + (g2.minThickness || 1.0)) / 2) * (1 + (Math.random() - 0.5) * 0.2)
-        : 1.0,
+      0.1,
+      ((g1.minThickness + g2.minThickness) / 2) *
+        (1 + (Math.random() - 0.5) * 0.2),
     ),
-    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay || 0.9997, 0.9995, 1.0),
+    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay, 0.9995, 1.0),
     stepSize: Math.max(
       0.5,
-      Number.isFinite((g1.stepSize || 1.2) + (g2.stepSize || 1.2))
-        ? (((g1.stepSize || 1.2) + (g2.stepSize || 1.2)) / 2) * (1 + (Math.random() - 0.5) * 0.2)
-        : 1.2,
+      ((g1.stepSize + g2.stepSize) / 2) * (1 + (Math.random() - 0.5) * 0.2),
     ),
     bifurcationRate: Math.max(
       0.01,
@@ -463,7 +459,7 @@ export function breedGenomes(
     ),
     geometryType: newGeometryType,
     appendage: (appInheritance.expressed && appInheritance.expressed !== "none") ? appInheritance.expressed : getWeightedAppendage(traitProbs),
-    multicolorAppendage: false,
+    multicolorAppendage: Math.random() < multicolorAppProb,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
     pulseTarget: pulseTarget as any,

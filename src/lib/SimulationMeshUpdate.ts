@@ -129,8 +129,12 @@ export function updateMeshSegments(
         scaleZ = baseScale * 2.0;
       }
 
-      if (!genome.sameColorAppendage) {
-        finalColor.offsetHSL(0.5, 0, 0); // 180° complementary hue shift
+      if (genome.multicolorAppendage) {
+        if (Math.random() < 0.5) {
+          finalColor.offsetHSL(0.3 + Math.random() * 0.4, 0, 0);
+        }
+      } else if (!genome.sameColorAppendage) {
+        finalColor.offsetHSL(0.5, 0, 0);
       }
       
       // Re-apply saturation limit after offsetHSL only if rainbow creature
@@ -238,13 +242,11 @@ export function updateMeshSegments(
 
   targetMesh.instanceMatrix.needsUpdate = true;
   if (targetMesh.instanceColor) targetMesh.instanceColor.needsUpdate = true;
-  if (!genome.name.startsWith("Feeler-")) {
-    engine.biomassMap.set(
-      genome.name,
-      (engine.biomassMap.get(genome.name) || 0) + 1,
-    );
-    engine.genomeMap.set(genome.name, genome);
-  }
+  engine.biomassMap.set(
+    genome.name,
+    (engine.biomassMap.get(genome.name) || 0) + 1,
+  );
+  engine.genomeMap.set(genome.name, genome);
 }
 
 export function processDyingSegments(
@@ -275,7 +277,7 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 240 unscaled frame ticks = 4.0 seconds of smooth Gaussian dither dissolve fade OUT
+    // 240 unscaled frame ticks = 4.0 seconds of smooth, graceful Gaussian dither dissolve fade OUT
     const wipeDuration = 240.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();

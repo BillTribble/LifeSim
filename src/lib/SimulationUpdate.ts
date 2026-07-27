@@ -349,8 +349,7 @@ export function updateSimulation(engine: SimulationEngine) {
                   ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
                   : engine.flowerSize;
 
-          const defaultStemScale = seg.thickness ? new THREE.Vector3(seg.thickness, seg.thickness, 1.0) : new THREE.Vector3(3.5, 3.5, 1.0);
-          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : (mesh === engine.cylinderMesh ? defaultStemScale : new THREE.Vector3(1, 1, 1));
+          const baseScaleVec = seg.scaleVec ? seg.scaleVec.clone() : new THREE.Vector3(1, 1, 1);
           engine.dummy.scale.copy(baseScaleVec).multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -555,7 +554,7 @@ export function updateSimulation(engine: SimulationEngine) {
             parentSeg.timestamp !== seg.parentTimestamp ||
             engine.dyingStems.has(seg.parentIndex);
           if (parentDead) {
-            const parentDyingStart = parentSeg ? parentSeg.dyingStart : undefined;
+            const parentDyingStart = (parentSeg && parentSeg.dyingStart) ? parentSeg.dyingStart : engine.unscaledTime;
             engine.markDying(app.segments, app.dyingSet, i, parentDyingStart);
           }
         }
@@ -733,10 +732,7 @@ export function updateSimulation(engine: SimulationEngine) {
           
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
-              if (!activeAgents[i].tapering) {
-                activeAgents[i].tapering = true;
-                activeAgents[i].dyingStart = engine.unscaledTime;
-              }
+              activeAgents[i].active = false;
             }
           }
 

@@ -97,7 +97,6 @@ export interface Agent {
   id?: number;
   mateCount?: number;
   hasBred?: boolean;
-  dyingStart?: number;
 }
 
 export interface Segment {

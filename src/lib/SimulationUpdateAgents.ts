@@ -25,22 +25,6 @@ export function processAgents(
         nonTaperingStrains.add(a.genome.name);
       }
     }
-  // MINIMUM POPULATION IMMUNITY (NO DEATH IF ≤ 3 CREATURES LEFT):
-  // When active main organisms <= 3, suspend natural death to preserve ecosystem.
-  const activeMainOrganisms = activeAgents.filter(a => a.active && !a.isFeeler);
-  const minThreshold = engine.minAgents || 3;
-  if (activeMainOrganisms.length <= minThreshold) {
-    if (!engine.immunityLogged) {
-      engine.onLog(`🛡️ MINIMUM POPULATION IMMUNITY (≤ ${minThreshold} creatures): Natural death suspended until offspring breed.`);
-      engine.immunityLogged = true;
-    }
-    for (const agent of activeMainOrganisms) {
-      agent.tapering = false;
-      agent.dyingStart = undefined;
-      if (engine.dyingStrains) engine.dyingStrains.delete(agent.genome.name);
-    }
-  } else {
-    engine.immunityLogged = false;
   }
 
   // Cap maximum species by tapering the oldest variant
@@ -95,19 +79,12 @@ export function processAgents(
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
     
-    // Protect newborn offspring (age < 60) from inheriting dying state on birth
-    const isDying = (agent.age >= 60 || agent.tapering) && (agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name)));
-    if (isDying) {
-      if (!agent.tapering) {
-        agent.tapering = true;
-        agent.dyingStart = engine.unscaledTime;
-        engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering 4-second smooth dissolve (Thickness: ${agent.thickness.toFixed(2)}).`);
-      }
-      if (!agent.dyingStart) agent.dyingStart = engine.unscaledTime;
+    const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
+    if (isDying && !agent.tapering) {
+      agent.tapering = true;
       agent.recovering = false;
       agent.targetThickness = undefined;
-      if (!engine.dyingStrains) engine.dyingStrains = new Set();
-      engine.dyingStrains.add(agent.genome.name);
+      engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
     }
     agent.suppressionFade = agent.suppressionFade || 0;
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
@@ -389,13 +366,13 @@ export function processAgents(
         agent.direction.normalize();
       }
 
-      const minAllowed = agent.isFeeler ? 0.1 : Math.max(3.5, (genome.thicknessBase || 4.0) * 0.75);
+      const minAllowed = agent.isFeeler ? 0.1 : 1.8;
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         minAllowed,
-        Math.max(12.0, engine.maxLineWidth * 1.5),
+        Math.max(8.0, engine.maxLineWidth),
       );
-      const renderThickness = Math.max(minAllowed, agent.thickness);
+      const renderThickness = Math.max(minAllowed, agent.thickness * 0.9);
 
       engine.addLineSegment(
         agent.lastPosition,
@@ -864,24 +841,14 @@ export function processAgents(
                  cooldown: engine.hybridCooldown,
                });
     
-               // Organisms mate 3 times before individual tapering death
-               agent.mateCount = (agent.mateCount || 0) + 1;
-               nearestPartner.mateCount = (nearestPartner.mateCount || 0) + 1;
-
-               if (agent.mateCount >= 3) {
-                 agent.hasBred = true;
-                 agent.tapering = true;
-                 agent.dyingStart = engine.unscaledTime;
-               }
-
-               if (nearestPartner.mateCount >= 3) {
-                 nearestPartner.hasBred = true;
-                 nearestPartner.tapering = true;
-                 nearestPartner.dyingStart = engine.unscaledTime;
-               }
+               // Post-Breeding Transition: Once parents breed, mark them as bred so they taper out and die neatly
+               agent.hasBred = true;
+               agent.tapering = true;
+               nearestPartner.hasBred = true;
+               nearestPartner.tapering = true;
 
                engine.spawnHybridArtifact(midPoint, childGenome.color);
-               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned (Parent Matings: ${agent.mateCount}/3 & ${nearestPartner.mateCount}/3).`);
+               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned from successful breeding.`);
 
                if (engine.matingCount < 3) {
                  engine.matingCount++;
@@ -902,6 +869,18 @@ export function processAgents(
                bredThisFrame.add(nearestPartner);
                
                projectedSpeciesCount++;
+               
+               // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
+               if (engine.postMatingDieoff !== false) {
+                 agent.tapering = true;
+                 agent.forceTapering = true;
+                 nearestPartner.tapering = true;
+                 nearestPartner.forceTapering = true;
+
+                 if (!engine.dyingStrains) engine.dyingStrains = new Set();
+                 engine.dyingStrains.add(agent.genome.name);
+                 engine.dyingStrains.add(nearestPartner.genome.name);
+               }
 
                if (isMonopoly) {
                  agent.tapering = true;
@@ -929,32 +908,51 @@ export function processAgents(
         agent.tapering = true;
       }
 
-      // Stage 3 & 4: Dissolving & Removal -> Maintain original thickness; stem & appendages dissolve together over 4 seconds
+      // Stage 3: Tapering Branches -> Shrink thickness neatly to 0.15
       if (agent.tapering) {
-        if (!agent.dyingStart) agent.dyingStart = engine.unscaledTime;
-        const fadeAge = engine.unscaledTime - agent.dyingStart;
-        const wipeDuration = 240.0; // 4.0 seconds smooth dissolve fade OUT
+        let duration = engine.taperDuration;
+        if (agent.isFeeler) duration /= engine.feelerFade;
+        let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
         
-        if (fadeAge > wipeDuration) {
+        agent.thickness *= shrinkRate;
+        // Stage 4: Vanishing & Removal -> Mark inactive, trigger 8-second dissolve
+        if (agent.thickness <= 0.15) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
+          if (!engine.dyingStrains) engine.dyingStrains = new Set();
+          engine.dyingStrains.add(agent.genome.name);
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished 4s dissolve and vanished after ${lifespanSecs}s.`
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after ${lifespanSecs}s.`
           );
         }
       } 
       
       if (!agent.tapering && agent.active) {
-        // Maintain bold lush thickness near thicknessBase without decaying into thin sticks
-        const targetThick = genome.thicknessBase || 4.0;
-        agent.thickness += (targetThick - agent.thickness) * 0.05;
+        if (!agent.recovering) {
+          agent.thickness *= genome.thicknessDecay;
+          // Natural recovery: if they get too thin, they bounce back and get thick again
+          if (agent.thickness <= genome.minThickness * 1.5 && Math.random() < 0.05) {
+             agent.recovering = true;
+             agent.targetThickness = genome.thicknessBase;
+             engine.onLog(`Strain ${genome.name.split(' ')[0]} recovered its thickness!`);
+          }
+        }
+        agent.thickness = Math.max(agent.thickness, genome.minThickness);
+
+        if (agent.targetThickness !== undefined) {
+          const recoverySpeed = agent.recovering ? 0.008 : 0.05;
+          agent.thickness += (agent.targetThickness - agent.thickness) * recoverySpeed;
+          if (Math.abs(agent.targetThickness - agent.thickness) < 0.05) {
+            agent.targetThickness = undefined;
+            agent.recovering = false;
+          }
+        }
       }
     }
   }
-}
 
   // Purge dead inactive agents from simulation memory array
   engine.agents = activeAgents.filter(a => a.active);
