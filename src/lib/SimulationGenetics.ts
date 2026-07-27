@@ -459,7 +459,7 @@ export function breedGenomes(
     ),
     geometryType: newGeometryType,
     appendage: (appInheritance.expressed && appInheritance.expressed !== "none") ? appInheritance.expressed : getWeightedAppendage(traitProbs),
-    multicolorAppendage: Math.random() < multicolorAppProb,
+    multicolorAppendage: false,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
     pulseTarget: pulseTarget as any,

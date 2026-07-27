@@ -129,12 +129,8 @@ export function updateMeshSegments(
         scaleZ = baseScale * 2.0;
       }
 
-      if (genome.multicolorAppendage) {
-        if (Math.random() < 0.5) {
-          finalColor.offsetHSL(0.3 + Math.random() * 0.4, 0, 0);
-        }
-      } else if (!genome.sameColorAppendage) {
-        finalColor.offsetHSL(0.5, 0, 0);
+      if (!genome.sameColorAppendage) {
+        finalColor.offsetHSL(0.5, 0, 0); // 180° complementary hue shift
       }
       
       // Re-apply saturation limit after offsetHSL only if rainbow creature
@@ -277,8 +273,8 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 60 unscaled frame ticks = 1.0 second fast Gaussian dither dissolve fade OUT
-    const wipeDuration = 60.0;
+    // 240 unscaled frame ticks = 4.0 seconds of smooth Gaussian dither dissolve fade OUT
+    const wipeDuration = 240.0;
     if (fadeAge > wipeDuration) {
       engine.dummy.matrix.identity();
       engine.dummy.scale.set(0, 0, 0);

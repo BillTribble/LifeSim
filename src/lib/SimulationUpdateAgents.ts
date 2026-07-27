@@ -80,11 +80,15 @@ export function processAgents(
     const agent = activeAgents[i];
     
     const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
-    if (isDying && !agent.tapering) {
-      agent.tapering = true;
+    if (isDying) {
+      if (!agent.tapering) {
+        agent.tapering = true;
+        engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
+      }
       agent.recovering = false;
       agent.targetThickness = undefined;
-      engine.onLog(`🔻 Organism ${agent.genome.name.split(' ')[0]} entering tapering death (Thickness: ${agent.thickness.toFixed(2)}).`);
+      if (!engine.dyingStrains) engine.dyingStrains = new Set();
+      engine.dyingStrains.add(agent.genome.name);
     }
     agent.suppressionFade = agent.suppressionFade || 0;
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);

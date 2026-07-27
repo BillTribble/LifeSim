@@ -97,7 +97,7 @@ export class SimulationEngine {
   entropyThreshold: number = 0.0;
   globalPulseSpeed: number = 1.0;
   maxLineWidth: number = 8.0;
-  multicolorAppProb: number = 0.5;
+  multicolorAppProb: number = 0.0;
   sameColorAppProb: number = 0.5;
   tideSpeed: number = 1.0;
   tideValue: number = 0;
@@ -251,7 +251,7 @@ export class SimulationEngine {
       wavingAmplitude: Math.random() * 0.08,
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
       appendage: getWeightedAppendage(this.traitProbs),
-      multicolorAppendage: Math.random() < this.multicolorAppProb,
+      multicolorAppendage: false,
       sameColorAppendage: Math.random() < this.sameColorAppProb,
       stability: 0.8,
       pulseTarget:
