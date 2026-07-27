@@ -2,7 +2,6 @@ import * as THREE from "three";
 
 export const GEO_TYPES = ["cylinder", "ribbon", "segmented"] as const;
 export const APPENDAGES = [
-  "none",
   "thorns",
   "hair",
   "curlyHair",

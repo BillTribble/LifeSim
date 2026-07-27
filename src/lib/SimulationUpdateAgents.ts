@@ -436,103 +436,64 @@ export function processAgents(
             renderThickness * 0.7,
             true,
           );
-        } else if (
-          (genome.appendage === "spores" || genome.appendage === "scales") &&
-          Math.random() < 0.03 * engine.ornamentFrequency &&
-          engine.pointCount < MAX_POINTS - 10
-        ) {
-          const randomOffset = new THREE.Vector3(
-            (Math.random() - 0.5) * 8,
-            (Math.random() - 0.5) * 8,
-            (Math.random() - 0.5) * 8,
-          );
-          const dir = randomOffset.clone().normalize();
-          const sporeStart = agent.position.clone().add(dir.clone().multiplyScalar(renderThickness));
-          const floatPos = sporeStart.clone().add(randomOffset);
-          engine.addLineSegment(
-            sporeStart,
-            floatPos,
-            genome,
-            renderThickness * 1.5,
-            true,
-          );
-        } else if (genome.appendage === "leaves") {
-          if (engine.pointCount < MAX_POINTS - 10) {
+        } else if (engine.pointCount < MAX_POINTS - 10) {
+          if (genome.appendage === "leaves") {
             const baseInterval = genome.phyllotaxisMode === "whorled" ? 15 : 5;
             const nodeInterval = Math.max(1, Math.round((baseInterval * Math.max(1.0, engine.leafScale)) / engine.leafDensity));
-            if (agent.age % nodeInterval === 0) {
-              if (Math.random() < engine.leafProbability) {
-                const up = new THREE.Vector3(0, 1, 0);
-                let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
-                if (normal.lengthSq() < 0.001) {
-                  normal.set(1, 0, 0);
-                }
-                
-                const nodeIdx = Math.floor(agent.age / nodeInterval);
-                
-                const spawnLeaf = (dir: THREE.Vector3) => {
-                  // Tilt the leaf direction slightly upwards along the stem's growth direction
-                  const tiltedDir = new THREE.Vector3()
-                    .addScaledVector(dir, 0.75)
-                    .addScaledVector(agent.direction, 0.25)
-                    .normalize();
-                  const leafStart = agent.position.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
-                  const leafEnd = leafStart.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
-                  engine.addLineSegment(
-                    leafStart,
-                    leafEnd,
-                    genome,
-                    renderThickness * 1.2,
-                    true,
-                  );
-                };
+            if (agent.age % nodeInterval === 0 && Math.random() < engine.leafProbability) {
+              const up = new THREE.Vector3(0, 1, 0);
+              let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
+              if (normal.lengthSq() < 0.001) normal.set(1, 0, 0);
+              
+              const nodeIdx = Math.floor(agent.age / nodeInterval);
+              const spawnLeaf = (dir: THREE.Vector3) => {
+                const tiltedDir = new THREE.Vector3()
+                  .addScaledVector(dir, 0.75)
+                  .addScaledVector(agent.direction, 0.25)
+                  .normalize();
+                const leafStart = agent.position.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
+                const leafEnd = leafStart.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
+                engine.addLineSegment(leafStart, leafEnd, genome, renderThickness * 1.2, true);
+              };
 
-                if (genome.phyllotaxisMode === "spiral") {
-                  const divAngle = THREE.MathUtils.degToRad(engine.phyllotaxisAngle);
-                  const theta = nodeIdx * divAngle;
+              if (genome.phyllotaxisMode === "spiral") {
+                const divAngle = THREE.MathUtils.degToRad(engine.phyllotaxisAngle);
+                const theta = nodeIdx * divAngle;
+                const leafDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+                spawnLeaf(leafDir);
+              } else if (genome.phyllotaxisMode === "decussate") {
+                const theta = nodeIdx * (Math.PI / 2);
+                const leafDir1 = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+                const leafDir2 = normal.clone().applyAxisAngle(agent.direction, theta + Math.PI).normalize();
+                spawnLeaf(leafDir1);
+                spawnLeaf(leafDir2);
+              } else {
+                const numLeaves = 5;
+                for (let i = 0; i < numLeaves; i++) {
+                  const theta = (i * 2 * Math.PI) / numLeaves;
                   const leafDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
                   spawnLeaf(leafDir);
-                } else if (genome.phyllotaxisMode === "decussate") {
-                  const theta = nodeIdx * (Math.PI / 2);
-                  const leafDir1 = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
-                  const leafDir2 = normal.clone().applyAxisAngle(agent.direction, theta + Math.PI).normalize();
-                  spawnLeaf(leafDir1);
-                  spawnLeaf(leafDir2);
-                } else if (genome.phyllotaxisMode === "whorled") {
-                  const numLeaves = 5;
-                  for (let i = 0; i < numLeaves; i++) {
-                    const theta = (i * 2 * Math.PI) / numLeaves;
-                    const leafDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
-                    spawnLeaf(leafDir);
-                  }
                 }
               }
             }
+          } else {
+            // For ALL other appendages (thorns, hair, curlyHair, crystals, spores, scales, spirals, flowers, lillyPads, petals, needles)
+            const appInterval = Math.max(1, Math.floor(3 / (engine.ornamentFrequency || 1.0)));
+            if (agent.age % appInterval === 0 || Math.random() < 0.5 * engine.ornamentFrequency) {
+              const spawnPos = agent.position.clone();
+              const up = new THREE.Vector3(0, 1, 0);
+              let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
+              if (normal.lengthSq() < 0.001) normal.set(1, 0, 0);
+              
+              // 360 degree golden angle radial distribution along the stem
+              const theta = (agent.age * 137.5 * Math.PI) / 180;
+              const radDir = normal.clone().applyAxisAngle(agent.direction, theta).normalize();
+              
+              const appStart = spawnPos.clone().add(radDir.clone().multiplyScalar(renderThickness));
+              const appEnd = appStart.clone().add(radDir.clone().multiplyScalar(renderThickness));
+              engine.addLineSegment(appStart, appEnd, genome, renderThickness * 1.2, true);
+            }
           }
-        } else if (
-          (genome.appendage === "flowers" ||
-            genome.appendage === "lillyPads" ||
-            genome.appendage === "petals" ||
-            genome.appendage === "needles" ||
-            genome.appendage === "ferns" ||
-            genome.appendage === "buds") &&
-          Math.random() < 0.05 * engine.ornamentFrequency &&
-          engine.pointCount < MAX_POINTS - 10
-        ) {
-          const spawnPos = agent.position.clone();
-          const offset = new THREE.Vector3()
-            .crossVectors(agent.direction, new THREE.Vector3(0, 1, 0))
-            .normalize()
-            .multiplyScalar(renderThickness);
-          const flowerStart = spawnPos.clone().add(offset);
-          const flowerEnd = flowerStart.clone().add(offset);
-          engine.addLineSegment(
-            flowerStart,
-            flowerEnd,
-            genome,
-            renderThickness * 1.2,
-            true,
-          );
         }
       }
 
