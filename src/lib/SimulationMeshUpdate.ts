@@ -49,8 +49,8 @@ export function updateMeshSegments(
 
   if (!isAppendage) {
     if (genome.geometryType === "ribbon") {
-      scaleX = thickness * 3;
-      scaleY = Math.max(0.1, thickness * 0.15);
+      scaleX = thickness * 2.2;
+      scaleY = Math.max(0.6, thickness * 0.8);
     } else if (genome.geometryType === "segmented") {
       scaleZ = distance * 0.6;
     }

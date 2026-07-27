@@ -13,7 +13,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const aspect = width / height;
     const d = 260;
     engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1500);
-    engine.camera.position.set(120, 220, -320);
+    engine.camera.position.set(53.88034825805899, 85.9356300114233, -393.5885866817418);
     engine.camera.zoom = 1.15;
     engine.camera.updateProjectionMatrix();
     engine.camera.lookAt(engine.scene.position);
@@ -42,7 +42,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.scene.add(d2);
 
     const grid = new THREE.GridHelper(1200, 60, 0x475569, 0x1e293b);
-    grid.position.y = -50;
+    grid.position.y = -160;
     engine.scene.add(grid);
 
     // Horizon Rays extending out to infinity/horizon
@@ -52,8 +52,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const rayRadius = 1200;
     for (let i = 0; i < rayCount; i++) {
       const angle = (i / rayCount) * Math.PI * 2;
-      rayPositions.push(Math.sin(angle) * 20, -50, Math.cos(angle) * 20);
-      rayPositions.push(Math.sin(angle) * rayRadius, -50, Math.cos(angle) * rayRadius);
+      rayPositions.push(Math.sin(angle) * 20, -160, Math.cos(angle) * 20);
+      rayPositions.push(Math.sin(angle) * rayRadius, -160, Math.cos(angle) * rayRadius);
     }
     horizonRayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
     const rayMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.5 });
@@ -66,7 +66,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const ringSegments = 64;
     for (let i = 0; i <= ringSegments; i++) {
       const angle = (i / ringSegments) * Math.PI * 2;
-      ringPositions.push(Math.sin(angle) * rayRadius, -50, Math.cos(angle) * rayRadius);
+      ringPositions.push(Math.sin(angle) * rayRadius, -160, Math.cos(angle) * rayRadius);
     }
     horizonRingGeo.setAttribute('position', new THREE.Float32BufferAttribute(ringPositions, 3));
     const horizonLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
