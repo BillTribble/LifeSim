@@ -79,12 +79,7 @@ export function processAgents(
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
     
-    // Stop growth immediately if the agent is tapering, dying, or deleting
     const isDying = agent.tapering || agent.forceTapering || !agent.active || (engine.dyingStrains && engine.dyingStrains.has(agent.genome.name));
-    if (isDying) {
-      agent.growthAccumulator = 0;
-      continue;
-    }
     agent.suppressionFade = agent.suppressionFade || 0;
     const isSuppressed = engine.suppressedStrains && engine.suppressedStrains.has(agent.genome.name);
     if (isSuppressed) {
@@ -108,7 +103,7 @@ export function processAgents(
     const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8) * agent.growthBoost;
     
     agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult * engine.timeScale;
-    let iterations = Math.floor(agent.growthAccumulator);
+    let iterations = isDying ? 0 : Math.floor(agent.growthAccumulator);
     agent.growthAccumulator -= iterations;
 
     for (let iter = 0; iter < iterations; iter++) {
@@ -782,8 +777,6 @@ export function processAgents(
                             }
                             engine.dyingStrains.add(victimSpeciesName);
                         }
-                    } else {
-                        allowBreeding = false;
                     }
                 }
 
@@ -887,6 +880,31 @@ export function processAgents(
         agent.age > 30 &&
         Math.random() < currentTermProb
       ) {
+        // Vegetative Child Sprouting Guarantee: Ensure parent spawns a child before tapering
+        if (!agent.hasBred && !agent.isFeeler && activeAgents.length + newAgents.length < engine.maxAgents * 1.5) {
+          agent.hasBred = true;
+          const childGenome = mutateGenome(
+            agent.genome,
+            engine.traitProbs,
+            engine.multicolorAppProb,
+            engine.sameColorAppProb,
+          );
+          childGenome.createdAt = engine.time;
+          childGenome.name = `Kin [${childGenome.archetype.toUpperCase()}]-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
+          
+          const spawnDir = agent.direction.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5)).normalize();
+          newAgents.push({
+            position: agent.position.clone(),
+            lastPosition: agent.position.clone(),
+            direction: spawnDir,
+            genome: childGenome,
+            active: true,
+            age: 0,
+            thickness: childGenome.thicknessBase,
+            cooldown: 120,
+          });
+          engine.onLog(`🌱 Child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] sprouted before parent decay.`);
+        }
         agent.tapering = true;
       }
 
