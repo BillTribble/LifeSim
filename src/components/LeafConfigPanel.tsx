@@ -65,8 +65,8 @@ export function LeafConfigPanel({ state, setters }: LeafPanelProps) {
                   tooltip={"GLOBAL LEAF SCALE\nGlobally scales all leaves in the simulation."} 
                   label="LEAF_SCALE" 
                   min={0.05} 
-                  max={3.0} 
-                  step={0.01} 
+                  max={5.0} 
+                  step={0.05} 
                   value={state.leafScale} 
                   onChange={setters.setLeafScale} 
                   color="#4ADE80" 

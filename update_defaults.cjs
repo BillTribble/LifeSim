@@ -54,7 +54,7 @@ const newDefaults = {
   "botanyRealism": true,
   "windVelocity": 0.2,
   "flutterIntensity": 0.5,
-  "leafScale": 0.14,
+  "leafScale": 3.0,
   "leafDensity": 0.35000000000000003,
   "relativeLeafSizeDiff": 0.2,
   "leafGrowthSpeed": 0.0045000000000000005,
@@ -123,7 +123,7 @@ const newDefaults = {
       "max": 5
     }
   },
-  "appendageSize": 0.25,
+  "appendageSize": 3.0,
   "hybridDecay": 4.185099627445749,
   "deathRate": 5.0,
   "slowMotion": 0.4,

@@ -118,7 +118,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 1.0;
   flutterIntensity: number = 1.0;
-  leafScale: number = 1.0;
+  leafScale: number = 3.0;
   leafDensity: number = 1.0;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.015;
