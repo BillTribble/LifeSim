@@ -41,11 +41,11 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
-    // Distance-Fading Horizon Grid Shader
+    // Distance-Fading Horizon Grid Shader (Single Dark Slate Color)
     const gridShaderMat = new THREE.ShaderMaterial({
       transparent: true,
       uniforms: {
-        gridColor: { value: new THREE.Color(0x38bdf8) },
+        gridColor: { value: new THREE.Color(0x1e293b) },
         fadeDistance: { value: 2000.0 },
       },
       vertexShader: `
