@@ -147,14 +147,8 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-27-v5";
+    const CURRENT_SCHEMA = "2026-07-27-v6";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
-      localStorage.removeItem("entropyThreshold");
-      localStorage.removeItem("timeScale");
-      localStorage.removeItem("slowMotion");
-      localStorage.removeItem("flowerSize");
-      localStorage.removeItem("leafScale");
-      localStorage.removeItem("appendageSize");
       localStorage.setItem("lifesim_schema_ver", CURRENT_SCHEMA);
     }
   }
@@ -191,7 +185,7 @@ export function useSimulationState() {
   );
   const [timeScale, setTimeScale] = useState(() => {
     const savedTs = localStorage.getItem("timeScale") || localStorage.getItem("slowMotion");
-    if (savedTs && savedTs !== "1.8") {
+    if (savedTs !== null) {
       const val = parseFloat(savedTs);
       if (!isNaN(val)) return val;
     }
