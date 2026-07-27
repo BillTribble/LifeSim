@@ -368,13 +368,19 @@ export function breedGenomes(
     g2.phyllotaxisMode ?? "spiral", g2.recessive?.phyllotaxisMode
   );
 
-  // Slight color mutation/blend
+  // Inheritance-focused color with subtle complementary/triadic alignment
   const baseColor = colorInheritance.expressed.clone();
-  const h = baseColor.getHSL({ h: 0, s: 0, l: 0 }).h;
-  const isAlbino = Math.random() < 0.08;
-  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
-  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
-  const resultH = (h + (Math.random() - 0.5) * 0.08 + 1.0) % 1.0;
+  const parentH = baseColor.getHSL({ h: 0, s: 0, l: 0 }).h;
+  const isAlbino = Math.random() < 0.05;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.88;
+  const resultL = isAlbino ? 0.92 + Math.random() * 0.08 : 0.55;
+  
+  // 85% tight parent inheritance, 15% complementary/triadic shift for high-contrast harmony
+  let resultH = (parentH + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
+  if (Math.random() < 0.15) {
+    const shift = (Math.floor(Math.random() * 3) + 1.0) * (1.0 / 3.0);
+    resultH = (parentH + shift + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0;
+  }
   baseColor.setHSL(resultH, resultS, resultL);
 
   const inheritedDecay = (g1.thicknessDecay + g2.thicknessDecay) / 2;
@@ -523,11 +529,16 @@ export function mutateBranchGenome(
       color: g.recessive.color.clone(),
     };
   }
-  const h = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-  const isAlbino = Math.random() < 0.05;
-  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.9;
-  const resultL = isAlbino ? 0.85 + Math.random() * 0.15 : 0.6;
-  res.color.setHSL((h + (Math.random() - 0.5) * 0.15 + 1.0) % 1.0, resultS, resultL);
+  const parentH = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
+  const isAlbino = Math.random() < 0.04;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.88;
+  const resultL = isAlbino ? 0.92 + Math.random() * 0.08 : 0.55;
+  let resultH = (parentH + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
+  if (Math.random() < 0.12) {
+    const shift = (Math.floor(Math.random() * 3) + 1.0) * (1.0 / 3.0);
+    resultH = (parentH + shift + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0;
+  }
+  res.color.setHSL(resultH, resultS, resultL);
 
   res.wanderIntensity = Math.max(0, res.wanderIntensity + (Math.random() - 0.5) * 0.05);
   res.wavingSpeed = Math.max(0, res.wavingSpeed + (Math.random() - 0.5) * 0.03);

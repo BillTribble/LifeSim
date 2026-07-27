@@ -14,7 +14,12 @@ export function updateMeshSegments(
 
   const distance = p1.distanceTo(p2);
   engine.dummy.position.copy(p1);
-  engine.dummy.lookAt(p2);
+  if (isAppendage) {
+    // Shift appendage position outwards to the surface of the creature so it is never hidden inside fat stems
+    const stemRadius = Math.max(0.5, thickness * 0.45);
+    const outwardDir = new THREE.Vector3(0, 1, 0).applyQuaternion(engine.dummy.quaternion);
+    engine.dummy.position.addScaledVector(outwardDir, stemRadius);
+  }
 
   let scaleX = thickness;
   let scaleY = thickness;
