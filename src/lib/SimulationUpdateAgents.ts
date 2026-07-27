@@ -865,36 +865,26 @@ export function processAgents(
 
 
       let currentTermProb = 0;
-      if (agent.age > 120) {
-        currentTermProb = engine.terminationProb * 0.05;
+      if (agent.age > 90) {
+        currentTermProb = Math.min(1.0, engine.terminationProb * 0.4 + (agent.age - 90) * 0.02);
       }
 
-      // 1: Older Strains Die Out (Bias system towards old variants dying to make room)
-      if (strainAge > 0) {
-         const agePenalty = Math.pow(Math.max(0, strainAge - 1000) / 1000, 2) * 0.4;
-         currentTermProb += agePenalty * engine.terminationProb; 
-      }
-
-      // Individual organism aging penalty tied directly to DEATH RATE dial
-      if (agent.age > 150) {
-         currentTermProb += Math.min(1.0, Math.pow(agent.age / 300.0, engine.diebackAgeBias) * (engine.diebackRate / 5.0) * 0.1);
-      }
-      
-      // Young Strain Immunity
-      if (strainAge < 500 && agent.age < 100) {
-         currentTermProb *= 0.1;
+      // Hard aging cap: once an organism reaches age 180 (~3s growth) or if screen fill > 40%, force 100% death
+      const isScreenFull = (engine.pointCount / engine.maxDOMs) > 0.40;
+      if (agent.age > 180 || isScreenFull) {
+        currentTermProb = 1.0;
       }
 
       if (
         !agent.tapering &&
-        agent.age > 40 &&
+        agent.age > 30 &&
         Math.random() < currentTermProb
       ) {
         agent.tapering = true;
       }
 
       if (agent.tapering) {
-        const isOldOrForce = agent.age > 200 || agent.forceTapering || engine.diebackRate > 5.0;
+        const isOldOrForce = agent.age > 120 || agent.forceTapering || isScreenFull;
         if (!isOldOrForce && !agent.isFeeler && currentActiveCount <= engine.minAgents) {
           agent.tapering = false;
           agent.forceTapering = false;

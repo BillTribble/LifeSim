@@ -933,13 +933,15 @@ export function updateSimulation(engine: SimulationEngine) {
     const avgAgeSecs = (totalAge / total / 60.0).toFixed(1);
     const maxAgeSecs = (maxAge / 60.0).toFixed(1);
 
+    const screenFillPct = ((engine.pointCount / engine.maxDOMs) * 100).toFixed(1);
+
     const gPct = Math.round(((archetypeCounts.ginger || 0) / total) * 100);
     const bPct = Math.round(((archetypeCounts.bush || 0) / total) * 100);
     const tPct = Math.round(((archetypeCounts.tree || 0) / total) * 100);
     const sPct = Math.round(((archetypeCounts.snake || 0) / total) * 100);
 
     engine.onLog(
-      `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Ginger: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
+      `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Screen Fill: ${screenFillPct}% | Ginger: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
     );
   }
 }
