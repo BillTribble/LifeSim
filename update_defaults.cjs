@@ -127,6 +127,7 @@ const newDefaults = {
   "hybridDecay": 4.185099627445749,
   "deathRate": 5.0,
   "slowMotion": 0.6,
+  "postMatingDieoff": true,
   "rotationVelocity": 0.1,
   "swarmCohesion": 0.01674453139194959,
   "detectionRange": 80.62478258463184,

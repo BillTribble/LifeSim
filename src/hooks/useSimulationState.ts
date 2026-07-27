@@ -141,6 +141,7 @@ export const DEFAULTS: Record<string, any> = {
     "z": -282.595626158962,
     "zoom": 1.7917714317777194
   },
+  "postMatingDieoff": true,
   "version": "1.0"
 };
 
@@ -195,6 +196,10 @@ export function useSimulationState() {
       if (!isNaN(val)) return val;
     }
     return DEFAULTS.timeScale;
+  });
+  const [postMatingDieoff, setPostMatingDieoff] = useState(() => {
+    const saved = localStorage.getItem("postMatingDieoff");
+    return saved !== null ? saved === "true" : true;
   });
   const [theme, setTheme] = useState(0); // Always start in normal theme
   const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
@@ -571,6 +576,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("gingerSpeed", gingerSpeed.toString());
     localStorage.setItem("timeScale", timeScale.toString());
     localStorage.setItem("slowMotion", timeScale.toString());
+    localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());
     localStorage.setItem("themeMorphFreq", themeMorphFreq.toString());
     localStorage.setItem("themeMorphSpeed", themeMorphSpeed.toString());
     localStorage.setItem("rotationSpeed", rotationSpeed.toString());
@@ -715,6 +721,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       themeMorphFreq,
       theme,
       timeScale,
+      postMatingDieoff,
       gingerSpeed,
       treeSpeed,
       bushSpeed,
@@ -856,6 +863,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setGlobalPulseSpeed,
       setMulticolorAppProb,
       setSameColorAppProb,
+      setPostMatingDieoff,
       setMaxSaturation,
       setFeelerFade,
       setCullRate,

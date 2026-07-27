@@ -107,8 +107,7 @@ export function processAgents(
 
     for (let iter = 0; iter < iterations; iter++) {
       if (!agent.active) break;
-      const { genome } = agent;
-      const isHybrid = genome.name.startsWith("Hybrid");
+      const isHybrid = genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin");
 
       let effectiveBifurcationRate = genome.bifurcationRate;
       let effectiveWanderIntensity = genome.wanderIntensity;
@@ -872,6 +871,18 @@ export function processAgents(
                
                projectedSpeciesCount++;
                
+               // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
+               if (engine.postMatingDieoff !== false) {
+                 agent.tapering = true;
+                 agent.forceTapering = true;
+                 nearestPartner.tapering = true;
+                 nearestPartner.forceTapering = true;
+
+                 if (!engine.dyingStrains) engine.dyingStrains = new Set();
+                 engine.dyingStrains.add(agent.genome.name);
+                 engine.dyingStrains.add(nearestPartner.genome.name);
+               }
+
                if (isMonopoly) {
                  agent.tapering = true;
                  agent.forceTapering = true;

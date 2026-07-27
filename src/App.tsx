@@ -223,6 +223,7 @@ export default function App() {
         treeSpeed={state.treeSpeed}
         gingerSpeed={state.gingerSpeed}
         timeScale={state.timeScale}
+        postMatingDieoff={state.postMatingDieoff}
         theme={state.theme}
         themeMorphFreq={state.themeMorphFreq}
         themeMorphSpeed={state.themeMorphSpeed}

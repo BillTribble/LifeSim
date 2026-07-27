@@ -109,6 +109,7 @@ export class SimulationEngine {
   growthSpeed: number = 1.0;
   diebackRate: number = 1.0;
   hybridCooldown: number = 300;
+  postMatingDieoff: boolean = true;
   hybridStickiness: number = 10;
   ornamentFrequency: number = 1.0;
   branchingMultiplier: number = 1.0;
@@ -427,6 +428,9 @@ export class SimulationEngine {
     if (this.scene.fog) {
       this.scene.fog.color.set(c);
     }
+  }
+  setPostMatingDieoff(val: boolean) {
+    this.postMatingDieoff = val;
   }
   setGlobalPulseSpeed(val: number) {
     this.globalPulseSpeed = val;

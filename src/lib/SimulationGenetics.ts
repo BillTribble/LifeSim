@@ -394,7 +394,7 @@ export function breedGenomes(
       : "none";
 
   const res: any = {
-    name: `Hybrid [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
+    name: `Kin [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
       Math.random() * 1000,
     )
       .toString()

@@ -160,6 +160,7 @@ export function SimulationView({
   treeSpeed?: number;
   gingerSpeed?: number;
   timeScale?: number;
+  postMatingDieoff?: boolean;
   theme?: number;
   themeMorphFreq?: number;
   themeMorphSpeed?: number;
@@ -407,6 +408,8 @@ export function SimulationView({
         engineRef.current.setGingerSpeed(gingerSpeed);
       if (timeScale !== undefined)
         engineRef.current.setTimeScale(timeScale);
+      if (postMatingDieoff !== undefined)
+        engineRef.current.setPostMatingDieoff(postMatingDieoff);
       if (theme !== undefined)
         engineRef.current.setTheme(theme);
       if (themeMorphFreq !== undefined)
