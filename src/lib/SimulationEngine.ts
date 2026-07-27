@@ -298,8 +298,8 @@ export class SimulationEngine {
     const colorMap = new Map<string, THREE.Color>();
 
     if (alphaGenome && betaGenome) {
+      const baseHue = Math.random();
       if (this.theme !== 1) {
-        const baseHue = Math.random();
         alphaGenome.color.setHSL(baseHue, 0.9, 0.52);
         betaGenome.color.setHSL((baseHue + 0.5) % 1.0, 0.9, 0.52);
       }
