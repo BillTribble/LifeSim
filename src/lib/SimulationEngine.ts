@@ -298,9 +298,11 @@ export class SimulationEngine {
     const colorMap = new Map<string, THREE.Color>();
 
     if (alphaGenome && betaGenome) {
-      const baseHue = Math.random();
-      alphaGenome.color.setHSL(baseHue, 0.8, 0.5);
-      betaGenome.color.setHSL((baseHue + 1 / 3) % 1.0, 0.8, 0.5);
+      if (this.theme !== 1) {
+        const baseHue = Math.random();
+        alphaGenome.color.setHSL(baseHue, 0.9, 0.52);
+        betaGenome.color.setHSL((baseHue + 0.5) % 1.0, 0.9, 0.52);
+      }
 
       colorMap.set(alphaGenome.name, alphaGenome.color.clone());
       colorMap.set(betaGenome.name, betaGenome.color.clone());
@@ -690,8 +692,12 @@ export class SimulationEngine {
     }
     betaGenome.phyllotaxisMode = betaPhyllo;
 
-    const alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-    betaGenome.color.setHSL((alphaHue + 0.4 + Math.random() * 0.2) % 1.0, 0.85, 0.5);
+    let alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
+    if (this.theme !== 1) {
+      alphaHue = Math.random();
+      alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
+      betaGenome.color.setHSL((alphaHue + 0.5) % 1.0, 0.9, 0.52);
+    }
 
     const bgHue = (alphaHue + 2 / 3) % 1.0;
     const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);

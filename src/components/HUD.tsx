@@ -114,15 +114,6 @@ export function HUD({
         <header className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 pointer-events-none">
             <div className={`flex flex-wrap items-center gap-2 sm:gap-3 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
-              <div
-                className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 shrink-0 ${showHUD ? "opacity-80" : "opacity-100"}`}
-                onClick={handleRestart}
-                title="Re-initialize system"
-              >
-                <Activity className="w-3.5 h-3.5 text-green-400" />
-                <span>RESTART_SIM</span>
-              </div>
-              
               <div className="relative shrink-0">
                 <div
                   className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
