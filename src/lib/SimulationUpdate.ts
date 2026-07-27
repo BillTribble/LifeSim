@@ -507,24 +507,19 @@ export function updateSimulation(engine: SimulationEngine) {
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
     // All-at-once whole-organism decay: Mark all stem and appendage segments of dying strains with the exact same timestamp
     const now = engine.unscaledTime;
-    const activeTotal = Math.min(engine.pointCount, engine.maxDOMs);
-    if (activeTotal > 0) {
-      for (let i = 0; i < activeTotal; i++) {
-        const seg = engine.segments[i];
-        if (seg && !engine.dyingStems.has(i) && engine.dyingStrains.has(seg.strainName)) {
-          engine.markDying(engine.segments, engine.dyingStems, i, now);
-        }
+    for (let i = 0; i < engine.maxDOMs; i++) {
+      const seg = engine.segments[i];
+      if (seg && !engine.dyingStems.has(i) && engine.dyingStrains.has(seg.strainName)) {
+        engine.markDying(engine.segments, engine.dyingStems, i, now);
       }
     }
 
     for (const app of engine.appendages.values()) {
       const appLim = Math.floor(engine.maxDOMs / 4);
-      if (appLim > 0) {
-        for (let i = 0; i < appLim; i++) {
-          const seg = app.segments[i];
-          if (seg && !app.dyingSet.has(i) && engine.dyingStrains.has(seg.strainName)) {
-            engine.markDying(app.segments, app.dyingSet, i, now);
-          }
+      for (let i = 0; i < appLim; i++) {
+        const seg = app.segments[i];
+        if (seg && !app.dyingSet.has(i) && engine.dyingStrains.has(seg.strainName)) {
+          engine.markDying(app.segments, app.dyingSet, i, now);
         }
       }
     }
@@ -696,7 +691,7 @@ export function updateSimulation(engine: SimulationEngine) {
     let totalBiomass = 0;
     engine.biomassMap.forEach((v) => (totalBiomass += v));
 
-    if (totalBiomass > 100) {
+    if (totalBiomass > 0) {
       engine.biomassMap.forEach((biomass, strainName) => {
         const ratio = biomass / totalBiomass;
         const isDying = engine.dyingStrains && engine.dyingStrains.has(strainName);
