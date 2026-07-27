@@ -78,6 +78,7 @@ export function SimulationView({
   treeSpeed,
   gingerSpeed,
   timeScale,
+  postMatingDieoff,
   theme,
   themeMorphFreq,
   themeMorphSpeed,
