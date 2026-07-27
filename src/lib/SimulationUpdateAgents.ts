@@ -607,12 +607,37 @@ export function processAgents(
       }
 
       const isMonopoly = monopolyStrains.has(evalGenome.name);
-      if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
-      const isSuppressed = engine.suppressedStrains.has(evalGenome.name);
-      const isFertile = !agent.tapering && (agent.age > 50 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
-      // Removed species and branch limits from canBreed so that older/desperate creatures continue to seek out mates
-      // The culling logic will naturally handle cleaning up excess creatures.
-      const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent) && activeAgents.length + newAgents.length < engine.maxAgents * 1.5;
+      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has bred
+      if (!agent.isFeeler && !agent.hasBred && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
+        const feelerChance = Math.min(0.85, (agent.age - 15) * 0.04 * engine.timeScale);
+        if (Math.random() < feelerChance) {
+          const feelerGenome = { ...agent.genome };
+          feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
+          feelerGenome.archetype = "snake"; // Fast sensory feeler
+          feelerGenome.thicknessBase = Math.max(0.2, agent.thickness * 0.3);
+          feelerGenome.minThickness = 0.1;
+          feelerGenome.wanderIntensity *= 1.8;
+
+          const spawnDir = agent.direction.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8)).normalize();
+          newAgents.push({
+            position: agent.position.clone(),
+            lastPosition: agent.position.clone(),
+            direction: spawnDir,
+            genome: feelerGenome,
+            active: true,
+            age: 0,
+            thickness: feelerGenome.thicknessBase,
+            cooldown: 15,
+            isFeeler: true,
+            realGenome: agent.genome,
+          });
+          agent.cooldown = 25;
+          engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Age ${agent.age}).`);
+        }
+      }
+
+      const isFertile = !agent.tapering && !agent.hasBred && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
+      const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
       if (canBreed) {
         let bestPartner: any = null;
@@ -810,7 +835,14 @@ export function processAgents(
                  cooldown: engine.hybridCooldown,
                });
     
+               // Post-Breeding Transition: Once parents breed, mark them as bred so they taper out and die neatly
+               agent.hasBred = true;
+               agent.tapering = true;
+               nearestPartner.hasBred = true;
+               nearestPartner.tapering = true;
+
                engine.spawnHybridArtifact(midPoint, childGenome.color);
+               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned from successful breeding.`);
 
                if (engine.matingCount < 3) {
                  engine.matingCount++;
@@ -863,76 +895,32 @@ export function processAgents(
       }
 
 
-      let currentTermProb = 0;
-      const maxGrowthAge = 180 * Math.max(0.5, engine.timeScale);
-      if (agent.age > maxGrowthAge * 0.5) {
-        currentTermProb = Math.min(1.0, engine.terminationProb * 0.4 + (agent.age - maxGrowthAge * 0.5) * 0.03);
-      }
-
-      // Hard aging cap: once an organism reaches full growth limit or if screen fill > 40%, force 100% death
-      const isScreenFull = (engine.pointCount / engine.maxDOMs) > 0.40;
-      if (agent.age > maxGrowthAge || isScreenFull) {
-        currentTermProb = 1.0;
-      }
-
-      if (
-        !agent.tapering &&
-        agent.age > 30 &&
-        Math.random() < currentTermProb
-      ) {
-        // Vegetative Child Sprouting Guarantee: Ensure parent spawns a child before tapering
-        if (!agent.hasBred && !agent.isFeeler && activeAgents.length + newAgents.length < engine.maxAgents * 1.5) {
-          agent.hasBred = true;
-          const childGenome = mutateGenome(
-            agent.genome,
-            engine.traitProbs,
-            engine.multicolorAppProb,
-            engine.sameColorAppProb,
-          );
-          childGenome.createdAt = engine.time;
-          childGenome.name = `Kin [${childGenome.archetype.toUpperCase()}]-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
-          
-          const spawnDir = agent.direction.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5)).normalize();
-          newAgents.push({
-            position: agent.position.clone(),
-            lastPosition: agent.position.clone(),
-            direction: spawnDir,
-            genome: childGenome,
-            active: true,
-            age: 0,
-            thickness: childGenome.thicknessBase,
-            cooldown: 120,
-          });
-          engine.onLog(`🌱 Child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] sprouted before parent decay.`);
-        }
+      // 4-STAGE LIFESPAN MODEL:
+      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (300 ticks ~ 5s), it tapers!
+      const maxGrowthAge = 300 * Math.max(0.5, engine.timeScale);
+      if (!agent.tapering && (agent.hasBred || agent.age > maxGrowthAge)) {
         agent.tapering = true;
       }
 
+      // Stage 3: Tapering Branches -> Shrink thickness neatly to 0.15
       if (agent.tapering) {
-        const isOldOrForce = agent.age > 120 || agent.forceTapering || isScreenFull;
-        if (!isOldOrForce && !agent.isFeeler && currentActiveCount <= engine.minAgents) {
-          agent.tapering = false;
-          agent.forceTapering = false;
-          agent.recovering = true;
-          agent.targetThickness = genome.thicknessBase;
-        } else {
-          let duration = engine.taperDuration;
-          if (agent.isFeeler) duration /= engine.feelerFade;
-          let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
-          
-          agent.thickness *= shrinkRate;
-          if (agent.thickness <= 0.15) {
-            agent.active = false;
-            currentActiveCount--;
-            const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
-            strainCounts.set(agent.genome.name, Math.max(0, newCount));
-            if (!engine.dyingStrains) engine.dyingStrains = new Set();
-            engine.dyingStrains.add(agent.genome.name);
-            const lifespanSecs = (agent.age / 60.0).toFixed(1);
-            engine.onLog(
-              `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] expired after ${lifespanSecs}s (${agent.age} ticks).`
-            );
-          }
+        let duration = engine.taperDuration;
+        if (agent.isFeeler) duration /= engine.feelerFade;
+        let shrinkRate = Math.pow(0.5, 1.0 / (duration * 30 + 1));
+        
+        agent.thickness *= shrinkRate;
+        // Stage 4: Vanishing & Removal -> Mark inactive, trigger 8-second dissolve
+        if (agent.thickness <= 0.15) {
+          agent.active = false;
+          currentActiveCount--;
+          const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+          strainCounts.set(agent.genome.name, Math.max(0, newCount));
+          if (!engine.dyingStrains) engine.dyingStrains = new Set();
+          engine.dyingStrains.add(agent.genome.name);
+          const lifespanSecs = (agent.age / 60.0).toFixed(1);
+          engine.onLog(
+            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after ${lifespanSecs}s.`
+          );
         }
       } 
       
@@ -959,4 +947,7 @@ export function processAgents(
       }
     }
   }
+
+  // Purge dead inactive agents from simulation memory array
+  engine.agents = activeAgents.filter(a => a.active);
 }
