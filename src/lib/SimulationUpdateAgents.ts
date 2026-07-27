@@ -903,47 +903,38 @@ export function processAgents(
       }
 
 
-      let currentTermProb = 0; // Only die when old
-      if (agent.age < 120) {
-        currentTermProb = 0;
+      let currentTermProb = 0;
+      if (agent.age > 120) {
+        currentTermProb = engine.terminationProb * 0.05;
       }
 
       // 1: Older Strains Die Out (Bias system towards old variants dying to make room)
       if (strainAge > 0) {
-         // Non-linear increase in termination probability for older variants
-         const agePenalty = Math.pow(Math.max(0, strainAge - 2000) / 2000, 2) * 0.4;
+         const agePenalty = Math.pow(Math.max(0, strainAge - 1000) / 1000, 2) * 0.4;
          currentTermProb += agePenalty * engine.terminationProb; 
       }
 
-      // Individual organism aging penalty tied to DEATH RATE
+      // Individual organism aging penalty tied directly to DEATH RATE dial
       if (agent.age > 150) {
-         currentTermProb += Math.min(1.0, Math.pow(agent.age / 400.0, engine.diebackAgeBias) * engine.diebackRate * 0.05);
+         currentTermProb += Math.min(1.0, Math.pow(agent.age / 300.0, engine.diebackAgeBias) * (engine.diebackRate / 5.0) * 0.1);
       }
       
-      // 4: Hybrid Vigor / Young Strain Immunity
-      const hasVigor = strainAge < 1000 && agent.age < 120;
-      if (hasVigor) {
+      // Young Strain Immunity
+      if (strainAge < 500 && agent.age < 100) {
          currentTermProb *= 0.1;
       }
-
-      const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
-      currentTermProb *= speedFactor;
-
-      const activeStrainsCount = strainCounts.size || 1;
-      const minPerStrain = Math.max(1, Math.floor(engine.minAgents / activeStrainsCount));
 
       if (
         !agent.tapering &&
         agent.age > 40 &&
-        Math.random() < currentTermProb &&
-        currentActiveCount > engine.minAgents &&
-        myStrainCount > minPerStrain
+        Math.random() < currentTermProb
       ) {
         agent.tapering = true;
       }
 
       if (agent.tapering) {
-        if (!agent.isFeeler && (currentActiveCount <= engine.minAgents || myStrainCount <= minPerStrain)) {
+        const isOldOrForce = agent.age > 200 || agent.forceTapering || engine.diebackRate > 5.0;
+        if (!isOldOrForce && !agent.isFeeler && currentActiveCount <= engine.minAgents) {
           agent.tapering = false;
           agent.forceTapering = false;
           agent.recovering = true;
@@ -958,13 +949,9 @@ export function processAgents(
             agent.active = false;
             currentActiveCount--;
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
-            if (newCount <= 0) {
-              strainCounts.delete(agent.genome.name);
-              if (!engine.dyingStrains) engine.dyingStrains = new Set();
-              engine.dyingStrains.add(agent.genome.name);
-            } else {
-              strainCounts.set(agent.genome.name, newCount);
-            }
+            strainCounts.set(agent.genome.name, Math.max(0, newCount));
+            if (!engine.dyingStrains) engine.dyingStrains = new Set();
+            engine.dyingStrains.add(agent.genome.name);
           }
         }
       } 
