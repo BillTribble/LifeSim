@@ -40,8 +40,10 @@ export class SimulationEngine {
   hybridConnectionMesh!: THREE.LineSegments;
   dummy!: THREE.Object3D;
   canvas!: HTMLCanvasElement;
-  width: number = 0;
-  height: number = 0;
+  floorGridMat?: THREE.ShaderMaterial;
+  ceilingGridMat?: THREE.ShaderMaterial;
+  floorGridMesh?: THREE.GridHelper;
+  ceilingGridMesh?: THREE.GridHelper;
 
   pointCount: number = 0;
   segments: Segment[] = [];
@@ -893,6 +895,38 @@ export class SimulationEngine {
 
   animate = () => {
     this.reqId = requestAnimationFrame(this.animate);
+
+    // Update Dual Infinite Grid Planes (Floor & Ceiling) with Dynamic Proximity Cross-Fade
+    if (this.floorGridMat && this.ceilingGridMat && this.camera) {
+      const camY = this.camera.position.y;
+      const floorY = -160;
+
+      // Infinite Grid Follows Camera in XZ plane
+      if (this.floorGridMesh) {
+        this.floorGridMesh.position.x = this.camera.position.x;
+        this.floorGridMesh.position.z = this.camera.position.z;
+      }
+      if (this.ceilingGridMesh) {
+        this.ceilingGridMesh.position.x = this.camera.position.x;
+        this.ceilingGridMesh.position.z = this.camera.position.z;
+      }
+
+      let floorAlpha = 1.0;
+      let ceilingAlpha = 0.25;
+
+      // When camera descends below floor plane, fade out floor grid & fade in ceiling grid above!
+      if (camY < floorY + 40) {
+        const factor = THREE.MathUtils.clamp((camY - (floorY - 80)) / 120, 0.0, 1.0);
+        floorAlpha = factor;
+        ceilingAlpha = 1.0 - factor * 0.75;
+      }
+
+      this.floorGridMat.uniforms.planeOpacity.value = floorAlpha;
+      this.ceilingGridMat.uniforms.planeOpacity.value = ceilingAlpha;
+      this.floorGridMat.uniforms.cameraPos.value.copy(this.camera.position);
+      this.ceilingGridMat.uniforms.cameraPos.value.copy(this.camera.position);
+    }
+
     this.update();
     this.renderer.render(this.scene, this.camera);
 
