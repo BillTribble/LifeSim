@@ -271,23 +271,23 @@ export function processAgents(
       if (genome.stability > 0) genome.stability -= 0.003;
 
       if (agent.isFeeler) {
-        // Feelers are sensory probes that keep seeking until they find a mate, or until host dies/breeeds/tapers
-        const hostDeadOrBred = !agent.parentAgent || !agent.parentAgent.active || agent.parentAgent.tapering || agent.parentAgent.forceTapering || agent.parentAgent.hasBred;
-
-        if (hostDeadOrBred) {
-          if (!agent.tapering) {
+        // Feelers keep seeking until they mate; once they mate, they die 3 seconds (180 ticks) afterwards
+        if (agent.dieAfterTicks !== undefined) {
+          agent.dieAfterTicks--;
+          if (agent.dieAfterTicks <= 0 && !agent.tapering) {
             agent.tapering = true;
             agent.forceTapering = true;
-            agent.fadeAge = agent.fadeAge || 0;
-            agent.taperBudget = undefined; // Reset so taper-to-zero system initializes fresh
+            agent.fadeAge = 0;
+            agent.taperBudget = undefined;
           }
-        } else if (!agent.tapering) {
-          // Active feeler seeking: home directly towards nearest fertile partner of a different strain
+        }
+        if (!agent.tapering) {
+          // Omniscient and perfect seeking: find nearest fertile partner of a different strain across the entire space
           let nearestPartnerPos: THREE.Vector3 | null = null;
           let minDSq = Infinity;
           for (let pIdx = 0; pIdx < activeAgents.length; pIdx++) {
             const pa = activeAgents[pIdx];
-            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== agent.genome.name && pa.age > 30) {
+            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== agent.genome.name) {
               const dSq = agent.position.distanceToSquared(pa.position);
               if (dSq < minDSq) {
                 minDSq = dSq;
@@ -295,9 +295,9 @@ export function processAgents(
               }
             }
           }
-          if (nearestPartnerPos && minDSq < 160000) { // Within 400 units
+          if (nearestPartnerPos) {
             const homingVector = new THREE.Vector3().subVectors(nearestPartnerPos, agent.position).normalize();
-            agent.direction.lerp(homingVector, 0.35).normalize();
+            agent.direction.lerp(homingVector, 0.85).normalize();
           }
         }
       } else if (genome.movementType === "spiral") {
@@ -438,7 +438,7 @@ export function processAgents(
         const arch = genome.archetype || 'bush';
         let archDecay = 0.995;
         if (arch === 'snake') archDecay = 0.9999;
-        else if (arch === 'bush') archDecay = 0.991;   // Moderate thinning → fine wispy tendrils that persist long enough to cluster
+        else if (arch === 'bush') archDecay = 0.997;   // Keep bush branches thick and surviving as dense shrubs
         else if (arch === 'tree') archDecay = agent.age < 150 ? 0.997 : 0.992; // Thick trunk, then gradual canopy thinning
         else if (arch === 'rhizome') archDecay = 0.9992; // Retain thick swollen volume for ginger tubers!
 
@@ -473,7 +473,8 @@ export function processAgents(
         minAllowed,
         engine.maxLineWidth,
       );
-      const renderThickness = Math.max(0.001, agent.thickness);
+      const ageScale = agent.isFeeler ? 1.0 : (agent.age >= 150 ? 1.0 : 0.1 + 0.9 * (1.0 - Math.pow(1.0 - agent.age / 150, 3)));
+      const renderThickness = Math.max(0.001, agent.thickness * ageScale);
 
       engine.addLineSegment(
         agent.lastPosition,
@@ -608,10 +609,9 @@ export function processAgents(
       agent.lastPosition.copy(agent.position);
 
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
-      const maxForArchetype = genome.archetype === "bush" ? 80 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 150 : genome.archetype === "tree" ? 60 : 20;
+      const maxForArchetype = genome.archetype === "bush" ? 250 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 200 : genome.archetype === "tree" ? 150 : 50;
 
-      const isSnake = genome.archetype === "snake";
-      let allowedToBranch = !(isSnake && myStrainCount >= maxForArchetype);
+      const allowedToBranch = myStrainCount < maxForArchetype;
 
       if (
         allowedToBranch &&
@@ -624,25 +624,6 @@ export function processAgents(
             genome.branchTendency *
             engine.branchingMultiplier
       ) {
-        if (myStrainCount >= maxForArchetype) {
-           // We are at or over the branch limit for this creature type.
-           // Find the oldest active branch of strictly the same genome and kill it to make room.
-           let oldestBranch: Agent | null = null;
-           for (let idx = 0; idx < activeAgents.length; idx++) {
-              const ca = activeAgents[idx];
-              if (ca.active && !ca.tapering && ca.genome.name === genome.name) {
-                 if (!oldestBranch || ca.age > oldestBranch.age) {
-                    oldestBranch = ca;
-                 }
-              }
-           }
-           if (oldestBranch) {
-              oldestBranch.tapering = true;
-              oldestBranch.forceTapering = true;
-              oldestBranch.fadeAge = oldestBranch.fadeAge || 0;
-              engine.onLog(`🔄 Branch cap reached for ${genome.name} [${(genome.archetype || 'bush').toUpperCase()}] — oldest branch retiring.`);
-           }
-        }
 
         // Partially reset age to allow varied branching distances instead of rigid grids
         agent.age = Math.floor(Math.random() * 10);
@@ -796,12 +777,12 @@ export function processAgents(
                         active: true,
                         age: 0,
                         thickness: feelerGenome.thicknessBase,
-                        cooldown: 20, // Low cooldown so the feeler itself can breed quickly
+                        cooldown: 120, // Stagger feeler breeding attempts
                         isFeeler: true,
                         realGenome: agent.genome,
                         parentAgent: agent,
                     });
-                    agent.cooldown = 150;
+                    agent.cooldown = 400;
                     if (engine.feelerCount < 3) {
                       engine.feelerCount++;
                       engine.lastFeelerWorldPos = agent.position.clone();
@@ -899,13 +880,8 @@ export function processAgents(
                  .clone()
                  .lerp(nearestPartner.position, 0.5);
 
-               // Offset offspring away from parents so they don't clump on top
-               const spawnOffset = new THREE.Vector3(
-                 (Math.random() - 0.5) * 2,
-                 (Math.random() - 0.5) * 2,
-                 (Math.random() - 0.5) * 2,
-               ).normalize().multiplyScalar(15 + Math.random() * 10);
-               const spawnPoint = midPoint.clone().add(spawnOffset);
+               // Offspring spawn exactly at the midPoint (center of mating artifact) and grow outward
+               const spawnPoint = midPoint.clone();
 
                newAgents.push({
                  position: spawnPoint.clone(),
@@ -931,15 +907,12 @@ export function processAgents(
                  nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
                }
 
-               // Immediately kill & taper any active feelers for either parent organism upon mating
+               // Schedule any active feelers for either parent organism to die 3 seconds (180 ticks) after mating
                const host1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
                const host2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
                for (const fa of activeAgents) {
-                 if (fa.active && fa.isFeeler && (fa.parentAgent === host1 || fa.parentAgent === host2 || fa.parentAgent === agent || fa.parentAgent === nearestPartner)) {
-                   fa.tapering = true;
-                   fa.forceTapering = true;
-                   fa.fadeAge = fa.fadeAge || 0;
-                   fa.taperBudget = undefined;
+                 if (fa.active && fa.isFeeler && (fa.parentAgent === host1 || fa.parentAgent === host2 || fa.parentAgent === agent || fa.parentAgent === nearestPartner || fa === agent || fa === nearestPartner)) {
+                   fa.dieAfterTicks = 180;
                  }
                }
 

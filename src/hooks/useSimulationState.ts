@@ -16,7 +16,7 @@ export const DEFAULTS: Record<string, any> = {
   "rhizomeBranching": 1,
   "snakeWander": 1,
   "snakeStepSize": 1,
-  "snakeSpeed": 1,
+  "snakeSpeed": 0.5,
   "rotationSpeed": 0.13,
   "magnetism": 0.08361988738043864,
   "proximity": 1538.23896997661,
@@ -139,7 +139,7 @@ export const DEFAULTS: Record<string, any> = {
   "hybridDecay": 48.44796525279812,
   "deathRate": 5.50616330309604,
   "slowMotion": 1,
-  "rotationVelocity": 0.13,
+  "rotationVelocity": 0.7,
   "swarmCohesion": 0.08361988738043864,
   "detectionRange": 1538.23896997661,
   "extrusionSpeed": 0.11,
@@ -157,7 +157,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-30-v18";
+    const CURRENT_SCHEMA = "2026-07-30-v19";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();

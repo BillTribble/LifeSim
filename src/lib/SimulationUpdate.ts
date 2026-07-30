@@ -748,7 +748,7 @@ export function updateSimulation(engine: SimulationEngine) {
         const growingCount = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
         if (ratio > 0.03) {
           engine.speciesAbove5Percent.add(strainName);
-        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName) && healthySpeciesCount > engine.minAgents && growingCount > engine.minAgents) {
+        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
           engine.speciesAbove5Percent.delete(strainName);
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
@@ -818,13 +818,17 @@ export function updateSimulation(engine: SimulationEngine) {
 
   const activeNotTapering = engine.agents.filter(a => !a.tapering && !a.isFeeler);
   
-  if (activeNotTapering.length > engine.maxAgents * 0.5) { // Optimization: only run if mildly crowded
+  if (engine.hasAnyOrganismBred && activeNotTapering.length > engine.maxAgents * 0.5) { // Optimization: only run if mildly crowded
     const strainGroups = new Map<string, typeof activeNotTapering>();
     activeNotTapering.forEach(a => {
       const arr = strainGroups.get(a.genome.name);
       if (arr) arr.push(a);
       else strainGroups.set(a.genome.name, [a]);
     });
+
+    if (strainGroups.size <= Math.max(3, engine.minAgents)) {
+      return;
+    }
 
     const activeSpeciesCount = strainGroups.size || 1;
     const globalLimit = engine.maxAgents;

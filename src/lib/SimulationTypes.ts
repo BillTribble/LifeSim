@@ -101,6 +101,7 @@ export interface Agent {
   matingCount?: number;
   fadeAge?: number;
   taperBudget?: number;
+  dieAfterTicks?: number;
   id?: number;
 }
 

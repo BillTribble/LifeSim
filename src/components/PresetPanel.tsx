@@ -17,57 +17,62 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
   const [presets, setPresets] = useState<any[]>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('presets') || '[]');
-      if (!stored.some((p: any) => p.name === "Agent recommended")) {
+      const recommendedState = {
+        ...DEFAULTS,
+        rotationSpeed: 0.1,
+        rotationVelocity: 0.7,
+        maxDOMs: 341000,
+        maxAgents: 50,
+        minAgents: 4,
+        maxSpecies: 4,
+        boundarySize: 150,
+        magnetism: 10.0,
+        proximity: 40,
+        desperation: 7.7,
+        despairAge: 800,
+        ecoFade: 1.0,
+        cullRate: 48.87,
+        growthSpeed: 1.6,
+        diebackRate: 5.0,
+        diebackAgeBias: 1.5,
+        terminationProb: 0.02,
+        desiccationSpeed: 9.9,
+        feelerFade: 10,
+        hybridCooldown: 650,
+        hybridSize: 3.5,
+        hybridStickiness: 47,
+        hybridSpinSpeed: 0.2,
+        branchTendencyVar: 50,
+        branchingMultiplier: 3.0,
+        termProbPostBranch: 1.5,
+        branchBigger: 0.75,
+        branchSplitSizeProb: 0.95,
+        timeScale: 0.4,
+        snakeSpeed: 0.5,
+        bushSpeed: 1.0,
+        treeSpeed: 1.0,
+        rhizomeSpeed: 1.0,
+        flowerSize: 0.41,
+        taperDuration: 1.0,
+        maxLineWidth: 1.5,
+        appendageSize: 1.2,
+        leafScale: 0.3,
+        multicolorAppProb: 0.05,
+        sameColorAppProb: 0.9,
+        globalPulseSpeed: 0.1,
+        maxSaturation: 0.8
+      };
+      const idx = stored.findIndex((p: any) => p.name === "Agent recommended");
+      if (idx === -1) {
         stored.unshift({
           id: "agent-recommended",
           name: "Agent recommended",
-          state: {
-            ...DEFAULTS,
-            rotationSpeed: 0.1,
-            maxDOMs: 341000,
-            maxAgents: 50,
-            minAgents: 4,
-            maxSpecies: 4,
-            boundarySize: 150,
-            magnetism: 10.0,
-            proximity: 40,
-            desperation: 7.7,
-            despairAge: 800,
-            ecoFade: 1.0,
-            cullRate: 48.87,
-            growthSpeed: 1.6,
-            diebackRate: 5.0,
-            diebackAgeBias: 1.5,
-            terminationProb: 0.02,
-            desiccationSpeed: 9.9,
-            feelerFade: 10,
-            hybridCooldown: 200,
-            hybridSize: 3.5,
-            hybridStickiness: 47,
-            hybridSpinSpeed: 0.2,
-            branchTendencyVar: 50,
-            branchingMultiplier: 3.0,
-            termProbPostBranch: 1.5,
-            branchBigger: 0.75,
-            branchSplitSizeProb: 0.95,
-            timeScale: 0.4,
-            snakeSpeed: 1.5,
-            bushSpeed: 1.0,
-            treeSpeed: 1.0,
-            rhizomeSpeed: 1.0,
-            flowerSize: 0.41,
-            taperDuration: 1.0,
-            maxLineWidth: 1.5,
-            appendageSize: 1.2,
-            leafScale: 0.3,
-            multicolorAppProb: 0.05,
-            sameColorAppProb: 0.9,
-            globalPulseSpeed: 0.1,
-            maxSaturation: 0.8
-          }
+          state: recommendedState
         });
-        localStorage.setItem('presets', JSON.stringify(stored));
+      } else {
+        stored[idx].state = recommendedState;
       }
+      localStorage.setItem('presets', JSON.stringify(stored));
       return stored;
     } catch {
       return [];

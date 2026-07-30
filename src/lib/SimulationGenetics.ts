@@ -449,7 +449,7 @@ export function breedGenomes(
   const parentBlendH = (h1.h + hueDiff * (0.35 + Math.random() * 0.30) + (Math.random() - 0.5) * 0.015 + 1.0) % 1.0;
   const resultH = parentBlendH;
 
-  const isAlbino = Math.random() < 0.02;
+  const isAlbino = Math.random() < 0.002;
   const resultS = isAlbino ? 0.02 : THREE.MathUtils.clamp((h1.s + h2.s) * 0.5 + (Math.random() - 0.5) * 0.02, 0.50, 0.75);
   const resultL = isAlbino ? 0.95 : THREE.MathUtils.clamp((h1.l + h2.l) * 0.5 + (Math.random() - 0.5) * 0.02, 0.45, 0.60);
   const baseColor = new THREE.Color().setHSL(resultH, resultS, resultL);

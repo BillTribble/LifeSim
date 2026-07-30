@@ -112,7 +112,7 @@ export class SimulationEngine {
   growthSpeed: number = 0.11;
   diebackRate: number = 5.50616330309604;
   allowBreeding: boolean = true;
-  hybridCooldown: number = 926.4522288567662;
+  hybridCooldown: number = 650;
   postMatingDieoff: boolean = true;
   hybridStickiness: number = 48.44796525279812;
   hybridSpinSpeed: number = 0.2;
@@ -1036,11 +1036,11 @@ export class SimulationEngine {
       betaGenome.sameColorAppendage = true;
     }
 
-    // Organism A (Alpha Strain) placed on the LEFT side of screen (X = -40)
+    // Organism A (Alpha Strain) placed on the LEFT side of screen (X = -40), pointing right (+1) towards center
     this.agents.push({
       position: new THREE.Vector3(-40, 0, 0),
       direction: new THREE.Vector3(
-        -1,
+        1,
         (Math.random() - 0.5) * 0.2,
         (Math.random() - 0.5) * 0.2,
       ).normalize(),
@@ -1049,14 +1049,14 @@ export class SimulationEngine {
       age: 0,
       lastPosition: new THREE.Vector3(-40, 0, 0),
       thickness: alphaGenome.thicknessBase * 2.0,
-      cooldown: 350,
+      cooldown: 0,
     });
 
-    // Organism B (Beta Strain) placed on the RIGHT side of screen (X = +40)
+    // Organism B (Beta Strain) placed on the RIGHT side of screen (X = +40), pointing left (-1) towards center
     this.agents.push({
       position: new THREE.Vector3(40, 0, 0),
       direction: new THREE.Vector3(
-        1,
+        -1,
         (Math.random() - 0.5) * 0.2,
         (Math.random() - 0.5) * 0.2,
       ).normalize(),
@@ -1065,7 +1065,7 @@ export class SimulationEngine {
       age: 0,
       lastPosition: new THREE.Vector3(40, 0, 0),
       thickness: betaGenome.thicknessBase * 2.0,
-      cooldown: 350,
+      cooldown: 0,
     });
 
     this.matingCount = 0;
