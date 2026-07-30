@@ -179,6 +179,7 @@ export default function App() {
         allowBreeding={state.allowBreeding}
         hybridCooldown={state.hybridCooldown}
         hybridStickiness={state.hybridStickiness}
+        hybridSpinSpeed={state.hybridSpinSpeed}
         branchTendencyVar={state.branchTendencyVar}
         ornamentFrequency={state.ornamentFrequency}
         branchingMultiplier={state.branchingMultiplier}

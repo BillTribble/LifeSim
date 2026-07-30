@@ -115,6 +115,7 @@ export class SimulationEngine {
   hybridCooldown: number = 926.4522288567662;
   postMatingDieoff: boolean = true;
   hybridStickiness: number = 48.44796525279812;
+  hybridSpinSpeed: number = 0.2;
   ornamentFrequency: number = 9.525004244851067;
   branchingMultiplier: number = 163.34538034535345;
   branchTendencyVar: number = 11.779000158227072;
@@ -123,7 +124,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.14;
+  leafScale: number = 0.3;
   leafDensity: number = 0.35;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
@@ -823,6 +824,9 @@ export class SimulationEngine {
   setHybridStickiness(v: number) {
     this.hybridStickiness = v;
   }
+  setHybridSpinSpeed(s: number) {
+    this.hybridSpinSpeed = s;
+  }
   setOrnamentFrequency(o: number) {
     this.ornamentFrequency = o;
   }
@@ -1079,7 +1083,7 @@ export class SimulationEngine {
       this.controls.autoRotate = false;
 
       this.controls.target.set(0, creatureCenterY, 0);
-      this.camera.position.set(0, creatureCenterY, -137.42);
+      this.camera.position.set(0, creatureCenterY, 137.42);
       this.camera.up.set(0, 1, 0);
       this.camera.lookAt(this.controls.target);
       this.camera.updateProjectionMatrix();
@@ -1087,7 +1091,7 @@ export class SimulationEngine {
       this.controls.saveState();
       this.controls.reset();
 
-      this.camera.position.set(0, creatureCenterY, -137.42);
+      this.camera.position.set(0, creatureCenterY, 137.42);
       this.controls.target.set(0, creatureCenterY, 0);
       this.controls.update();
 

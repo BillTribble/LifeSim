@@ -42,6 +42,7 @@ export function SimulationView({
   allowBreeding,
   hybridCooldown,
   hybridStickiness,
+  hybridSpinSpeed,
   branchTendencyVar,
   ornamentFrequency,
   branchingMultiplier,
@@ -135,6 +136,7 @@ export function SimulationView({
   allowBreeding?: boolean;
   hybridCooldown?: number;
   hybridStickiness?: number;
+  hybridSpinSpeed?: number;
   branchTendencyVar?: number;
   ornamentFrequency?: number;
   branchingMultiplier?: number;
@@ -419,6 +421,8 @@ export function SimulationView({
         engineRef.current.setHybridCooldown(hybridCooldown);
       if (hybridStickiness !== undefined)
         engineRef.current.setHybridStickiness(hybridStickiness);
+      if (hybridSpinSpeed !== undefined)
+        engineRef.current.setHybridSpinSpeed(hybridSpinSpeed);
       if (branchTendencyVar !== undefined)
         engineRef.current.setBranchTendencyVar(branchTendencyVar);
       if (ornamentFrequency !== undefined)
@@ -544,6 +548,7 @@ export function SimulationView({
     allowBreeding,
     hybridCooldown,
     hybridStickiness,
+    hybridSpinSpeed,
     branchTendencyVar,
     ornamentFrequency,
     branchingMultiplier,
@@ -654,6 +659,8 @@ export function SimulationView({
     if (hybridCooldown !== undefined) engine.setHybridCooldown(hybridCooldown);
     if (hybridStickiness !== undefined)
       engine.setHybridStickiness(hybridStickiness);
+    if (hybridSpinSpeed !== undefined)
+      engine.setHybridSpinSpeed(hybridSpinSpeed);
     if (branchTendencyVar !== undefined)
       engine.setBranchTendencyVar(branchTendencyVar);
     if (ornamentFrequency !== undefined)

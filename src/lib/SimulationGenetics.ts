@@ -377,6 +377,12 @@ export function clampArchetypeGenome(res: Genome): Genome {
     res.bifurcationRate = Math.min(res.bifurcationRate, 0.01);
     res.branchTendency = Math.min(res.branchTendency, 1.0);
   }
+  if (!res.appendage) {
+    res.appendage = getWeightedAppendage({});
+  }
+  if (res.recessive && !res.recessive.appendage) {
+    res.recessive.appendage = getWeightedAppendage({});
+  }
   return res;
 }
 
@@ -535,7 +541,7 @@ export function breedGenomes(
       archetype: archInheritance.recessive,
       movementType: moveInheritance.recessive,
       geometryType: geoInheritance.recessive,
-      appendage: appInheritance.recessive,
+      appendage: appInheritance.recessive || getWeightedAppendage(traitProbs),
       isGlowing: glowInheritance.recessive,
       vernationType: vernInheritance.recessive,
       canopyZone: canopyInheritance.recessive,

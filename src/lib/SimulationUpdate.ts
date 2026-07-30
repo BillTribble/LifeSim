@@ -292,7 +292,8 @@ export function updateSimulation(engine: SimulationEngine) {
           );
 
           if (isHybrid) {
-            const slowRot = i * 2.5 + engine.unscaledTime * 0.005;
+            const spinMult = engine.hybridSpinSpeed !== undefined ? engine.hybridSpinSpeed : 0.2;
+            const slowRot = i * 2.5 + engine.unscaledTime * 0.005 * spinMult;
             engine.dummy.quaternion.multiply(
               new THREE.Quaternion().setFromEuler(
                 new THREE.Euler(slowRot, slowRot * 1.1, slowRot * 0.8),

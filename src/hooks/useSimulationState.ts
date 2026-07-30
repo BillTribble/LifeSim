@@ -58,7 +58,7 @@ export const DEFAULTS: Record<string, any> = {
   "botanyRealism": true,
   "windVelocity": 0.2,
   "flutterIntensity": 0.5,
-  "leafScale": 0.14,
+  "leafScale": 0.3,
   "leafDensity": 0.35,
   "relativeLeafSizeDiff": 0.2,
   "leafGrowthSpeed": 0.0045,
@@ -134,7 +134,8 @@ export const DEFAULTS: Record<string, any> = {
       "max": 5
     }
   },
-  "appendageSize": 1.3,
+  "appendageSize": 1.2,
+  "hybridSpinSpeed": 0.2,
   "hybridDecay": 48.44796525279812,
   "deathRate": 5.50616330309604,
   "slowMotion": 1,
@@ -146,9 +147,9 @@ export const DEFAULTS: Record<string, any> = {
   "pulseSpeed": 0.8637093147800061,
   "saturation": 0.3135869032532054,
   "cameraPosition": {
-    "x": 102.79425496529767,
+    "x": 0,
     "y": 18.921075000000005,
-    "z": -91.20086373565351,
+    "z": 137.42,
     "zoom": 1
   },
   "version": "1.0"
@@ -156,7 +157,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-30-v16";
+    const CURRENT_SCHEMA = "2026-07-30-v18";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();
@@ -366,6 +367,12 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     parseFloat(
       localStorage.getItem("hybridStickiness") ||
         DEFAULTS.hybridStickiness.toString(),
+    ),
+  );
+  const [hybridSpinSpeed, setHybridSpinSpeed] = useState(() =>
+    parseFloat(
+      localStorage.getItem("hybridSpinSpeed") ||
+        DEFAULTS.hybridSpinSpeed.toString(),
     ),
   );
   const [branchTendencyVar, setBranchTendencyVar] = useState(() =>
@@ -653,6 +660,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("allowBreeding", allowBreeding.toString());
     localStorage.setItem("hybridCooldown", hybridCooldown.toString());
     localStorage.setItem("hybridStickiness", hybridStickiness.toString());
+    localStorage.setItem("hybridSpinSpeed", hybridSpinSpeed.toString());
     localStorage.setItem("branchTendencyVar", branchTendencyVar.toString());
     localStorage.setItem("ornamentFrequency", ornamentFrequency.toString());
     localStorage.setItem("branchingMultiplier", branchingMultiplier.toString());
@@ -720,6 +728,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     diebackRate,
     hybridCooldown,
     hybridStickiness,
+    hybridSpinSpeed,
     branchTendencyVar,
     ornamentFrequency,
     branchingMultiplier,
@@ -805,6 +814,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       allowBreeding,
       hybridCooldown,
       hybridStickiness,
+      hybridSpinSpeed,
       branchTendencyVar,
       ornamentFrequency,
       branchingMultiplier,
@@ -908,6 +918,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setBoundarySize,
       setDesiccationSpeed,
       setHybridSize,
+      setHybridSpinSpeed,
       setTerminationProb,
       setTermProbPostBranch,
       setTaperDuration,
@@ -1004,6 +1015,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         setColorClamp(DEFAULTS.colorClamp);
         setHybridCooldown(DEFAULTS.hybridCooldown);
         setHybridStickiness(DEFAULTS.hybridStickiness);
+        setHybridSpinSpeed(DEFAULTS.hybridSpinSpeed);
         setBranchTendencyVar(DEFAULTS.branchTendencyVar);
         setOrnamentFrequency(DEFAULTS.ornamentFrequency);
         setBranchingMultiplier(DEFAULTS.branchingMultiplier);

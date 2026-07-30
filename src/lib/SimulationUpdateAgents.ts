@@ -487,7 +487,7 @@ export function processAgents(
           (genome.appendage === "hair" ||
             genome.appendage === "curlyHair" ||
             genome.appendage === "spirals") &&
-          Math.random() < 0.15 * engine.ornamentFrequency &&
+          Math.random() < 0.55 * engine.ornamentFrequency &&
           engine.pointCount < MAX_POINTS - 10
         ) {
           const rad = Math.random() * Math.PI * 2;
@@ -519,7 +519,7 @@ export function processAgents(
           (genome.appendage === "thorns" ||
             genome.appendage === "crystals" ||
             genome.appendage === "sparkles") &&
-          Math.random() < 0.08 * engine.ornamentFrequency &&
+          Math.random() < 0.45 * engine.ornamentFrequency &&
           engine.pointCount < MAX_POINTS - 10
         ) {
           const rad = Math.random() * Math.PI * 2;

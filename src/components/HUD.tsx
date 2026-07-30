@@ -598,7 +598,7 @@ Slide between flat orthographic (0 = no perspective) and full 3D perspective (1.
                   <span className="text-[8px] text-green-400 tracking-widest text-center border-b border-green-500/20 pb-1 font-bold">LEAVES & BOTANY</span>
                   <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF SCALE
-Size of foliage leaves." label="LEAF_SCALE" min={0.5} max={10.0} step={0.1} value={state.leafScale} onChange={setters.setLeafScale} color="#4ade80" />
+Size of foliage leaves." label="LEAF_SCALE" min={0.05} max={10.0} step={0.05} value={state.leafScale} onChange={setters.setLeafScale} color="#4ade80" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF DENSITY
 Density of foliage coverage along stems." label="LEAF_DENSITY" min={0.1} max={1.0} step={0.05} value={state.leafDensity} onChange={setters.setLeafDensity} color="#4ade80" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF SIZE DIFF
@@ -701,7 +701,7 @@ Low: Long, persistent feelers." label="FEELER_FADE" min={1.0} max={50.0} step={1
                 )}
 
                 {/* REPRODUCTION */}
-                {hasMatch(['HYBRID_COOL', 'HYBRID_SIZE', 'HYBRID_DECAY', 'BREED', 'COOLDOWN', 'SIZE', 'DECAY', 'REPRODUCTION']) && (
+                {hasMatch(['HYBRID_COOL', 'HYBRID_SIZE', 'HYBRID_DECAY', 'HYBRID_SPIN', 'BREED', 'COOLDOWN', 'SIZE', 'DECAY', 'SPIN', 'REPRODUCTION']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">REPRODUCTION</span>
                   <div className="flex gap-1 flex-wrap justify-center items-center max-w-[280px] sm:max-w-none">
@@ -728,6 +728,10 @@ Low: Tiny, fragile newborns." label="HYBRID_SIZE" min={0.5} max={10.0} step={0.1
 Duration that hybridization artifacts persist before fading.
 High: Artifacts linger for a long time.
 Low: Artifacts fade away quickly." label="HYBRID_DECAY" min={0.01} max={1.0} step={0.01} value={state.hybridStickiness} onChange={setters.setHybridStickiness} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="HYBRID SPIN
+Rotation speed of hybridization artifact polygons.
+High: Spinning rapidly.
+Low: Extremely slow rotation." label="HYBRID_SPIN" min={0.0} max={2.0} step={0.05} value={state.hybridSpinSpeed} onChange={setters.setHybridSpinSpeed} color="#87CEEB" />
                   </div>
                 </div>
                 )}
