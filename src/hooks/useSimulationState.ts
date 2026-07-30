@@ -156,7 +156,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-30-v15";
+    const CURRENT_SCHEMA = "2026-07-30-v16";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();

@@ -56,7 +56,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
             rhizomeSpeed: 1.0,
             flowerSize: 0.41,
             taperDuration: 1.0,
-            maxLineWidth: 12.0,
+            maxLineWidth: 1.5,
             multicolorAppProb: 0.05,
             sameColorAppProb: 0.9,
             globalPulseSpeed: 0.1,
