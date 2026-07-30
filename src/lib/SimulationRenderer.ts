@@ -8,29 +8,45 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.width = width;
     engine.height = height;
     engine.scene = new THREE.Scene();
-    engine.scene.fog = new THREE.Fog('#001220', 200, 800);
+    const creatureCenterY = 18.921075072447547;
+    const initialBgHex = engine.bgColor || '#5e3e54';
+    engine.scene.background = new THREE.Color(initialBgHex);
+    engine.scene.fog = new THREE.Fog(initialBgHex, 120, 771.53);
     
     const aspect = width / height;
-    const d = 260;
-    engine.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1500);
-    engine.camera.position.set(53.88034825805899, 85.9356300114233, -393.5885866817418);
-    engine.camera.zoom = 1.15;
+    const initCamX = 0;
+    const initCamY = creatureCenterY;
+    const initCamZ = -137.42;
+
+    engine.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
+    engine.camera.position.set(initCamX, initCamY, initCamZ);
     engine.camera.updateProjectionMatrix();
-    engine.camera.lookAt(engine.scene.position);
     
     engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true });
     engine.renderer.setSize(width, height);
     engine.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
+    engine.controls.target.set(0, creatureCenterY, 0);
+    engine.camera.position.set(0, creatureCenterY, -137.42);
+    engine.camera.up.set(0, 1, 0);
+    engine.camera.lookAt(engine.controls.target);
     engine.controls.enableDamping = true;
     engine.controls.dampingFactor = 0.05;
-    engine.controls.autoRotate = true;
+    engine.controls.autoRotate = false;
     engine.controls.autoRotateSpeed = 0.4;
     engine.controls.enablePan = true;
     engine.controls.enableZoom = true;
+    engine.controls.minAzimuthAngle = -Infinity;
+    engine.controls.maxAzimuthAngle = Infinity;
+    // Allow vertical mouse pitch rotation while auto-rotate spins horizontally around Y axis
+    engine.controls.minPolarAngle = 0.05;
+    engine.controls.maxPolarAngle = Math.PI - 0.05;
+    engine.controls.saveState();
+    engine.controls.update();
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    engine.ambientLight = ambientLight;
     engine.scene.add(ambientLight);
     
     const d1 = new THREE.DirectionalLight('#F9D29D', 1.5);
@@ -41,50 +57,98 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     d2.position.set(-100, -50, -100);
     engine.scene.add(d2);
 
-    // Infinite Dual Floor & Ceiling Grid Shader Materials
-    const createInfiniteGridMat = () => new THREE.ShaderMaterial({
+    // Setup full-screen WebGL overlay for smooth restart fade-outs
+    engine.fadeScene = new THREE.Scene();
+    engine.fadeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    engine.fadeQuadMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
       transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+    });
+    engine.fadeQuadMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      engine.fadeQuadMat
+    );
+    engine.fadeScene.add(engine.fadeQuadMesh);
+
+    // Procedural Infinite Horizon Grid Materials (Zero horizon black bands, anti-aliased LOD fade)
+    const createHorizonGridMat = () => new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
       uniforms: {
-        gridColor: { value: new THREE.Color(0x1e293b) },
+        gridColor: { value: new THREE.Color(0x38bdf8) },
+        fogColor: { value: new THREE.Color(initialBgHex) },
         cameraPos: { value: new THREE.Vector3() },
         planeOpacity: { value: 1.0 },
       },
       vertexShader: `
-        varying vec3 vWorldPosition;
+        varying vec3 vWorldPos;
         void main() {
-          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `
         uniform vec3 gridColor;
+        uniform vec3 fogColor;
         uniform vec3 cameraPos;
         uniform float planeOpacity;
-        varying vec3 vWorldPosition;
+        varying vec3 vWorldPos;
+
+        // Anti-aliased grid function with LOD & density suppression
+        float drawGrid(vec2 pos, float scale, float width) {
+          vec2 coord = pos / scale;
+          vec2 derivative = fwidth(coord);
+          vec2 grid = abs(fract(coord - 0.5) - 0.5) / max(derivative, vec2(0.001));
+          float line = min(grid.x, grid.y);
+          float alpha = 1.0 - min(line / width, 1.0);
+          
+          // Suppress line density when lines become smaller than screen pixels (eliminates black bands!)
+          float pixelCoverage = max(derivative.x, derivative.y);
+          float moireFade = 1.0 - smoothstep(0.20, 0.70, pixelCoverage);
+          return alpha * moireFade;
+        }
+
         void main() {
-          // Distance from camera in XZ plane -> Extends infinitely with camera movement!
-          float distToCam = length(vWorldPosition.xz - cameraPos.xz);
-          float horizonFade = 1.0 - smoothstep(400.0, 4500.0, distToCam);
-          if (horizonFade <= 0.001 || planeOpacity <= 0.001) discard;
-          gl_FragColor = vec4(gridColor, planeOpacity * horizonFade * 0.45);
+          if (planeOpacity <= 0.001) discard;
+
+          float distToCam = length(vWorldPos.xz - cameraPos.xz);
+
+          // Multi-scale LOD Grids (40u fine grid & 200u major grid)
+          float fineGrid = drawGrid(vWorldPos.xz, 40.0, 1.2);
+          float majorGrid = drawGrid(vWorldPos.xz, 200.0, 1.8);
+          float combinedGrid = max(fineGrid, majorGrid * 0.75);
+
+          if (combinedGrid <= 0.001) discard;
+
+          // Horizon distance opacity fade: Grid remains 100% bright main color and smoothly dissolves alpha to 0.0
+          float distanceFade = 1.0 - smoothstep(200.0, 950.0, distToCam);
+          if (distanceFade <= 0.001) discard;
+
+          float finalAlpha = combinedGrid * distanceFade * planeOpacity * 0.70;
+          gl_FragColor = vec4(gridColor, finalAlpha);
         }
       `
     });
 
-    engine.floorGridMat = createInfiniteGridMat();
-    engine.ceilingGridMat = createInfiniteGridMat();
+    engine.floorGridMat = createHorizonGridMat();
+    engine.ceilingGridMat = createHorizonGridMat();
 
-    const floorGrid = new THREE.GridHelper(8000, 160);
-    floorGrid.material = engine.floorGridMat;
-    floorGrid.position.y = -160;
+    const gridGeo = new THREE.PlaneGeometry(16000, 16000, 1, 1);
+    gridGeo.rotateX(-Math.PI / 2);
+
+    const floorGrid = new THREE.Mesh(gridGeo, engine.floorGridMat);
+    floorGrid.position.set(0, creatureCenterY - engine.gridHeight, 0);
     engine.scene.add(floorGrid);
-    engine.floorGridMesh = floorGrid;
+    engine.floorGridMesh = floorGrid as any;
 
-    const ceilingGrid = new THREE.GridHelper(8000, 160);
-    ceilingGrid.material = engine.ceilingGridMat;
-    ceilingGrid.position.y = 320;
+    const ceilingGrid = new THREE.Mesh(gridGeo, engine.ceilingGridMat);
+    ceilingGrid.position.set(0, creatureCenterY + engine.gridHeight, 0);
     engine.scene.add(ceilingGrid);
-    engine.ceilingGridMesh = ceilingGrid;
+    engine.ceilingGridMesh = ceilingGrid as any;
 
     engine.dummy = new THREE.Object3D();
 

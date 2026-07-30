@@ -46,18 +46,8 @@ export function updateSimulation(engine: SimulationEngine) {
       const offset = new THREE.Vector3().subVectors(engine.camera.position, target);
       const spherical = new THREE.Spherical().setFromVector3(offset);
 
-      // Continuous horizontal yaw rotation (doubled speed) and vertical pitch rotation at half speed
-      spherical.theta -= angleStep * 2.0;
-      if (engine.phiDirection === undefined) engine.phiDirection = -1;
-      spherical.phi += angleStep * 0.5 * engine.phiDirection;
-
-      if (spherical.phi <= 0.35) {
-        spherical.phi = 0.35;
-        engine.phiDirection = 1;
-      } else if (spherical.phi >= Math.PI - 0.35) {
-        spherical.phi = Math.PI - 0.35;
-        engine.phiDirection = -1;
-      }
+      // Horizontal yaw auto-rotation around Y axis (vertical auto-rotation = 0)
+      spherical.theta -= angleStep;
 
       offset.setFromSpherical(spherical);
       engine.camera.position.copy(target).add(offset);
@@ -254,14 +244,7 @@ export function updateSimulation(engine: SimulationEngine) {
         }
 
         if (isHybrid) {
-          if (age < 300) {
-            const phase = Math.sin(
-              age * 0.05 * (engine.globalPulseSpeed || 1.0),
-            );
-            const intensity = 1.0 - Math.pow(age / 300, 2);
-            sizePulseEffect = 1.0 + phase * 0.5 * intensity;
-            colorPulseEffect = sizePulseEffect;
-          }
+          // Simple ease out animation is applied to growth scale below; no bounce pulse
         } else if (genome && genome.pulseTarget !== "none") {
           const isStem = mesh === engine.cylinderMesh;
           const tp = genome.pulseTarget;
@@ -296,7 +279,11 @@ export function updateSimulation(engine: SimulationEngine) {
           isHybrid ||
           isLeaf
         ) {
-          const growth = isLeaf ? 1.0 : (age <= growthDuration ? age / growthDuration : 1.0);
+          const growth = isLeaf
+            ? 1.0
+            : isHybrid
+              ? 1.0 - Math.pow(1.0 - Math.min(1.0, age / 120), 3)
+              : (age <= growthDuration ? age / growthDuration : 1.0);
           engine.dummy.matrix.copy(seg.matrix);
           engine.dummy.matrix.decompose(
             engine.dummy.position,
@@ -525,24 +512,43 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
-  // UNCONDITIONAL ORPHAN CLEANUP: Check every frame to ensure any leaf, flower, or appendage
-  // whose parent stem is missing, overwritten, or dying gets marked dying immediately with parent's timestamp.
+  // INSTANT APPENDAGE SYNC & ORPHAN CLEANUP:
+  // Ensure any leaf, flower, or appendage whose parent stem is dying dissolves in exact lockstep with its parent,
+  // and any leaf whose parent stem is missing or deleted is instantly erased without delay.
   for (const app of engine.appendages.values()) {
     const appLim = Math.floor(engine.maxDOMs / 4);
     if (appLim > 0) {
+      let appChanged = false;
       for (let i = 0; i < appLim; i++) {
         const seg = app.segments[i];
-        if (seg && !app.dyingSet.has(i)) {
+        if (seg) {
           const parentSeg = engine.segments[seg.parentIndex];
-          const parentDead =
-            !parentSeg ||
-            parentSeg.timestamp !== seg.parentTimestamp ||
-            engine.dyingStems.has(seg.parentIndex);
-          if (parentDead) {
-            const parentDyingStart = parentSeg ? parentSeg.dyingStart : undefined;
-            engine.markDying(app.segments, app.dyingSet, i, parentDyingStart);
+          const parentDying = engine.dyingStems.has(seg.parentIndex);
+          const parentMissing = !parentSeg || parentSeg.timestamp !== seg.parentTimestamp;
+
+          if (parentMissing) {
+            // Parent stem is completely gone, dead, or overwritten -> Erase hanging appendage instantly on this frame
+            engine.dummy.matrix.identity();
+            engine.dummy.scale.set(0, 0, 0);
+            engine.dummy.updateMatrix();
+            app.mesh.setMatrixAt(i, engine.dummy.matrix);
+            app.segments[i] = undefined as any;
+            app.dyingSet.delete(i);
+            appChanged = true;
+
+            const packAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+            if (packAAttr) {
+              packAAttr.setZ(i, 1.0);
+              packAAttr.needsUpdate = true;
+            }
+          } else if (parentDying && parentSeg && parentSeg.dyingStart && !app.dyingSet.has(i)) {
+            // Sync leaf dissolve timestamp to exact same timestamp as parent stem
+            engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);
           }
         }
+      }
+      if (appChanged) {
+        app.mesh.instanceMatrix.needsUpdate = true;
       }
     }
   }
@@ -654,25 +660,28 @@ export function updateSimulation(engine: SimulationEngine) {
       true;
   }
 
-  if (effectiveDieback > 0.000001 || (engine.dyingStrains && engine.dyingStrains.size > 0)) {
-    const batchSize = 100;
-    const sweepStart = (engine.frameCount * batchSize) % 2000;
-    for (let i = 0; i < batchSize; i++) {
-      const idx = (sweepStart + i) % 2000;
-      const seg = engine.hybridSegments[idx];
-      if (seg && !engine.dyingHybrids.has(idx)) {
-        const age = engine.time - seg.timestamp;
-        const maxHybridLife = engine.hybridStickiness * 60 + 5;
-        if (age > maxHybridLife) {
+  // Instant Comprehensive Cleanup: Remove breeding polygon artifacts as soon as parent organisms die or taper out
+  const activeAgentIds = new Set(engine.agents.filter(a => a.active && !a.tapering).map(a => a.id));
+
+  for (let idx = 0; idx < engine.hybridSegments.length; idx++) {
+    const seg = engine.hybridSegments[idx];
+    if (seg && !engine.dyingHybrids.has(idx)) {
+      const age = engine.time - seg.timestamp;
+      const maxHybridLife = engine.hybridStickiness * 30 + 3;
+      
+      const parentADead = seg.agentAId !== undefined && !activeAgentIds.has(seg.agentAId);
+      const parentBDead = seg.agentBId !== undefined && !activeAgentIds.has(seg.agentBId);
+      const isParentDying = engine.dyingStrains && (engine.dyingStrains.has(seg.strainName) || (seg.strainBName && engine.dyingStrains.has(seg.strainBName)));
+
+      if (parentADead || parentBDead || isParentDying || age > maxHybridLife) {
+        engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
+      } else if (effectiveDieback > 0.000001) {
+        const deathProb = Math.min(
+          1.0,
+          Math.pow(age / 1000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.2,
+        );
+        if (Math.random() < deathProb) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
-        } else {
-          const deathProb = Math.min(
-            1.0,
-            Math.pow(age / 2000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.2,
-          );
-          if (Math.random() < deathProb) {
-            engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
-          }
         }
       }
     }
@@ -721,94 +730,37 @@ export function updateSimulation(engine: SimulationEngine) {
             }
           }
 
-          if (ratio < 0.01) {
+          if (biomass <= 5 || ratio < 0.01) {
             engine.biomassMap.delete(strainName);
             engine.dyingStrains.delete(strainName);
             if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
-            if (engine.suppressedStrains) engine.suppressedStrains.delete(strainName);
-            engine.onLog(`Species ${strainName.split(' ')[0]} was fully eradicated.`);
+            const genome = engine.genomeMap?.get(strainName);
+            const arch = genome?.archetype || 'bush';
+            engine.onLog(`☠️ Species ${strainName} [${arch.toUpperCase()}] was fully eradicated.`);
           }
           return;
         }
 
-        if (!engine.suppressedStrains) engine.suppressedStrains = new Set();
         if (!engine.speciesAbove5Percent) engine.speciesAbove5Percent = new Set();
         
+        const healthySpeciesCount = Array.from(engine.biomassMap.keys()).filter(s => !(engine.dyingStrains && engine.dyingStrains.has(s))).length;
+        const growingCount = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
         if (ratio > 0.03) {
           engine.speciesAbove5Percent.add(strainName);
-        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName)) {
+        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName) && healthySpeciesCount > engine.minAgents && growingCount > engine.minAgents) {
           engine.speciesAbove5Percent.delete(strainName);
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
               activeAgents[i].tapering = true;
               activeAgents[i].forceTapering = true;
+              activeAgents[i].fadeAge = activeAgents[i].fadeAge || 0;
             }
           }
           if (!engine.dyingStrains) engine.dyingStrains = new Set();
           engine.dyingStrains.add(strainName);
-          engine.onLog(`Species ${strainName} dropped below 3% and was culled to make space.`);
-        }
-
-        const entropyEnabled = engine.entropyThreshold > 0.001;
-        const justSuppressed = entropyEnabled && ratio > engine.entropyThreshold && !engine.suppressedStrains.has(strainName);
-        
-        if (entropyEnabled && ratio > engine.entropyThreshold) {
-          engine.suppressedStrains.add(strainName);
-        } else {
-          engine.suppressedStrains.delete(strainName);
-        }
-
-        if (engine.suppressedStrains.has(strainName)) {
-          const dominantAgents: Agent[] = [];
-          for (let i = 0; i < activeAgents.length; i++) {
-            if (activeAgents[i].genome.name === strainName) {
-              dominantAgents.push(activeAgents[i]);
-            }
-          }
-          
-          if (dominantAgents.length > 1) {
-            // Sort by age, keep the newest one, taper the rest
-            dominantAgents.sort((a, b) => a.age - b.age);
-            for (let i = 1; i < dominantAgents.length; i++) {
-              const agent = dominantAgents[i];
-              agent.tapering = true;
-              agent.forceTapering = true;
-            }
-          }
-
-          if (justSuppressed && dominantAgents.length > 0) {
-            const victim =
-              dominantAgents[Math.floor(Math.random() * dominantAgents.length)];
-            const mutatedGenome = mutateGenome(
-              victim.genome,
-              engine.traitProbs,
-              engine.multicolorAppProb,
-              engine.sameColorAppProb,
-            );
-            mutatedGenome.name = `Hybrid-Entropy-${Math.floor(Math.random() * 1000)}`;
-
-            for (let k = 0; k < 3; k++) {
-              const spawned = {
-                position: victim.position.clone(),
-                direction: new THREE.Vector3(
-                  Math.random() - 0.5,
-                  Math.random() - 0.5,
-                  Math.random() - 0.5,
-                ).normalize(),
-                genome: mutatedGenome,
-                active: true,
-                age: 0,
-                lastPosition: victim.position.clone(),
-                thickness: mutatedGenome.thicknessBase,
-                cooldown: 300,
-              };
-              engine.agents.push(spawned);
-              activeAgents.push(spawned);
-            }
-            engine.onLog(
-              `CRITICAL ENTROPY: ${strainName} suppressed. Triggering mutation burst.`,
-            );
-          }
+          const genome3 = engine.genomeMap?.get(strainName);
+          const arch3 = genome3?.archetype || 'bush';
+          engine.onLog(`📉 Species ${strainName} [${arch3.toUpperCase()}] dropped below 3% and was culled to make space.`);
         }
       });
     }
@@ -820,7 +772,7 @@ export function updateSimulation(engine: SimulationEngine) {
   let currentActiveCount = 0;
   const strainCounts = new Map<string, number>();
   for (const a of activeAgents) {
-    if (a.active) {
+    if (a.active && !a.tapering && !a.isFeeler) {
       currentActiveCount++;
       strainCounts.set(a.genome.name, (strainCounts.get(a.genome.name) || 0) + 1);
     }
@@ -916,7 +868,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
   // Periodic archetype census breakdown logged every 300 frames (~5s)
   if (engine.frameCount % 300 === 0 && activeNotTapering.length > 0) {
-    const archetypeCounts: Record<string, number> = { ginger: 0, bush: 0, tree: 0, snake: 0 };
+    const archetypeCounts: Record<string, number> = { rhizome: 0, bush: 0, tree: 0, snake: 0 };
     let totalAge = 0;
     let maxAge = 0;
     for (const agent of activeNotTapering) {
@@ -931,13 +883,13 @@ export function updateSimulation(engine: SimulationEngine) {
 
     const screenFillPct = ((engine.pointCount / engine.maxDOMs) * 100).toFixed(1);
 
-    const gPct = Math.round(((archetypeCounts.ginger || 0) / total) * 100);
+    const gPct = Math.round(((archetypeCounts.rhizome || 0) / total) * 100);
     const bPct = Math.round(((archetypeCounts.bush || 0) / total) * 100);
     const tPct = Math.round(((archetypeCounts.tree || 0) / total) * 100);
     const sPct = Math.round(((archetypeCounts.snake || 0) / total) * 100);
 
     engine.onLog(
-      `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Screen Fill: ${screenFillPct}% | Ginger: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
+      `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Screen Fill: ${screenFillPct}% | Rhizome: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
     );
   }
 }

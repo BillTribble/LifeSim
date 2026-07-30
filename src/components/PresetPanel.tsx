@@ -10,9 +10,10 @@ interface PresetPanelProps {
   stats: any;
   setRandomizeKey: any;
   handleRestart: () => void;
+  onClose?: () => void;
 }
 
-export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRestart }: PresetPanelProps) {
+export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRestart, onClose }: PresetPanelProps) {
   const [presets, setPresets] = useState<any[]>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('presets') || '[]');
@@ -32,7 +33,6 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
             proximity: 40,
             desperation: 7.7,
             despairAge: 800,
-            entropyThreshold: 0.7,
             ecoFade: 1.0,
             cullRate: 48.87,
             growthSpeed: 1.6,
@@ -47,14 +47,13 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
             branchTendencyVar: 50,
             branchingMultiplier: 3.0,
             termProbPostBranch: 1.5,
-            branchMutationRate: 0.001,
             branchBigger: 0.75,
             branchSplitSizeProb: 0.95,
             timeScale: 0.4,
             snakeSpeed: 1.5,
             bushSpeed: 1.0,
             treeSpeed: 1.0,
-            gingerSpeed: 1.0,
+            rhizomeSpeed: 1.0,
             flowerSize: 0.41,
             taperDuration: 1.0,
             maxLineWidth: 12.0,
@@ -90,6 +89,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
       state: { ...state }
     };
     setPresets([...presets, newPreset]);
+    if (onClose) onClose();
   };
 
   const handleLoad = (presetState: any) => {
@@ -99,6 +99,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         setters[setterName](presetState[key]);
       }
     });
+    if (onClose) onClose();
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -107,19 +108,30 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
   };
 
   const handleFactoryReset = () => {
-    Object.keys(DEFAULTS).forEach(key => {
-      const setterName = `set${key.charAt(0).toUpperCase() + key.slice(1)}`;
-      if (setters[setterName]) {
-        setters[setterName]((DEFAULTS as any)[key]);
+    if (setters.resetToDefaults) {
+      setters.resetToDefaults();
+    } else {
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.warn("Could not clear localStorage", e);
       }
-    });
+      Object.keys(DEFAULTS).forEach(key => {
+        const setterName = `set${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        if (setters[setterName]) {
+          setters[setterName]((DEFAULTS as any)[key]);
+        }
+      });
+    }
     if (handleRestart) {
       handleRestart();
     }
+    if (onClose) onClose();
   };
 
   const handleRandomize = () => {
     triggerRandomize(setters, state, setRandomizeKey, handleRestart);
+    if (onClose) onClose();
   };
 
   return (

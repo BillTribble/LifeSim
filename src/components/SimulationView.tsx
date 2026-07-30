@@ -9,7 +9,6 @@ interface Props {
   onInitOrganisms?: (event: { alpha: any; beta: any }) => void;
   onMatingEvent?: (event: { parent1: any; parent2: any; child: any }) => void;
   onFeelerEvent?: (event: { parent: any; feeler: any }) => void;
-  onBranchMutationEvent?: (event: { parent: any; child: any }) => void;
   stats?: any;
   [key: string]: any;
 }
@@ -20,7 +19,6 @@ export function SimulationView({
   onInitOrganisms,
   onMatingEvent,
   onFeelerEvent,
-  onBranchMutationEvent,
   stats,
   restartTrigger,
   randomizeTrigger,
@@ -30,7 +28,6 @@ export function SimulationView({
   desperation,
   despairAge,
   flowerSize,
-  entropyThreshold,
   tideSpeed,
   minAgents,
   boundarySize,
@@ -42,6 +39,7 @@ export function SimulationView({
   tideSaturation,
   growthSpeed,
   diebackRate,
+  allowBreeding,
   hybridCooldown,
   hybridStickiness,
   branchTendencyVar,
@@ -63,12 +61,18 @@ export function SimulationView({
   termProbPostBranch,
   taperDuration,
   diebackAgeBias,
-  branchMutationRate,
   maxLineWidth,
   globalPulseSpeed,
   multicolorAppProb,
   sameColorAppProb,
   maxSaturation,
+  colorClamp,
+  gridHeight,
+  layerGap,
+  floorHeight,
+  ceilingHeight,
+  cameraProjection,
+  showBoundaryBox,
   feelerFade,
   cullRate,
   snakeSpeed,
@@ -76,7 +80,11 @@ export function SimulationView({
   snakeWander,
   bushSpeed,
   treeSpeed,
-  gingerSpeed,
+  rhizomeSpeed,
+  bushBranching,
+  treeBranching,
+  snakeBranching,
+  rhizomeBranching,
   timeScale,
   postMatingDieoff,
   theme,
@@ -113,7 +121,6 @@ export function SimulationView({
   desperation?: number;
   despairAge?: number;
   flowerSize?: number;
-  entropyThreshold?: number;
   tideSpeed?: number;
   minAgents?: number;
   boundarySize?: number;
@@ -125,6 +132,7 @@ export function SimulationView({
   tideSaturation?: number;
   growthSpeed?: number;
   diebackRate?: number;
+  allowBreeding?: boolean;
   hybridCooldown?: number;
   hybridStickiness?: number;
   branchTendencyVar?: number;
@@ -146,12 +154,16 @@ export function SimulationView({
   termProbPostBranch?: number;
   taperDuration?: number;
   diebackAgeBias?: number;
-  branchMutationRate?: number;
   maxLineWidth?: number;
   globalPulseSpeed?: number;
   multicolorAppProb?: number;
   sameColorAppProb?: number;
   maxSaturation?: number;
+  colorClamp?: number;
+  gridHeight?: number;
+  layerGap?: number;
+  floorHeight?: number;
+  ceilingHeight?: number;
   feelerFade?: number;
   cullRate?: number;
   snakeSpeed?: number;
@@ -159,7 +171,11 @@ export function SimulationView({
   snakeWander?: number;
   bushSpeed?: number;
   treeSpeed?: number;
-  gingerSpeed?: number;
+  rhizomeSpeed?: number;
+  bushBranching?: number;
+  treeBranching?: number;
+  snakeBranching?: number;
+  rhizomeBranching?: number;
   timeScale?: number;
   postMatingDieoff?: boolean;
   theme?: number;
@@ -227,6 +243,42 @@ export function SimulationView({
   }, [rotationSpeed]);
 
   useEffect(() => {
+    if (engineRef.current && gridHeight !== undefined) {
+      engineRef.current.setGridHeight(gridHeight);
+    }
+  }, [gridHeight]);
+
+  useEffect(() => {
+    if (engineRef.current && layerGap !== undefined) {
+      engineRef.current.setLayerGap(layerGap);
+    }
+  }, [layerGap]);
+
+  useEffect(() => {
+    if (engineRef.current && floorHeight !== undefined) {
+      engineRef.current.setFloorHeight(floorHeight);
+    }
+  }, [floorHeight]);
+
+  useEffect(() => {
+    if (engineRef.current && ceilingHeight !== undefined) {
+      engineRef.current.setCeilingHeight(ceilingHeight);
+    }
+  }, [ceilingHeight]);
+
+  useEffect(() => {
+    if (engineRef.current && cameraProjection !== undefined) {
+      engineRef.current.setCameraProjection(cameraProjection);
+    }
+  }, [cameraProjection]);
+
+  useEffect(() => {
+    if (engineRef.current && showBoundaryBox !== undefined) {
+      engineRef.current.setShowBoundaryBox(showBoundaryBox);
+    }
+  }, [showBoundaryBox]);
+
+  useEffect(() => {
     if (engineRef.current && magnetism !== undefined) {
       engineRef.current.setMagnetism(magnetism);
     }
@@ -267,12 +319,6 @@ export function SimulationView({
       engineRef.current.setBoundarySize(boundarySize);
     }
   }, [boundarySize]);
-
-  useEffect(() => {
-    if (engineRef.current && entropyThreshold !== undefined) {
-      engineRef.current.setEntropyThreshold(entropyThreshold);
-    }
-  }, [entropyThreshold]);
 
   useEffect(() => {
     if (engineRef.current && tideSpeed !== undefined) {
@@ -317,10 +363,34 @@ export function SimulationView({
   }, [treeSpeed]);
 
   useEffect(() => {
-    if (engineRef.current && gingerSpeed !== undefined) {
-      engineRef.current.setGingerSpeed(gingerSpeed);
+    if (engineRef.current && rhizomeSpeed !== undefined) {
+      engineRef.current.setRhizomeSpeed(rhizomeSpeed);
     }
-  }, [gingerSpeed]);
+  }, [rhizomeSpeed]);
+
+  useEffect(() => {
+    if (engineRef.current && bushBranching !== undefined) {
+      engineRef.current.setBushBranching(bushBranching);
+    }
+  }, [bushBranching]);
+
+  useEffect(() => {
+    if (engineRef.current && treeBranching !== undefined) {
+      engineRef.current.setTreeBranching(treeBranching);
+    }
+  }, [treeBranching]);
+
+  useEffect(() => {
+    if (engineRef.current && snakeBranching !== undefined) {
+      engineRef.current.setSnakeBranching(snakeBranching);
+    }
+  }, [snakeBranching]);
+
+  useEffect(() => {
+    if (engineRef.current && rhizomeBranching !== undefined) {
+      engineRef.current.setRhizomeBranching(rhizomeBranching);
+    }
+  }, [rhizomeBranching]);
 
   useEffect(() => {
     if (engineRef.current && timeScale !== undefined) {
@@ -343,6 +413,8 @@ export function SimulationView({
         engineRef.current.growthSpeed = growthSpeed;
       if (diebackRate !== undefined)
         engineRef.current.diebackRate = diebackRate;
+      if (allowBreeding !== undefined)
+        engineRef.current.setAllowBreeding(allowBreeding);
       if (hybridCooldown !== undefined)
         engineRef.current.setHybridCooldown(hybridCooldown);
       if (hybridStickiness !== undefined)
@@ -379,8 +451,6 @@ export function SimulationView({
         engineRef.current.setTaperDuration(taperDuration);
       if (diebackAgeBias !== undefined)
         engineRef.current.setDiebackAgeBias(diebackAgeBias);
-      if (branchMutationRate !== undefined)
-        engineRef.current.setBranchMutationRate(branchMutationRate);
       if (maxLineWidth !== undefined)
         engineRef.current.setMaxLineWidth(maxLineWidth);
       if (globalPulseSpeed !== undefined)
@@ -391,6 +461,8 @@ export function SimulationView({
         engineRef.current.setSameColorAppProb(sameColorAppProb);
       if (maxSaturation !== undefined)
         engineRef.current.setMaxSaturation(maxSaturation);
+      if (colorClamp !== undefined)
+        engineRef.current.setColorClamp(colorClamp);
       if (feelerFade !== undefined)
         engineRef.current.setFeelerFade(feelerFade);
       if (cullRate !== undefined)
@@ -405,8 +477,16 @@ export function SimulationView({
         engineRef.current.setBushSpeed(bushSpeed);
       if (treeSpeed !== undefined)
         engineRef.current.setTreeSpeed(treeSpeed);
-      if (gingerSpeed !== undefined)
-        engineRef.current.setGingerSpeed(gingerSpeed);
+      if (rhizomeSpeed !== undefined)
+        engineRef.current.setRhizomeSpeed(rhizomeSpeed);
+      if (bushBranching !== undefined)
+        engineRef.current.setBushBranching(bushBranching);
+      if (treeBranching !== undefined)
+        engineRef.current.setTreeBranching(treeBranching);
+      if (snakeBranching !== undefined)
+        engineRef.current.setSnakeBranching(snakeBranching);
+      if (rhizomeBranching !== undefined)
+        engineRef.current.setRhizomeBranching(rhizomeBranching);
       if (timeScale !== undefined)
         engineRef.current.setTimeScale(timeScale);
       if (postMatingDieoff !== undefined)
@@ -461,6 +541,7 @@ export function SimulationView({
     tideSaturation,
     growthSpeed,
     diebackRate,
+    allowBreeding,
     hybridCooldown,
     hybridStickiness,
     branchTendencyVar,
@@ -482,7 +563,6 @@ export function SimulationView({
     termProbPostBranch,
     taperDuration,
     diebackAgeBias,
-    branchMutationRate,
     maxLineWidth,
     globalPulseSpeed,
     multicolorAppProb,
@@ -495,7 +575,7 @@ export function SimulationView({
     snakeWander,
     bushSpeed,
     treeSpeed,
-    gingerSpeed,
+    rhizomeSpeed,
     timeScale,
     theme,
     themeMorphFreq,
@@ -543,7 +623,6 @@ export function SimulationView({
     if (onInitOrganisms) engine.onInitOrganisms = onInitOrganisms;
     if (onMatingEvent) engine.onMatingEvent = onMatingEvent;
     if (onFeelerEvent) engine.onFeelerEvent = onFeelerEvent;
-    if (onBranchMutationEvent) engine.onBranchMutationEvent = onBranchMutationEvent;
     if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (onConfigChange) {
@@ -559,8 +638,6 @@ export function SimulationView({
     if (desperation !== undefined) engine.setDesperation(desperation);
     if (despairAge !== undefined) engine.setDespairAge(despairAge);
     if (flowerSize !== undefined) engine.setFlowerSize(flowerSize);
-    if (entropyThreshold !== undefined)
-      engine.setEntropyThreshold(entropyThreshold);
     if (minAgents !== undefined) engine.setMinAgents(minAgents);
     if (boundarySize !== undefined) engine.setBoundarySize(boundarySize);
     if (tideSpeed !== undefined) engine.setTideSpeed(tideSpeed);
@@ -573,6 +650,7 @@ export function SimulationView({
     if (tideSaturation !== undefined) engine.tideSaturation = tideSaturation;
     if (growthSpeed !== undefined) engine.growthSpeed = growthSpeed;
     if (diebackRate !== undefined) engine.diebackRate = diebackRate;
+    if (allowBreeding !== undefined) engine.setAllowBreeding(allowBreeding);
     if (hybridCooldown !== undefined) engine.setHybridCooldown(hybridCooldown);
     if (hybridStickiness !== undefined)
       engine.setHybridStickiness(hybridStickiness);
@@ -602,8 +680,6 @@ export function SimulationView({
       engine.setTermProbPostBranch(termProbPostBranch);
     if (taperDuration !== undefined) engine.setTaperDuration(taperDuration);
     if (diebackAgeBias !== undefined) engine.setDiebackAgeBias(diebackAgeBias);
-    if (branchMutationRate !== undefined)
-      engine.setBranchMutationRate(branchMutationRate);
     if (maxLineWidth !== undefined) engine.setMaxLineWidth(maxLineWidth);
     if (globalPulseSpeed !== undefined)
       engine.setGlobalPulseSpeed(globalPulseSpeed);
@@ -611,6 +687,8 @@ export function SimulationView({
       engine.setMulticolorAppProb(multicolorAppProb);
     if (sameColorAppProb !== undefined)
       engine.setSameColorAppProb(sameColorAppProb);
+    if (colorClamp !== undefined)
+      engine.setColorClamp(colorClamp);
     if (feelerFade !== undefined)
       engine.setFeelerFade(feelerFade);
     if (cullRate !== undefined)
@@ -625,8 +703,16 @@ export function SimulationView({
       engine.setBushSpeed(bushSpeed);
     if (treeSpeed !== undefined)
       engine.setTreeSpeed(treeSpeed);
-    if (gingerSpeed !== undefined)
-      engine.setGingerSpeed(gingerSpeed);
+    if (rhizomeSpeed !== undefined)
+      engine.setRhizomeSpeed(rhizomeSpeed);
+    if (bushBranching !== undefined)
+      engine.setBushBranching(bushBranching);
+    if (treeBranching !== undefined)
+      engine.setTreeBranching(treeBranching);
+    if (snakeBranching !== undefined)
+      engine.setSnakeBranching(snakeBranching);
+    if (rhizomeBranching !== undefined)
+      engine.setRhizomeBranching(rhizomeBranching);
     if (timeScale !== undefined)
       engine.setTimeScale(timeScale);
     if (theme !== undefined)

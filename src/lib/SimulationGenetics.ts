@@ -10,11 +10,7 @@ import {
 } from "./SimulationTypes";
 
 export function getRandomWeightedArchetype(): Archetype {
-  const r = Math.random();
-  if (r < 0.70) return "ginger"; // Dominant 70%!
-  if (r < 0.90) return "bush";   // 20%
-  if (r < 0.98) return "tree";   // 8%
-  return "snake";                // 2%
+  return ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 }
 
 export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false) {
@@ -310,6 +306,39 @@ export function getWeightedAppendage(
   return "leaves";
 }
 
+const SCIENCY_PREFIXES = [
+  "Phyto", "Chlor", "Virid", "Xylo", "Thallo", "Spiro", "Aeth", "Flor",
+  "Cyan", "Phaen", "Astra", "Oryz", "Kryo", "Sol", "Zen", "Mycel",
+  "Helio", "Lumin", "Dendro", "Rhizo", "Nycto", "Zephyr", "Stell", "Vesper"
+];
+
+const SCIENCY_SUFFIXES = [
+  "vire", "ion", "pteryx", "dium", "thos", "llis", "rix", "onix",
+  "phis", "ria", "naut", "lia", "nis", "tis", "los", "morph", "stema"
+];
+
+const SCIENCY_EPITHETS = [
+  "Zenithia", "Virella", "Phaenon", "Aetheris", "Florion", "Cyanis",
+  "Sylvatica", "Zylos", "Thallos", "Spirella", "Mycelon", "Kryon",
+  "Verdantis", "Xylos", "Astraea", "Erythros", "Nautilus", "Oryzon",
+  "Solaria", "Helianthus", "Chlorostema", "Luminaria", "Rhizophora",
+  "Dendrobium", "Phytolacca", "Vesperia", "Stellaris", "Zephyria"
+];
+
+export function generateSciencyName(): string {
+  if (Math.random() < 0.35) {
+    return SCIENCY_EPITHETS[Math.floor(Math.random() * SCIENCY_EPITHETS.length)];
+  }
+  const p = SCIENCY_PREFIXES[Math.floor(Math.random() * SCIENCY_PREFIXES.length)];
+  const s = SCIENCY_SUFFIXES[Math.floor(Math.random() * SCIENCY_SUFFIXES.length)];
+  return `${p}${s}`;
+}
+
+export function formatGenomeName(archetype: string): string {
+  const capArch = archetype.charAt(0).toUpperCase() + archetype.slice(1);
+  return `${capArch} ${generateSciencyName()}`;
+}
+
 export function selectMendelianAlleles<T>(
   p1Expressed: T,
   p1Recessive: T | undefined,
@@ -326,6 +355,31 @@ export function selectMendelianAlleles<T>(
   }
 }
 
+export function clampArchetypeGenome(res: Genome): Genome {
+  if (res.archetype === "rhizome") {
+    res.thicknessBase = Math.max(res.thicknessBase, 10.0);
+    res.minThickness = Math.max(res.minThickness, 4.0);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.9995, 0.9999);
+    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.15 + Math.random() * 0.10);
+    res.branchTendency = Math.max(res.branchTendency || 0.5, 15.0 + Math.random() * 10.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.4, 0.55);
+    res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.7);
+  } else if (res.archetype === "bush") {
+    res.thicknessBase = Math.min(res.thicknessBase, 1.2);
+    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.25 + Math.random() * 0.15);
+    res.branchTendency = Math.max(res.branchTendency || 0.5, 3.0 + Math.random() * 4.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 0.65);
+    res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
+  } else if (res.archetype === "tree") {
+    res.thicknessBase = Math.max(res.thicknessBase, 2.5 + Math.random() * 1.5);
+    res.stepSize = Math.max(res.stepSize, 0.6);
+  } else if (res.archetype === "snake") {
+    res.bifurcationRate = Math.min(res.bifurcationRate, 0.01);
+    res.branchTendency = Math.min(res.branchTendency, 1.0);
+  }
+  return res;
+}
+
 export function breedGenomes(
   g1: Genome,
   g2: Genome,
@@ -339,7 +393,7 @@ export function breedGenomes(
     g1.archetype, g1.recessive?.archetype,
     g2.archetype, g2.recessive?.archetype
   );
-  const newArchetype = archInheritance.expressed;
+  let newArchetype = archInheritance.expressed;
 
   const moveInheritance = selectMendelianAlleles(
     g1.movementType, g1.recessive?.movementType,
@@ -356,11 +410,6 @@ export function breedGenomes(
   const appInheritance = selectMendelianAlleles(
     g1.appendage, g1.recessive?.appendage,
     g2.appendage, g2.recessive?.appendage
-  );
-
-  const colorInheritance = selectMendelianAlleles(
-    g1.color, g1.recessive?.color,
-    g2.color, g2.recessive?.color
   );
 
   const glowInheritance = selectMendelianAlleles(
@@ -383,8 +432,7 @@ export function breedGenomes(
     g2.phyllotaxisMode ?? "spiral", g2.recessive?.phyllotaxisMode
   );
 
-  // Inheritance-focused color: 85% parent HSL lerp + 15% complementary accent (Aesthetic Harmony)
-  const baseColor = colorInheritance.expressed.clone();
+  // Stable Color Blending: Direct lerp of expressed parent colors with tight variation (+/- 0.015)
   const h1 = g1.color.getHSL({ h: 0, s: 0, l: 0 });
   const h2 = g2.color.getHSL({ h: 0, s: 0, l: 0 });
   
@@ -392,18 +440,13 @@ export function breedGenomes(
   if (hueDiff > 0.5) hueDiff -= 1.0;
   if (hueDiff < -0.5) hueDiff += 1.0;
   
-  // Tight parent hue lerp with subtle variation (+-0.02)
-  let resultH = (h1.h + hueDiff * (0.4 + Math.random() * 0.2) + (Math.random() - 0.5) * 0.02 + 1.0) % 1.0;
-  
-  // 15% chance of exact 180° complementary accent shift
-  if (Math.random() < 0.15) {
-    resultH = (resultH + 0.50 + (Math.random() - 0.5) * 0.02 + 1.0) % 1.0;
-  }
+  const parentBlendH = (h1.h + hueDiff * (0.35 + Math.random() * 0.30) + (Math.random() - 0.5) * 0.015 + 1.0) % 1.0;
+  const resultH = parentBlendH;
 
   const isAlbino = Math.random() < 0.02;
-  const resultS = isAlbino ? 0.02 : Math.min(0.85, Math.max(0.65, (h1.s + h2.s) * 0.5));
-  const resultL = isAlbino ? 0.95 : Math.min(0.60, Math.max(0.48, (h1.l + h2.l) * 0.5));
-  baseColor.setHSL(resultH, resultS, resultL);
+  const resultS = isAlbino ? 0.02 : THREE.MathUtils.clamp((h1.s + h2.s) * 0.5 + (Math.random() - 0.5) * 0.02, 0.50, 0.75);
+  const resultL = isAlbino ? 0.95 : THREE.MathUtils.clamp((h1.l + h2.l) * 0.5 + (Math.random() - 0.5) * 0.02, 0.45, 0.60);
+  const baseColor = new THREE.Color().setHSL(resultH, resultS, resultL);
 
   const inheritedDecay = (g1.thicknessDecay + g2.thicknessDecay) / 2;
   const thicknessDecay = inheritedDecay + (Math.random() - 0.5) * 0.002;
@@ -416,11 +459,8 @@ export function breedGenomes(
       : "none";
 
   const res: any = {
-    name: `Kin [${newArchetype.toUpperCase()}]-${g1.name.split(" ")[0]}-${g2.name.split(" ")[0]}-${Math.floor(
-      Math.random() * 1000,
-    )
-      .toString()
-      .padStart(3, "0")}`,
+    name: formatGenomeName(newArchetype),
+    isHybrid: true,
     archetype: newArchetype,
     movementType: newMovementType,
     color: baseColor,
@@ -464,13 +504,14 @@ export function breedGenomes(
         (Math.random() - 0.5) * 0.1,
     ),
     geometryType: newGeometryType,
-    appendage: (appInheritance.expressed && appInheritance.expressed !== "none") ? appInheritance.expressed : getWeightedAppendage(traitProbs),
-    multicolorAppendage: Math.random() < multicolorAppProb,
+    appendage: appInheritance.expressed ? appInheritance.expressed : getWeightedAppendage(traitProbs),
+    multicolorAppendage: false,
     sameColorAppendage: Math.random() < sameColorAppProb,
     stability: 0.8,
     pulseTarget: pulseTarget as any,
     pulseSpeed: 0.003 + Math.random() * 0.007,
     gradientGrowth: Math.random() < (traitProbs["gradient"] || 0.1),
+    gradientType: 1 + Math.floor(Math.random() * 4),
     singleton: newArchetype === "snake" && Math.random() < 0.5,
     isGlowing: glowInheritance.expressed || Math.random() < glowProbability,
     
@@ -495,7 +536,6 @@ export function breedGenomes(
       movementType: moveInheritance.recessive,
       geometryType: geoInheritance.recessive,
       appendage: appInheritance.recessive,
-      color: colorInheritance.recessive.clone(),
       isGlowing: glowInheritance.recessive,
       vernationType: vernInheritance.recessive,
       canopyZone: canopyInheritance.recessive,
@@ -503,12 +543,7 @@ export function breedGenomes(
     },
   };
   
-  if (res.archetype === "ginger") {
-    res.minThickness = Math.min(res.minThickness, 1.0);
-    res.thicknessBase = Math.min(res.thicknessBase, 3.0);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.98, 0.999);
-  }
-  
+  clampArchetypeGenome(res);
   return res;
 }
 
@@ -526,12 +561,10 @@ export function mutateGenome(
     traitProbs,
     multicolorAppProb,
     sameColorAppProb,
-    appendageSpawnRate,
     glowProbability,
   );
-  res.name = `Mutant [${res.archetype.toUpperCase()}]-${Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")}`;
+  res.name = formatGenomeName(res.archetype);
+  clampArchetypeGenome(res);
   return res;
 }
 
@@ -553,12 +586,12 @@ export function mutateBranchGenome(
   }
   const parentH = res.color.getHSL({ h: 0, s: 0, l: 0 }).h;
   const isAlbino = Math.random() < 0.04;
-  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.88;
-  const resultL = isAlbino ? 0.92 + Math.random() * 0.08 : 0.55;
+  const resultS = isAlbino ? 0.01 + Math.random() * 0.04 : 0.68;
+  const resultL = isAlbino ? 0.92 + Math.random() * 0.08 : 0.52;
   let resultH = (parentH + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
-  if (Math.random() < 0.12) {
-    const shift = (Math.floor(Math.random() * 3) + 1.0) * (1.0 / 3.0);
-    resultH = (parentH + shift + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0;
+  if (Math.random() < 0.20) {
+    // Complementary shift (+180°), avoiding random triadic jumps
+    resultH = (parentH + 0.50 + (Math.random() - 0.5) * 0.03 + 1.0) % 1.0;
   }
   res.color.setHSL(resultH, resultS, resultL);
 
@@ -567,7 +600,7 @@ export function mutateBranchGenome(
   res.wavingAmplitude = Math.max(0, res.wavingAmplitude + (Math.random() - 0.5) * 0.06);
 
   // Always assign valid appendage from weighted pool
-  res.appendage = (res.appendage && res.appendage !== "none") ? res.appendage : getWeightedAppendage(traitProbs);
+  res.appendage = res.appendage ? res.appendage : getWeightedAppendage(traitProbs);
   
   if (Math.random() < 0.05) {
      res.archetype = getRandomWeightedArchetype();
@@ -579,7 +612,7 @@ export function mutateBranchGenome(
   }
   
   if (Math.random() < 0.2)
-    res.multicolorAppendage = Math.random() < multicolorAppProb;
+    res.multicolorAppendage = false;
   if (Math.random() < 0.1)
     res.sameColorAppendage = Math.random() < sameColorAppProb;
   if (Math.random() < glowProbability)
@@ -602,6 +635,7 @@ export function mutateBranchGenome(
     .toString()
     .padStart(3, "0")}`;
   res.stability = 0.4;
+  clampArchetypeGenome(res);
   return res;
 }export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
   setupShaderMaterial(material, true);
@@ -787,14 +821,12 @@ export function mutateBranchGenome(
            transformed.x = mix(transformed.x, mix(transformed.x, r_conv * sin(phi), isBlade), foldFactor);
            transformed.z += r_conv * (1.0 - cos(phi)) * foldFactor * isBlade;
          } else {
-           // Conduplicate: book fold (blade only)
-           // Stay folded until U = 0.4, then unfold with a gorgeous wing-flap bounce
+           // Conduplicate: book fold (blade only) — smooth ease out
            float alpha = 1.5708;
            float conduplicateFold = 1.0;
            if (U > 0.4) {
                float t = (U - 0.4) / 0.6;
-               float baseAlpha = 1.5708 * (1.0 - smoothstep(0.0, 1.0, t));
-               alpha = baseAlpha + 1.0 * sin(t * 3.14159 * 2.0) * (1.0 - t);
+               alpha = 1.5708 * (1.0 - smoothstep(0.0, 1.0, t));
                conduplicateFold = abs(alpha) / 1.5708;
            }
            float sx = sign(position.x);

@@ -4,7 +4,7 @@ import { Genome } from "../lib/SimulationTypes";
 
 export interface PopupItem {
   id: string;
-  type: "organism1" | "organism2" | "mating" | "feeler" | "branchMutation";
+  type: "organism1" | "organism2" | "mating" | "feeler";
   title: string;
   subtitle: string;
   genome?: Genome;
@@ -16,10 +16,6 @@ export interface PopupItem {
   feelerData?: {
     parent: Genome;
     feeler: Genome;
-  };
-  branchData?: {
-    parent: Genome;
-    child: Genome;
   };
   duration?: number;
 }
@@ -39,29 +35,46 @@ interface PopupNotificationProps {
 export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupNotificationProps) {
   if (!queue || queue.length === 0) return null;
 
-  const leftItems = queue.filter(item => item.type === "organism1");
-  const rightItems = queue.filter(item => item.type !== "organism1");
+  // Determine targetPos and side for each item
+  const mappedItems = queue.map((item) => {
+    let targetPos: { x: number; y: number; isBehind?: boolean } | null = null;
+
+    if (item.type === "organism1") {
+      targetPos = trackedPositions?.org1 || null;
+    } else if (item.type === "organism2") {
+      targetPos = trackedPositions?.org2 || null;
+    } else if (item.type === "mating") {
+      targetPos = trackedPositions?.mating || null;
+    } else if (item.type === "feeler") {
+      targetPos = (trackedPositions as any)?.feeler || trackedPositions?.org1 || trackedPositions?.org2 || null;
+    }
+
+    let side: "left" | "right";
+    if (item.type === "organism1") {
+      const pos1X = trackedPositions?.org1?.x ?? 0;
+      const pos2X = trackedPositions?.org2?.x ?? window.innerWidth;
+      side = pos1X <= pos2X ? "left" : "right";
+    } else if (item.type === "organism2") {
+      const pos1X = trackedPositions?.org1?.x ?? 0;
+      const pos2X = trackedPositions?.org2?.x ?? window.innerWidth;
+      side = pos2X >= pos1X ? "right" : "left";
+    } else {
+      // Future event: side depends on whether event target is on left or right half of screen
+      const screenX = targetPos?.x ?? (window.innerWidth / 2);
+      side = screenX < (window.innerWidth / 2) ? "left" : "right";
+    }
+
+    return { item, targetPos, side };
+  });
+
+  const leftList = mappedItems.filter((i) => i.side === "left");
+  const rightList = mappedItems.filter((i) => i.side === "right");
 
   return (
     <>
-      {queue.map((item) => {
-        let targetPos: { x: number; y: number } | null = null;
-
-        if (item.type === "organism1") {
-          targetPos = trackedPositions?.org1 || null;
-        } else if (item.type === "organism2") {
-          targetPos = trackedPositions?.org2 || null;
-        } else if (item.type === "mating") {
-          targetPos = trackedPositions?.mating || null;
-        } else if (item.type === "feeler") {
-          targetPos = (trackedPositions as any)?.feeler || trackedPositions?.org1 || trackedPositions?.org2 || null;
-        } else if (item.type === "branchMutation") {
-          targetPos = (trackedPositions as any)?.branchMutation || null;
-        }
-
-        const isLeft = item.type === "organism1";
-        const sideList = isLeft ? leftItems : rightItems;
-        const indexInSideList = sideList.indexOf(item);
+      {mappedItems.map(({ item, targetPos, side }) => {
+        const sideList = side === "left" ? leftList : rightList;
+        const indexInSideList = sideList.findIndex((i) => i.item.id === item.id);
         const stackIndex = sideList.length - 1 - indexInSideList;
 
         return (
@@ -71,7 +84,7 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
             targetPos={targetPos}
             onDismiss={onDismiss}
             stackIndex={stackIndex}
-            side={isLeft ? "left" : "right"}
+            side={side}
           />
         );
       })}
@@ -80,8 +93,9 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
 }
 
 interface PopupCardItemProps {
+  key?: string;
   item: PopupItem;
-  targetPos: { x: number; y: number } | null;
+  targetPos: { x: number; y: number; isBehind?: boolean } | null;
   onDismiss: (id: string) => void;
   stackIndex: number;
   side: "left" | "right";
@@ -136,25 +150,55 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
     !targetPos.isBehind &&
     (targetPos.x > 5 || targetPos.y > 5);
 
-  // Default creature screen X position estimate
-  const defaultCx = item.type === "organism1" ? window.innerWidth * 0.75 : window.innerWidth * 0.25;
-  const cx = isValidTarget ? targetPos.x : defaultCx;
-  const cy = isValidTarget ? targetPos.y : window.innerHeight / 2;
-
   // Compute cascading stack positioning and scaling
-  const baseCardY = window.innerHeight - 110;
-  const verticalShift = stackIndex * 75;
-  const cardY = baseCardY - verticalShift;
   const scale = Math.max(0.75, 1 - stackIndex * 0.05);
   const stackOpacity = Math.max(0.35, 1 - stackIndex * 0.15);
   const zIndex = Math.max(5, 20 - stackIndex * 5);
 
-  const cardX = side === "left"
-    ? Math.min(185, window.innerWidth * 0.25)
-    : Math.max(window.innerWidth - 185, window.innerWidth * 0.75);
+  let cardX: number;
+  let cardY: number;
+  let cx = targetPos?.x ?? 0;
+  let cy = targetPos?.y ?? 0;
 
-  const anchorPointX = side === "left" ? cardX + 110 : cardX - 110;
-  const anchorPointY = cardY - 30;
+  if (isValidTarget) {
+    cx = targetPos!.x;
+    cy = targetPos!.y;
+
+    const W = window.innerWidth;
+    const marginX = 160;
+
+    if (side === "left") {
+      // Position card on the LEFT side of cx, halfway to the left edge of screen
+      const halfWayLeft = cx * 0.5;
+      cardX = Math.max(marginX, Math.min(cx - 150, halfWayLeft));
+    } else {
+      // Position card on the RIGHT side of cx, halfway to the right edge of screen
+      const halfWayRight = cx + (W - cx) * 0.5;
+      cardX = Math.min(W - marginX, Math.max(cx + 150, halfWayRight));
+    }
+
+    // Position cards lower down below the organisms so they never obscure 3D structures
+    const targetY = cy + 135 + (stackIndex * 85);
+    const marginYTop = 110;
+    const marginYBottom = 60;
+    cardY = Math.max(marginYTop, Math.min(window.innerHeight - marginYBottom, targetY));
+  } else {
+    // Default creature screen position estimate for non-targeted cards
+    const defaultCx = side === "left" ? window.innerWidth * 0.25 : window.innerWidth * 0.75;
+    cx = defaultCx;
+    cy = window.innerHeight / 2;
+
+    const baseCardY = window.innerHeight - 80;
+    const verticalShift = stackIndex * 75;
+    cardY = baseCardY - verticalShift;
+    cardX = side === "left"
+      ? Math.max(160, window.innerWidth * 0.20)
+      : Math.min(window.innerWidth - 160, window.innerWidth * 0.80);
+  }
+
+  // Anchor line point on top/edge of card
+  const anchorPointX = cardX < cx ? cardX + 100 : cardX - 100;
+  const anchorPointY = cardY - 25;
 
   return (
     <>
@@ -368,47 +412,7 @@ function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
     );
   }
 
-  if (item.type === "branchMutation" && item.branchData) {
-    const parentHex = getHexColor(item.branchData.parent.color);
-    const childHex = getHexColor(item.branchData.child.color);
-
-    return (
-      <div className="flex items-start gap-2.5">
-        <div className="p-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shrink-0 mt-0.5">
-          <GitBranch className="w-4 h-4 text-emerald-400" />
-        </div>
-        <div className="flex-1 pr-3">
-          <div className="text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
-            {item.subtitle}
-          </div>
-          <h3 className="text-xs font-bold text-white mb-0.5">
-            {item.title}
-          </h3>
-          <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
-            A lateral branch diverged genetically from {item.branchData.parent.name.split(' ')[0]}.
-          </p>
-
-          <div className="flex items-center gap-1.5 text-[9px] bg-black/40 p-1.5 rounded border border-emerald-500/30">
-            <div className="flex items-center gap-1">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40"
-                style={{ backgroundColor: parentHex }}
-              />
-              <span className="text-white">{item.branchData.parent.name.split(' ')[0]}</span>
-            </div>
-            <span className="text-emerald-400 font-bold">➔</span>
-            <div className="flex items-center gap-1 border border-emerald-400/50 px-1 py-0.5 rounded bg-emerald-500/20">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40"
-                style={{ backgroundColor: childHex }}
-              />
-              <span className="text-emerald-200 font-bold">{item.branchData.child.name}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  return null;
 
   return null;
 }

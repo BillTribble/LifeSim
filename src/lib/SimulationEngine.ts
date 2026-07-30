@@ -8,6 +8,7 @@ import {
   GEO_TYPES,
   PULSE_TARGETS,
   ARCHETYPES,
+  Archetype,
   MOVEMENT_TYPES,
 } from "./SimulationTypes";
 import {
@@ -16,6 +17,7 @@ import {
   breedGenomes,
   mutateGenome,
   getRandomWeightedArchetype,
+  formatGenomeName,
 } from "./SimulationGenetics";
 import { updateSimulation } from "./SimulationUpdate";
 import { setupSimulationScene } from "./SimulationRenderer";
@@ -26,7 +28,7 @@ import {
 
 export class SimulationEngine {
   scene: THREE.Scene = new THREE.Scene();
-  camera!: THREE.OrthographicCamera;
+  camera!: THREE.PerspectiveCamera;
   renderer!: THREE.WebGLRenderer;
   controls!: OrbitControls;
 
@@ -68,7 +70,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 0.6;
+  timeScale: number = 1;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -81,75 +83,73 @@ export class SimulationEngine {
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
   onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
   onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
-  onBranchMutationEvent?: (event: { parent: Genome; child: Genome; count?: number }) => void;
   matingCount: number = 0;
   feelerCount: number = 0;
-  branchMutationCount: number = 0;
+  hasAnyOrganismBred: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
-  lastBranchMutationWorldPos?: THREE.Vector3;
 
-  rotationSpeed: number = 0.2;
+  rotationSpeed: number = 0.13;
   phiDirection: number = -1;
-  magnetism: number = 0.02;
-  proximity: number = 400.0;
-  desperation: number = 2.0;
-  despairAge: number = 1000;
-  flowerSize: number = 3.0;
-  entropyThreshold: number = 0.0;
-  globalPulseSpeed: number = 1.0;
-  maxLineWidth: number = 8.0;
-  multicolorAppProb: number = 0.5;
-  sameColorAppProb: number = 0.5;
-  tideSpeed: number = 1.0;
+  magnetism: number = 0.08361988738043864;
+  proximity: number = 1538.23896997661;
+  desperation: number = 4.333947682994568;
+  despairAge: number = 3185.029905594175;
+  flowerSize: number = 1.3;
+  globalPulseSpeed: number = 0.8637093147800061;
+  maxLineWidth: number = 1.5;
+  multicolorAppProb: number = 0.3155126730950826;
+  sameColorAppProb: number = 0.4968205547416572;
+  tideSpeed: number = 1.2393635516813024;
   tideValue: number = 0;
-  tideColorTop: string = "#8A2BE2";
-  tideColorBottom: string = "#FF4500";
-  tideThickness: number = 140.0;
-  tideOpacity: number = 0.5;
-  tideSaturation: number = 1.0;
-  maxSaturation: number = 1.0;
-  growthSpeed: number = 1.0;
-  diebackRate: number = 1.0;
-  hybridCooldown: number = 300;
+  tideColorTop: string = "#0b939c";
+  tideColorBottom: string = "#3e5e50";
+  tideThickness: number = 74.92111043533596;
+  tideOpacity: number = 0.12871529096468015;
+  tideSaturation: number = 0.0162554822004225;
+  maxSaturation: number = 0.3135869032532054;
+  colorClamp: number = 1;
+  growthSpeed: number = 0.11;
+  diebackRate: number = 5.50616330309604;
+  allowBreeding: boolean = true;
+  hybridCooldown: number = 926.4522288567662;
   postMatingDieoff: boolean = true;
-  hybridStickiness: number = 10;
-  ornamentFrequency: number = 1.0;
-  branchingMultiplier: number = 1.0;
-  branchTendencyVar: number = 10;
-  desiccationSpeed: number = 1.0;
+  hybridStickiness: number = 48.44796525279812;
+  ornamentFrequency: number = 9.525004244851067;
+  branchingMultiplier: number = 163.34538034535345;
+  branchTendencyVar: number = 11.779000158227072;
+  desiccationSpeed: number = 12.842754552113087;
 
   botanyRealism: boolean = true;
-  windVelocity: number = 1.0;
-  flutterIntensity: number = 1.0;
-  leafScale: number = 3.0;
-  leafDensity: number = 1.0;
+  windVelocity: number = 0.2;
+  flutterIntensity: number = 0.5;
+  leafScale: number = 0.14;
+  leafDensity: number = 0.35;
   relativeLeafSizeDiff: number = 0.2;
-  leafGrowthSpeed: number = 0.015;
+  leafGrowthSpeed: number = 0.0045;
   phyllotaxisAngle: number = 137.5;
-  leafProbability: number = 0.65;
-  appendageSpawnRate: number = 1.0;
+  leafProbability: number = 1;
+  appendageSpawnRate: number = 1;
   glowProbability: number = 0.1;
-  stemCurviness: number = 1.0;
-  veinStrength: number = 1.0;
+  stemCurviness: number = 3;
+  veinStrength: number = 15;
   veinGlow: number = 0.5;
 
   hybridSize: number = 2.0;
 
-  maxDOMs: number = 80000;
-  lastMaxDOMs: number = 80000;
-  minAgents: number = 2;
-  boundarySize: number = 58.8;
+  maxDOMs: number = 341000;
+  lastMaxDOMs: number = 341000;
+  minAgents: number = 3;
+  boundarySize: number = 50;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxSpecies: number = 6;
-  ecoFade: number = 0.5;
+  maxSpecies: number = 14;
+  ecoFade: number = 0.8944272063480259;
   probGlow: number = 0.0;
-  branchSplitSizeProb: number = 0.2;
-  branchBigger: number = 0.5;
-  branchMutationRate: number = 0.012;
+  branchSplitSizeProb: number = 0.7936089206087223;
+  branchBigger: number = 0.9929495875268578;
   enableGlow: boolean = false;
-  glowSize: number = 0.0;
-  fogVisibility: number = 800;
+  glowSize: number = 0.5;
+  fogVisibility: number = 826.8761838338102;
   tideCullIndex: number = 0;
 
   kioskMode: boolean = true;
@@ -209,7 +209,12 @@ export class SimulationEngine {
   snakeWander: number = 1.0;
   bushSpeed: number = 1.0;
   treeSpeed: number = 1.0;
-  gingerSpeed: number = 1.0;
+  rhizomeSpeed: number = 1.0;
+
+  bushBranching: number = 8.0;
+  treeBranching: number = 1.0;
+  snakeBranching: number = 1.0;
+  rhizomeBranching: number = 1.0;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
@@ -218,8 +223,13 @@ export class SimulationEngine {
   lastRelativeLeafSizeDiff: number = 0.2;
   lastStemCurviness: number = 1.0;
 
+  width: number = 0;
+  height: number = 0;
+
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.canvas = canvas;
+    this.width = width;
+    this.height = height;
     setupSimulationScene(this, width, height);
     // initAgents() is NOT called here — it is called explicitly in SimulationView
     // after all user settings have been applied to the engine.
@@ -235,25 +245,65 @@ export class SimulationEngine {
     const archetype = forceArchetype || getRandomWeightedArchetype();
     const movementType = MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)];
 
+    // Per-archetype genome parameters for clearly distinct growth forms
+    let thicknessBase: number;
+    let minThickness: number;
+    let thicknessDecay: number;
+    let bifurcationRate: number;
+    let stepSize: number;
+    let branchTendency: number;
+
+    if (archetype === "bush") {
+      // BUSH: Thin stems, extremely high bifurcation → dense bushy mass of tendrils
+      thicknessBase = (0.6 + Math.random() * 1.2) * 0.70;      // Thin but visible stems
+      minThickness = (0.08 + Math.random() * 0.15) * 0.70;     // Recovery kicks in while still visible
+      thicknessDecay = 0.9993 + Math.random() * 0.0005;
+      bifurcationRate = 0.25 + Math.random() * 0.15;             // Prolific branching rate
+      stepSize = (0.5 + Math.random() * 0.3) * 0.70;             // Sprawling steps
+      branchTendency = Math.exp((Math.random() - 0.3) * this.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 12.0 : 5.0);
+    } else if (archetype === "tree") {
+      // TREE: Thick trunk, low initial branching that explodes into canopy later
+      thicknessBase = (3.0 + Math.random() * 4.0) * 0.70;       // Thick trunk
+      minThickness = (0.2 + Math.random() * 1.0) * 0.70;
+      thicknessDecay = 0.9996 + Math.random() * 0.0004;
+      bifurcationRate = 0.005 + Math.random() * 0.015;           // Low branching (trunk phase dominates)
+      stepSize = (1.0 + Math.random() * 1.0) * 0.70;             // Long strides → tall trunks
+      branchTendency = Math.exp((Math.random() - 0.5) * this.branchTendencyVar * 0.2) * (Math.random() > 0.7 ? 6.0 : 0.8);
+    } else if (archetype === "snake") {
+      // SNAKE: Medium-thin, almost no branching, long sinuous unbranched forms
+      thicknessBase = (1.0 + Math.random() * 2.0) * 0.70;       // Medium thickness
+      minThickness = (0.3 + Math.random() * 0.8) * 0.70;
+      thicknessDecay = 0.9998 + Math.random() * 0.0002;          // Very slow decay → stays thick
+      bifurcationRate = 0.002 + Math.random() * 0.005;           // Extremely low branching
+      stepSize = (1.2 + Math.random() * 1.2) * 0.70;             // Long strides → elongated forms
+      branchTendency = Math.exp((Math.random() - 0.5) * this.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.0 : 0.2);
+    } else {
+      // RHIZOME: Thick swollen nodes, high bifurcation, short stubby
+      thicknessBase = 12.0 + Math.random() * 6.0;
+      minThickness = 5.0 + Math.random() * 3.0;
+      thicknessDecay = 0.9995 + Math.random() * 0.0004;
+      bifurcationRate = 0.25 + Math.random() * 0.20;
+      stepSize = 0.2 + Math.random() * 0.15;
+      branchTendency = 20.0 + Math.random() * 15.0;
+    }
+
     return {
-      name: `${baseName} [${archetype.toUpperCase()}]-${Math.floor(Math.random() * 100)}`,
+      name: formatGenomeName(archetype),
       archetype: archetype,
       movementType: movementType,
       color: color,
-      thicknessBase: (1.5 + Math.random() * 4) * 0.70,
-      minThickness: (0.1 + Math.random() * 1.5) * 0.70,
-      thicknessDecay: 0.9995 + Math.random() * 0.0005,
-      stepSize: (0.8 + Math.random() * 0.8) * 0.70,
-      bifurcationRate: 0.01 + Math.random() * 0.03,
-      wanderIntensity: 0.01 + Math.random() * 0.05,
-      branchTendency:
-        Math.exp((Math.random() - 0.5) * this.branchTendencyVar * 0.2) *
-        (Math.random() > 0.8 ? 10.0 : 0.5),
+      thicknessBase: thicknessBase,
+      minThickness: minThickness,
+      thicknessDecay: thicknessDecay,
+      stepSize: stepSize,
+      bifurcationRate: bifurcationRate,
+      wanderIntensity: archetype === "rhizome" ? 1.0 + Math.random() * 0.8 : archetype === "bush" ? 0.8 + Math.random() * 0.5 : 0.01 + Math.random() * 0.05,
+      branchTendency: branchTendency,
       wavingSpeed: Math.random() * 0.05,
       wavingAmplitude: Math.random() * 0.08,
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
       appendage: getWeightedAppendage(this.traitProbs),
-      multicolorAppendage: Math.random() < this.multicolorAppProb,
+      multicolorAppendage: false,
       sameColorAppendage: Math.random() < this.sameColorAppProb,
       stability: 0.8,
       pulseTarget:
@@ -264,6 +314,7 @@ export class SimulationEngine {
           : "none",
       pulseSpeed: 0.003 + Math.random() * 0.007,
       gradientGrowth: Math.random() < (this.traitProbs["gradient"] || 0.1),
+      gradientType: 1 + Math.floor(Math.random() * 4),
       createdAt: this.time,
       singleton: archetype === "snake" && Math.random() < 0.5,
       isGlowing: Math.random() < (this.traitProbs.glow ?? 0.1),
@@ -281,7 +332,7 @@ export class SimulationEngine {
         movementType: MOVEMENT_TYPES.find(m => m !== movementType) || MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)],
         geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
         appendage: getWeightedAppendage(this.traitProbs),
-        color: new THREE.Color().setHSL((color.getHSL({h:0,s:0,l:0}).h + 0.33 + Math.random() * 0.34) % 1.0, 0.8, 0.5),
+        color: new THREE.Color().setHSL((color.getHSL({h:0,s:0,l:0}).h + 0.50 + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0, 0.68, 0.52),
         isGlowing: Math.random() < 0.3,
         vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
         canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
@@ -344,9 +395,127 @@ export class SimulationEngine {
     }
   }
 
+  cameraZoom: number = 1.15;
+  cameraHeight: number = 75;
+  gridHeight: number = 80;
+  layerGap: number = 80;
+  floorHeight: number = 0;
+  ceilingHeight: number = 0;
+  cameraProjection: number = 1.0;
+  ambientLight?: THREE.AmbientLight;
+  showBoundaryBox: boolean = false;
+  boundaryMesh?: THREE.LineSegments;
+  fadeProgress: number = 0;
+  fadeState: "idle" | "out" | "in" = "idle";
+  fadeScene?: THREE.Scene;
+  fadeCamera?: THREE.OrthographicCamera;
+  fadeQuadMat?: THREE.MeshBasicMaterial;
+  fadeQuadMesh?: THREE.Mesh;
+
+  setShowBoundaryBox(show: boolean) {
+    this.showBoundaryBox = show;
+    this.updateBoundaryMesh();
+  }
+
+  updateBoundaryMesh() {
+    if (!this.scene) return;
+
+    if (this.boundaryMesh) {
+      this.scene.remove(this.boundaryMesh);
+      if (this.boundaryMesh.geometry) this.boundaryMesh.geometry.dispose();
+      if (this.boundaryMesh.material) {
+        if (Array.isArray(this.boundaryMesh.material)) {
+          this.boundaryMesh.material.forEach(m => m.dispose());
+        } else {
+          this.boundaryMesh.material.dispose();
+        }
+      }
+      this.boundaryMesh = undefined;
+    }
+
+    if (!this.showBoundaryBox) return;
+
+    const b = this.boundarySize;
+    let geo: THREE.BufferGeometry;
+
+    if (this.boundaryShape === "sphere") {
+      const sphereGeo = new THREE.SphereGeometry(b, 24, 16);
+      geo = new THREE.WireframeGeometry(sphereGeo);
+    } else {
+      const boxGeo = new THREE.BoxGeometry(b * 2, b * 2, b * 2);
+      geo = new THREE.EdgesGeometry(boxGeo);
+    }
+
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x87CEEB,
+      transparent: true,
+      opacity: 0.5,
+    });
+
+    this.boundaryMesh = new THREE.LineSegments(geo, mat);
+    this.boundaryMesh.position.set(0, this.creatureCenterY, 0);
+    this.scene.add(this.boundaryMesh);
+  }
+
+  setGridHeight(height: number) {
+    this.gridHeight = height;
+    this.layerGap = height;
+  }
+  setLayerGap(gap: number) {
+    this.layerGap = gap;
+    this.gridHeight = gap;
+  }
+  setFloorHeight(h: number) {
+    this.floorHeight = h;
+  }
+  setCeilingHeight(h: number) {
+    this.ceilingHeight = h;
+  }
+  setCameraProjection(val: number) {
+    this.cameraProjection = val;
+    if (this.camera && this.controls) {
+      const baseFOV = 45.0;
+      const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, val));
+      const distFactor = Math.tan((baseFOV * Math.PI / 360)) / Math.tan((targetFOV * Math.PI / 360));
+      const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
+      const baseDist = 137.42;
+      const newDist = baseDist * distFactor;
+      this.camera.fov = targetFOV;
+      this.camera.position.copy(this.controls.target).addScaledVector(dir, newDist);
+      this.camera.updateProjectionMatrix();
+
+      // Dynamic fog near/far planes to ensure orthographic view never goes dark
+      if (this.scene && this.scene.fog && (this.scene.fog instanceof THREE.Fog)) {
+        this.scene.fog.near = 120 * distFactor;
+        this.scene.fog.far = (this.fogVisibility || 800) * distFactor;
+      }
+
+      if (this.ambientLight) {
+        this.ambientLight.intensity = THREE.MathUtils.lerp(2.2, 1.2, val);
+      }
+
+      this.controls.update();
+    }
+  }
+
   setRotationSpeed(speed: number) {
     this.rotationSpeed = speed;
     if (this.controls) this.controls.autoRotateSpeed = speed;
+  }
+  setCameraZoom(zoom: number) {
+    this.cameraZoom = zoom;
+    if (this.camera) {
+      this.camera.zoom = zoom;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+  setCameraHeight(height: number) {
+    this.cameraHeight = height;
+    if (this.camera && this.controls) {
+      this.controls.target.y = height;
+      this.camera.position.y = height;
+      this.controls.update();
+    }
   }
   setMagnetism(val: number) {
     this.magnetism = val;
@@ -366,19 +535,24 @@ export class SimulationEngine {
     this.flowerSize = val;
     this.leafScale = val;
   }
-  setEntropyThreshold(val: number) {
-    this.entropyThreshold = val;
-    if (val <= 0.001) {
-      this.onLog("ENTROPY: Set to 0.0 (0% Chance - Self-hybridization & Feelers OFF)");
-    } else {
-      this.onLog(`ENTROPY: Set to ${(val * 100).toFixed(0)}% threshold.`);
-    }
-  }
   setMinAgents(val: number) {
     this.minAgents = val;
   }
+  creatureCenterY: number = 18.921075;
   setBoundarySize(val: number) {
     this.boundarySize = val;
+    this.updateBoundaryMesh();
+    if (this.camera && this.controls) {
+      const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
+      const baseFOV = 45.0;
+      const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, this.cameraProjection));
+      const distFactor = Math.tan((baseFOV * Math.PI / 360)) / Math.tan((targetFOV * Math.PI / 360));
+      const baseDist = val * 2.7484;
+      const newDist = baseDist * distFactor;
+      this.camera.position.copy(this.controls.target).addScaledVector(dir, newDist);
+      this.camera.updateProjectionMatrix();
+      this.controls.update();
+    }
   }
   setTideSpeed(val: number) {
     this.tideSpeed = val;
@@ -431,11 +605,28 @@ export class SimulationEngine {
   }
   setBgColor(c: string) {
     this.bgColor = c;
-    this.scene.background = new THREE.Color(c);
+    const color = new THREE.Color(c);
+    this.scene.background = color;
+    if (this.scene.fog) {
+      this.scene.fog.color.copy(color);
+    }
+    if (this.floorGridMat && this.floorGridMat.uniforms.fogColor) {
+      this.floorGridMat.uniforms.fogColor.value.copy(color);
+    }
+    if (this.ceilingGridMat && this.ceilingGridMat.uniforms.fogColor) {
+      this.ceilingGridMat.uniforms.fogColor.value.copy(color);
+    }
   }
   setFogColor(c: string) {
+    const color = new THREE.Color(c);
     if (this.scene.fog) {
-      this.scene.fog.color.set(c);
+      this.scene.fog.color.copy(color);
+    }
+    if (this.floorGridMat && this.floorGridMat.uniforms.fogColor) {
+      this.floorGridMat.uniforms.fogColor.value.copy(color);
+    }
+    if (this.ceilingGridMat && this.ceilingGridMat.uniforms.fogColor) {
+      this.ceilingGridMat.uniforms.fogColor.value.copy(color);
     }
   }
   setPostMatingDieoff(val: boolean) {
@@ -499,8 +690,67 @@ export class SimulationEngine {
   setTreeSpeed(val: number) {
     this.treeSpeed = val;
   }
-  setGingerSpeed(val: number) {
-    this.gingerSpeed = val;
+  setRhizomeSpeed(val: number) {
+    this.rhizomeSpeed = val;
+  }
+  setBushBranching(val: number) {
+    this.bushBranching = val;
+  }
+  setTreeBranching(val: number) {
+    this.treeBranching = val;
+  }
+  setSnakeBranching(val: number) {
+    this.snakeBranching = val;
+  }
+  setRhizomeBranching(val: number) {
+    this.rhizomeBranching = val;
+  }
+
+  spawnNewSpecies(forceArchetype?: Archetype): Genome {
+    const archetypes: Archetype[] = ["bush", "tree", "snake", "rhizome"];
+    const arch = forceArchetype || archetypes[Math.floor(Math.random() * archetypes.length)];
+    const familyNames = ["Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda"];
+    const nameStr = `${familyNames[Math.floor(Math.random() * familyNames.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
+    const genome = this.generateRandomGenome(nameStr, arch);
+    genome.appendage = getWeightedAppendage(this.traitProbs);
+    // Archetype-specific thickness for spawned species (don't override bush's thin stems)
+    if (arch === "bush") {
+      genome.thicknessBase = (0.6 + Math.random() * 1.2) * 0.70;
+    } else if (arch === "tree") {
+      genome.thicknessBase = (3.5 + Math.random() * 3.0) * 0.70;
+    } else if (arch === "snake") {
+      genome.thicknessBase = (1.2 + Math.random() * 2.0) * 0.70;
+    } else {
+      // rhizome — keep the values from generateRandomGenome
+    }
+    genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
+
+    this.genomeMap.set(genome.name, genome);
+
+    const pos = new THREE.Vector3(
+      (Math.random() - 0.5) * 80,
+      (Math.random() - 0.5) * 30,
+      (Math.random() - 0.5) * 80
+    );
+
+    const agent: Agent = {
+      position: pos.clone(),
+      lastPosition: pos.clone(),
+      direction: new THREE.Vector3(
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+        Math.random() - 0.5
+      ).normalize(),
+      genome: genome,
+      active: true,
+      age: 0,
+      thickness: genome.thicknessBase * 1.5,
+      cooldown: 200
+    };
+
+    this.agents.push(agent);
+    this.onLog(`🌱 Emergence of new species: ${genome.name} [${arch.toUpperCase()}] to maintain minimum 3 species.`);
+    return genome;
   }
 
   setDiebackAgeBias(val: number) {
@@ -508,9 +758,6 @@ export class SimulationEngine {
   }
   setBranchSplitSizeProb(val: number) {
     this.branchSplitSizeProb = val;
-  }
-  setBranchMutationRate(val: number) {
-    this.branchMutationRate = val;
   }
   setGrowthSpeed(g: number) {
     this.growthSpeed = g;
@@ -562,6 +809,13 @@ export class SimulationEngine {
   }
   setMaxSaturation(val: number) {
     this.maxSaturation = val;
+  }
+  setColorClamp(val: number) {
+    this.colorClamp = val;
+    this.maxSaturation = val;
+  }
+  setAllowBreeding(v: boolean) {
+    this.allowBreeding = v;
   }
   setHybridCooldown(c: number) {
     this.hybridCooldown = c;
@@ -654,9 +908,9 @@ export class SimulationEngine {
     this.cylinderMesh.instanceMatrix.needsUpdate = true;
     this.cylinderMesh.count = 0;
 
-    const alphaArchetype = "ginger";
+    const alphaArchetype = getRandomWeightedArchetype();
     let betaArchetype = getRandomWeightedArchetype();
-    while (betaArchetype === "ginger") {
+    while (betaArchetype === alphaArchetype) {
       betaArchetype = getRandomWeightedArchetype();
     }
 
@@ -703,9 +957,20 @@ export class SimulationEngine {
       betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
     }
 
-    // Provide bold contrasting thickness base so organisms grow thick, lush, and distinct
-    alphaGenome.thicknessBase = (5.0 + Math.random() * 3.5) * 0.70;
-    betaGenome.thicknessBase = (3.5 + Math.random() * 2.5) * 0.70;
+    // Archetype-specific thickness — preserve the archetype's character
+    const getArchetypeThickness = (arch: Archetype) => {
+      if (arch === "bush") {
+        return (0.6 + Math.random() * 1.2) * 0.70;
+      } else if (arch === "tree") {
+        return (3.5 + Math.random() * 2.5) * 0.70;
+      } else if (arch === "snake") {
+        return (1.2 + Math.random() * 2.0) * 0.70;
+      } else {
+        return (5.0 + Math.random() * 3.5) * 0.70;
+      }
+    };
+    alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);
+    betaGenome.thicknessBase = getArchetypeThickness(betaArchetype);
 
     // Assign distinct vernation and phyllotaxis modes
     alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
@@ -752,21 +1017,22 @@ export class SimulationEngine {
       this.onConfigChange({ bgColor: bgHex });
     }
 
-    this.agents.push({
-      position: new THREE.Vector3(40, 0, 0),
-      direction: new THREE.Vector3(
-        1,
-        (Math.random() - 0.5) * 0.2,
-        (Math.random() - 0.5) * 0.2,
-      ).normalize(),
-      genome: alphaGenome,
-      active: true,
-      age: 0,
-      lastPosition: new THREE.Vector3(40, 0, 0),
-      thickness: alphaGenome.thicknessBase * 2.0,
-      cooldown: 0,
-    });
+    // Startup Rule: At most ONE founder organism can have multicolor appendages or rainbow gradient growth
+    if (alphaGenome.gradientGrowth) {
+      betaGenome.gradientGrowth = false;
+      betaGenome.multicolorAppendage = false;
+      betaGenome.sameColorAppendage = true;
+    } else if (betaGenome.gradientGrowth) {
+      alphaGenome.multicolorAppendage = false;
+      alphaGenome.sameColorAppendage = true;
+      betaGenome.multicolorAppendage = false;
+      betaGenome.sameColorAppendage = true;
+    } else if (alphaGenome.multicolorAppendage) {
+      betaGenome.multicolorAppendage = false;
+      betaGenome.sameColorAppendage = true;
+    }
 
+    // Organism A (Alpha Strain) placed on the LEFT side of screen (X = -40)
     this.agents.push({
       position: new THREE.Vector3(-40, 0, 0),
       direction: new THREE.Vector3(
@@ -774,39 +1040,83 @@ export class SimulationEngine {
         (Math.random() - 0.5) * 0.2,
         (Math.random() - 0.5) * 0.2,
       ).normalize(),
-      genome: betaGenome,
+      genome: alphaGenome,
       active: true,
       age: 0,
       lastPosition: new THREE.Vector3(-40, 0, 0),
+      thickness: alphaGenome.thicknessBase * 2.0,
+      cooldown: 350,
+    });
+
+    // Organism B (Beta Strain) placed on the RIGHT side of screen (X = +40)
+    this.agents.push({
+      position: new THREE.Vector3(40, 0, 0),
+      direction: new THREE.Vector3(
+        1,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2,
+      ).normalize(),
+      genome: betaGenome,
+      active: true,
+      age: 0,
+      lastPosition: new THREE.Vector3(40, 0, 0),
       thickness: betaGenome.thicknessBase * 2.0,
-      cooldown: 0,
+      cooldown: 350,
     });
 
     this.matingCount = 0;
     this.feelerCount = 0;
+    this.hasAnyOrganismBred = false;
     if (this.onInitOrganisms) {
       this.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
     }
   }
 
-  restart() {
+  resetCamera() {
+    if (this.camera && this.controls) {
+      const creatureCenterY = this.creatureCenterY || 18.921075;
+      const wasAutoRotate = this.controls.autoRotate;
+      this.controls.autoRotate = false;
+
+      this.controls.target.set(0, creatureCenterY, 0);
+      this.camera.position.set(0, creatureCenterY, -137.42);
+      this.camera.up.set(0, 1, 0);
+      this.camera.lookAt(this.controls.target);
+      this.camera.updateProjectionMatrix();
+
+      this.controls.saveState();
+      this.controls.reset();
+
+      this.camera.position.set(0, creatureCenterY, -137.42);
+      this.controls.target.set(0, creatureCenterY, 0);
+      this.controls.update();
+
+      this.controls.autoRotate = wasAutoRotate;
+      this.setCameraProjection(this.cameraProjection);
+    }
+  }
+
+  executeReset() {
     this.time = 0;
     this.lastKioskTime = 0;
     this.lastKioskRealTime = performance.now();
     this.kioskFadeProgress = 0;
     this.kioskFadingOut = false;
+    this.resetCamera();
     this.initAgents();
+  }
+
+  restart() {
+    this.fadeState = "out";
+    if (this.fadeProgress <= 0) {
+      this.fadeProgress = 0.01;
+    }
   }
 
   resize(width: number, height: number) {
     this.width = width;
     this.height = height;
-    const aspect = width / height;
-    const d = 180;
-    this.camera.left = -d * aspect;
-    this.camera.right = d * aspect;
-    this.camera.top = d;
-    this.camera.bottom = -d;
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
   }
@@ -826,9 +1136,11 @@ export class SimulationEngine {
     if (seg && !seg.dyingStart) {
       seg.dyingStart = dyingStartOverride !== undefined ? dyingStartOverride : this.unscaledTime;
       dyingSet.add(idx);
-      const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
-      if (prevBiomass > 0) {
-        this.biomassMap.set(seg.strainName, prevBiomass - 1);
+      if (seg.countsForBiomass !== false) {
+        const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
+        if (prevBiomass > 0) {
+          this.biomassMap.set(seg.strainName, prevBiomass - 1);
+        }
       }
     }
   }
@@ -842,7 +1154,7 @@ export class SimulationEngine {
     processDyingSegments(this, segments, dyingSet, mesh, isFlower);
   }
 
-  spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color) {
+  spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color, strainName?: string, strainBName?: string, agentAId?: number, agentBId?: number) {
     if (this.hybridMeshes.length === 0) return;
 
     const currentCount = this.hybridCount % 2000;
@@ -867,7 +1179,10 @@ export class SimulationEngine {
       timestamp: this.time,
       matrix: this.dummy.matrix.clone(),
       thickness: this.hybridSize,
-      strainName: "hybrid",
+      strainName: strainName || "hybrid",
+      strainBName: strainBName || "hybrid",
+      agentAId: agentAId,
+      agentBId: agentBId,
       variant: variant,
       color: color.clone(),
     };
@@ -896,39 +1211,70 @@ export class SimulationEngine {
   animate = () => {
     this.reqId = requestAnimationFrame(this.animate);
 
-    // Update Dual Infinite Grid Planes (Floor & Ceiling) with Dynamic Proximity Cross-Fade
-    if (this.floorGridMat && this.ceilingGridMat && this.camera) {
+    // Update Dual Bioluminescent Grid Helpers (Follows Camera in XZ plane, centered vertically on creatures at creatureCenterY)
+    if (this.camera) {
       const camY = this.camera.position.y;
-      const floorY = -160;
+      const baseGap = this.boundarySize + 2.0;
+      const layerGapOffset = (this.layerGap - 100) / 2;
+      const floorY = this.creatureCenterY - baseGap - layerGapOffset + this.floorHeight;
+      const ceilingY = this.creatureCenterY + baseGap + layerGapOffset + this.ceilingHeight;
 
-      // Infinite Grid Follows Camera in XZ plane
       if (this.floorGridMesh) {
         this.floorGridMesh.position.x = this.camera.position.x;
+        this.floorGridMesh.position.y = floorY;
         this.floorGridMesh.position.z = this.camera.position.z;
+        this.floorGridMesh.visible = (camY > floorY);
       }
       if (this.ceilingGridMesh) {
         this.ceilingGridMesh.position.x = this.camera.position.x;
+        this.ceilingGridMesh.position.y = ceilingY;
         this.ceilingGridMesh.position.z = this.camera.position.z;
+        this.ceilingGridMesh.visible = (camY < ceilingY);
       }
 
-      let floorAlpha = 1.0;
-      let ceilingAlpha = 0.25;
+      // Smooth opacity fading when camera approaches plane boundary
+      const floorAlpha = THREE.MathUtils.clamp((camY - floorY) / 25.0, 0.0, 1.0);
+      const ceilingAlpha = THREE.MathUtils.clamp((ceilingY - camY) / 25.0, 0.0, 1.0);
 
-      // When camera descends below floor plane, fade out floor grid & fade in ceiling grid above!
-      if (camY < floorY + 40) {
-        const factor = THREE.MathUtils.clamp((camY - (floorY - 80)) / 120, 0.0, 1.0);
-        floorAlpha = factor;
-        ceilingAlpha = 1.0 - factor * 0.75;
+      if (this.floorGridMat && this.floorGridMat.uniforms.planeOpacity) {
+        this.floorGridMat.uniforms.planeOpacity.value = floorAlpha;
       }
+      if (this.ceilingGridMat && this.ceilingGridMat.uniforms.planeOpacity) {
+        this.ceilingGridMat.uniforms.planeOpacity.value = ceilingAlpha;
+      }
+      if (this.floorGridMat && this.floorGridMat.uniforms.cameraPos) {
+        this.floorGridMat.uniforms.cameraPos.value.copy(this.controls ? this.controls.target : this.camera.position);
+      }
+      if (this.ceilingGridMat && this.ceilingGridMat.uniforms.cameraPos) {
+        this.ceilingGridMat.uniforms.cameraPos.value.copy(this.controls ? this.controls.target : this.camera.position);
+      }
+    }
 
-      this.floorGridMat.uniforms.planeOpacity.value = floorAlpha;
-      this.ceilingGridMat.uniforms.planeOpacity.value = ceilingAlpha;
-      this.floorGridMat.uniforms.cameraPos.value.copy(this.camera.position);
-      this.ceilingGridMat.uniforms.cameraPos.value.copy(this.camera.position);
+    // Handle Smooth Screen Fade & Camera Reset on Restart
+    if (this.fadeState === "out") {
+      this.fadeProgress = Math.min(1.0, this.fadeProgress + 0.08);
+      if (this.fadeProgress >= 1.0) {
+        this.executeReset();
+        this.fadeState = "in";
+      }
+    } else if (this.fadeState === "in") {
+      this.fadeProgress = Math.max(0.0, this.fadeProgress - 0.08);
+      if (this.fadeProgress <= 0.0) {
+        this.fadeState = "idle";
+      }
     }
 
     this.update();
     this.renderer.render(this.scene, this.camera);
+
+    const activeFade = Math.max(this.fadeProgress, this.kioskFadeProgress || 0);
+    if (activeFade > 0 && this.fadeScene && this.fadeQuadMat) {
+      this.fadeQuadMat.opacity = activeFade;
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.fadeScene, this.fadeCamera);
+      this.renderer.autoClear = true;
+    }
 
     if (this.reqId % 15 === 0) {
       const strains: {
@@ -941,7 +1287,7 @@ export class SimulationEngine {
         isDying?: boolean;
       }[] = [];
       this.biomassMap.forEach((v, k) => {
-        if (v > 0) {
+        if (v > 0 && !k.startsWith("Feeler-")) {
           const genome = this.genomeMap.get(k);
           if (genome) {
             const color2 = genome.gradientGrowth
@@ -1012,15 +1358,14 @@ export class SimulationEngine {
     };
 
     // Fixed initial spawn locations (Alpha on screen left, Beta on screen right) so vector lines indicate the first position without crossing over
-    const alphaPos = new THREE.Vector3(40, 0, 0);
-    const betaPos = new THREE.Vector3(-40, 0, 0);
+    const alphaPos = new THREE.Vector3(-40, 0, 0);
+    const betaPos = new THREE.Vector3(40, 0, 0);
 
     return {
       org1: projectPos(alphaPos),
       org2: projectPos(betaPos),
       mating: this.lastMatingWorldPos ? projectPos(this.lastMatingWorldPos) : null,
       feeler: this.lastFeelerWorldPos ? projectPos(this.lastFeelerWorldPos) : null,
-      branchMutation: this.lastBranchMutationWorldPos ? projectPos(this.lastBranchMutationWorldPos) : null,
     };
   }
 

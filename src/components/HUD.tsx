@@ -13,6 +13,7 @@ import {
   Dices,
   Tv,
   RotateCcw,
+  Layers,
 } from "lucide-react";
 import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
@@ -50,6 +51,7 @@ export function HUD({
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
   const [presetPanelOpen, setPresetPanelOpen] = useState(false);
   const [leafPanelOpen, setLeafPanelOpen] = useState(false);
+  const [landscapePanelOpen, setLandscapePanelOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(() => window.innerWidth < 640);
   const [isControlsExpanded, setIsControlsExpanded] = useState(false);
@@ -111,7 +113,7 @@ export function HUD({
     <>
       {cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
       {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
-      {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} />}
+      {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} onClose={() => setPresetPanelOpen(false)} />}
       {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
 
       <div
@@ -263,55 +265,9 @@ export function HUD({
                 <span>PRESETS</span>
                 <ChevronDown className="w-3 h-3" />
               </div>
-              <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => {
-                  setMutationPanelOpen(!mutationPanelOpen);
-                  setPresetPanelOpen(false);
-                  setCloudPanelOpen(false);
-                  setLeafPanelOpen(false);
-                  setThemePanelOpen(false);
-                  setIsControlsExpanded(false);
-                }}
-                title="Mutations"
-              >
-                <Dna className="w-3 h-3 text-[#87CEEB]" />
-                <span>MUTATION</span>
-                <ChevronDown className="w-3 h-3" />
-              </div>
-              <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => {
-                  setLeafPanelOpen(!leafPanelOpen);
-                  setPresetPanelOpen(false);
-                  setMutationPanelOpen(false);
-                  setCloudPanelOpen(false);
-                  setThemePanelOpen(false);
-                  setIsControlsExpanded(false);
-                }}
-                title="Leaf Controls"
-              >
-                <Leaf className="w-3.5 h-3.5 text-green-400" />
-                <span>LEAVES</span>
-                <ChevronDown className="w-3 h-3" />
-              </div>
-              <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
-                onClick={() => {
-                  setCloudPanelOpen(!cloudPanelOpen);
-                  setPresetPanelOpen(false);
-                  setMutationPanelOpen(false);
-                  setLeafPanelOpen(false);
-                  setThemePanelOpen(false);
-                  setIsControlsExpanded(false);
-                }}
-                title="Configure Tide Cloud"
-              >
-                <Cloud className="w-3 h-3 text-purple-400" />
-                <span>CONFIG</span>
-                <ChevronDown className="w-3 h-3" />
-              </div>
             </div>
+
+
             <button
               onClick={() => {
                 const nextHUD = !showHUD;
@@ -320,14 +276,12 @@ export function HUD({
                   setIsControlsExpanded(true);
                 }
               }}
-              className={`flex items-center gap-2 bg-[#001220]/60 border border-[#D2B48C]/30 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-500 overflow-hidden shrink-0 ${
-                showHUD ? "w-6 h-6 p-0 justify-center hover:bg-white/20" : "px-3 py-1 hover:bg-white/10 pr-3.5"
-              }`}
-              title={showHUD ? "Hide HUD Interface" : "Show HUD Interface"}
+              className="flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 py-1 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
+              title="HUD Interface"
             >
-              <div className={`rounded-full transition-all duration-300 ${showHUD ? "w-2.5 h-2.5 bg-[#D2B48C]/60 hover:bg-white" : "w-2 h-2 bg-[#87CEEB]"}`} />
-              <span className={`text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap transition-all duration-300 ${showHUD ? "opacity-0 w-0 hidden" : "opacity-100"}`}>
-                Interface
+              <div className={`w-2 h-2 rounded-full transition-all duration-300 ${showHUD ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" : "bg-[#87CEEB]"}`} />
+              <span className="text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap">
+                INTERFACE
               </span>
             </button>
           </div>
@@ -348,8 +302,9 @@ export function HUD({
               {!isBiomassCollapsed && (
                 <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
                   {(() => {
+                  const filteredStrains = stats.strains.filter((s: any) => !s.name.startsWith("Feeler-"));
                   const archetypeTotals: Record<string, number> = {};
-                  stats.strains.forEach((s: any) => {
+                  filteredStrains.forEach((s: any) => {
                     const arch = s.archetype || "unknown";
                     archetypeTotals[arch] = (archetypeTotals[arch] || 0) + s.biomass;
                   });
@@ -365,7 +320,7 @@ export function HUD({
                       );
                     });
                 })()}
-                {stats.strains.map((strain: any, i: number) => {
+                {stats.strains.filter((s: any) => !s.name.startsWith("Feeler-")).map((strain: any, i: number) => {
                   const percent = (strain.biomass / totalBiomass) * 100;
                   const hasGradient =
                     strain.color2 && strain.color2 !== strain.color;
@@ -609,6 +564,78 @@ Low: Confined, dense space." label="RADIUS" min={50} max={1000} step={10} value=
                 </div>
                 )}
 
+                {/* LANDSCAPE */}
+                {hasMatch(['LAYER_GAP', 'FLOOR_HEIGHT', 'CEILING_HEIGHT', 'LANDSCAPE', 'LAYER', 'HEIGHT', 'GAP', 'FLOOR', 'CEILING']) && (
+                <div className="flex flex-col gap-2 border border-[#87CEEB]/30 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-[#87CEEB] tracking-widest text-center border-b border-[#87CEEB]/20 pb-1 font-bold">LANDSCAPE</span>
+                  <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LAYER GAP
+Relative vertical distance/gap between floor and ceiling landscape layers." label="LAYER_GAP" min={10} max={300} step={1} value={state.layerGap} onChange={setters.setLayerGap} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="FLOOR HEIGHT
+Individual vertical offset for the bottom floor landscape layer." label="FLOOR_HEIGHT" min={-150} max={150} step={1} value={state.floorHeight} onChange={setters.setFloorHeight} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="CEILING HEIGHT
+Individual vertical offset for the top ceiling landscape layer." label="CEILING_HEIGHT" min={-150} max={150} step={1} value={state.ceilingHeight} onChange={setters.setCeilingHeight} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="CAMERA PROJECTION
+Slide between flat orthographic (0 = no perspective) and full 3D perspective (1.0)." label="PROJECTION" min={0.0} max={1.0} step={0.01} value={state.cameraProjection ?? 1.0} onChange={setters.setCameraProjection} color="#87CEEB" />
+                    <button
+                      onClick={() => setters.setShowBoundaryBox(!state.showBoundaryBox)}
+                      className={`px-2 py-1 rounded text-[8px] font-mono tracking-wider border transition-all ${
+                        state.showBoundaryBox
+                          ? 'border-[#87CEEB] bg-[#87CEEB]/20 text-[#87CEEB]'
+                          : 'border-white/20 bg-black/40 text-white/50 hover:bg-white/10'
+                      }`}
+                      title="Toggle 3D Bounding Box Wireframe Edges"
+                    >
+                      BOUNDS: {state.showBoundaryBox ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
+                )}
+
+                {/* LEAVES & BOTANY */}
+                {hasMatch(['LEAF_SCALE', 'LEAF_DENSITY', 'LEAF_SIZE_DIFF', 'LEAF_SPD', 'LEAF_ANGLE', 'LEAF_PROB', 'WIND_VEL', 'FLUTTER', 'LEAF', 'LEAVES', 'BOTANY']) && (
+                <div className="flex flex-col gap-2 border border-green-500/30 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-green-400 tracking-widest text-center border-b border-green-500/20 pb-1 font-bold">LEAVES & BOTANY</span>
+                  <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF SCALE
+Size of foliage leaves." label="LEAF_SCALE" min={0.5} max={10.0} step={0.1} value={state.leafScale} onChange={setters.setLeafScale} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF DENSITY
+Density of foliage coverage along stems." label="LEAF_DENSITY" min={0.1} max={1.0} step={0.05} value={state.leafDensity} onChange={setters.setLeafDensity} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF SIZE DIFF
+Variability in individual leaf sizes." label="LEAF_SIZE_DIFF" min={0.0} max={0.5} step={0.05} value={state.relativeLeafSizeDiff} onChange={setters.setRelativeLeafSizeDiff} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF GROWTH SPEED
+Rate at which new leaves unfurl." label="LEAF_SPD" min={0.005} max={0.05} step={0.005} value={state.leafGrowthSpeed} onChange={setters.setLeafGrowthSpeed} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="PHYLLOTAXIS ANGLE
+Divergence angle between consecutive leaves." label="LEAF_ANGLE" min={90} max={180} step={1} value={state.phyllotaxisAngle} onChange={setters.setPhyllotaxisAngle} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LEAF PROBABILITY
+Chance of spawning leaves on eligible nodes." label="LEAF_PROB" min={0.1} max={1.0} step={0.05} value={state.leafProbability} onChange={setters.setLeafProbability} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="WIND VELOCITY
+Sway velocity imparted by wind on foliage." label="WIND_VEL" min={0.0} max={5.0} step={0.1} value={state.windVelocity} onChange={setters.setWindVelocity} color="#4ade80" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="FLUTTER INTENSITY
+Rapid fluttering motion of individual leaves." label="FLUTTER" min={0.0} max={2.0} step={0.1} value={state.flutterIntensity} onChange={setters.setFlutterIntensity} color="#4ade80" />
+                  </div>
+                </div>
+                )}
+
+                {/* CONFIG & TIDE */}
+                {hasMatch(['TIDE_SPEED', 'TIDE_THICK', 'TIDE_OPACITY', 'TIDE_SAT', 'FOG_VIS', 'TIDE', 'CLOUD', 'CONFIG', 'FOG']) && (
+                <div className="flex flex-col gap-2 border border-purple-500/30 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
+                  <span className="text-[8px] text-purple-400 tracking-widest text-center border-b border-purple-500/20 pb-1 font-bold">CONFIG & TIDE</span>
+                  <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TIDE SPEED
+Speed of tide cloud pulses." label="TIDE_SPEED" min={0.1} max={10.0} step={0.1} value={state.tideSpeed} onChange={setters.setTideSpeed} color="#c084fc" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TIDE THICKNESS
+Vertical thickness of tide cloud layer." label="TIDE_THICK" min={20} max={500} step={10} value={state.tideThickness} onChange={setters.setTideThickness} color="#c084fc" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TIDE OPACITY
+Transparency of tide cloud layer." label="TIDE_OPACITY" min={0.0} max={1.0} step={0.05} value={state.tideOpacity} onChange={setters.setTideOpacity} color="#c084fc" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TIDE SATURATION
+Color saturation of tide cloud layer." label="TIDE_SAT" min={0.0} max={1.0} step={0.05} value={state.tideSaturation} onChange={setters.setTideSaturation} color="#c084fc" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="FOG VISIBILITY
+Distance of atmospheric fog fade." label="FOG_VIS" min={100} max={2000} step={50} value={state.fogVisibility} onChange={setters.setFogVisibility} color="#c084fc" />
+                  </div>
+                </div>
+                )}
+
                 {/* ECOLOGY */}
                 {hasMatch(['MAGNET', 'PROXIM', 'DESPAIR', 'DESP_AGE', 'ENTROPY', 'ECO_FADE', 'CULL_RATE', 'SWARM', 'COHESION', 'DETECTION', 'RANGE', 'DESPERATION', 'AGE', 'POPULATION', 'LIMIT', 'FADE', 'CULL']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
@@ -630,10 +657,6 @@ Low: Calm, methodical movement." label="DESPAIR" min={1} max={10.0} step={0.1} v
 Age at which desperation begins.
 High: Only elders become desperate.
 Low: Youthful desperation." label="DESP_AGE" min={100} max={5000} step={100} value={state.despairAge} onChange={setters.setDespairAge} color="#87CEEB" />
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="SELF HYBRIDIZATION (ENTROPY)
-Biomass threshold for spontaneous self-mutation.
-High: Dominant species remain purebred longer.
-Low: Frequent spontaneous self-hybridization." label="ENTROPY" min={0.0} max={1.0} step={0.05} value={state.entropyThreshold} onChange={setters.setEntropyThreshold} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="ECO FADE
 Rate at which environment marks disappear.
 High: Trails fade quickly.
@@ -681,7 +704,18 @@ Low: Long, persistent feelers." label="FEELER_FADE" min={1.0} max={50.0} step={1
                 {hasMatch(['HYBRID_COOL', 'HYBRID_SIZE', 'HYBRID_DECAY', 'BREED', 'COOLDOWN', 'SIZE', 'DECAY', 'REPRODUCTION']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">REPRODUCTION</span>
-                  <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+                  <div className="flex gap-1 flex-wrap justify-center items-center max-w-[280px] sm:max-w-none">
+                    <button
+                      onClick={() => setters.setAllowBreeding(!state.allowBreeding)}
+                      className={`px-2 py-1 rounded text-[8px] font-mono tracking-wider border transition-all ${
+                        state.allowBreeding
+                          ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50'
+                          : 'border-red-500/50 bg-red-950/40 text-red-400 opacity-80 hover:bg-red-900/50'
+                      }`}
+                      title="Toggle whether organisms can breed and produce offspring"
+                    >
+                      BREEDING: {state.allowBreeding ? 'ON' : 'OFF'}
+                    </button>
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="HYBRID BREED COOL
 Delay between breeding attempts.
 High: Infrequent, rare breeding.
@@ -715,24 +749,32 @@ Low: Linear, simple structures." label="BRANCHING" min={0.1} max={500.0} step={0
 Death risk after creating a branch.
 High: Branching is often fatal.
 Low: Safe, frequent branching." label="TERM_BRANCH" min={0.5} max={10.0} step={0.5} value={state.termProbPostBranch} onChange={setters.setTermProbPostBranch} color="#87CEEB" />
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH MUTATION
-Chance of mutation upon branching.
-High: Rapid evolution on new branches.
-Low: Stable genetic clones." label="B_MUTATE" min={0.0} max={1.0} step={0.001} value={state.branchMutationRate} onChange={setters.setBranchMutationRate} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH BIGGER
 Chance for branches to be thicker.
 High: Thick, heavy secondary branches.
 Low: Thin, wispy branches." label="BRANCH_BIG" min={0} max={1.0} step={0.05} value={state.branchBigger} onChange={setters.setBranchBigger} color="#87CEEB" />
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LARGE BRANCH PROB
-Frequency of major structural forks.
-High: Frequent major splits.
-Low: Mostly minor side-branches." label="LRG_BRANCH" min={0.0} max={1.0} step={0.05} value={state.branchSplitSizeProb} onChange={setters.setBranchSplitSizeProb} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BUSH BRANCHING
+Branching multiplier for bush-types.
+High: Extremely dense bush branching.
+Low: Sparse bush branches." label="BUSH_BR" min={0.1} max={50.0} step={0.5} value={state.bushBranching} onChange={setters.setBushBranching} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="TREE BRANCHING
+Branching multiplier for tree-types.
+High: Explosive tree canopy.
+Low: Single trunk trees." label="TREE_BR" min={0.1} max={50.0} step={0.5} value={state.treeBranching} onChange={setters.setTreeBranching} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="SNAKE BRANCHING
+Branching multiplier for snake-types.
+High: Branching snakes.
+Low: Pure single snakes." label="SNAK_BR" min={0.1} max={50.0} step={0.5} value={state.snakeBranching} onChange={setters.setSnakeBranching} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="RHIZOME BRANCHING
+Branching multiplier for rhizome-types.
+High: Intense, tangled rhizome network.
+Low: Minimal rhizome splits." label="RHIZ_BR" min={0.1} max={50.0} step={0.5} value={state.rhizomeBranching} onChange={setters.setRhizomeBranching} color="#87CEEB" />
                   </div>
                 </div>
                 )}
 
                 {/* SPEEDS */}
-                {hasMatch(['SNAKE', 'S_STEP', 'S_WAND', 'BUSH', 'TREE', 'GINGER', 'SPEED', 'STEP', 'WANDER']) && (
+                {hasMatch(['SNAKE', 'S_STEP', 'S_WAND', 'BUSH', 'TREE', 'RHIZOME', 'SPEED', 'STEP', 'WANDER']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">SPEEDS</span>
                   <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
@@ -756,10 +798,10 @@ Low: Slowly growing bushes." label="BUSH" min={0.1} max={10.0} step={0.1} value=
 Growth speed for tree-types.
 High: Fast-sprouting trees.
 Low: Slow, ancient trees." label="TREE" min={0.1} max={10.0} step={0.1} value={state.treeSpeed} onChange={setters.setTreeSpeed} color="#87CEEB" />
-                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="GINGER SPEED
-Movement speed for ginger-types.
-High: Quick, erratic gingers.
-Low: Slow, drifting gingers." label="GINGER" min={0.1} max={10.0} step={0.1} value={state.gingerSpeed} onChange={setters.setGingerSpeed} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="RHIZOME SPEED
+Movement speed for rhizome-types.
+High: Quick, erratic rhizomes.
+Low: Slow, drifting rhizomes." label="RHIZOME" min={0.1} max={10.0} step={0.1} value={state.rhizomeSpeed} onChange={setters.setRhizomeSpeed} color="#87CEEB" />
                   </div>
                 </div>
                 )}
@@ -793,6 +835,16 @@ Low: Contrasting appendage colors." label="SAME_COLOR" min={0.0} max={1.0} step=
 Speed of luminescent pulses.
 High: Rapid, strobing pulses.
 Low: Slow, gentle throbbing." label="PULSE_SPD" min={0.1} max={1.0} step={0.1} value={state.globalPulseSpeed} onChange={setters.setGlobalPulseSpeed} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="COLOR CLAMPING (0-100%)
+Limits max saturation & lightness clamping of organism colors.
+High (100%): Unconstrained vivid colors.
+Low (0%): Heavily clamped, muted tones." label="COLOR_CLAMP" min={0.0} max={1.0} step={0.01} value={state.colorClamp} onChange={setters.setColorClamp} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="LAYER GAP
+Relative vertical distance/gap to landscape layers with creature space in middle." label="LAYER_GAP" min={10} max={300} step={1} value={state.layerGap} onChange={setters.setLayerGap} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="FLOOR HEIGHT
+Individual height control for the bottom floor landscape layer." label="FLOOR_HEIGHT" min={-200} max={40} step={1} value={state.floorHeight} onChange={setters.setFloorHeight} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="CEILING HEIGHT
+Individual height control for the top ceiling landscape layer." label="CEILING_HEIGHT" min={45} max={300} step={1} value={state.ceilingHeight} onChange={setters.setCeilingHeight} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="SATURATION
 Overall color intensity limit.
 High: Vibrant, neon colors.

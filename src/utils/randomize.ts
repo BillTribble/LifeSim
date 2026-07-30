@@ -13,7 +13,6 @@ export const triggerRandomize = (
   if (setters.setDesperation) setters.setDesperation(rRange(1, 10));
   if (setters.setDespairAge) setters.setDespairAge(rRange(100, 5000));
   // Note: flowerSize, hybridSize, and growthSpeed are intentionally excluded from randomize
-  if (setters.setEntropyThreshold) setters.setEntropyThreshold(rRange(0.0, 1.0));
   if (setters.setDiebackRate) setters.setDiebackRate(rRange(0.0, 10.0));
 
   // Tides & Environment
@@ -35,7 +34,6 @@ export const triggerRandomize = (
   if (setters.setBranchingMultiplier) setters.setBranchingMultiplier(rRange(0.1, 500));
   if (setters.setBranchBigger) setters.setBranchBigger(rRange(0.0, 1.0));
   if (setters.setBranchSplitSizeProb) setters.setBranchSplitSizeProb(rRange(0.0, 1.0));
-  if (setters.setBranchMutationRate) setters.setBranchMutationRate(rRange(0.0, 1.0));
   if (setters.setTermProbPostBranch) setters.setTermProbPostBranch(rRange(0.5, 10.0));
 
   // Limits

@@ -13,6 +13,12 @@ export function processAgents(
   newAgents: Agent[],
   bredThisFrame: Set<Agent>,
 ) {
+  function canEnterDeleting(engine: SimulationEngine, activeAgents: Agent[], countAsRemoved: number = 1): boolean {
+    if (!engine.hasAnyOrganismBred) return false;
+    const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
+    return livingNonFeelerAgents >= 4 && (livingNonFeelerAgents - countAsRemoved) >= Math.max(3, engine.minAgents);
+  }
+
   const strainCounts = new Map<string, number>();
   const nonTaperingStrains = new Set<string>();
   let currentActiveCount = 0;
@@ -27,8 +33,22 @@ export function processAgents(
     }
   }
 
-  // Cap maximum species by tapering the oldest variant
-  if (nonTaperingStrains.size > engine.maxSpecies) {
+  // Startup & Ecosystem Minimum Rules:
+  // 1. Before any organism has bred, enforce a MINIMUM 2 ACTIVE LIVING CREATURES limit so Organism A or B never dies off alone.
+  // 2. After breeding has occurred, enforce a MINIMUM 3 ACTIVE SPECIES limit to maintain ecosystem diversity.
+  const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
+  if (!engine.hasAnyOrganismBred) {
+    if (livingNonFeelerAgents < Math.min(2, engine.minAgents)) {
+      engine.spawnNewSpecies();
+    }
+  } else {
+    if (livingNonFeelerAgents < engine.minAgents || nonTaperingStrains.size < Math.min(3, engine.minAgents)) {
+      engine.spawnNewSpecies();
+    }
+  }
+
+  // Cap maximum species by tapering the oldest variant when capacity exceeded
+  if (canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxSpecies) {
     let oldestGenomeName: string | null = null;
     let oldestAge = -Infinity;
     for (const a of activeAgents) {
@@ -44,13 +64,15 @@ export function processAgents(
     if (oldestGenomeName) {
       if (!engine.dyingStrains) engine.dyingStrains = new Set();
       if (!engine.dyingStrains.has(oldestGenomeName)) {
-        engine.onLog(`Maximum species capacity reached. Gradual die-off of oldest species: ${oldestGenomeName.split(' ')[0]}`);
+        const arch = activeAgents.find(a => a.genome.name === oldestGenomeName)?.genome.archetype || 'bush';
+        engine.onLog(`🧹 Maximum species capacity reached. Gradual die-off of oldest species: ${oldestGenomeName} [${arch.toUpperCase()}]`);
       }
       engine.dyingStrains.add(oldestGenomeName);
       for (const a of activeAgents) {
         if (a.genome.name === oldestGenomeName) {
            a.tapering = true;
            a.forceTapering = true;
+           a.fadeAge = a.fadeAge || 0;
         }
       }
     }
@@ -66,15 +88,6 @@ export function processAgents(
   // Ignore aliveSpeciesCount (which includes fading dead trails) for breeding caps, 
   // so we don't accidentally eradicate healthy species just because old trails haven't faded yet.
   let projectedSpeciesCount = nonTaperingStrains.size;
-
-  const entropyEnabled = engine.entropyThreshold > 0.001;
-  const monopolyThreshold = entropyEnabled ? Math.max(10, totalBiomass * engine.entropyThreshold) : Infinity;
-  const monopolyStrains = new Set<string>();
-  if (entropyEnabled && totalBiomass > 0) {
-     engine.biomassMap.forEach((v, k) => {
-        if (v > monopolyThreshold) monopolyStrains.add(k);
-     });
-  }
 
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
@@ -92,7 +105,7 @@ export function processAgents(
     if (agent.genome.archetype === "snake") baseSpeedMult = engine.snakeSpeed;
     else if (agent.genome.archetype === "bush") baseSpeedMult = engine.bushSpeed;
     else if (agent.genome.archetype === "tree") baseSpeedMult = engine.treeSpeed;
-    else if (agent.genome.archetype === "ginger") baseSpeedMult = engine.gingerSpeed;
+    else if (agent.genome.archetype === "rhizome") baseSpeedMult = engine.rhizomeSpeed;
     
     agent.growthBoost = agent.growthBoost || 1.0;
     if (agent.growthBoost > 1.0) {
@@ -103,34 +116,60 @@ export function processAgents(
     const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8) * agent.growthBoost;
     
     agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult * engine.timeScale;
-    let iterations = isDying ? 0 : Math.floor(agent.growthAccumulator);
-    agent.growthAccumulator -= iterations;
+    let iterations: number;
+    if (isDying) {
+      // Initialize taper tracking on first dying frame
+      if (agent.taperBudget === undefined) {
+        const arch = agent.genome.archetype || 'bush';
+        agent.taperBudget = 0; // Counts segments added during taper (no fixed limit)
+        engine.onLog(`🌿 ${agent.genome.name} [${arch.toUpperCase()}] tapering out (thickness: ${agent.thickness.toFixed(2)})`);
+      }
+      // Keep growing as long as there's still visible thickness — branches always taper to zero (0.001)
+      if (agent.thickness > 0.001) {
+        iterations = Math.floor(agent.growthAccumulator);
+      } else {
+        iterations = 0;
+      }
+    } else {
+      iterations = Math.floor(agent.growthAccumulator);
+    }
+    agent.growthAccumulator -= Math.floor(agent.growthAccumulator);
 
     for (let iter = 0; iter < iterations; iter++) {
       if (!agent.active) break;
       const { genome } = agent;
-      const isHybrid = genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin");
+      const isHybrid = !!genome.isHybrid || genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin") || genome.name.includes("-");
 
       let effectiveBifurcationRate = genome.bifurcationRate;
       let effectiveWanderIntensity = genome.wanderIntensity;
       let effectiveStepSize = genome.stepSize;
 
       if (genome.archetype === "bush") {
-        effectiveBifurcationRate *= 4.0;
-        effectiveStepSize *= 0.4;
-        effectiveWanderIntensity *= 2.0;
+        // BUSH: Broad sprawling shrub canopy
+        effectiveBifurcationRate *= 6.0 * engine.bushBranching;
+        effectiveStepSize *= 0.65;
+        effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
-        effectiveBifurcationRate *= 0.25;
-        effectiveStepSize *= 1.2;
-        effectiveWanderIntensity *= 0.5;
+        // TRUNK-THEN-BURST: 3 seconds of normal trunk growth (180 ticks * timeScale),
+        // then dramatically increase bifurcation to create a canopy explosion
+        const trunkDurationTicks = 180 * Math.max(0.5, engine.timeScale);
+        if (agent.age < trunkDurationTicks) {
+          effectiveBifurcationRate *= 0.01 * engine.treeBranching; // Suppress branching — pure trunk
+          effectiveStepSize *= 1.2;          // Long growth strides
+          effectiveWanderIntensity *= 0.05;  // Very straight vertical trunk
+        } else {
+          effectiveBifurcationRate *= 6.0 * engine.treeBranching;   // Canopy burst
+          effectiveStepSize *= 0.5;          // Short, dense branching
+          effectiveWanderIntensity *= 3.0;   // Spread outward
+        }
       } else if (genome.archetype === "snake") {
-        effectiveBifurcationRate *= 0.05;
+        effectiveBifurcationRate *= 0.05 * engine.snakeBranching;
         effectiveWanderIntensity *= engine.snakeWander;
         effectiveStepSize *= engine.snakeStepSize;
-      } else if (genome.archetype === "ginger") {
-        effectiveBifurcationRate *= 12.0;
-        effectiveStepSize *= 0.6;
-        effectiveWanderIntensity *= 12.0;
+      } else if (genome.archetype === "rhizome") {
+        effectiveBifurcationRate *= 20.0 * engine.rhizomeBranching;
+        effectiveStepSize *= 0.45;
+        effectiveWanderIntensity *= 0.7;
       }
 
       agent.age++;
@@ -232,7 +271,35 @@ export function processAgents(
       if (genome.stability > 0) genome.stability -= 0.003;
 
       if (agent.isFeeler) {
-        // Feelers don't wander, wave, or spiral; they are homing missiles.
+        // Feelers are sensory probes that keep seeking until they find a mate, or until host dies/breeeds/tapers
+        const hostDeadOrBred = !agent.parentAgent || !agent.parentAgent.active || agent.parentAgent.tapering || agent.parentAgent.forceTapering || agent.parentAgent.hasBred;
+
+        if (hostDeadOrBred) {
+          if (!agent.tapering) {
+            agent.tapering = true;
+            agent.forceTapering = true;
+            agent.fadeAge = agent.fadeAge || 0;
+            agent.taperBudget = undefined; // Reset so taper-to-zero system initializes fresh
+          }
+        } else if (!agent.tapering) {
+          // Active feeler seeking: home directly towards nearest fertile partner of a different strain
+          let nearestPartnerPos: THREE.Vector3 | null = null;
+          let minDSq = Infinity;
+          for (let pIdx = 0; pIdx < activeAgents.length; pIdx++) {
+            const pa = activeAgents[pIdx];
+            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== agent.genome.name && pa.age > 30) {
+              const dSq = agent.position.distanceToSquared(pa.position);
+              if (dSq < minDSq) {
+                minDSq = dSq;
+                nearestPartnerPos = pa.position;
+              }
+            }
+          }
+          if (nearestPartnerPos && minDSq < 160000) { // Within 400 units
+            const homingVector = new THREE.Vector3().subVectors(nearestPartnerPos, agent.position).normalize();
+            agent.direction.lerp(homingVector, 0.35).normalize();
+          }
+        }
       } else if (genome.movementType === "spiral") {
         if (!agent.spiralAxis) {
           // Determine a spiral axis perpendicular to the current direction
@@ -297,23 +364,23 @@ export function processAgents(
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
 
       const b = engine.boundarySize;
-      const aspectX = 1.6; // Oblong/Ovoid aspect scaling for rectangular screens
+      const creatureCenterY = engine.creatureCenterY || 18.921075;
       let bounced = false;
 
       if (engine.boundaryShape === "sphere") {
-        // Ovoid Ellipsoid: (x / (1.6 * b))^2 + (y / b)^2 + (z / b)^2 <= 1.0
-        const scaledX = agent.position.x / aspectX;
-        const distSq = scaledX * scaledX + agent.position.y * agent.position.y + agent.position.z * agent.position.z;
+        // Perfect Sphere centered at (0, creatureCenterY, 0)
+        const dy = agent.position.y - creatureCenterY;
+        const distSq = agent.position.x * agent.position.x + dy * dy + agent.position.z * agent.position.z;
         if (distSq > b * b) {
           const dist = Math.sqrt(distSq);
           const scale = b / dist;
           
-          // Outward normal vector for ellipsoid
-          const normal = new THREE.Vector3(agent.position.x / (aspectX * aspectX), agent.position.y, agent.position.z).normalize();
+          // Outward normal vector for sphere
+          const normal = new THREE.Vector3(agent.position.x, dy, agent.position.z).normalize();
           
-          // Push agent back to ovoid surface
-          agent.position.x = scaledX * scale * aspectX;
-          agent.position.y = agent.position.y * scale;
+          // Push agent back to sphere surface
+          agent.position.x = agent.position.x * scale;
+          agent.position.y = creatureCenterY + dy * scale;
           agent.position.z = agent.position.z * scale;
           
           // Reflect direction: R = D - 2(D.N)N
@@ -323,24 +390,25 @@ export function processAgents(
           bounced = true;
         }
       } else {
-        // Oblong Cube
-        const bx = b * aspectX;
-        if (agent.position.x > bx) {
-          agent.position.x = bx;
+        // Perfect Equilateral Cube centered at (0, creatureCenterY, 0)
+        if (agent.position.x > b) {
+          agent.position.x = b;
           agent.direction.x *= -1;
           bounced = true;
-        } else if (agent.position.x < -bx) {
-          agent.position.x = -bx;
+        } else if (agent.position.x < -b) {
+          agent.position.x = -b;
           agent.direction.x *= -1;
           bounced = true;
         }
 
-        if (agent.position.y > b) {
-          agent.position.y = b;
+        const minY = creatureCenterY - b;
+        const maxY = creatureCenterY + b;
+        if (agent.position.y > maxY) {
+          agent.position.y = maxY;
           agent.direction.y *= -1;
           bounced = true;
-        } else if (agent.position.y < -b) {
-          agent.position.y = -b;
+        } else if (agent.position.y < minY) {
+          agent.position.y = minY;
           agent.direction.y *= -1;
           bounced = true;
         }
@@ -360,13 +428,52 @@ export function processAgents(
         agent.direction.normalize();
       }
 
-      const minAllowed = agent.isFeeler ? 0.1 : 1.8;
+      // Step-by-step progressive stem tapering decay along the length of the branch
+      if (!agent.isFeeler) {
+        // Archetype-specific progressive thickness decay:
+        // Snake: 0.9999 (can travel indefinitely without shrinking)
+        // Bush: 0.992 (steady shrinking into bushy tips)
+        // Tree: 0.996 during trunk (age < 150), 0.990 during canopy burst
+        // Rhizome: 0.985 (rapid shrinking into fine thread tips)
+        const arch = genome.archetype || 'bush';
+        let archDecay = 0.995;
+        if (arch === 'snake') archDecay = 0.9999;
+        else if (arch === 'bush') archDecay = 0.991;   // Moderate thinning → fine wispy tendrils that persist long enough to cluster
+        else if (arch === 'tree') archDecay = agent.age < 150 ? 0.997 : 0.992; // Thick trunk, then gradual canopy thinning
+        else if (arch === 'rhizome') archDecay = 0.9992; // Retain thick swollen volume for ginger tubers!
+
+        agent.thickness *= archDecay;
+        
+        // If agent is in tapering phase, aggressively taper to zero (0.001)
+        if (isDying && agent.taperBudget !== undefined) {
+          const taperAge = agent.taperBudget;
+          const taperDecay = Math.max(0.70, 0.90 - taperAge * 0.008);
+          agent.thickness *= taperDecay;
+          agent.taperBudget++;
+        } else if (agent.tapering) {
+          agent.thickness *= 0.94;
+        }
+
+        // Natural termination: if a living non-snake branch shrinks down to 0.001, finish tapering and deactivate
+        // But never kill the last agent of a species when we have fewer than 3 living species
+        if (!agent.tapering && arch !== 'snake' && agent.thickness <= 0.001) {
+          const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;
+          if (canEnterDeleting(engine, activeAgents, 1) && (!wouldKillSpecies || nonTaperingStrains.size > engine.minAgents)) {
+            agent.tapering = true;
+            agent.forceTapering = true;
+            agent.fadeAge = 0;
+          }
+        }
+      }
+
+      // All branches taper to zero (0.001) — never stop bluntly
+      const minAllowed = 0.001;
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         minAllowed,
-        Math.max(8.0, engine.maxLineWidth),
+        engine.maxLineWidth,
       );
-      const renderThickness = Math.max(minAllowed, agent.thickness * 0.9);
+      const renderThickness = Math.max(0.001, agent.thickness);
 
       engine.addLineSegment(
         agent.lastPosition,
@@ -501,7 +608,7 @@ export function processAgents(
       agent.lastPosition.copy(agent.position);
 
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
-      const maxForArchetype = genome.archetype === "bush" ? 40 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "ginger" ? 150 : 20;
+      const maxForArchetype = genome.archetype === "bush" ? 80 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 150 : genome.archetype === "tree" ? 60 : 20;
 
       const isSnake = genome.archetype === "snake";
       let allowedToBranch = !(isSnake && myStrainCount >= maxForArchetype);
@@ -510,8 +617,8 @@ export function processAgents(
         allowedToBranch &&
         !agent.isFeeler &&
         !agent.tapering &&
-        agent.age > 30 + Math.random() * 40 &&
-        activeAgents.length + newAgents.length < engine.maxAgents * 1.5 &&
+        agent.age > (genome.archetype === "rhizome" ? 5 : 12) + Math.random() * 15 &&
+        activeAgents.length + newAgents.length < engine.maxAgents * 3.0 &&
         Math.random() <
           effectiveBifurcationRate *
             genome.branchTendency *
@@ -532,11 +639,13 @@ export function processAgents(
            if (oldestBranch) {
               oldestBranch.tapering = true;
               oldestBranch.forceTapering = true;
+              oldestBranch.fadeAge = oldestBranch.fadeAge || 0;
+              engine.onLog(`🔄 Branch cap reached for ${genome.name} [${(genome.archetype || 'bush').toUpperCase()}] — oldest branch retiring.`);
            }
         }
 
         // Partially reset age to allow varied branching distances instead of rigid grids
-        agent.age = Math.floor(Math.random() * 25);
+        agent.age = Math.floor(Math.random() * 10);
         const forkAngle = Math.PI / 4 + (Math.random() - 0.5) * 0.5;
         const newDirection = agent.direction
           .clone()
@@ -550,42 +659,21 @@ export function processAgents(
           );
 
         const isThickBranch = Math.random() < engine.branchSplitSizeProb;
-        let thicknessMod = isThickBranch ? 1.0 + engine.branchBigger : 0.85;
+        let thicknessMod = isThickBranch ? 0.82 + engine.branchBigger * 0.3 : 0.70;
 
+        // When branching, parent stem ALSO loses thickness (except snakes which remain constant; rhizomes swell into fat knobby joints)
         if (genome.archetype === "bush") {
-          thicknessMod *= 0.8;
+          thicknessMod *= 0.70;    // Children thin quickly → wispy tendrils
+          agent.thickness *= 0.80; // Parent thins significantly
+        } else if (genome.archetype === "rhizome") {
+          thicknessMod *= 1.15; // Swell into a fat knobby ginger joint!
+          agent.thickness *= 0.95; // Parent rhizome stem remains thick and swollen!
         } else if (genome.archetype === "tree") {
-          thicknessMod *= 1.25;
+          thicknessMod *= 0.85;
+          agent.thickness *= 0.85;
         }
 
-        let branchGenome = agent.genome;
-        if (
-          engine.branchMutationRate > 0 &&
-          Math.random() < engine.branchMutationRate * 0.005 &&
-          projectedSpeciesCount < engine.maxSpecies
-        ) {
-          branchGenome = mutateBranchGenome(
-            agent.genome,
-            engine.traitProbs,
-            engine.multicolorAppProb,
-            engine.sameColorAppProb,
-            engine.appendageSpawnRate,
-            engine.glowProbability,
-          );
-          branchGenome.createdAt = engine.time;
-          projectedSpeciesCount++;
-          if (engine.branchMutationCount < 3) {
-            engine.branchMutationCount++;
-            engine.lastBranchMutationWorldPos = agent.position.clone();
-            if (engine.onBranchMutationEvent) {
-              engine.onBranchMutationEvent({
-                parent: agent.genome,
-                child: branchGenome,
-                count: engine.branchMutationCount,
-              });
-            }
-          }
-        }
+        const branchGenome = agent.genome;
 
         newAgents.push({
           position: agent.position.clone(),
@@ -606,10 +694,16 @@ export function processAgents(
          strainAge = engine.time - evalGenome.createdAt;
       }
 
-      const isMonopoly = monopolyStrains.has(evalGenome.name);
-      // Age-dependent feeler emission: Organism extends feelers more and more frequently as it grows until it has bred
-      if (!agent.isFeeler && !agent.hasBred && !agent.tapering && agent.age > 15 && agent.cooldown <= 0) {
-        const feelerChance = Math.min(0.85, (agent.age - 15) * 0.04 * engine.timeScale);
+      // Age-dependent feeler emission: Organism extends feelers as it grows until it has bred
+      // Limit: only ONE active feeler per creature at a time
+      // Limit: only ONE active feeler per species at a time
+      const hasActiveFeeler = activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+        (a.realGenome && a.realGenome.name === evalGenome.name) ||
+        (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+        a.genome.name === evalGenome.name
+      ));
+      if (!agent.isFeeler && !agent.hasBred && !agent.tapering && !hasActiveFeeler && (agent.age > 70 || strainAge > 180) && agent.cooldown <= 0) {
+        const feelerChance = Math.min(0.85, (agent.age - 120) * 0.04 * engine.timeScale);
         if (Math.random() < feelerChance) {
           const feelerGenome = { ...agent.genome };
           feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
@@ -630,13 +724,14 @@ export function processAgents(
             cooldown: 15,
             isFeeler: true,
             realGenome: agent.genome,
+            parentAgent: agent,
           });
-          agent.cooldown = 25;
+          agent.cooldown = 45;
           engine.onLog(`📡 ${agent.genome.name.split(' ')[0]} extending sensory feelers to breed (Age ${agent.age}).`);
         }
       }
 
-      const isFertile = !agent.tapering && !agent.hasBred && (agent.age > 20 || evalGenome.stability < 0.5 || isMonopoly || strainAge > 2000);
+      const isFertile = !agent.tapering && !agent.hasBred && agent.cooldown <= 0 && (agent.isFeeler || agent.age > 150 || evalGenome.stability < 0.5 || strainAge > 2000);
       const canBreed = isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
       if (canBreed) {
@@ -650,9 +745,8 @@ export function processAgents(
            const partner = activeAgents[j];
            const partnerEvalGenome = partner.isFeeler && partner.realGenome ? partner.realGenome : partner.genome;
            const partnerStrainAge = partnerEvalGenome.createdAt !== undefined ? engine.time - partnerEvalGenome.createdAt : 0;
-           const partnerMonopoly = monopolyStrains.has(partnerEvalGenome.name);
            const partnerFertile =
-             partner.age > 50 || partnerEvalGenome.stability < 0.5 || partnerMonopoly || partnerStrainAge > 2000;
+             !partner.tapering && !partner.hasBred && partner.cooldown <= 0 && (partner.isFeeler || partner.age > 150 || partnerEvalGenome.stability < 0.5 || partnerStrainAge > 2000);
 
            if (
              !partnerFertile ||
@@ -664,35 +758,16 @@ export function processAgents(
            if (evalGenome.name !== partnerEvalGenome.name) {
              const distSq = agent.position.distanceToSquared(partner.position);
 
-             if (isMonopoly) {
-                 let diffScore = 0;
-                 if (evalGenome.archetype !== partnerEvalGenome.archetype) diffScore += 10;
-                 if (evalGenome.movementType !== partnerEvalGenome.movementType) diffScore += 5;
-                 const h1 = evalGenome.color.getHSL({h:0,s:0,l:0}).h;
-                 const h2 = partnerEvalGenome.color.getHSL({h:0,s:0,l:0}).h;
-                 let hDiff = Math.abs(h1 - h2);
-                 if (hDiff > 0.5) hDiff = 1.0 - hDiff;
-                 diffScore += hDiff * 10;
-                 
-                 diffScore -= Math.sqrt(distSq) / 2000.0;
-                 
-                 if (diffScore > bestDiffScore) {
-                     bestDiffScore = diffScore;
-                     bestPartner = partner;
-                     nearestDistSq = distSq;
-                 }
-             } else {
-                 if (distSq < nearestDistSq) {
-                     nearestDistSq = distSq;
-                     bestPartner = partner;
-                 }
+             if (distSq < nearestDistSq) {
+                 nearestDistSq = distSq;
+                 bestPartner = partner;
              }
            }
         }
 
         if (bestPartner) {
            const distSq = nearestDistSq;
-           const isDesperate = isMonopoly || strainAge > 2000 || agent.age > engine.despairAge;
+           const isDesperate = strainAge > 2000 || agent.age > engine.despairAge;
            const reachMultiplier = isDesperate ? engine.desperation : 1.0;
            const reach = engine.proximity * engine.proximity * reachMultiplier * reachMultiplier;
            
@@ -704,7 +779,7 @@ export function processAgents(
                agent.direction.lerp(towardsPartner, isDesperate ? 0.8 : 0.2).normalize();
            }
            
-           if (entropyEnabled && !agent.isFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
+           if (!agent.isFeeler && !hasActiveFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
@@ -724,6 +799,7 @@ export function processAgents(
                         cooldown: 20, // Low cooldown so the feeler itself can breed quickly
                         isFeeler: true,
                         realGenome: agent.genome,
+                        parentAgent: agent,
                     });
                     agent.cooldown = 150;
                     if (engine.feelerCount < 3) {
@@ -740,14 +816,13 @@ export function processAgents(
                     }
                }
            
-            // Require physical touching based on agent thicknesses to breed
-            const touchDist = (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
+            // Require physical touching based on agent thicknesses to breed; feelers reach out further to connect
+            const touchDist = (agent.isFeeler || bestPartner.isFeeler) ? 7.5 : (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
             const breedReach = touchDist * touchDist;
-            if (distSq < breedReach) {
+            if (engine.allowBreeding && distSq < breedReach) {
                 const nearestPartner = bestPartner;
-                
                 let allowBreeding = true;
-                if (projectedSpeciesCount >= engine.maxSpecies) {
+                if (nonTaperingStrains.size >= engine.maxSpecies) {
                     let victimSpeciesName = "";
 
                     // 1. Try to find an unrelated feeler to sacrifice first
@@ -794,11 +869,11 @@ export function processAgents(
                         }
                         
                         if (isFeelerSacrifice) {
-                            engine.onLog(`Feeler terminated for hybrid creation.`);
+                            engine.onLog(`Feeler terminated for child creation.`);
                         } else {
                             if (!engine.dyingStrains) engine.dyingStrains = new Set();
                             if (!engine.dyingStrains.has(victimSpeciesName)) {
-                                engine.onLog(`Hybridization recorded. Culling oldest species: ${victimSpeciesName.split(' ')[0]}.`);
+                                engine.onLog(`Breeding recorded. Culling oldest species: ${victimSpeciesName.split(' ')[0]}.`);
                             }
                             engine.dyingStrains.add(victimSpeciesName);
                         }
@@ -823,10 +898,18 @@ export function processAgents(
                const midPoint = agent.position
                  .clone()
                  .lerp(nearestPartner.position, 0.5);
-    
+
+               // Offset offspring away from parents so they don't clump on top
+               const spawnOffset = new THREE.Vector3(
+                 (Math.random() - 0.5) * 2,
+                 (Math.random() - 0.5) * 2,
+                 (Math.random() - 0.5) * 2,
+               ).normalize().multiplyScalar(15 + Math.random() * 10);
+               const spawnPoint = midPoint.clone().add(spawnOffset);
+
                newAgents.push({
-                 position: midPoint.clone(),
-                 lastPosition: midPoint.clone(),
+                 position: spawnPoint.clone(),
+                 lastPosition: spawnPoint.clone(),
                  direction: childDir,
                  genome: childGenome,
                  active: true,
@@ -836,13 +919,32 @@ export function processAgents(
                });
     
                // Post-Breeding Transition: Once parents breed, mark them as bred so they taper out and die neatly
+               engine.hasAnyOrganismBred = true;
                agent.hasBred = true;
-               agent.tapering = true;
+               if (canEnterDeleting(engine, activeAgents, 1)) {
+                 agent.tapering = true;
+                 agent.fadeAge = agent.fadeAge || 0;
+               }
                nearestPartner.hasBred = true;
-               nearestPartner.tapering = true;
+               if (canEnterDeleting(engine, activeAgents, 1)) {
+                 nearestPartner.tapering = true;
+                 nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
+               }
 
-               engine.spawnHybridArtifact(midPoint, childGenome.color);
-               engine.onLog(`💖 Hybrid child ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned from successful breeding.`);
+               // Immediately kill & taper any active feelers for either parent organism upon mating
+               const host1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
+               const host2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
+               for (const fa of activeAgents) {
+                 if (fa.active && fa.isFeeler && (fa.parentAgent === host1 || fa.parentAgent === host2 || fa.parentAgent === agent || fa.parentAgent === nearestPartner)) {
+                   fa.tapering = true;
+                   fa.forceTapering = true;
+                   fa.fadeAge = fa.fadeAge || 0;
+                   fa.taperBudget = undefined;
+                 }
+               }
+
+               engine.spawnHybridArtifact(midPoint, childGenome.color, agent.genome.name, nearestPartner.genome.name, agent.id, nearestPartner.id);
+               engine.onLog(`💖 Offspring ${childGenome.name.split(' ')[0]} [${childGenome.archetype.toUpperCase()}] spawned from ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] × ${nearestPartner.genome.name} [${(nearestPartner.genome.archetype || 'bush').toUpperCase()}]`);
 
                if (engine.matingCount < 3) {
                  engine.matingCount++;
@@ -866,57 +968,64 @@ export function processAgents(
                
                // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
                if (engine.postMatingDieoff !== false) {
-                 agent.tapering = true;
-                 agent.forceTapering = true;
-                 nearestPartner.tapering = true;
-                 nearestPartner.forceTapering = true;
+                 agent.matingCount = (agent.matingCount || 0) + 1;
+                 nearestPartner.matingCount = (nearestPartner.matingCount || 0) + 1;
 
-                 if (!engine.dyingStrains) engine.dyingStrains = new Set();
-                 engine.dyingStrains.add(agent.genome.name);
-                 engine.dyingStrains.add(nearestPartner.genome.name);
-               }
+                 if (agent.matingCount >= 3 && canEnterDeleting(engine, activeAgents, 1)) {
+                   agent.tapering = true;
+                   agent.forceTapering = true;
+                 }
 
-               if (isMonopoly) {
-                 agent.tapering = true;
-                 agent.forceTapering = true;
+                 if (nearestPartner.matingCount >= 3 && canEnterDeleting(engine, activeAgents, 1)) {
+                   nearestPartner.tapering = true;
+                   nearestPartner.forceTapering = true;
+                 }
                }
 
                if (agent.isFeeler) {
                  agent.tapering = true;
                  agent.forceTapering = true;
+                 agent.fadeAge = agent.fadeAge || 0;
                }
                if (nearestPartner.isFeeler) {
                  nearestPartner.tapering = true;
                  nearestPartner.forceTapering = true;
+                 nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
                }
-            }
+             }
            }
          }
-      }
+       }
 
 
       // 4-STAGE LIFESPAN MODEL:
       // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
       const maxGrowthAge = 600 * Math.max(0.5, engine.timeScale);
-      if (!agent.tapering && (agent.hasBred || agent.age > maxGrowthAge)) {
-        agent.tapering = true;
-        agent.fadeAge = 0;
-        if (!engine.dyingStrains) engine.dyingStrains = new Set();
-        engine.dyingStrains.add(agent.genome.name);
+      const maxLifespan = maxGrowthAge * 3.0;
+      if (!agent.tapering && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
+        // Don't kill the last agent of a species when we have fewer than 3 living species
+        const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;
+        if (canEnterDeleting(engine, activeAgents, 1) && (!wouldKillSpecies || nonTaperingStrains.size > engine.minAgents)) {
+          agent.tapering = true;
+          agent.fadeAge = 0;
+          const reason = (agent.matingCount && agent.matingCount >= 3) ? `mated ${agent.matingCount}x` : `exceeded max lifespan ${(maxLifespan / 60).toFixed(1)}s`;
+          engine.onLog(`⏳ ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] entering end-of-life (${reason}, age: ${(agent.age / 60).toFixed(1)}s)`);
+        }
       }
 
       // Stage 3 & 4: 3-Second Transparency Fade -> Retain 100% exact shape & size, NO changes, zero jolt, fade transparently & vanish
       if (agent.tapering) {
         agent.fadeAge = (agent.fadeAge || 0) + 1;
-        // 180 ticks = 3.0 seconds of real-time transparency fade
-        if (agent.fadeAge >= 180) {
+        // 180 ticks = 3.0 seconds of real-time transparency fade (feelers deactivate faster in 25 ticks)
+        const maxFade = agent.isFeeler ? 25 : 180;
+        if (agent.fadeAge >= maxFade) {
           agent.active = false;
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
-            `💀 Organism ${agent.genome.name.split(' ')[0]} [${(agent.genome.archetype || 'bush').toUpperCase()}] finished life cycle (bred: ${agent.hasBred ? 'YES' : 'NO'}) and vanished after 3.0s fade.`
+            `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] died after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x, fadeAge: ${agent.fadeAge})`
           );
         }
       } 
@@ -931,7 +1040,7 @@ export function processAgents(
              engine.onLog(`Strain ${genome.name.split(' ')[0]} recovered its thickness!`);
           }
         }
-        agent.thickness = Math.max(agent.thickness, genome.minThickness);
+        agent.thickness = Math.max(agent.thickness, 0.001);
 
         if (agent.targetThickness !== undefined) {
           const recoverySpeed = agent.recovering ? 0.008 : 0.05;

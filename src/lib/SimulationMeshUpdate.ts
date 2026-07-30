@@ -66,7 +66,33 @@ export function updateMeshSegments(
   }
 
   if (genome.gradientGrowth) {
-    finalColor.offsetHSL((engine.time * 0.001) % 1.0, 0, 0);
+    let gType = genome.gradientType ?? 1;
+    if (gType === 0) gType = 1;
+    const t = engine.time * 0.001;
+
+    if (gType === 1) {
+      // Type 1: Complementary Shift (+/- 180° opposite hue oscillation)
+      const shift = Math.sin(t * 1.5) * 0.5;
+      finalColor.offsetHSL(shift, 0, 0);
+    } else if (gType === 2) {
+      // Type 2: Analogous / Soft Adjacent (+/- 30° adjacent hue oscillation)
+      const shift = Math.sin(t * 1.2) * 0.083;
+      finalColor.offsetHSL(shift, 0, 0);
+    } else if (gType === 3) {
+      // Type 3: Bi-Color Split (+/- 60° dual hue oscillation)
+      const shift = Math.sin(t * 1.4) * 0.166;
+      finalColor.offsetHSL(shift, 0, 0);
+    } else if (gType === 4) {
+      // Type 4: Monochromatic Luster (oscillating lightness and saturation within same hue family)
+      const baseHSL = genome.color.getHSL({ h: 0, s: 0, l: 0 });
+      const sShift = Math.sin(t * 1.3) * 0.2;
+      const lShift = Math.cos(t * 1.3) * 0.15;
+      finalColor.setHSL(
+        baseHSL.h,
+        THREE.MathUtils.clamp(baseHSL.s + sShift, 0.3, 0.95),
+        THREE.MathUtils.clamp(baseHSL.l + lShift, 0.3, 0.75)
+      );
+    }
   }
 
   let targetMesh = engine.cylinderMesh;
@@ -129,13 +155,8 @@ export function updateMeshSegments(
         scaleZ = baseScale * 2.0;
       }
 
-      if (genome.multicolorAppendage) {
-        if (Math.random() < 0.5) {
-          finalColor.offsetHSL(0.3 + Math.random() * 0.4, 0, 0);
-        }
-      } else if (!genome.sameColorAppendage) {
-        finalColor.offsetHSL(0.5, 0, 0);
-      }
+      // Appendages match body stem color 100% (No multi-color appendage mismatched chaos)
+      // finalColor remains identical to genome.color (body stem color)
       
       // Re-apply saturation limit after offsetHSL only if rainbow creature
       const appHsl = finalColor.getHSL({ h: 0, s: 0, l: 0 });
@@ -207,6 +228,8 @@ export function updateMeshSegments(
     packBAttr.needsUpdate = true;
   }
 
+  const shouldCountBiomass = !genome.name.startsWith("Feeler-") && !isAppendage && thickness >= 0.35;
+
   if (targetMesh === engine.cylinderMesh) {
     engine.dyingStems.delete(targetIndex);
     engine.segments[targetIndex] = {
@@ -215,6 +238,7 @@ export function updateMeshSegments(
       matrix: fullMatrix,
       thickness,
       strainName: genome.name,
+      countsForBiomass: shouldCountBiomass,
     };
     engine.pointCount++;
     engine.cylinderMesh.count = Math.min(engine.pointCount, engine.maxDOMs);
@@ -233,17 +257,22 @@ export function updateMeshSegments(
         parentIndex: targetIndexStem,
         parentTimestamp: engine.time,
         randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,
+        countsForBiomass: false,
       };
     }
   }
 
   targetMesh.instanceMatrix.needsUpdate = true;
   if (targetMesh.instanceColor) targetMesh.instanceColor.needsUpdate = true;
-  engine.biomassMap.set(
-    genome.name,
-    (engine.biomassMap.get(genome.name) || 0) + 1,
-  );
-  engine.genomeMap.set(genome.name, genome);
+  if (shouldCountBiomass) {
+    engine.biomassMap.set(
+      genome.name,
+      (engine.biomassMap.get(genome.name) || 0) + 1,
+    );
+    engine.genomeMap.set(genome.name, genome);
+  } else if (!genome.name.startsWith("Feeler-")) {
+    engine.genomeMap.set(genome.name, genome);
+  }
 }
 
 export function processDyingSegments(

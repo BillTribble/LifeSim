@@ -3,87 +3,98 @@ import { useState, useEffect } from "react";
 export const DEFAULTS: Record<string, any> = {
   "kioskMode": true,
   "themeMorphSpeed": 5,
-  "themeMorphFreq": 1.0,
+  "themeMorphFreq": 1,
   "theme": 0,
-  "timeScale": 0.6,
-  "gingerSpeed": 1,
+  "timeScale": 1,
+  "postMatingDieoff": true,
+  "rhizomeSpeed": 1,
   "treeSpeed": 1,
   "bushSpeed": 1,
+  "bushBranching": 8,
+  "treeBranching": 1,
+  "snakeBranching": 1,
+  "rhizomeBranching": 1,
   "snakeWander": 1,
   "snakeStepSize": 1,
   "snakeSpeed": 1,
-  "rotationSpeed": 0.2,
-  "magnetism": 0.01674453139194959,
-  "proximity": 80.62478258463184,
-  "desperation": 8.659824757074798,
-  "despairAge": 2005.5339943951117,
-  "flowerSize": 3.0,
-  "entropyThreshold": 0.0,
-  "tideSpeed": 3.381581873622713,
-  "tideColor": "#56e025",
-  "bgColor": "#435e3e",
+  "rotationSpeed": 0.13,
+  "magnetism": 0.08361988738043864,
+  "proximity": 1538.23896997661,
+  "desperation": 4.333947682994568,
+  "despairAge": 3185.029905594175,
+  "flowerSize": 1.3,
+  "tideSpeed": 1.2393635516813024,
+  "tideColor": "#0b939c",
+  "bgColor": "#3e5e50",
   "fogColor": "#000000",
-  "tideThickness": 268.6983249575498,
-  "tideOpacity": 0.3458378903884015,
-  "tideSaturation": 0.7961707798008151,
+  "tideThickness": 74.92111043533596,
+  "tideOpacity": 0.12871529096468015,
+  "tideSaturation": 0.0162554822004225,
   "growthSpeed": 0.11,
-  "diebackRate": 3.8934543793261156,
-  "hybridCooldown": 976.8983528433891,
-  "hybridStickiness": 4.185099627445749,
-  "branchTendencyVar": 30.582749834324215,
-  "ornamentFrequency": 2.162335974046962,
-  "branchingMultiplier": 109.08822074866077,
-  "branchBigger": 0.32733758582809547,
-  "branchSplitSizeProb": 0.7529685020565647,
+  "diebackRate": 5.50616330309604,
+  "allowBreeding": true,
+  "hybridCooldown": 926.4522288567662,
+  "hybridStickiness": 48.44796525279812,
+  "branchTendencyVar": 11.779000158227072,
+  "ornamentFrequency": 9.525004244851067,
+  "branchingMultiplier": 163.34538034535345,
+  "branchBigger": 0.9929495875268578,
+  "branchSplitSizeProb": 0.7936089206087223,
   "maxDOMs": 341000,
-  "maxAgents": 103,
-  "maxSpecies": 19,
-  "ecoFade": 0.09835534619763375,
-  "minAgents": 11,
-  "boundarySize": 120,
-  "desiccationSpeed": 10.562491679923507,
+  "maxAgents": 107,
+  "maxSpecies": 14,
+  "ecoFade": 0.8944272063480259,
+  "minAgents": 3,
+  "boundarySize": 50,
+  "desiccationSpeed": 12.842754552113087,
   "hybridSize": 2,
-  "terminationProb": 0.3373915948495838,
-  "termProbPostBranch": 4.197484913107235,
-  "taperDuration": 2.8319689168338855,
-  "diebackAgeBias": 2.2591955721722714,
-  "branchMutationRate": 0.7422689620821984,
+  "terminationProb": 0.0462143068937545,
+  "termProbPostBranch": 2.0392659736659366,
+  "taperDuration": 1.4271648309574363,
+  "diebackAgeBias": 4.4091254750620505,
   "enableGlow": false,
   "glowSize": 0.5,
-  "fogVisibility": 842.5548245648578,
+  "fogVisibility": 826.8761838338102,
   "botanyRealism": true,
   "windVelocity": 0.2,
   "flutterIntensity": 0.5,
   "leafScale": 0.14,
-  "leafDensity": 0.35000000000000003,
+  "leafDensity": 0.35,
   "relativeLeafSizeDiff": 0.2,
-  "leafGrowthSpeed": 0.0045000000000000005,
+  "leafGrowthSpeed": 0.0045,
   "phyllotaxisAngle": 137.5,
   "leafProbability": 1,
-  "appendageSpawnRate": 1.0,
+  "appendageSpawnRate": 1,
   "glowProbability": 0.1,
   "stemCurviness": 3,
   "veinStrength": 15,
   "veinGlow": 0.5,
   "traitProbs": {
-    "flowers": 0.5,
-    "lillyPads": 0.5,
-    "leaves": 0.4,
-    "petals": 0.5,
-    "needles": 0.5,
-    "thorns": 0.5,
-    "hair": 0.5,
-    "curlyHair": 0.5,
-    "crystals": 0.5,
-    "spores": 0.5,
-    "scales": 0.5,
-    "spirals": 0.5
+    "flowers": 0.25308343649782206,
+    "lillyPads": 0.22658594313832736,
+    "leaves": 0.6861914211625996,
+    "petals": 0.17734982544932287,
+    "needles": 0.652656691289245,
+    "thorns": 0.02097595552862941,
+    "hair": 0.20011696648365407,
+    "curlyHair": 0.5951412197911187,
+    "crystals": 0.2358742561569518,
+    "spores": 0.30771523305963355,
+    "scales": 0.9933893114828062,
+    "spirals": 0.15350714077951655
   },
-  "maxLineWidth": 7.191209283996436,
-  "globalPulseSpeed": 0.9291218050541217,
-  "multicolorAppProb": 0.6822955192543154,
-  "sameColorAppProb": 0.43101827682151894,
-  "maxSaturation": 0.09829768810495365,
+  "maxLineWidth": 1.5,
+  "globalPulseSpeed": 0.8637093147800061,
+  "multicolorAppProb": 0.3155126730950826,
+  "sameColorAppProb": 0.4968205547416572,
+  "maxSaturation": 0.3135869032532054,
+  "colorClamp": 1,
+  "gridHeight": 80,
+  "layerGap": 166,
+  "floorHeight": 6,
+  "ceilingHeight": -38,
+  "cameraProjection": 1,
+  "showBoundaryBox": false,
   "feelerFade": 10,
   "cullRate": 48.87,
   "glowTraitIntensity": 1.5,
@@ -123,32 +134,33 @@ export const DEFAULTS: Record<string, any> = {
       "max": 5
     }
   },
-  "appendageSize": 0.25,
-  "hybridDecay": 4.185099627445749,
-  "deathRate": 3.8934543793261156,
-  "slowMotion": 0.6,
-  "rotationVelocity": 0.1,
-  "swarmCohesion": 0.01674453139194959,
-  "detectionRange": 80.62478258463184,
-  "populationLimit": 0.18289032978665032,
+  "appendageSize": 1.3,
+  "hybridDecay": 48.44796525279812,
+  "deathRate": 5.50616330309604,
+  "slowMotion": 1,
+  "rotationVelocity": 0.13,
+  "swarmCohesion": 0.08361988738043864,
+  "detectionRange": 1538.23896997661,
   "extrusionSpeed": 0.11,
-  "fadeSpeed": 10.562491679923507,
-  "pulseSpeed": 0.9291218050541217,
-  "saturation": 0.09829768810495365,
+  "fadeSpeed": 12.842754552113087,
+  "pulseSpeed": 0.8637093147800061,
+  "saturation": 0.3135869032532054,
   "cameraPosition": {
-    "x": 85.63730363681164,
-    "y": 181.12416818756873,
-    "z": -282.595626158962,
-    "zoom": 1.7917714317777194
+    "x": 102.79425496529767,
+    "y": 18.921075000000005,
+    "z": -91.20086373565351,
+    "zoom": 1
   },
-  "postMatingDieoff": true,
   "version": "1.0"
 };
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-27-v6";
+    const CURRENT_SCHEMA = "2026-07-30-v15";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
+      try {
+        localStorage.clear();
+      } catch (e) {}
       localStorage.setItem("lifesim_schema_ver", CURRENT_SCHEMA);
     }
   }
@@ -178,9 +190,29 @@ export function useSimulationState() {
       localStorage.getItem("treeSpeed") || DEFAULTS.treeSpeed.toString(),
     ),
   );
-  const [gingerSpeed, setGingerSpeed] = useState(() =>
+  const [rhizomeSpeed, setRhizomeSpeed] = useState(() =>
     parseFloat(
-      localStorage.getItem("gingerSpeed") || DEFAULTS.gingerSpeed.toString(),
+      localStorage.getItem("rhizomeSpeed") || DEFAULTS.rhizomeSpeed.toString(),
+    ),
+  );
+  const [bushBranching, setBushBranching] = useState(() =>
+    parseFloat(
+      localStorage.getItem("bushBranching") || DEFAULTS.bushBranching.toString(),
+    ),
+  );
+  const [treeBranching, setTreeBranching] = useState(() =>
+    parseFloat(
+      localStorage.getItem("treeBranching") || DEFAULTS.treeBranching.toString(),
+    ),
+  );
+  const [snakeBranching, setSnakeBranching] = useState(() =>
+    parseFloat(
+      localStorage.getItem("snakeBranching") || DEFAULTS.snakeBranching.toString(),
+    ),
+  );
+  const [rhizomeBranching, setRhizomeBranching] = useState(() =>
+    parseFloat(
+      localStorage.getItem("rhizomeBranching") || DEFAULTS.rhizomeBranching.toString(),
     ),
   );
   const [timeScale, setTimeScale] = useState(() => {
@@ -225,6 +257,34 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         DEFAULTS.rotationSpeed.toString(),
     ),
   );
+  const [gridHeight, setGridHeight] = useState(() =>
+    parseFloat(
+      localStorage.getItem("gridHeight") || DEFAULTS.gridHeight.toString(),
+    ),
+  );
+  const [layerGap, setLayerGap] = useState(() =>
+    parseFloat(
+      localStorage.getItem("layerGap") || DEFAULTS.layerGap.toString(),
+    ),
+  );
+  const [floorHeight, setFloorHeight] = useState(() =>
+    parseFloat(
+      localStorage.getItem("floorHeight") || DEFAULTS.floorHeight.toString(),
+    ),
+  );
+  const [ceilingHeight, setCeilingHeight] = useState(() =>
+    parseFloat(
+      localStorage.getItem("ceilingHeight") || DEFAULTS.ceilingHeight.toString(),
+    ),
+  );
+  const [cameraProjection, setCameraProjection] = useState(() =>
+    parseFloat(
+      localStorage.getItem("cameraProjection") || DEFAULTS.cameraProjection.toString(),
+    ),
+  );
+  const [showBoundaryBox, setShowBoundaryBox] = useState(() =>
+    localStorage.getItem("showBoundaryBox") === "true",
+  );
   const [magnetism, setMagnetism] = useState(() =>
     parseFloat(
       localStorage.getItem("magnetism") || DEFAULTS.magnetism.toString(),
@@ -248,12 +308,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
   const [flowerSize, setFlowerSize] = useState(() =>
     parseFloat(
       localStorage.getItem("flowerSize") || DEFAULTS.flowerSize.toString(),
-    ),
-  );
-  const [entropyThreshold, setEntropyThreshold] = useState(() =>
-    parseFloat(
-      localStorage.getItem("entropyThreshold") ||
-        DEFAULTS.entropyThreshold.toString(),
     ),
   );
   const [tideSpeed, setTideSpeed] = useState(() =>
@@ -296,6 +350,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     parseFloat(
       localStorage.getItem("diebackRate") || DEFAULTS.diebackRate.toString(),
     ),
+  );
+  const [allowBreeding, setAllowBreeding] = useState(() =>
+    localStorage.getItem("allowBreeding") !== null
+      ? localStorage.getItem("allowBreeding") === "true"
+      : DEFAULTS.allowBreeding,
   );
   const [hybridCooldown, setHybridCooldown] = useState(() =>
     parseFloat(
@@ -399,12 +458,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     parseFloat(
       localStorage.getItem("diebackAgeBias") ||
         DEFAULTS.diebackAgeBias.toString(),
-    ),
-  );
-  const [branchMutationRate, setBranchMutationRate] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchMutationRate") ||
-        DEFAULTS.branchMutationRate.toString(),
     ),
   );
   const [enableGlow, setEnableGlow] = useState(() => {
@@ -524,6 +577,12 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         DEFAULTS.maxSaturation.toString(),
     ),
   );
+  const [colorClamp, setColorClamp] = useState(() =>
+    parseFloat(
+      localStorage.getItem("colorClamp") ||
+        (DEFAULTS.colorClamp !== undefined ? DEFAULTS.colorClamp : 0.75).toString(),
+    ),
+  );
 
   const [feelerFade, setFeelerFade] = useState(() =>
     parseFloat(
@@ -567,7 +626,11 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("snakeWander", snakeWander.toString());
     localStorage.setItem("bushSpeed", bushSpeed.toString());
     localStorage.setItem("treeSpeed", treeSpeed.toString());
-    localStorage.setItem("gingerSpeed", gingerSpeed.toString());
+    localStorage.setItem("rhizomeSpeed", rhizomeSpeed.toString());
+    localStorage.setItem("bushBranching", bushBranching.toString());
+    localStorage.setItem("treeBranching", treeBranching.toString());
+    localStorage.setItem("snakeBranching", snakeBranching.toString());
+    localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
     localStorage.setItem("timeScale", timeScale.toString());
     localStorage.setItem("slowMotion", timeScale.toString());
     localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());
@@ -579,7 +642,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("desperation", desperation.toString());
     localStorage.setItem("despairAge", despairAge.toString());
     localStorage.setItem("flowerSize", flowerSize.toString());
-    localStorage.setItem("entropyThreshold", entropyThreshold.toString());
     localStorage.setItem("tideSpeed", tideSpeed.toString());
     localStorage.setItem("tideColor", tideColor);
     localStorage.setItem("bgColor", bgColor);
@@ -588,6 +650,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("tideSaturation", tideSaturation.toString());
     localStorage.setItem("growthSpeed", growthSpeed.toString());
     localStorage.setItem("diebackRate", diebackRate.toString());
+    localStorage.setItem("allowBreeding", allowBreeding.toString());
     localStorage.setItem("hybridCooldown", hybridCooldown.toString());
     localStorage.setItem("hybridStickiness", hybridStickiness.toString());
     localStorage.setItem("branchTendencyVar", branchTendencyVar.toString());
@@ -607,7 +670,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("termProbPostBranch", termProbPostBranch.toString());
     localStorage.setItem("taperDuration", taperDuration.toString());
     localStorage.setItem("diebackAgeBias", diebackAgeBias.toString());
-    localStorage.setItem("branchMutationRate", branchMutationRate.toString());
     localStorage.setItem("kioskMode", kioskMode.toString());
     localStorage.setItem("enableGlow", enableGlow.toString());
     localStorage.setItem("glowSize", glowSize.toString());
@@ -632,6 +694,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("multicolorAppProb", multicolorAppProb.toString());
     localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
     localStorage.setItem("maxSaturation", maxSaturation.toString());
+    localStorage.setItem("colorClamp", colorClamp.toString());
     localStorage.setItem("feelerFade", feelerFade.toString());
     localStorage.setItem("cullRate", cullRate.toString());
     localStorage.setItem("glowTraitIntensity", glowTraitIntensity.toString());
@@ -646,7 +709,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     desperation,
     despairAge,
     flowerSize,
-    entropyThreshold,
     tideSpeed,
     tideColor,
     bgColor,
@@ -694,7 +756,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     termProbPostBranch,
     taperDuration,
     diebackAgeBias,
-    branchMutationRate,
     maxLineWidth,
     globalPulseSpeed,
     multicolorAppProb,
@@ -716,9 +777,13 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       theme,
       timeScale,
       postMatingDieoff,
-      gingerSpeed,
+      rhizomeSpeed,
       treeSpeed,
       bushSpeed,
+      bushBranching,
+      treeBranching,
+      snakeBranching,
+      rhizomeBranching,
       snakeWander,
       snakeStepSize,
       snakeSpeed,
@@ -728,7 +793,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     desperation,
     despairAge,
       flowerSize,
-      entropyThreshold,
       tideSpeed,
       tideColor,
       bgColor,
@@ -738,6 +802,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       tideSaturation,
       growthSpeed,
       diebackRate,
+      allowBreeding,
       hybridCooldown,
       hybridStickiness,
       branchTendencyVar,
@@ -757,7 +822,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       termProbPostBranch,
       taperDuration,
       diebackAgeBias,
-      branchMutationRate,
       enableGlow,
       glowSize,
       fogVisibility,
@@ -781,6 +845,13 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       multicolorAppProb,
       sameColorAppProb,
       maxSaturation,
+      colorClamp,
+      gridHeight,
+      layerGap,
+      floorHeight,
+      ceilingHeight,
+      cameraProjection,
+      showBoundaryBox,
       feelerFade,
       cullRate,
       glowTraitIntensity,
@@ -793,9 +864,13 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setThemeMorphFreq,
       setTheme,
       setTimeScale,
-      setGingerSpeed,
+      setRhizomeSpeed,
       setTreeSpeed,
       setBushSpeed,
+      setBushBranching,
+      setTreeBranching,
+      setSnakeBranching,
+      setRhizomeBranching,
       setSnakeWander,
       setSnakeStepSize,
       setSnakeSpeed,
@@ -808,7 +883,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         setFlowerSize(v);
         setLeafScale(v);
       },
-      setEntropyThreshold,
       setTideSpeed,
       setTideColor,
       setBgColor,
@@ -818,6 +892,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setTideSaturation,
       setGrowthSpeed,
       setDiebackRate,
+      setAllowBreeding,
       setHybridCooldown,
       setHybridStickiness,
       setBranchTendencyVar,
@@ -837,7 +912,6 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setTermProbPostBranch,
       setTaperDuration,
       setDiebackAgeBias,
-      setBranchMutationRate,
       setEnableGlow,
       setGlowSize,
       setFogVisibility,
@@ -862,6 +936,19 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setSameColorAppProb,
       setPostMatingDieoff,
       setMaxSaturation,
+      setColorClamp: (v: number) => {
+        setColorClamp(v);
+        setMaxSaturation(v);
+      },
+      setGridHeight,
+      setLayerGap,
+      setFloorHeight,
+      setCeilingHeight,
+      setCameraProjection,
+      setShowBoundaryBox: (val: boolean) => {
+        setShowBoundaryBox(val);
+        localStorage.setItem("showBoundaryBox", val ? "true" : "false");
+      },
       setFeelerFade,
       setCullRate,
       setGlowTraitIntensity,
@@ -869,6 +956,100 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setGlowTraitReflect,
       setKioskMode,
       setDialLimits,
+      resetToDefaults: () => {
+        try {
+          localStorage.clear();
+        } catch (e) {
+          console.warn("Could not clear localStorage", e);
+        }
+        setKioskMode(DEFAULTS.kioskMode);
+        setThemeMorphSpeed(DEFAULTS.themeMorphSpeed);
+        setThemeMorphFreq(DEFAULTS.themeMorphFreq);
+        setTheme(DEFAULTS.theme);
+        setTimeScale(DEFAULTS.timeScale);
+        setPostMatingDieoff(DEFAULTS.postMatingDieoff);
+        setRhizomeSpeed(DEFAULTS.rhizomeSpeed);
+        setTreeSpeed(DEFAULTS.treeSpeed);
+        setBushSpeed(DEFAULTS.bushSpeed);
+        setBushBranching(DEFAULTS.bushBranching);
+        setTreeBranching(DEFAULTS.treeBranching);
+        setSnakeBranching(DEFAULTS.snakeBranching);
+        setRhizomeBranching(DEFAULTS.rhizomeBranching);
+        setSnakeWander(DEFAULTS.snakeWander);
+        setSnakeStepSize(DEFAULTS.snakeStepSize);
+        setSnakeSpeed(DEFAULTS.snakeSpeed);
+        setRotationSpeed(DEFAULTS.rotationSpeed);
+        setMagnetism(DEFAULTS.magnetism);
+        setProximity(DEFAULTS.proximity);
+        setDesperation(DEFAULTS.desperation);
+        setDespairAge(DEFAULTS.despairAge);
+        setFlowerSize(DEFAULTS.flowerSize);
+        setTideSpeed(DEFAULTS.tideSpeed);
+        setTideColor(DEFAULTS.tideColor);
+        setBgColor(DEFAULTS.bgColor);
+        setFogColor(DEFAULTS.fogColor);
+        setTideThickness(DEFAULTS.tideThickness);
+        setTideOpacity(DEFAULTS.tideOpacity);
+        setTideSaturation(DEFAULTS.tideSaturation);
+        setGrowthSpeed(DEFAULTS.growthSpeed);
+        setDiebackRate(DEFAULTS.diebackRate);
+        setAllowBreeding(DEFAULTS.allowBreeding);
+        setGridHeight(DEFAULTS.gridHeight);
+        setLayerGap(DEFAULTS.layerGap);
+        setFloorHeight(DEFAULTS.floorHeight);
+        setCeilingHeight(DEFAULTS.ceilingHeight);
+        setCameraProjection(DEFAULTS.cameraProjection);
+        setShowBoundaryBox(DEFAULTS.showBoundaryBox);
+        setMaxSaturation(DEFAULTS.maxSaturation);
+        setColorClamp(DEFAULTS.colorClamp);
+        setHybridCooldown(DEFAULTS.hybridCooldown);
+        setHybridStickiness(DEFAULTS.hybridStickiness);
+        setBranchTendencyVar(DEFAULTS.branchTendencyVar);
+        setOrnamentFrequency(DEFAULTS.ornamentFrequency);
+        setBranchingMultiplier(DEFAULTS.branchingMultiplier);
+        setBranchBigger(DEFAULTS.branchBigger);
+        setBranchSplitSizeProb(DEFAULTS.branchSplitSizeProb);
+        setMaxDOMs(DEFAULTS.maxDOMs);
+        setMaxAgents(DEFAULTS.maxAgents);
+        setMaxSpecies(DEFAULTS.maxSpecies);
+        setEcoFade(DEFAULTS.ecoFade);
+        setMinAgents(DEFAULTS.minAgents);
+        setBoundarySize(DEFAULTS.boundarySize);
+        setDesiccationSpeed(DEFAULTS.desiccationSpeed);
+        setHybridSize(DEFAULTS.hybridSize);
+        setTerminationProb(DEFAULTS.terminationProb);
+        setTermProbPostBranch(DEFAULTS.termProbPostBranch);
+        setTaperDuration(DEFAULTS.taperDuration);
+        setDiebackAgeBias(DEFAULTS.diebackAgeBias);
+        setEnableGlow(DEFAULTS.enableGlow);
+        setGlowSize(DEFAULTS.glowSize);
+        setFogVisibility(DEFAULTS.fogVisibility);
+        setBotanyRealism(DEFAULTS.botanyRealism);
+        setWindVelocity(DEFAULTS.windVelocity);
+        setFlutterIntensity(DEFAULTS.flutterIntensity);
+        setLeafScale(DEFAULTS.leafScale);
+        setLeafDensity(DEFAULTS.leafDensity);
+        setRelativeLeafSizeDiff(DEFAULTS.relativeLeafSizeDiff);
+        setStemCurviness(DEFAULTS.stemCurviness);
+        setVeinStrength(DEFAULTS.veinStrength);
+        setVeinGlow(DEFAULTS.veinGlow);
+        setLeafGrowthSpeed(DEFAULTS.leafGrowthSpeed);
+        setPhyllotaxisAngle(DEFAULTS.phyllotaxisAngle);
+        setLeafProbability(DEFAULTS.leafProbability);
+        setAppendageSpawnRate(DEFAULTS.appendageSpawnRate);
+        setGlowProbability(DEFAULTS.glowProbability);
+        setTraitProbs(DEFAULTS.traitProbs);
+        setMaxLineWidth(DEFAULTS.maxLineWidth);
+        setGlobalPulseSpeed(DEFAULTS.globalPulseSpeed);
+        setMulticolorAppProb(DEFAULTS.multicolorAppProb);
+        setSameColorAppProb(DEFAULTS.sameColorAppProb);
+        setFeelerFade(DEFAULTS.feelerFade);
+        setCullRate(DEFAULTS.cullRate);
+        setGlowTraitIntensity(DEFAULTS.glowTraitIntensity);
+        setGlowTraitDistance(DEFAULTS.glowTraitDistance);
+        setGlowTraitReflect(DEFAULTS.glowTraitReflect);
+        setDialLimits(DEFAULTS.dialLimits);
+      },
     },
   };
 }

@@ -18,8 +18,8 @@ export const APPENDAGES = [
   "ferns",
   "buds",
 ] as const;
-export type Archetype = "bush" | "tree" | "snake" | "ginger";
-export const ARCHETYPES: Archetype[] = ["bush", "tree", "snake", "ginger"];
+export type Archetype = "bush" | "tree" | "snake" | "rhizome";
+export const ARCHETYPES: Archetype[] = ["bush", "tree", "snake", "rhizome"];
 
 export type MovementType = "wiggle" | "spiral" | "orthogonal";
 export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"];
@@ -60,9 +60,11 @@ export interface Genome {
   pulseTarget: (typeof PULSE_TARGETS)[number];
   pulseSpeed: number;
   gradientGrowth?: boolean;
+  gradientType?: number;
   createdAt?: number;
   singleton?: boolean;
   isGlowing?: boolean;
+  isHybrid?: boolean;
   
   // Procedural Leaf Genes
   leafDivision: number;
@@ -93,7 +95,12 @@ export interface Agent {
   spiralAxis?: THREE.Vector3;
   isFeeler?: boolean;
   realGenome?: Genome;
+  parentAgent?: Agent;
   growthBoost?: number;
+  hasBred?: boolean;
+  matingCount?: number;
+  fadeAge?: number;
+  taperBudget?: number;
   id?: number;
 }
 
@@ -101,7 +108,10 @@ export interface Segment {
   index: number;
   timestamp: number;
   strainName: string;
+  strainBName?: string;
   agentId?: number;
+  agentAId?: number;
+  agentBId?: number;
   matrix: THREE.Matrix4;
   thickness: number;
   dyingStart?: number;
@@ -110,6 +120,7 @@ export interface Segment {
   parentTimestamp?: number;
   color?: THREE.Color;
   randomFactor?: number;
+  countsForBiomass?: boolean;
 }
 
 export const MAX_POINTS = 24000;

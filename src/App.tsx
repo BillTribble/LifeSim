@@ -25,16 +25,16 @@ export default function App() {
     const org1Item: PopupItem = {
       id: `org1-${Date.now()}`,
       type: "organism1",
-      title: "Organism 1 (Alpha Strain)",
-      subtitle: "Founder Phenotype 1",
+      title: "Organism A (Alpha Strain)",
+      subtitle: "Founder Phenotype A",
       genome: alpha,
       duration: dur,
     };
     const org2Item: PopupItem = {
       id: `org2-${Date.now()}`,
       type: "organism2",
-      title: "Organism 2 (Beta Strain)",
-      subtitle: "Founder Phenotype 2",
+      title: "Organism B (Beta Strain)",
+      subtitle: "Founder Phenotype B",
       genome: beta,
       duration: dur,
     };
@@ -67,20 +67,6 @@ export default function App() {
       duration: dur,
     };
     setPopupQueue((prev) => [...prev, feelerItem]);
-  };
-
-  const handleBranchMutationEvent = (event: { parent: any; child: any; count?: number }) => {
-    const dur = getScaledDuration();
-    const countText = event.count ? ` #${event.count}` : "";
-    const branchItem: PopupItem = {
-      id: `branch-${Date.now()}`,
-      type: "branchMutation",
-      title: `Branch Mutation${countText}`,
-      subtitle: "Vegetative Divergence",
-      branchData: event,
-      duration: dur,
-    };
-    setPopupQueue((prev) => [...prev, branchItem]);
   };
 
   const handleDismissPopup = (id: string) => {
@@ -119,7 +105,6 @@ export default function App() {
       rotationVelocity: state.rotationSpeed,
       swarmCohesion: state.magnetism,
       detectionRange: state.proximity,
-      populationLimit: state.entropyThreshold,
       extrusionSpeed: state.growthSpeed,
       fadeSpeed: state.desiccationSpeed,
       pulseSpeed: state.globalPulseSpeed,
@@ -182,7 +167,6 @@ export default function App() {
         desperation={state.desperation}
         despairAge={state.despairAge}
         flowerSize={state.flowerSize}
-        entropyThreshold={state.entropyThreshold}
         tideSpeed={state.tideSpeed}
         tideColor={state.tideColor}
         bgColor={state.bgColor}
@@ -192,6 +176,7 @@ export default function App() {
         tideSaturation={state.tideSaturation}
         growthSpeed={state.growthSpeed}
         diebackRate={state.diebackRate}
+        allowBreeding={state.allowBreeding}
         hybridCooldown={state.hybridCooldown}
         hybridStickiness={state.hybridStickiness}
         branchTendencyVar={state.branchTendencyVar}
@@ -215,12 +200,18 @@ export default function App() {
         termProbPostBranch={state.termProbPostBranch}
         taperDuration={state.taperDuration}
         diebackAgeBias={state.diebackAgeBias}
-        branchMutationRate={state.branchMutationRate}
         maxLineWidth={state.maxLineWidth}
         globalPulseSpeed={state.globalPulseSpeed}
         multicolorAppProb={state.multicolorAppProb}
         sameColorAppProb={state.sameColorAppProb}
         maxSaturation={state.maxSaturation}
+        colorClamp={state.colorClamp}
+        gridHeight={state.gridHeight}
+        layerGap={state.layerGap}
+        floorHeight={state.floorHeight}
+        ceilingHeight={state.ceilingHeight}
+        cameraProjection={state.cameraProjection}
+        showBoundaryBox={state.showBoundaryBox}
         feelerFade={state.feelerFade}
         cullRate={state.cullRate}
         snakeSpeed={state.snakeSpeed}
@@ -228,7 +219,11 @@ export default function App() {
         snakeWander={state.snakeWander}
         bushSpeed={state.bushSpeed}
         treeSpeed={state.treeSpeed}
-        gingerSpeed={state.gingerSpeed}
+        rhizomeSpeed={state.rhizomeSpeed}
+        bushBranching={state.bushBranching}
+        treeBranching={state.treeBranching}
+        snakeBranching={state.snakeBranching}
+        rhizomeBranching={state.rhizomeBranching}
         timeScale={state.timeScale}
         postMatingDieoff={state.postMatingDieoff}
         theme={state.theme}
@@ -254,7 +249,6 @@ export default function App() {
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
         onFeelerEvent={handleFeelerEvent}
-        onBranchMutationEvent={handleBranchMutationEvent}
       />
 
       <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
