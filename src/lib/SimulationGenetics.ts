@@ -280,30 +280,18 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
 export function getWeightedAppendage(
   traitProbs: Record<string, number>,
 ): (typeof APPENDAGES)[number] {
-  // If leaves is set to 1.0 (100% LEAF_WT), make it exclusive and bypass other weights
-  if (traitProbs.leaves === 1.0) {
-    return "leaves";
-  }
-
-  // Dedicated 40% probability for leaves relative to all other appendages
-  const leafProb = traitProbs.leaves !== undefined ? Math.min(0.95, traitProbs.leaves) : 0.40;
-  if (Math.random() < leafProb) {
-    return "leaves";
-  }
-
-  const otherAppendages = APPENDAGES.filter((a) => a !== "leaves");
   let total = 0;
-  for (const k of otherAppendages) {
+  for (const k of APPENDAGES) {
     total += traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
   }
-  if (total <= 0) return "leaves";
+  if (total <= 0) return APPENDAGES[Math.floor(Math.random() * APPENDAGES.length)];
   let r = Math.random() * total;
-  for (const k of otherAppendages) {
+  for (const k of APPENDAGES) {
     const v = traitProbs[k] !== undefined ? traitProbs[k] : 0.5;
     r -= v;
     if (r <= 0) return k as any;
   }
-  return "leaves";
+  return APPENDAGES[Math.floor(Math.random() * APPENDAGES.length)];
 }
 
 const SCIENCY_PREFIXES = [

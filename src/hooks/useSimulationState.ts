@@ -45,7 +45,7 @@ export const DEFAULTS: Record<string, any> = {
   "maxSpecies": 14,
   "ecoFade": 0.8944272063480259,
   "minAgents": 3,
-  "boundarySize": 50,
+  "boundarySize": 80,
   "desiccationSpeed": 12.842754552113087,
   "hybridSize": 2,
   "terminationProb": 0.0462143068937545,
@@ -157,7 +157,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-30-v19";
+    const CURRENT_SCHEMA = "2026-07-30-v20";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();

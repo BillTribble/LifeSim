@@ -283,11 +283,12 @@ export function processAgents(
         }
         if (!agent.tapering) {
           // Omniscient and perfect seeking: find nearest fertile partner of a different strain across the entire space
+          const myStrainName = agent.realGenome ? agent.realGenome.name : agent.genome.name;
           let nearestPartnerPos: THREE.Vector3 | null = null;
           let minDSq = Infinity;
           for (let pIdx = 0; pIdx < activeAgents.length; pIdx++) {
             const pa = activeAgents[pIdx];
-            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== agent.genome.name) {
+            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== myStrainName) {
               const dSq = agent.position.distanceToSquared(pa.position);
               if (dSq < minDSq) {
                 minDSq = dSq;
@@ -297,7 +298,7 @@ export function processAgents(
           }
           if (nearestPartnerPos) {
             const homingVector = new THREE.Vector3().subVectors(nearestPartnerPos, agent.position).normalize();
-            agent.direction.lerp(homingVector, 0.85).normalize();
+            agent.direction.lerp(homingVector, 0.92).normalize();
           }
         }
       } else if (genome.movementType === "spiral") {
@@ -689,11 +690,17 @@ export function processAgents(
           const feelerGenome = { ...agent.genome };
           feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
           feelerGenome.archetype = "snake"; // Fast sensory feeler
-          feelerGenome.thicknessBase = Math.max(0.2, agent.thickness * 0.3);
-          feelerGenome.minThickness = 0.1;
-          feelerGenome.wanderIntensity *= 1.8;
+          feelerGenome.thicknessBase = Math.max(0.8, agent.thickness * 0.7);
+          feelerGenome.minThickness = 0.5;
+          feelerGenome.stepSize = 1.2;
+          feelerGenome.wanderIntensity = 0.15;
+          feelerGenome.bifurcationRate = 0.0001;
+          feelerGenome.branchTendency = 0;
+          feelerGenome.wavingAmplitude = 0;
+          feelerGenome.wavingSpeed = 0;
+          feelerGenome.isGlowing = true;
 
-          const spawnDir = agent.direction.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8)).normalize();
+          const spawnDir = agent.direction.clone();
           newAgents.push({
             position: agent.position.clone(),
             lastPosition: agent.position.clone(),

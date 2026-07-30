@@ -25,7 +25,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         maxAgents: 50,
         minAgents: 4,
         maxSpecies: 4,
-        boundarySize: 150,
+        boundarySize: 80,
         magnetism: 10.0,
         proximity: 40,
         desperation: 7.7,

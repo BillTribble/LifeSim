@@ -141,7 +141,7 @@ export class SimulationEngine {
   maxDOMs: number = 341000;
   lastMaxDOMs: number = 341000;
   minAgents: number = 3;
-  boundarySize: number = 50;
+  boundarySize: number = 80;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
   maxSpecies: number = 14;
   ecoFade: number = 0.8944272063480259;
