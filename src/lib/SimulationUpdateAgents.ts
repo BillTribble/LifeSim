@@ -194,21 +194,25 @@ export function processAgents(
         effectiveStepSize *= 0.65;
         effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
-        // 3-phase tree: short trunk -> increasing canopy branching -> taper off
-        const trunkDurationTicks = 80 * Math.max(0.5, engine.timeScale);
-        const canopyAge = agent.age - trunkDurationTicks;
+        // Tree: Short vertical trunk -> Prolific canopy branching into fine limbs and twigs
+        const trunkDurationTicks = 60 * Math.max(0.5, engine.timeScale);
         if (agent.age < trunkDurationTicks) {
-          // Phase 1: Short straight trunk
+          // Phase 1: Straight vertical trunk
           effectiveBifurcationRate *= 0.01 * engine.treeBranching;
-          effectiveStepSize *= 1.2;
-          effectiveWanderIntensity *= 0.05;
+          effectiveStepSize *= 1.3;
+          effectiveWanderIntensity *= 0.02; // Rigid, straight trunk
+          // Pull trunk gently upward toward +Y
+          agent.direction.lerp(new THREE.Vector3(0, 1, 0), 0.08).normalize();
         } else {
-          // Phase 2 & 3: Canopy — branching accelerates then plateaus
-          const canopyProgress = Math.min(1.0, canopyAge / 400);
-          const branchRamp = 2.0 + canopyProgress * 10.0; // Ramps from 2 to 12
+          // Phase 2: Canopy — prolific branching with straight, wooden limbs (no snake wobble!)
+          const canopyAge = agent.age - trunkDurationTicks;
+          const canopyProgress = Math.min(1.0, canopyAge / 300);
+          const branchRamp = 15.0 + canopyProgress * 25.0; // Ramps from 15x to 40x so it branches prolifically!
           effectiveBifurcationRate *= branchRamp * engine.treeBranching;
-          effectiveStepSize *= 0.6 - canopyProgress * 0.2; // Gets shorter as branches multiply
-          effectiveWanderIntensity *= 1.5 + canopyProgress * 3.0; // Spreads wider over time
+          effectiveStepSize *= 0.7 - canopyProgress * 0.25; // Twigs get shorter as branches multiply
+          effectiveWanderIntensity *= 0.3; // Low wander so tree branches remain straight and wooden, not wobbly!
+          // Give limbs a slight upward canopy lift
+          agent.direction.lerp(new THREE.Vector3(0, 0.4, 0), 0.03).normalize();
         }
       } else if (genome.archetype === "snake") {
         effectiveBifurcationRate *= 0.05 * engine.snakeBranching;
@@ -672,7 +676,7 @@ export function processAgents(
       agent.lastPosition.copy(agent.position);
 
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
-      const maxForArchetype = genome.archetype === "bush" ? 250 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 200 : genome.archetype === "tree" ? 150 : 50;
+      const maxForArchetype = genome.archetype === "bush" ? 250 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 200 : genome.archetype === "tree" ? 250 : 50;
 
       const allowedToBranch = myStrainCount < maxForArchetype;
 
