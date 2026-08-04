@@ -9,6 +9,7 @@ export function updateMeshSegments(
   genome: Genome,
   thickness: number,
   isAppendage = false,
+  agentId?: number,
 ) {
   const targetIndexStem = engine.pointCount % engine.maxDOMs;
 
@@ -250,6 +251,7 @@ export function updateMeshSegments(
       matrix: fullMatrix,
       thickness,
       strainName: genome.name,
+      agentId: agentId,
       countsForBiomass: shouldCountBiomass,
     };
     engine.pointCount++;
@@ -266,6 +268,7 @@ export function updateMeshSegments(
         matrix: fullMatrix,
         thickness,
         strainName: genome.name,
+        agentId: agentId,
         parentIndex: targetIndexStem,
         parentTimestamp: engine.time,
         randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,

@@ -701,7 +701,7 @@ Low: Long, persistent feelers." label="FEELER_FADE" min={1.0} max={50.0} step={1
                 )}
 
                 {/* REPRODUCTION */}
-                {hasMatch(['HYBRID_COOL', 'HYBRID_SIZE', 'HYBRID_DECAY', 'HYBRID_SPIN', 'BREED', 'COOLDOWN', 'SIZE', 'DECAY', 'SPIN', 'REPRODUCTION']) && (
+                {hasMatch(['HUE_SHIFT', 'HYBRID_COOL', 'HYBRID_SIZE', 'HYBRID_DECAY', 'HYBRID_SPIN', 'BREED', 'COOLDOWN', 'SIZE', 'DECAY', 'SPIN', 'REPRODUCTION']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">REPRODUCTION</span>
                   <div className="flex gap-1 flex-wrap justify-center items-center max-w-[280px] sm:max-w-none">
@@ -716,6 +716,10 @@ Low: Long, persistent feelers." label="FEELER_FADE" min={1.0} max={50.0} step={1
                     >
                       BREEDING: {state.allowBreeding ? 'ON' : 'OFF'}
                     </button>
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="HUE SHIFT
+Amount of hue shift when offspring inherit a parent's color (90% chance).
+High: Strong hue shifts across the color wheel.
+Low: Subtle analogous color shifts." label="HUE_SHIFT" min={0.0} max={0.25} step={0.01} value={state.colorMutationShift} onChange={setters.setColorMutationShift} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="HYBRID BREED COOL
 Delay between breeding attempts.
 High: Infrequent, rare breeding.

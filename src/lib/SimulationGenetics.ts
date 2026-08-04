@@ -382,6 +382,7 @@ export function breedGenomes(
   sameColorAppProb: number = 0.5,
   appendageSpawnRate: number = 0.7,
   glowProbability: number = 0.1,
+  colorMutationShift: number = 0.06,
 ): Genome {
   const archInheritance = selectMendelianAlleles(
     g1.archetype, g1.recessive?.archetype,
@@ -434,7 +435,14 @@ export function breedGenomes(
   if (hueDiff > 0.5) hueDiff -= 1.0;
   if (hueDiff < -0.5) hueDiff += 1.0;
   
-  const parentBlendH = (h1.h + hueDiff * (0.35 + Math.random() * 0.30) + (Math.random() - 0.5) * 0.015 + 1.0) % 1.0;
+  let parentBlendH: number;
+  if (Math.random() < 0.90) {
+    const chosenH = Math.random() < 0.5 ? h1.h : h2.h;
+    const shift = (Math.random() - 0.5) * 2.0 * colorMutationShift;
+    parentBlendH = (chosenH + shift + 1.0) % 1.0;
+  } else {
+    parentBlendH = (h1.h + hueDiff * (0.35 + Math.random() * 0.30) + (Math.random() - 0.5) * 0.015 + 1.0) % 1.0;
+  }
   const resultH = parentBlendH;
 
   const isAlbino = Math.random() < 0.002;

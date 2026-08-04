@@ -19,6 +19,7 @@ export const DEFAULTS: Record<string, any> = {
   "snakeSpeed": 0.5,
   "widthVariance": 0.5,
   "branchGrowthBoost": 1.0,
+  "colorMutationShift": 0.06,
   "rotationSpeed": 0.13,
   "magnetism": 0.08361988738043864,
   "proximity": 1538.23896997661,
@@ -159,7 +160,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-08-04-v21";
+    const CURRENT_SCHEMA = "2026-08-04-v22";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();
@@ -211,6 +212,11 @@ export function useSimulationState() {
   const [branchGrowthBoost, setBranchGrowthBoost] = useState(() =>
     parseFloat(
       localStorage.getItem("branchGrowthBoost") || DEFAULTS.branchGrowthBoost.toString(),
+    ),
+  );
+  const [colorMutationShift, setColorMutationShift] = useState(() =>
+    parseFloat(
+      localStorage.getItem("colorMutationShift") || DEFAULTS.colorMutationShift.toString(),
     ),
   );
   const [treeBranching, setTreeBranching] = useState(() =>
@@ -652,6 +658,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
     localStorage.setItem("widthVariance", widthVariance.toString());
     localStorage.setItem("branchGrowthBoost", branchGrowthBoost.toString());
+    localStorage.setItem("colorMutationShift", colorMutationShift.toString());
     localStorage.setItem("timeScale", timeScale.toString());
     localStorage.setItem("slowMotion", timeScale.toString());
     localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());
@@ -806,6 +813,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       bushBranching,
       widthVariance,
       branchGrowthBoost,
+      colorMutationShift,
       treeBranching,
       snakeBranching,
       rhizomeBranching,
@@ -896,6 +904,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setBushBranching,
       setWidthVariance,
       setBranchGrowthBoost,
+      setColorMutationShift,
       setTreeBranching,
       setSnakeBranching,
       setRhizomeBranching,
@@ -1003,6 +1012,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         setBushBranching(DEFAULTS.bushBranching);
         setWidthVariance(DEFAULTS.widthVariance);
         setBranchGrowthBoost(DEFAULTS.branchGrowthBoost);
+        setColorMutationShift(DEFAULTS.colorMutationShift);
         setTreeBranching(DEFAULTS.treeBranching);
         setSnakeBranching(DEFAULTS.snakeBranching);
         setRhizomeBranching(DEFAULTS.rhizomeBranching);

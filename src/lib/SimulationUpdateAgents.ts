@@ -548,6 +548,8 @@ export function processAgents(
         agent.position,
         agent.isFeeler && agent.realGenome ? agent.realGenome : genome,
         renderThickness,
+        false,
+        agent.id,
       );
 
       if (!agent.tapering) {
@@ -582,6 +584,7 @@ export function processAgents(
             genome,
             renderThickness * 0.1,
             true,
+            agent.id,
           );
         } else if (
           (genome.appendage === "thorns" ||
@@ -611,6 +614,7 @@ export function processAgents(
             genome,
             renderThickness * 0.7,
             true,
+            agent.id,
           );
         } else if (engine.pointCount < MAX_POINTS - 10) {
           if (genome.appendage === "leaves") {
@@ -629,7 +633,7 @@ export function processAgents(
                   .normalize();
                 const leafStart = agent.position.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
                 const leafEnd = leafStart.clone().add(tiltedDir.clone().multiplyScalar(renderThickness));
-                engine.addLineSegment(leafStart, leafEnd, genome, renderThickness * 1.2, true);
+                engine.addLineSegment(leafStart, leafEnd, genome, renderThickness * 1.2, true, agent.id);
               };
 
               if (genome.phyllotaxisMode === "spiral") {
@@ -667,7 +671,7 @@ export function processAgents(
               
               const appStart = spawnPos.clone().add(radDir.clone().multiplyScalar(renderThickness));
               const appEnd = appStart.clone().add(radDir.clone().multiplyScalar(renderThickness));
-              engine.addLineSegment(appStart, appEnd, genome, renderThickness * 1.2, true);
+              engine.addLineSegment(appStart, appEnd, genome, renderThickness * 1.2, true, agent.id);
             }
           }
         }
@@ -1084,31 +1088,40 @@ export function processAgents(
         }
       }
 
-      // Stage 3 & 4: 3-Second Transparency Fade -> Retain 100% exact shape & size, NO changes, zero jolt, fade transparently & vanish
       if (agent.tapering) {
         agent.fadeAge = (agent.fadeAge || 0) + 1;
-        // 180 ticks = 3.0 seconds of real-time transparency fade (feelers deactivate faster in 25 ticks)
-        const maxFade = agent.isFeeler ? 25 : 180;
-        if (agent.fadeAge >= maxFade) {
-          agent.active = false;
-          currentActiveCount--;
-          const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
-          strainCounts.set(agent.genome.name, Math.max(0, newCount));
+        if (agent.fadeAge < 180 && !agent.isFeeler) {
+          // Phase 1 (Ticks 0 to 180 / ~3s): Tapering to fine sculptural tips
+          agent.thickness = Math.max(0.1, agent.thickness * 0.96);
+        } else if (agent.fadeAge < 360 && !agent.isFeeler) {
+          // Phase 2 (Ticks 180 to 360 / ~3s): 3-Second Pause in completed tapered form
+          // No thickness change, pauses beautifully on screen
+        } else {
+          // Phase 3 (At tick 360, or tick 25 for feelers): Trigger 3-Second Transparency Dissolve
+          const maxFade = agent.isFeeler ? 25 : 360;
+          if (agent.fadeAge >= maxFade) {
+            agent.active = false;
+            currentActiveCount--;
+            const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+            strainCounts.set(agent.genome.name, Math.max(0, newCount));
 
-          // Check if this was the last active agent of its strain
-          const remainingOfStrain = activeAgents.filter(
-            a => a.active && a.genome.name === agent.genome.name
-          ).length;
-          if (remainingOfStrain <= 0) {
-            // Mark entire strain for simultaneous dissolve of all segments
-            if (!engine.dyingStrains) engine.dyingStrains = new Set();
-            engine.dyingStrains.add(agent.genome.name);
+            // Immediately mark this individual agent's segments to dissolve over 3 seconds
+            engine.markAgentSegmentsDying(agent.id);
+
+            // Check if this was the last active agent of its strain
+            const remainingOfStrain = activeAgents.filter(
+              a => a.active && a.genome.name === agent.genome.name
+            ).length;
+            if (remainingOfStrain <= 0) {
+              if (!engine.dyingStrains) engine.dyingStrains = new Set();
+              engine.dyingStrains.add(agent.genome.name);
+            }
+
+            const lifespanSecs = (agent.age / 60.0).toFixed(1);
+            engine.onLog(
+              `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] died after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x, fadeAge: ${agent.fadeAge})`
+            );
           }
-
-          const lifespanSecs = (agent.age / 60.0).toFixed(1);
-          engine.onLog(
-            `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] died after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x, fadeAge: ${agent.fadeAge})`
-          );
         }
       } 
       

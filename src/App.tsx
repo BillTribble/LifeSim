@@ -224,6 +224,7 @@ export default function App() {
         bushBranching={state.bushBranching}
         widthVariance={state.widthVariance}
         branchGrowthBoost={state.branchGrowthBoost}
+        colorMutationShift={state.colorMutationShift}
         treeBranching={state.treeBranching}
         snakeBranching={state.snakeBranching}
         rhizomeBranching={state.rhizomeBranching}

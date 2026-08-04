@@ -85,6 +85,7 @@ export function SimulationView({
   bushBranching,
   widthVariance,
   branchGrowthBoost,
+  colorMutationShift,
   treeBranching,
   snakeBranching,
   rhizomeBranching,
@@ -179,6 +180,7 @@ export function SimulationView({
   bushBranching?: number;
   widthVariance?: number;
   branchGrowthBoost?: number;
+  colorMutationShift?: number;
   treeBranching?: number;
   snakeBranching?: number;
   rhizomeBranching?: number;
@@ -393,6 +395,12 @@ export function SimulationView({
   }, [branchGrowthBoost]);
 
   useEffect(() => {
+    if (engineRef.current && colorMutationShift !== undefined) {
+      engineRef.current.setColorMutationShift(colorMutationShift);
+    }
+  }, [colorMutationShift]);
+
+  useEffect(() => {
     if (engineRef.current && treeBranching !== undefined) {
       engineRef.current.setTreeBranching(treeBranching);
     }
@@ -505,6 +513,8 @@ export function SimulationView({
         engineRef.current.setWidthVariance(widthVariance);
       if (branchGrowthBoost !== undefined)
         engineRef.current.setBranchGrowthBoost(branchGrowthBoost);
+      if (colorMutationShift !== undefined)
+        engineRef.current.setColorMutationShift(colorMutationShift);
       if (treeBranching !== undefined)
         engineRef.current.setTreeBranching(treeBranching);
       if (snakeBranching !== undefined)
@@ -738,6 +748,8 @@ export function SimulationView({
       engine.setWidthVariance(widthVariance);
     if (branchGrowthBoost !== undefined)
       engine.setBranchGrowthBoost(branchGrowthBoost);
+    if (colorMutationShift !== undefined)
+      engine.setColorMutationShift(colorMutationShift);
     if (treeBranching !== undefined)
       engine.setTreeBranching(treeBranching);
     if (snakeBranching !== undefined)

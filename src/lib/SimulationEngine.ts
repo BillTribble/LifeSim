@@ -85,6 +85,7 @@ export class SimulationEngine {
   onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
   matingCount: number = 0;
   feelerCount: number = 0;
+  nextAgentId: number = 1;
   hasAnyOrganismBred: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
@@ -100,6 +101,7 @@ export class SimulationEngine {
   maxLineWidth: number = 1.5;
   widthVariance: number = 0.5;
   branchGrowthBoost: number = 1.0;
+  colorMutationShift: number = 0.06;
   multicolorAppProb: number = 0.3155126730950826;
   sameColorAppProb: number = 0.4968205547416572;
   tideSpeed: number = 1.2393635516813024;
@@ -714,6 +716,9 @@ export class SimulationEngine {
   setBranchGrowthBoost(val: number) {
     this.branchGrowthBoost = val;
   }
+  setColorMutationShift(val: number) {
+    this.colorMutationShift = val;
+  }
 
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
     const archetypes: Archetype[] = ["bush", "tree", "snake", "rhizome"];
@@ -755,6 +760,7 @@ export class SimulationEngine {
       active: true,
       age: 0,
       thickness: genome.thicknessBase * 1.5,
+      id: this.nextAgentId++,
       cooldown: 200
     };
 
@@ -1055,6 +1061,7 @@ export class SimulationEngine {
         (Math.random() - 0.5) * 0.2,
       ).normalize(),
       genome: alphaGenome,
+      id: this.nextAgentId++,
       active: true,
       age: 0,
       lastPosition: new THREE.Vector3(-40, 0, 0),
@@ -1064,6 +1071,7 @@ export class SimulationEngine {
 
     // Organism B (Beta Strain) placed on the RIGHT side of screen (X = +40), pointing left (-1) towards center
     this.agents.push({
+      id: this.nextAgentId++,
       position: new THREE.Vector3(40, 0, 0),
       direction: new THREE.Vector3(
         -1,
@@ -1141,8 +1149,9 @@ export class SimulationEngine {
     genome: Genome,
     thickness: number,
     isAppendage = false,
+    agentId?: number,
   ) {
-    updateMeshSegments(this, p1, p2, genome, thickness, isAppendage);
+    updateMeshSegments(this, p1, p2, genome, thickness, isAppendage, agentId);
   }
 
   markDying(segments: any[], dyingSet: Set<number>, idx: number, dyingStartOverride?: number) {
@@ -1154,6 +1163,26 @@ export class SimulationEngine {
         const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
         if (prevBiomass > 0) {
           this.biomassMap.set(seg.strainName, prevBiomass - 1);
+        }
+      }
+    }
+  }
+
+  markAgentSegmentsDying(agentId?: number) {
+    if (agentId === undefined) return;
+    const now = this.unscaledTime;
+    for (let i = 0; i < this.maxDOMs; i++) {
+      const seg = this.segments[i];
+      if (seg && seg.agentId === agentId && !seg.dyingStart) {
+        this.markDying(this.segments, this.dyingStems, i, now);
+      }
+    }
+    for (const app of this.appendages.values()) {
+      const lim = Math.floor(this.maxDOMs / 4);
+      for (let i = 0; i < lim; i++) {
+        const seg = app.segments[i];
+        if (seg && seg.agentId === agentId && !seg.dyingStart) {
+          this.markDying(app.segments, app.dyingSet, i, now);
         }
       }
     }

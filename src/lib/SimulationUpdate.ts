@@ -812,6 +812,11 @@ export function updateSimulation(engine: SimulationEngine) {
   }
 
   processAgents(engine, activeAgents, newAgents, bredThisFrame);
+  newAgents.forEach(a => {
+    if (a.id === undefined) {
+      a.id = engine.nextAgentId++;
+    }
+  });
   engine.agents.push(...newAgents);
 
   engine.agents = engine.agents.filter((a) => a.active);
