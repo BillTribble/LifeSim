@@ -98,6 +98,7 @@ export class SimulationEngine {
   flowerSize: number = 1.3;
   globalPulseSpeed: number = 0.8637093147800061;
   maxLineWidth: number = 1.5;
+  widthVariance: number = 0.5;
   multicolorAppProb: number = 0.3155126730950826;
   sameColorAppProb: number = 0.4968205547416572;
   tideSpeed: number = 1.2393635516813024;
@@ -706,6 +707,9 @@ export class SimulationEngine {
   setRhizomeBranching(val: number) {
     this.rhizomeBranching = val;
   }
+  setWidthVariance(val: number) {
+    this.widthVariance = val;
+  }
 
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
     const archetypes: Archetype[] = ["bush", "tree", "snake", "rhizome"];
@@ -715,12 +719,13 @@ export class SimulationEngine {
     const genome = this.generateRandomGenome(nameStr, arch);
     genome.appendage = getWeightedAppendage(this.traitProbs);
     // Archetype-specific thickness for spawned species (don't override bush's thin stems)
+    const variance = 1.0 + (this.widthVariance - 0.5) * 2.0;
     if (arch === "bush") {
-      genome.thicknessBase = (0.6 + Math.random() * 1.2) * 0.70;
+      genome.thicknessBase = (0.6 + Math.random() * 1.2 * variance) * 0.70;
     } else if (arch === "tree") {
-      genome.thicknessBase = (3.5 + Math.random() * 3.0) * 0.70;
+      genome.thicknessBase = (3.5 + Math.random() * 3.0 * variance) * 0.70;
     } else if (arch === "snake") {
-      genome.thicknessBase = (1.2 + Math.random() * 2.0) * 0.70;
+      genome.thicknessBase = (1.2 + Math.random() * 2.0 * variance) * 0.70;
     } else {
       // rhizome — keep the values from generateRandomGenome
     }
@@ -963,14 +968,15 @@ export class SimulationEngine {
 
     // Archetype-specific thickness — preserve the archetype's character
     const getArchetypeThickness = (arch: Archetype) => {
+      const variance = 1.0 + (this.widthVariance - 0.5) * 2.0; // 0->0, 0.5->1, 1->2
       if (arch === "bush") {
-        return (0.6 + Math.random() * 1.2) * 0.70;
+        return (0.6 + Math.random() * 1.2 * variance) * 0.70;
       } else if (arch === "tree") {
-        return (3.5 + Math.random() * 2.5) * 0.70;
+        return (3.5 + Math.random() * 2.5 * variance) * 0.70;
       } else if (arch === "snake") {
-        return (1.2 + Math.random() * 2.0) * 0.70;
+        return (1.2 + Math.random() * 2.0 * variance) * 0.70;
       } else {
-        return (5.0 + Math.random() * 3.5) * 0.70;
+        return (5.0 + Math.random() * 3.5 * variance) * 0.70;
       }
     };
     alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);

@@ -137,6 +137,7 @@ export function processAgents(
 
     for (let iter = 0; iter < iterations; iter++) {
       if (!agent.active) break;
+      if (agent.tapering) break; // Stop growing immediately when entering deleting phase
       const { genome } = agent;
       const isHybrid = !!genome.isHybrid || genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin") || genome.name.includes("-");
 
@@ -171,6 +172,12 @@ export function processAgents(
         effectiveStepSize *= 0.45;
         effectiveWanderIntensity *= 0.7;
       }
+
+      // Width-driven branching & rotation: thicker agents branch more and wander more (rhododendron behavior)
+      const thickRatio = agent.thickness / Math.max(0.5, genome.thicknessBase);
+      const widthBoost = 1.0 + (thickRatio - 1.0) * engine.widthVariance * 3.0;
+      effectiveBifurcationRate *= Math.max(1.0, widthBoost);
+      effectiveWanderIntensity *= Math.max(1.0, 1.0 + (widthBoost - 1.0) * 0.5);
 
       agent.age++;
       if (agent.cooldown > 0) agent.cooldown--;
@@ -771,10 +778,16 @@ export function processAgents(
                    const feelerGenome = { ...agent.genome };
                    feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
                    feelerGenome.archetype = "snake"; // Fast!
-                   feelerGenome.thicknessBase = Math.max(0.2, agent.thickness * 0.3);
-                   feelerGenome.minThickness = 0.1;
-                   // High wander so it spirals towards them quickly
-                   feelerGenome.wanderIntensity *= 1.5;
+                   feelerGenome.thicknessBase = Math.max(0.8, agent.thickness * 0.7);
+                   feelerGenome.minThickness = 0.5;
+                   feelerGenome.stepSize = 1.2;
+                   feelerGenome.wanderIntensity = 0.15;
+                   feelerGenome.bifurcationRate = 0.0001;
+                   feelerGenome.branchTendency = 0;
+                   feelerGenome.wavingAmplitude = 0;
+                   feelerGenome.wavingSpeed = 0;
+                   feelerGenome.isGlowing = true;
+
                    
                     newAgents.push({
                         position: agent.position.clone(),
@@ -1003,6 +1016,17 @@ export function processAgents(
           currentActiveCount--;
           const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
           strainCounts.set(agent.genome.name, Math.max(0, newCount));
+
+          // Check if this was the last active agent of its strain
+          const remainingOfStrain = activeAgents.filter(
+            a => a.active && a.genome.name === agent.genome.name
+          ).length;
+          if (remainingOfStrain <= 0) {
+            // Mark entire strain for simultaneous dissolve of all segments
+            if (!engine.dyingStrains) engine.dyingStrains = new Set();
+            engine.dyingStrains.add(agent.genome.name);
+          }
+
           const lifespanSecs = (agent.age / 60.0).toFixed(1);
           engine.onLog(
             `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] died after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x, fadeAge: ${agent.fadeAge})`

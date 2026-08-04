@@ -811,7 +811,7 @@ Low: Slow, drifting rhizomes." label="RHIZOME" min={0.1} max={10.0} step={0.1} v
                 )}
 
                 {/* MORPHOLOGY */}
-                {hasMatch(['APPENDAGE SIZE', 'TAPER_TIME', 'MAX_WIDTH', 'MULTI_COLOR', 'SAME_COLOR', 'PULSE_SPD', 'SATURATION', 'APPENDAGE', 'SIZE', 'TAPER', 'WIDTH', 'COLOR', 'PULSE']) && (
+                {hasMatch(['APPENDAGE SIZE', 'TAPER_TIME', 'MAX_WIDTH', 'WIDTH_VAR', 'MULTI_COLOR', 'SAME_COLOR', 'PULSE_SPD', 'SATURATION', 'APPENDAGE', 'SIZE', 'TAPER', 'WIDTH', 'COLOR', 'PULSE']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">MORPHOLOGY</span>
                   <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
@@ -827,6 +827,10 @@ Low: Abrupt, sharp tapers." label="TAPER_TIME" min={0.5} max={3.0} step={0.1} va
 Maximum thickness of organisms.
 High: Thick, bulky lines.
 Low: Thin, delicate lines." label="MAX_WIDTH" min={1.0} max={20.0} step={0.5} value={state.maxLineWidth} onChange={setters.setMaxLineWidth} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="WIDTH VARIANCE
+Variance in creature width. Wider creatures branch more and rotate more.
+High: Extreme thickness differences, lush rhododendron-like bushes.
+Low: Uniform thin creatures." label="WIDTH_VAR" min={0.0} max={2.0} step={0.1} value={state.widthVariance} onChange={setters.setWidthVariance} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="MULTI COLOR APP PROB
 Chance of colorful appendages.
 High: Rainbow, multi-colored parts.

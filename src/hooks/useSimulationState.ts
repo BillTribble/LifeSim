@@ -17,6 +17,7 @@ export const DEFAULTS: Record<string, any> = {
   "snakeWander": 1,
   "snakeStepSize": 1,
   "snakeSpeed": 0.5,
+  "widthVariance": 0.5,
   "rotationSpeed": 0.13,
   "magnetism": 0.08361988738043864,
   "proximity": 1538.23896997661,
@@ -199,6 +200,11 @@ export function useSimulationState() {
   const [bushBranching, setBushBranching] = useState(() =>
     parseFloat(
       localStorage.getItem("bushBranching") || DEFAULTS.bushBranching.toString(),
+    ),
+  );
+  const [widthVariance, setWidthVariance] = useState(() =>
+    parseFloat(
+      localStorage.getItem("widthVariance") || DEFAULTS.widthVariance.toString(),
     ),
   );
   const [treeBranching, setTreeBranching] = useState(() =>
@@ -638,6 +644,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
     localStorage.setItem("treeBranching", treeBranching.toString());
     localStorage.setItem("snakeBranching", snakeBranching.toString());
     localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
+    localStorage.setItem("widthVariance", widthVariance.toString());
     localStorage.setItem("timeScale", timeScale.toString());
     localStorage.setItem("slowMotion", timeScale.toString());
     localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());
@@ -790,6 +797,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       treeSpeed,
       bushSpeed,
       bushBranching,
+      widthVariance,
       treeBranching,
       snakeBranching,
       rhizomeBranching,
@@ -878,6 +886,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       setTreeSpeed,
       setBushSpeed,
       setBushBranching,
+      setWidthVariance,
       setTreeBranching,
       setSnakeBranching,
       setRhizomeBranching,
@@ -983,6 +992,7 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
         setTreeSpeed(DEFAULTS.treeSpeed);
         setBushSpeed(DEFAULTS.bushSpeed);
         setBushBranching(DEFAULTS.bushBranching);
+        setWidthVariance(DEFAULTS.widthVariance);
         setTreeBranching(DEFAULTS.treeBranching);
         setSnakeBranching(DEFAULTS.snakeBranching);
         setRhizomeBranching(DEFAULTS.rhizomeBranching);
