@@ -815,7 +815,17 @@ export function processAgents(
              continue;
 
            if (evalGenome.name !== partnerEvalGenome.name) {
-             const distSq = agent.position.distanceToSquared(partner.position);
+             let distSq = agent.position.distanceToSquared(partner.position);
+             if (agent.isFeeler || partner.isFeeler) {
+               for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 3) {
+                 const seg = engine.segments[sIdx];
+                 if (seg && !seg.dyingStart && (seg.strainName === partnerEvalGenome.name || seg.strainName === evalGenome.name)) {
+                   const m = seg.matrix.elements;
+                   const d = agent.position.distanceToSquared(new THREE.Vector3(m[12], m[13], m[14]));
+                   if (d < distSq) distSq = d;
+                 }
+               }
+             }
 
              if (distSq < nearestDistSq) {
                  nearestDistSq = distSq;
@@ -887,7 +897,7 @@ export function processAgents(
                }
            
             // Require physical touching based on agent thicknesses to breed; feelers reach out further to connect
-            const touchDist = (agent.isFeeler || bestPartner.isFeeler) ? 7.5 : (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
+            const touchDist = (agent.isFeeler || bestPartner.isFeeler) ? 20.0 : (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
             const breedReach = touchDist * touchDist;
             if (engine.allowBreeding && distSq < breedReach) {
                 const nearestPartner = bestPartner;

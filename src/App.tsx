@@ -47,7 +47,7 @@ export default function App() {
     const matingItem: PopupItem = {
       id: `mating-${Date.now()}`,
       type: "mating",
-      title: `Mating Event Detected${countText}`,
+      title: `Mating Detected${countText}`,
       subtitle: "Cross-Species Hybridization",
       matingData: event,
       duration: dur,

@@ -71,17 +71,29 @@ export function updateMeshSegments(
     const t = engine.time * 0.001;
 
     if (gType === 1) {
-      // Type 1: Complementary Shift (+/- 180° opposite hue oscillation)
-      const shift = Math.sin(t * 1.5) * 0.5;
-      finalColor.offsetHSL(shift, 0, 0);
+      // Type 1: 3-Color Triadic Harmonious Gradient (BaseHue -> BaseHue+120° -> BaseHue+240°)
+      const phase = (Math.sin(t * 0.8) + 1.0) * 0.5;
+      let hueOffset = 0;
+      if (phase < 0.5) {
+        hueOffset = THREE.MathUtils.lerp(0, 0.333, phase * 2.0);
+      } else {
+        hueOffset = THREE.MathUtils.lerp(0.333, 0.666, (phase - 0.5) * 2.0);
+      }
+      finalColor.offsetHSL(hueOffset, 0, 0);
     } else if (gType === 2) {
       // Type 2: Analogous / Soft Adjacent (+/- 30° adjacent hue oscillation)
       const shift = Math.sin(t * 1.2) * 0.083;
       finalColor.offsetHSL(shift, 0, 0);
     } else if (gType === 3) {
-      // Type 3: Bi-Color Split (+/- 60° dual hue oscillation)
-      const shift = Math.sin(t * 1.4) * 0.166;
-      finalColor.offsetHSL(shift, 0, 0);
+      // Type 3: 3-Color Analogous Sunset Gradient (BaseHue -> BaseHue+45° -> BaseHue+90°)
+      const phase = (Math.sin(t * 1.1) + 1.0) * 0.5;
+      let hueOffset = 0;
+      if (phase < 0.5) {
+        hueOffset = THREE.MathUtils.lerp(0, 0.125, phase * 2.0);
+      } else {
+        hueOffset = THREE.MathUtils.lerp(0.125, 0.25, (phase - 0.5) * 2.0);
+      }
+      finalColor.offsetHSL(hueOffset, 0, 0);
     } else if (gType === 4) {
       // Type 4: Monochromatic Luster (oscillating lightness and saturation within same hue family)
       const baseHSL = genome.color.getHSL({ h: 0, s: 0, l: 0 });
