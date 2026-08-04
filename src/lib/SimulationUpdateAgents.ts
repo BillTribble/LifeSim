@@ -219,7 +219,7 @@ export function processAgents(
         effectiveWanderIntensity *= engine.snakeWander;
         effectiveStepSize *= engine.snakeStepSize;
       } else if (genome.archetype === "rhizome") {
-        effectiveBifurcationRate *= 20.0 * engine.rhizomeBranching;
+        effectiveBifurcationRate *= 4.0 * engine.rhizomeBranching;
         effectiveStepSize *= 0.45;
         effectiveWanderIntensity *= 0.7;
       }
@@ -1062,8 +1062,7 @@ export function processAgents(
 
       // 4-STAGE LIFESPAN MODEL:
       // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
-      const maxGrowthAge = 600 * Math.max(0.5, engine.timeScale);
-      const maxLifespan = maxGrowthAge * 3.0;
+      const maxLifespan = 400 * Math.max(0.5, engine.timeScale);
       if (!agent.tapering && agent.hasBred && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
         // Don't kill the last agent of a species when we have fewer than 3 living species
         const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;

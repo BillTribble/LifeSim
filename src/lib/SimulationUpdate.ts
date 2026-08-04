@@ -727,14 +727,14 @@ export function updateSimulation(engine: SimulationEngine) {
           
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName) {
-              activeAgents[i].active = false;
+              activeAgents[i].tapering = true;
             }
           }
 
           if (biomass <= 5 || ratio < 0.01) {
             engine.biomassMap.delete(strainName);
             engine.dyingStrains.delete(strainName);
-            if (engine.speciesAbove5Percent) engine.speciesAbove5Percent.delete(strainName);
+            if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.delete(strainName);
             const genome = engine.genomeMap?.get(strainName);
             const arch = genome?.archetype || 'bush';
             engine.onLog(`☠️ Species ${strainName} [${arch.toUpperCase()}] was fully eradicated.`);
@@ -742,14 +742,14 @@ export function updateSimulation(engine: SimulationEngine) {
           return;
         }
 
-        if (!engine.speciesAbove5Percent) engine.speciesAbove5Percent = new Set();
+        if (!engine.speciesAbove3Percent) engine.speciesAbove3Percent = new Set();
         
         const healthySpeciesCount = Array.from(engine.biomassMap.keys()).filter(s => !(engine.dyingStrains && engine.dyingStrains.has(s))).length;
         const growingCount = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
         if (ratio > 0.03) {
-          engine.speciesAbove5Percent.add(strainName);
-        } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
-          engine.speciesAbove5Percent.delete(strainName);
+          engine.speciesAbove3Percent.add(strainName);
+        } else if (ratio < 0.03 && engine.speciesAbove3Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
+          engine.speciesAbove3Percent.delete(strainName);
           for (let i = 0; i < activeAgents.length; i++) {
             if (activeAgents[i].genome.name === strainName && activeAgents[i].hasBred) {
               activeAgents[i].tapering = true;
@@ -852,7 +852,7 @@ export function updateSimulation(engine: SimulationEngine) {
     }
     
     // Pass 2: Failsafe global cut (in case ecoFade < 1 and sum exceeds maxAgents)
-    const survivors = engine.agents.filter(a => !a.tapering && !a.isFeeler);
+    const survivors = engine.agents.filter(a => !a.tapering && !a.isFeeler && a.hasBred);
     if (survivors.length > globalLimit) {
       survivors.sort((a, b) => b.age - a.age);
       const overflow = survivors.length - globalLimit;
@@ -860,14 +860,6 @@ export function updateSimulation(engine: SimulationEngine) {
         survivors[i].tapering = true;
         survivors[i].forceTapering = true;
       }
-    }
-  } else if (engine.hasAnyOrganismBred && activeNotTapering.length > engine.maxAgents) {
-    // Basic fallback just in case
-    activeNotTapering.sort((a, b) => b.age - a.age);
-    const numToTaper = activeNotTapering.length - engine.maxAgents;
-    for (let i = 0; i < numToTaper; i++) {
-       activeNotTapering[i].tapering = true;
-       activeNotTapering[i].forceTapering = true;
     }
   }
 

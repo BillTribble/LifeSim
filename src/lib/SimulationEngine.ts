@@ -65,7 +65,7 @@ export class SimulationEngine {
   biomassMap: Map<string, number> = new Map();
   genomeMap: Map<string, Genome> = new Map();
   suppressedStrains: Set<string> = new Set();
-  speciesAbove5Percent: Set<string> = new Set();
+  speciesAbove3Percent: Set<string> = new Set();
   time: number = 0;
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
@@ -859,7 +859,7 @@ export class SimulationEngine {
     if (this.dyingStrains) this.dyingStrains.clear();
     if (this.dyingStems) this.dyingStems.clear();
     if (this.suppressedStrains) this.suppressedStrains.clear();
-    if (this.speciesAbove5Percent) this.speciesAbove5Percent.clear();
+    if (this.speciesAbove3Percent) this.speciesAbove3Percent.clear();
     this.time = 0;
     this.frameCount = 0;
     const idm = new THREE.Matrix4().set(
