@@ -751,7 +751,7 @@ export function updateSimulation(engine: SimulationEngine) {
         } else if (ratio < 0.03 && engine.speciesAbove5Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
           engine.speciesAbove5Percent.delete(strainName);
           for (let i = 0; i < activeAgents.length; i++) {
-            if (activeAgents[i].genome.name === strainName) {
+            if (activeAgents[i].genome.name === strainName && activeAgents[i].hasBred) {
               activeAgents[i].tapering = true;
               activeAgents[i].forceTapering = true;
               activeAgents[i].fadeAge = activeAgents[i].fadeAge || 0;
@@ -816,7 +816,7 @@ export function updateSimulation(engine: SimulationEngine) {
 
   engine.agents = engine.agents.filter((a) => a.active);
 
-  const activeNotTapering = engine.agents.filter(a => !a.tapering && !a.isFeeler);
+  const activeNotTapering = engine.agents.filter(a => !a.tapering && !a.isFeeler && a.hasBred);
   
   if (engine.hasAnyOrganismBred && activeNotTapering.length > engine.maxAgents * 0.5) { // Optimization: only run if mildly crowded
     const strainGroups = new Map<string, typeof activeNotTapering>();
@@ -861,7 +861,7 @@ export function updateSimulation(engine: SimulationEngine) {
         survivors[i].forceTapering = true;
       }
     }
-  } else if (activeNotTapering.length > engine.maxAgents) {
+  } else if (engine.hasAnyOrganismBred && activeNotTapering.length > engine.maxAgents) {
     // Basic fallback just in case
     activeNotTapering.sort((a, b) => b.age - a.age);
     const numToTaper = activeNotTapering.length - engine.maxAgents;

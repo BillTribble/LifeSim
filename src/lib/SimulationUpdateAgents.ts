@@ -16,7 +16,7 @@ export function processAgents(
   function canEnterDeleting(engine: SimulationEngine, activeAgents: Agent[], countAsRemoved: number = 1): boolean {
     if (!engine.hasAnyOrganismBred) return false;
     const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
-    return livingNonFeelerAgents >= 4 && (livingNonFeelerAgents - countAsRemoved) >= Math.max(3, engine.minAgents);
+    return livingNonFeelerAgents >= 3 && (livingNonFeelerAgents - countAsRemoved) >= 2;
   }
 
   const strainCounts = new Map<string, number>();
@@ -52,7 +52,7 @@ export function processAgents(
     let oldestGenomeName: string | null = null;
     let oldestAge = -Infinity;
     for (const a of activeAgents) {
-      if (a.active && !a.tapering && !a.isFeeler) {
+      if (a.active && !a.tapering && !a.isFeeler && a.hasBred) {
          const age = engine.time - (a.genome.createdAt || 0);
          if (age > oldestAge) {
              oldestAge = age;
@@ -1055,7 +1055,7 @@ export function processAgents(
       // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
       const maxGrowthAge = 600 * Math.max(0.5, engine.timeScale);
       const maxLifespan = maxGrowthAge * 3.0;
-      if (!agent.tapering && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
+      if (!agent.tapering && agent.hasBred && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
         // Don't kill the last agent of a species when we have fewer than 3 living species
         const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;
         if (canEnterDeleting(engine, activeAgents, 1) && (!wouldKillSpecies || nonTaperingStrains.size > engine.minAgents)) {
