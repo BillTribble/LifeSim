@@ -737,7 +737,7 @@ Low: Extremely slow rotation." label="HYBRID_SPIN" min={0.0} max={2.0} step={0.0
                 )}
 
                 {/* BRANCHING */}
-                {hasMatch(['BRANCH_VAR', 'BRANCHING', 'TERM_BRANCH', 'B_MUTATE', 'BRANCH_BIG', 'LRG_BRANCH', 'VARIANCE', 'RATE', 'PENALTY', 'MUTATION', 'PROB']) && (
+                {hasMatch(['BRANCH_VAR', 'BRANCHING', 'BRANCH_SPD', 'TERM_BRANCH', 'B_MUTATE', 'BRANCH_BIG', 'LRG_BRANCH', 'VARIANCE', 'RATE', 'PENALTY', 'MUTATION', 'PROB']) && (
                 <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
                   <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">BRANCHING</span>
                   <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
@@ -749,6 +749,10 @@ Low: Uniform, predictable branching." label="BRANCH_VAR" min={1} max={50.0} step
 Overall frequency of branching.
 High: Dense, bushy structures.
 Low: Linear, simple structures." label="BRANCHING" min={0.1} max={500.0} step={0.1} value={state.branchingMultiplier} onChange={setters.setBranchingMultiplier} color="#87CEEB" />
+                    <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH SPEED BOOST
+Multiplies growth speed for creatures doing lots of branching.
+High: Heavily branching bushes explode in rapid growth.
+Low: Branching does not speed up growth." label="BRANCH_SPD" min={0.0} max={3.0} step={0.1} value={state.branchGrowthBoost} onChange={setters.setBranchGrowthBoost} color="#87CEEB" />
                     <SmartDial searchQuery={searchQuery} state={state} setters={setters} tooltip="BRANCH TERM PENALTY
 Death risk after creating a branch.
 High: Branching is often fatal.

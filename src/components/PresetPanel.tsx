@@ -56,6 +56,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         taperDuration: 1.0,
         maxLineWidth: 1.5,
         widthVariance: 0.5,
+        branchGrowthBoost: 1.0,
         appendageSize: 1.8,
         leafScale: 0.3,
         multicolorAppProb: 0.05,

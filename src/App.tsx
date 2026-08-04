@@ -223,6 +223,7 @@ export default function App() {
         rhizomeSpeed={state.rhizomeSpeed}
         bushBranching={state.bushBranching}
         widthVariance={state.widthVariance}
+        branchGrowthBoost={state.branchGrowthBoost}
         treeBranching={state.treeBranching}
         snakeBranching={state.snakeBranching}
         rhizomeBranching={state.rhizomeBranching}

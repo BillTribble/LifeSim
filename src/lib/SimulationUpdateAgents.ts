@@ -226,6 +226,11 @@ export function processAgents(
       effectiveBifurcationRate *= Math.max(1.0, widthBoost);
       effectiveWanderIntensity *= Math.max(1.0, 1.0 + (widthBoost - 1.0) * 0.5);
 
+      // Branching-driven growth speed boost: creatures doing lots of branching grow faster!
+      const branchCountForBoost = strainCounts.get(agent.genome.name) || 1;
+      const branchSpeedBoost = 1.0 + Math.min(3.0, Math.max(0, branchCountForBoost - 1) * 0.06 * (engine.branchGrowthBoost || 1.0));
+      effectiveStepSize *= branchSpeedBoost;
+
       agent.age++;
       if (agent.cooldown > 0) agent.cooldown--;
 

@@ -99,6 +99,7 @@ export class SimulationEngine {
   globalPulseSpeed: number = 0.8637093147800061;
   maxLineWidth: number = 1.5;
   widthVariance: number = 0.5;
+  branchGrowthBoost: number = 1.0;
   multicolorAppProb: number = 0.3155126730950826;
   sameColorAppProb: number = 0.4968205547416572;
   tideSpeed: number = 1.2393635516813024;
@@ -709,6 +710,9 @@ export class SimulationEngine {
   }
   setWidthVariance(val: number) {
     this.widthVariance = val;
+  }
+  setBranchGrowthBoost(val: number) {
+    this.branchGrowthBoost = val;
   }
 
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
