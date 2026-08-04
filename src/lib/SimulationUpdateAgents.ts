@@ -168,6 +168,10 @@ export function processAgents(
               thicknessDecay: 0.9999,
               movementType: 'default',
               geometryType: 'cylinder',
+              appendage: 'none' as any,
+              sameColorAppendage: true,
+              multicolorAppendage: false,
+              gradientGrowth: false,
             };
             newAgents.push({
               position: agent.position.clone(),
@@ -177,7 +181,7 @@ export function processAgents(
               active: true,
               age: 0,
               thickness: feelerGenome.thicknessBase,
-              cooldown: 15,
+              cooldown: 0,
               isFeeler: true,
               realGenome: agent.genome,
               parentAgent: agent,
@@ -544,9 +548,9 @@ export function processAgents(
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         minAllowed,
-        engine.maxLineWidth,
+        Math.max(engine.maxLineWidth, genome.thicknessBase * 1.5),
       );
-      const ageScale = agent.isFeeler ? 1.0 : (agent.age >= 150 ? 1.0 : 0.1 + 0.9 * (1.0 - Math.pow(1.0 - agent.age / 150, 3)));
+      const ageScale = agent.isFeeler ? 1.0 : (agent.age >= 30 ? 1.0 : 0.5 + 0.5 * (agent.age / 30));
       const renderThickness = Math.max(0.001, agent.thickness * ageScale);
 
       engine.addLineSegment(
@@ -785,6 +789,10 @@ export function processAgents(
             thicknessDecay: 0.9999,
             movementType: 'default',
             geometryType: 'cylinder',
+            appendage: 'none' as any,
+            sameColorAppendage: true,
+            multicolorAppendage: false,
+            gradientGrowth: false,
           };
 
           const spawnDir = agent.direction.clone();
@@ -796,7 +804,7 @@ export function processAgents(
             active: true,
             age: 0,
             thickness: feelerGenome.thicknessBase,
-            cooldown: 15,
+            cooldown: 0,
             isFeeler: true,
             realGenome: agent.genome,
             parentAgent: agent,
@@ -881,6 +889,10 @@ export function processAgents(
                      thicknessDecay: 0.9999,
                      movementType: "default" as any,
                      geometryType: "cylinder" as any,
+                     appendage: "none" as any,
+                     sameColorAppendage: true,
+                     multicolorAppendage: false,
+                     gradientGrowth: false,
                    };
 
                    
@@ -892,7 +904,7 @@ export function processAgents(
                         active: true,
                         age: 0,
                         thickness: feelerGenome.thicknessBase,
-                        cooldown: 120, // Stagger feeler breeding attempts
+                        cooldown: 0, // Stagger feeler breeding attempts
                         isFeeler: true,
                         realGenome: agent.genome,
                         parentAgent: agent,
@@ -1024,6 +1036,13 @@ export function processAgents(
                  nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
                }
 
+               if (agent.isFeeler && agent.parentAgent) {
+                 agent.parentAgent.hasBred = true;
+               }
+               if (nearestPartner.isFeeler && nearestPartner.parentAgent) {
+                 nearestPartner.parentAgent.hasBred = true;
+               }
+
                // Schedule any active feelers for either parent organism to die 3 seconds (180 ticks) after mating
                const host1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
                const host2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
@@ -1153,25 +1172,8 @@ export function processAgents(
       } 
       
       if (!agent.tapering && agent.active) {
-        if (!agent.recovering) {
-          agent.thickness *= genome.thicknessDecay;
-          // Natural recovery: if they get too thin, they bounce back and get thick again
-          if (agent.thickness <= genome.minThickness * 1.5 && Math.random() < 0.05) {
-             agent.recovering = true;
-             agent.targetThickness = genome.thicknessBase;
-             engine.onLog(`Strain ${genome.name.split(' ')[0]} recovered its thickness!`);
-          }
-        }
-        agent.thickness = Math.max(agent.thickness, 0.001);
-
-        if (agent.targetThickness !== undefined) {
-          const recoverySpeed = agent.recovering ? 0.008 : 0.05;
-          agent.thickness += (agent.targetThickness - agent.thickness) * recoverySpeed;
-          if (Math.abs(agent.targetThickness - agent.thickness) < 0.05) {
-            agent.targetThickness = undefined;
-            agent.recovering = false;
-          }
-        }
+        // Healthy active organisms maintain their natural thickness Base
+        agent.thickness = Math.max(agent.thickness, genome.thicknessBase);
       }
     }
   }
