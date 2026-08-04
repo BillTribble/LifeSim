@@ -86,6 +86,7 @@ export class SimulationEngine {
   matingCount: number = 0;
   feelerCount: number = 0;
   nextAgentId: number = 1;
+  strainFeelerCooldown: Map<string, number> = new Map();
   hasAnyOrganismBred: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
@@ -1182,6 +1183,29 @@ export class SimulationEngine {
       for (let i = 0; i < lim; i++) {
         const seg = app.segments[i];
         if (seg && seg.agentId === agentId && !seg.dyingStart) {
+          this.markDying(app.segments, app.dyingSet, i, now);
+        }
+      }
+    }
+  }
+
+  markStrainSegmentsDying(strainName?: string) {
+    if (!strainName) return;
+    const now = this.unscaledTime;
+    if (!this.dyingStrains) this.dyingStrains = new Set();
+    this.dyingStrains.add(strainName);
+
+    for (let i = 0; i < this.maxDOMs; i++) {
+      const seg = this.segments[i];
+      if (seg && seg.strainName === strainName && !seg.dyingStart) {
+        this.markDying(this.segments, this.dyingStems, i, now);
+      }
+    }
+    for (const app of this.appendages.values()) {
+      const lim = Math.floor(this.maxDOMs / 4);
+      for (let i = 0; i < lim; i++) {
+        const seg = app.segments[i];
+        if (seg && seg.strainName === strainName && !seg.dyingStart) {
           this.markDying(app.segments, app.dyingSet, i, now);
         }
       }

@@ -140,24 +140,30 @@ export function processAgents(
       if (agent.tapering) {
         if (!agent.hasBred && !agent.isFeeler && agent.cooldown <= 0) {
           const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
-          const hasActiveFeeler = activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
-            (a.realGenome && a.realGenome.name === evalGenome.name) ||
-            (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
-            a.genome.name === evalGenome.name
-          ));
+          const hasActiveFeeler =
+            activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+              (a.realGenome && a.realGenome.name === evalGenome.name) ||
+              (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+              a.genome.name === evalGenome.name
+            )) ||
+            newAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+              (a.realGenome && a.realGenome.name === evalGenome.name) ||
+              (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+              a.genome.name === evalGenome.name
+            ));
           if (!hasActiveFeeler && Math.random() < 0.05 * engine.timeScale) {
             const feelerGenome: any = {
               ...agent.genome,
               name: `Feeler-${Math.floor(Math.random() * 10000)}`,
               archetype: 'snake' as any,
-              thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+              thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
               minThickness: 0.5,
-              stepSize: 1.2,
-              wanderIntensity: 0.15,
+              stepSize: 0.8,
+              wanderIntensity: 0.75,
               bifurcationRate: 0.0001,
               branchTendency: 0,
-              wavingAmplitude: 0,
-              wavingSpeed: 0,
+              wavingAmplitude: 0.5,
+              wavingSpeed: 0.05,
               isGlowing: true,
               thicknessDecay: 0.9999,
               movementType: 'default',
@@ -749,11 +755,17 @@ export function processAgents(
       // Age-dependent feeler emission: Organism extends feelers as it grows until it has bred
       // Limit: only ONE active feeler per creature at a time
       // Limit: only ONE active feeler per species at a time
-      const hasActiveFeeler = activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
-        (a.realGenome && a.realGenome.name === evalGenome.name) ||
-        (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
-        a.genome.name === evalGenome.name
-      ));
+      const hasActiveFeeler =
+        activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+          (a.realGenome && a.realGenome.name === evalGenome.name) ||
+          (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+          a.genome.name === evalGenome.name
+        )) ||
+        newAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+          (a.realGenome && a.realGenome.name === evalGenome.name) ||
+          (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+          a.genome.name === evalGenome.name
+        ));
       if (!agent.isFeeler && !agent.hasBred && !agent.tapering && !hasActiveFeeler && (agent.age > 70 || strainAge > 180) && agent.cooldown <= 0) {
         const feelerChance = Math.min(0.85, (agent.age - 120) * 0.04 * engine.timeScale);
         if (Math.random() < feelerChance) {
@@ -761,14 +773,14 @@ export function processAgents(
             ...agent.genome,
             name: `Feeler-${Math.floor(Math.random() * 10000)}`,
             archetype: 'snake' as any,
-            thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+            thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
             minThickness: 0.5,
-            stepSize: 1.2,
-            wanderIntensity: 0.15,
+            stepSize: 0.8,
+            wanderIntensity: 0.75,
             bifurcationRate: 0.0001,
             branchTendency: 0,
-            wavingAmplitude: 0,
-            wavingSpeed: 0,
+            wavingAmplitude: 0.5,
+            wavingSpeed: 0.05,
             isGlowing: true,
             thicknessDecay: 0.9999,
             movementType: 'default',
@@ -857,14 +869,14 @@ export function processAgents(
                      ...agent.genome,
                      name: `Feeler-${Math.floor(Math.random() * 10000)}`,
                      archetype: "snake" as any,
-                     thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+                     thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
                      minThickness: 0.5,
-                     stepSize: 1.2,
-                     wanderIntensity: 0.15,
+                     stepSize: 0.8,
+                     wanderIntensity: 0.75,
                      bifurcationRate: 0.0001,
                      branchTendency: 0,
-                     wavingAmplitude: 0,
-                     wavingSpeed: 0,
+                     wavingAmplitude: 0.5,
+                     wavingSpeed: 0.05,
                      isGlowing: true,
                      thicknessDecay: 0.9999,
                      movementType: "default" as any,
@@ -979,9 +991,11 @@ export function processAgents(
                  .clone()
                  .lerp(nearestPartner.direction, 0.5)
                  .normalize();
-               const midPoint = agent.position
-                 .clone()
-                 .lerp(nearestPartner.position, 0.5);
+               const midPoint = agent.isFeeler
+                 ? agent.position.clone()
+                 : nearestPartner.isFeeler
+                 ? nearestPartner.position.clone()
+                 : agent.position.clone().lerp(nearestPartner.position, 0.5);
 
                // Offspring spawn exactly at the midPoint (center of mating artifact) and grow outward
                const spawnPoint = midPoint.clone();
@@ -1105,8 +1119,21 @@ export function processAgents(
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
 
-            // Immediately mark this individual agent's segments to dissolve over 3 seconds
-            engine.markAgentSegmentsDying(agent.id);
+            // Immediately mark all segments of this entire strain to dissolve simultaneously over 3 seconds
+            if ((engine as any).markStrainSegmentsDying) {
+              (engine as any).markStrainSegmentsDying(agent.genome.name);
+            } else {
+              engine.markAgentSegmentsDying(agent.id);
+            }
+
+            // Deactivate all remaining branch agents of this organism so no ghost branch tips linger
+            for (let j = 0; j < activeAgents.length; j++) {
+              const other = activeAgents[j];
+              if (other.active && other.genome.name === agent.genome.name) {
+                other.active = false;
+                currentActiveCount--;
+              }
+            }
 
             // Check if this was the last active agent of its strain
             const remainingOfStrain = activeAgents.filter(
