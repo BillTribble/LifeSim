@@ -23,7 +23,7 @@ export const DEFAULTS: Record<string, any> = {
   "proximity": 1538.23896997661,
   "desperation": 4.333947682994568,
   "despairAge": 3185.029905594175,
-  "flowerSize": 1.3,
+  "flowerSize": 1.8,
   "tideSpeed": 1.2393635516813024,
   "tideColor": "#0b939c",
   "bgColor": "#3e5e50",
@@ -135,7 +135,7 @@ export const DEFAULTS: Record<string, any> = {
       "max": 5
     }
   },
-  "appendageSize": 1.2,
+  "appendageSize": 1.8,
   "hybridSpinSpeed": 0.2,
   "hybridDecay": 48.44796525279812,
   "deathRate": 5.50616330309604,
@@ -158,7 +158,7 @@ export const DEFAULTS: Record<string, any> = {
 
 export function useSimulationState() {
   if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-07-30-v20";
+    const CURRENT_SCHEMA = "2026-08-04-v21";
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
       try {
         localStorage.clear();

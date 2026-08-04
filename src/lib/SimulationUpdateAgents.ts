@@ -137,7 +137,50 @@ export function processAgents(
 
     for (let iter = 0; iter < iterations; iter++) {
       if (!agent.active) break;
-      if (agent.tapering) break; // Stop growing immediately when entering deleting phase
+      if (agent.tapering) {
+        if (!agent.hasBred && !agent.isFeeler && agent.cooldown <= 0) {
+          const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+          const hasActiveFeeler = activeAgents.some(a => a.active && a.isFeeler && !a.tapering && (
+            (a.realGenome && a.realGenome.name === evalGenome.name) ||
+            (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
+            a.genome.name === evalGenome.name
+          ));
+          if (!hasActiveFeeler && Math.random() < 0.05 * engine.timeScale) {
+            const feelerGenome: any = {
+              ...agent.genome,
+              name: `Feeler-${Math.floor(Math.random() * 10000)}`,
+              archetype: 'snake' as any,
+              thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+              minThickness: 0.5,
+              stepSize: 1.2,
+              wanderIntensity: 0.15,
+              bifurcationRate: 0.0001,
+              branchTendency: 0,
+              wavingAmplitude: 0,
+              wavingSpeed: 0,
+              isGlowing: true,
+              thicknessDecay: 0.9999,
+              movementType: 'default',
+              geometryType: 'cylinder',
+            };
+            newAgents.push({
+              position: agent.position.clone(),
+              lastPosition: agent.position.clone(),
+              direction: agent.direction.clone(),
+              genome: feelerGenome,
+              active: true,
+              age: 0,
+              thickness: feelerGenome.thicknessBase,
+              cooldown: 15,
+              isFeeler: true,
+              realGenome: agent.genome,
+              parentAgent: agent,
+            });
+            agent.cooldown = 45;
+          }
+        }
+        break; // Stop growing stems when in deleting phase
+      }
       const { genome } = agent;
       const isHybrid = !!genome.isHybrid || genome.name.startsWith("Hybrid") || genome.name.startsWith("Kin") || genome.name.includes("-");
 
@@ -151,17 +194,21 @@ export function processAgents(
         effectiveStepSize *= 0.65;
         effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
-        // TRUNK-THEN-BURST: 3 seconds of normal trunk growth (180 ticks * timeScale),
-        // then dramatically increase bifurcation to create a canopy explosion
-        const trunkDurationTicks = 180 * Math.max(0.5, engine.timeScale);
+        // 3-phase tree: short trunk -> increasing canopy branching -> taper off
+        const trunkDurationTicks = 80 * Math.max(0.5, engine.timeScale);
+        const canopyAge = agent.age - trunkDurationTicks;
         if (agent.age < trunkDurationTicks) {
-          effectiveBifurcationRate *= 0.01 * engine.treeBranching; // Suppress branching — pure trunk
-          effectiveStepSize *= 1.2;          // Long growth strides
-          effectiveWanderIntensity *= 0.05;  // Very straight vertical trunk
+          // Phase 1: Short straight trunk
+          effectiveBifurcationRate *= 0.01 * engine.treeBranching;
+          effectiveStepSize *= 1.2;
+          effectiveWanderIntensity *= 0.05;
         } else {
-          effectiveBifurcationRate *= 6.0 * engine.treeBranching;   // Canopy burst
-          effectiveStepSize *= 0.5;          // Short, dense branching
-          effectiveWanderIntensity *= 3.0;   // Spread outward
+          // Phase 2 & 3: Canopy — branching accelerates then plateaus
+          const canopyProgress = Math.min(1.0, canopyAge / 400);
+          const branchRamp = 2.0 + canopyProgress * 10.0; // Ramps from 2 to 12
+          effectiveBifurcationRate *= branchRamp * engine.treeBranching;
+          effectiveStepSize *= 0.6 - canopyProgress * 0.2; // Gets shorter as branches multiply
+          effectiveWanderIntensity *= 1.5 + canopyProgress * 3.0; // Spreads wider over time
         }
       } else if (genome.archetype === "snake") {
         effectiveBifurcationRate *= 0.05 * engine.snakeBranching;
@@ -289,22 +336,25 @@ export function processAgents(
           }
         }
         if (!agent.tapering) {
-          // Omniscient and perfect seeking: find nearest fertile partner of a different strain across the entire space
+          // Omniscient seeking: find nearest SEGMENT of any creature of a different strain
           const myStrainName = agent.realGenome ? agent.realGenome.name : agent.genome.name;
-          let nearestPartnerPos: THREE.Vector3 | null = null;
+          let nearestPos: THREE.Vector3 | null = null;
           let minDSq = Infinity;
-          for (let pIdx = 0; pIdx < activeAgents.length; pIdx++) {
-            const pa = activeAgents[pIdx];
-            if (pa.active && !pa.tapering && !pa.isFeeler && pa.genome.name !== myStrainName) {
-              const dSq = agent.position.distanceToSquared(pa.position);
-              if (dSq < minDSq) {
-                minDSq = dSq;
-                nearestPartnerPos = pa.position;
-              }
+          // Search all live segments for the closest point on any other organism
+          for (let sIdx = 0; sIdx < engine.segments.length; sIdx++) {
+            const seg = engine.segments[sIdx];
+            if (!seg || seg.dyingStart || seg.strainName === myStrainName || seg.strainName.startsWith('Feeler-')) continue;
+            const m = seg.matrix.elements;
+            const sx = m[12], sy = m[13], sz = m[14];
+            const dx = agent.position.x - sx, dy = agent.position.y - sy, dz = agent.position.z - sz;
+            const dSq = dx * dx + dy * dy + dz * dz;
+            if (dSq < minDSq) {
+              minDSq = dSq;
+              nearestPos = new THREE.Vector3(sx, sy, sz);
             }
           }
-          if (nearestPartnerPos) {
-            const homingVector = new THREE.Vector3().subVectors(nearestPartnerPos, agent.position).normalize();
+          if (nearestPos) {
+            const homingVector = new THREE.Vector3().subVectors(nearestPos, agent.position).normalize();
             agent.direction.lerp(homingVector, 0.92).normalize();
           }
         }
@@ -694,18 +744,23 @@ export function processAgents(
       if (!agent.isFeeler && !agent.hasBred && !agent.tapering && !hasActiveFeeler && (agent.age > 70 || strainAge > 180) && agent.cooldown <= 0) {
         const feelerChance = Math.min(0.85, (agent.age - 120) * 0.04 * engine.timeScale);
         if (Math.random() < feelerChance) {
-          const feelerGenome = { ...agent.genome };
-          feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
-          feelerGenome.archetype = "snake"; // Fast sensory feeler
-          feelerGenome.thicknessBase = Math.max(0.8, agent.thickness * 0.7);
-          feelerGenome.minThickness = 0.5;
-          feelerGenome.stepSize = 1.2;
-          feelerGenome.wanderIntensity = 0.15;
-          feelerGenome.bifurcationRate = 0.0001;
-          feelerGenome.branchTendency = 0;
-          feelerGenome.wavingAmplitude = 0;
-          feelerGenome.wavingSpeed = 0;
-          feelerGenome.isGlowing = true;
+          const feelerGenome: any = {
+            ...agent.genome,
+            name: `Feeler-${Math.floor(Math.random() * 10000)}`,
+            archetype: 'snake' as any,
+            thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+            minThickness: 0.5,
+            stepSize: 1.2,
+            wanderIntensity: 0.15,
+            bifurcationRate: 0.0001,
+            branchTendency: 0,
+            wavingAmplitude: 0,
+            wavingSpeed: 0,
+            isGlowing: true,
+            thicknessDecay: 0.9999,
+            movementType: 'default',
+            geometryType: 'cylinder',
+          };
 
           const spawnDir = agent.direction.clone();
           newAgents.push({
@@ -775,18 +830,23 @@ export function processAgents(
            }
            
            if (!agent.isFeeler && !hasActiveFeeler && distSq < reach && agent.cooldown <= 0 && Math.random() < 0.2 * reachMultiplier * engine.timeScale) {
-                   const feelerGenome = { ...agent.genome };
-                   feelerGenome.name = `Feeler-${Math.floor(Math.random() * 10000)}`;
-                   feelerGenome.archetype = "snake"; // Fast!
-                   feelerGenome.thicknessBase = Math.max(0.8, agent.thickness * 0.7);
-                   feelerGenome.minThickness = 0.5;
-                   feelerGenome.stepSize = 1.2;
-                   feelerGenome.wanderIntensity = 0.15;
-                   feelerGenome.bifurcationRate = 0.0001;
-                   feelerGenome.branchTendency = 0;
-                   feelerGenome.wavingAmplitude = 0;
-                   feelerGenome.wavingSpeed = 0;
-                   feelerGenome.isGlowing = true;
+                   const feelerGenome: any = {
+                     ...agent.genome,
+                     name: `Feeler-${Math.floor(Math.random() * 10000)}`,
+                     archetype: "snake" as any,
+                     thicknessBase: Math.max(0.8, agent.thickness * 0.7),
+                     minThickness: 0.5,
+                     stepSize: 1.2,
+                     wanderIntensity: 0.15,
+                     bifurcationRate: 0.0001,
+                     branchTendency: 0,
+                     wavingAmplitude: 0,
+                     wavingSpeed: 0,
+                     isGlowing: true,
+                     thicknessDecay: 0.9999,
+                     movementType: "default" as any,
+                     geometryType: "cylinder" as any,
+                   };
 
                    
                     newAgents.push({

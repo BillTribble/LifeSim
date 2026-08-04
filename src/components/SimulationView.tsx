@@ -207,7 +207,7 @@ export function SimulationView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SimulationEngine | null>(null);
   const [hoveredStrainName, setHoveredStrainName] = useState<string | null>(null);
-  const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{ age: number; tapering: boolean } | null>(null);
+  const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{ age: number; tapering: boolean; appendage?: string } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const lastRaycastTime = useRef<number>(0);
   const pointerDownStart = useRef<{ x: number; y: number } | null>(null);
@@ -923,7 +923,7 @@ export function SimulationView({
         matchingAgent = engine.agents.find(a => a.active && !a.isFeeler && a.genome.name === targetStrainName);
       }
       if (matchingAgent) {
-        setHoveredAgentInfo({ age: matchingAgent.age, tapering: !!matchingAgent.tapering });
+        setHoveredAgentInfo({ age: matchingAgent.age, tapering: !!matchingAgent.tapering, appendage: matchingAgent.genome.appendage });
       } else {
         setHoveredAgentInfo(null);
       }
@@ -1019,6 +1019,10 @@ export function SimulationView({
           <div className="flex justify-between mb-1 gap-2">
             <span>Archetype:</span>
             <span className="capitalize">{hoveredStrain.archetype || "unknown"}</span>
+          </div>
+          <div className="flex justify-between mb-1 gap-2">
+            <span>Appendage:</span>
+            <span className="capitalize">{hoveredStrain.appendage || hoveredAgentInfo?.appendage || "none"}</span>
           </div>
           <div className="flex justify-between mb-1 gap-2">
             <span>Biomass:</span>

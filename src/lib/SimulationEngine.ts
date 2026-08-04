@@ -95,7 +95,7 @@ export class SimulationEngine {
   proximity: number = 1538.23896997661;
   desperation: number = 4.333947682994568;
   despairAge: number = 3185.029905594175;
-  flowerSize: number = 1.3;
+  flowerSize: number = 1.8;
   globalPulseSpeed: number = 0.8637093147800061;
   maxLineWidth: number = 1.5;
   widthVariance: number = 0.5;

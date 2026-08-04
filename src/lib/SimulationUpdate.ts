@@ -674,7 +674,7 @@ export function updateSimulation(engine: SimulationEngine) {
       const parentBDead = seg.agentBId !== undefined && !activeAgentIds.has(seg.agentBId);
       const isParentDying = engine.dyingStrains && (engine.dyingStrains.has(seg.strainName) || (seg.strainBName && engine.dyingStrains.has(seg.strainBName)));
 
-      if (parentADead || parentBDead || isParentDying || age > maxHybridLife) {
+      if (age > maxHybridLife) {
         engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
       } else if (effectiveDieback > 0.000001) {
         const deathProb = Math.min(
