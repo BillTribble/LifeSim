@@ -1,649 +1,113 @@
 import { useState, useEffect } from "react";
+import {
+  DEFAULTS,
+  DEFAULT_PALETTE,
+  CURRENT_SCHEMA,
+  getStoredFloat,
+  getStoredBool,
+  getStoredString,
+  getStoredTimeScale,
+  getStoredDialLimits,
+  getStoredTraitProbs,
+  checkSchemaVersion,
+} from "./SimulationDefaults";
 
-export const DEFAULTS: Record<string, any> = {
-  "kioskMode": true,
-  "themeMorphSpeed": 5,
-  "themeMorphFreq": 1,
-  "theme": 0,
-  "timeScale": 1,
-  "postMatingDieoff": true,
-  "rhizomeSpeed": 1,
-  "treeSpeed": 1,
-  "bushSpeed": 1,
-  "bushBranching": 8,
-  "treeBranching": 1,
-  "snakeBranching": 1,
-  "rhizomeBranching": 1,
-  "snakeWander": 1,
-  "snakeStepSize": 1,
-  "snakeSpeed": 0.5,
-  "widthVariance": 0.5,
-  "branchGrowthBoost": 1.0,
-  "colorMutationShift": 0.06,
-  "rotationSpeed": 0.13,
-  "magnetism": 0.08361988738043864,
-  "proximity": 1538.23896997661,
-  "desperation": 4.333947682994568,
-  "despairAge": 3185.029905594175,
-  "flowerSize": 1.8,
-  "tideSpeed": 1.2393635516813024,
-  "tideColor": "#0b939c",
-  "bgColor": "#3e5e50",
-  "fogColor": "#000000",
-  "tideThickness": 74.92111043533596,
-  "tideOpacity": 0.12871529096468015,
-  "tideSaturation": 0.0162554822004225,
-  "growthSpeed": 0.11,
-  "diebackRate": 5.50616330309604,
-  "allowBreeding": true,
-  "hybridCooldown": 926.4522288567662,
-  "hybridStickiness": 48.44796525279812,
-  "branchTendencyVar": 11.779000158227072,
-  "ornamentFrequency": 9.525004244851067,
-  "branchingMultiplier": 163.34538034535345,
-  "branchBigger": 0.9929495875268578,
-  "branchSplitSizeProb": 0.7936089206087223,
-  "maxDOMs": 341000,
-  "maxAgents": 107,
-  "maxSpecies": 14,
-  "ecoFade": 0.8944272063480259,
-  "minAgents": 3,
-  "boundarySize": 80,
-  "desiccationSpeed": 12.842754552113087,
-  "hybridSize": 2,
-  "terminationProb": 0.0462143068937545,
-  "termProbPostBranch": 2.0392659736659366,
-  "taperDuration": 1.4271648309574363,
-  "diebackAgeBias": 4.4091254750620505,
-  "enableGlow": false,
-  "glowSize": 0.5,
-  "fogVisibility": 826.8761838338102,
-  "botanyRealism": true,
-  "windVelocity": 0.2,
-  "flutterIntensity": 0.5,
-  "leafScale": 0.3,
-  "leafDensity": 0.35,
-  "relativeLeafSizeDiff": 0.2,
-  "leafGrowthSpeed": 0.0045,
-  "phyllotaxisAngle": 137.5,
-  "leafProbability": 1,
-  "appendageSpawnRate": 1,
-  "glowProbability": 0.1,
-  "stemCurviness": 3,
-  "veinStrength": 15,
-  "veinGlow": 0.5,
-  "traitProbs": {
-    "flowers": 0.25308343649782206,
-    "lillyPads": 0.22658594313832736,
-    "leaves": 0.6861914211625996,
-    "petals": 0.17734982544932287,
-    "needles": 0.652656691289245,
-    "thorns": 0.02097595552862941,
-    "hair": 0.20011696648365407,
-    "curlyHair": 0.5951412197911187,
-    "crystals": 0.2358742561569518,
-    "spores": 0.30771523305963355,
-    "scales": 0.9933893114828062,
-    "spirals": 0.15350714077951655
-  },
-  "maxLineWidth": 1.5,
-  "globalPulseSpeed": 0.8637093147800061,
-  "multicolorAppProb": 0.3155126730950826,
-  "sameColorAppProb": 0.4968205547416572,
-  "maxSaturation": 0.3135869032532054,
-  "colorClamp": 1,
-  "gridHeight": 80,
-  "layerGap": 166,
-  "floorHeight": 6,
-  "ceilingHeight": -38,
-  "cameraProjection": 1,
-  "showBoundaryBox": false,
-  "feelerFade": 10,
-  "cullRate": 48.87,
-  "glowTraitIntensity": 1.5,
-  "glowTraitDistance": 50,
-  "glowTraitReflect": 1,
-  "dialLimits": {
-    "DEATH RATE": {
-      "min": 0,
-      "max": 10
-    },
-    "MAGNET": {
-      "min": 0,
-      "max": 10
-    },
-    "BUDGET": {
-      "min": 500,
-      "max": 1000000
-    },
-    "HYBRID_DECAY": {
-      "min": 0,
-      "max": 1
-    },
-    "SLOW_MO": {
-      "min": 0.1,
-      "max": 50
-    },
-    "GLOW_INTENSITY": {
-      "min": 0.1,
-      "max": 10
-    },
-    "GLOW_DIST": {
-      "min": 5,
-      "max": 200
-    },
-    "GLOW_REFLECT": {
-      "min": 0,
-      "max": 5
-    }
-  },
-  "appendageSize": 1.8,
-  "hybridSpinSpeed": 0.2,
-  "hybridDecay": 48.44796525279812,
-  "deathRate": 5.50616330309604,
-  "slowMotion": 1,
-  "rotationVelocity": 0.7,
-  "swarmCohesion": 0.08361988738043864,
-  "detectionRange": 1538.23896997661,
-  "extrusionSpeed": 0.11,
-  "fadeSpeed": 12.842754552113087,
-  "pulseSpeed": 0.8637093147800061,
-  "saturation": 0.3135869032532054,
-  "cameraPosition": {
-    "x": 0,
-    "y": 18.921075000000005,
-    "z": 137.42,
-    "zoom": 1
-  },
-  "version": "1.0"
-};
+export { DEFAULTS, DEFAULT_PALETTE, CURRENT_SCHEMA };
 
 export function useSimulationState() {
-  if (typeof window !== "undefined") {
-    const CURRENT_SCHEMA = "2026-08-04-v22";
-    if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
-      try {
-        localStorage.clear();
-      } catch (e) {}
-      localStorage.setItem("lifesim_schema_ver", CURRENT_SCHEMA);
-    }
-  }
+  checkSchemaVersion();
 
-  const [snakeSpeed, setSnakeSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("snakeSpeed") || DEFAULTS.snakeSpeed.toString(),
-    ),
-  );
-  const [snakeStepSize, setSnakeStepSize] = useState(() =>
-    parseFloat(
-      localStorage.getItem("snakeStepSize") || DEFAULTS.snakeStepSize.toString(),
-    ),
-  );
-  const [snakeWander, setSnakeWander] = useState(() =>
-    parseFloat(
-      localStorage.getItem("snakeWander") || DEFAULTS.snakeWander.toString(),
-    ),
-  );
-  const [bushSpeed, setBushSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("bushSpeed") || DEFAULTS.bushSpeed.toString(),
-    ),
-  );
-  const [treeSpeed, setTreeSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("treeSpeed") || DEFAULTS.treeSpeed.toString(),
-    ),
-  );
-  const [rhizomeSpeed, setRhizomeSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("rhizomeSpeed") || DEFAULTS.rhizomeSpeed.toString(),
-    ),
-  );
-  const [bushBranching, setBushBranching] = useState(() =>
-    parseFloat(
-      localStorage.getItem("bushBranching") || DEFAULTS.bushBranching.toString(),
-    ),
-  );
-  const [widthVariance, setWidthVariance] = useState(() =>
-    parseFloat(
-      localStorage.getItem("widthVariance") || DEFAULTS.widthVariance.toString(),
-    ),
-  );
-  const [branchGrowthBoost, setBranchGrowthBoost] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchGrowthBoost") || DEFAULTS.branchGrowthBoost.toString(),
-    ),
-  );
-  const [colorMutationShift, setColorMutationShift] = useState(() =>
-    parseFloat(
-      localStorage.getItem("colorMutationShift") || DEFAULTS.colorMutationShift.toString(),
-    ),
-  );
-  const [treeBranching, setTreeBranching] = useState(() =>
-    parseFloat(
-      localStorage.getItem("treeBranching") || DEFAULTS.treeBranching.toString(),
-    ),
-  );
-  const [snakeBranching, setSnakeBranching] = useState(() =>
-    parseFloat(
-      localStorage.getItem("snakeBranching") || DEFAULTS.snakeBranching.toString(),
-    ),
-  );
-  const [rhizomeBranching, setRhizomeBranching] = useState(() =>
-    parseFloat(
-      localStorage.getItem("rhizomeBranching") || DEFAULTS.rhizomeBranching.toString(),
-    ),
-  );
-  const [timeScale, setTimeScale] = useState(() => {
-    const savedTs = localStorage.getItem("timeScale") || localStorage.getItem("slowMotion");
-    if (savedTs !== null) {
-      const val = parseFloat(savedTs);
-      if (!isNaN(val)) return val;
-    }
-    return DEFAULTS.timeScale;
-  });
-  const [postMatingDieoff, setPostMatingDieoff] = useState(() => {
-    const saved = localStorage.getItem("postMatingDieoff");
-    return saved !== null ? saved === "true" : true;
-  });
+  const [snakeSpeed, setSnakeSpeed] = useState(() => getStoredFloat("snakeSpeed"));
+  const [snakeStepSize, setSnakeStepSize] = useState(() => getStoredFloat("snakeStepSize"));
+  const [snakeWander, setSnakeWander] = useState(() => getStoredFloat("snakeWander"));
+  const [bushSpeed, setBushSpeed] = useState(() => getStoredFloat("bushSpeed"));
+  const [treeSpeed, setTreeSpeed] = useState(() => getStoredFloat("treeSpeed"));
+  const [rhizomeSpeed, setRhizomeSpeed] = useState(() => getStoredFloat("rhizomeSpeed"));
+  const [bushBranching, setBushBranching] = useState(() => getStoredFloat("bushBranching"));
+  const [widthVariance, setWidthVariance] = useState(() => getStoredFloat("widthVariance"));
+  const [branchGrowthBoost, setBranchGrowthBoost] = useState(() => getStoredFloat("branchGrowthBoost"));
+  const [colorMutationShift, setColorMutationShift] = useState(() => getStoredFloat("colorMutationShift"));
+  const [treeBranching, setTreeBranching] = useState(() => getStoredFloat("treeBranching"));
+  const [snakeBranching, setSnakeBranching] = useState(() => getStoredFloat("snakeBranching"));
+  const [rhizomeBranching, setRhizomeBranching] = useState(() => getStoredFloat("rhizomeBranching"));
+  const [timeScale, setTimeScale] = useState(() => getStoredTimeScale());
+  const [postMatingDieoff, setPostMatingDieoff] = useState(() => getStoredBool("postMatingDieoff", true));
   const [theme, setTheme] = useState(0); // Always start in normal theme
-  const [themeMorphFreq, setThemeMorphFreq] = useState(() =>
-    parseFloat(
-      localStorage.getItem("themeMorphFreq") || DEFAULTS.themeMorphFreq.toString(),
-    ),
-  );
-  const [themeMorphSpeed, setThemeMorphSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("themeMorphSpeed") || DEFAULTS.themeMorphSpeed.toString(),
-    ),
-  );
-const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: number}>>(() => {
-    try {
-      const stored = localStorage.getItem("dialLimits");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Object.keys(parsed).length > 0) return parsed;
-      }
-      return DEFAULTS.dialLimits;
-    } catch {
-      return DEFAULTS.dialLimits;
-    }
-  });
-
-  const [rotationSpeed, setRotationSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("rotationSpeed") ||
-        DEFAULTS.rotationSpeed.toString(),
-    ),
-  );
-  const [gridHeight, setGridHeight] = useState(() =>
-    parseFloat(
-      localStorage.getItem("gridHeight") || DEFAULTS.gridHeight.toString(),
-    ),
-  );
-  const [layerGap, setLayerGap] = useState(() =>
-    parseFloat(
-      localStorage.getItem("layerGap") || DEFAULTS.layerGap.toString(),
-    ),
-  );
-  const [floorHeight, setFloorHeight] = useState(() =>
-    parseFloat(
-      localStorage.getItem("floorHeight") || DEFAULTS.floorHeight.toString(),
-    ),
-  );
-  const [ceilingHeight, setCeilingHeight] = useState(() =>
-    parseFloat(
-      localStorage.getItem("ceilingHeight") || DEFAULTS.ceilingHeight.toString(),
-    ),
-  );
-  const [cameraProjection, setCameraProjection] = useState(() =>
-    parseFloat(
-      localStorage.getItem("cameraProjection") || DEFAULTS.cameraProjection.toString(),
-    ),
-  );
-  const [showBoundaryBox, setShowBoundaryBox] = useState(() =>
-    localStorage.getItem("showBoundaryBox") === "true",
-  );
-  const [magnetism, setMagnetism] = useState(() =>
-    parseFloat(
-      localStorage.getItem("magnetism") || DEFAULTS.magnetism.toString(),
-    ),
-  );
-  const [proximity, setProximity] = useState(() =>
-    parseFloat(
-      localStorage.getItem("proximity") || DEFAULTS.proximity.toString(),
-    ),
-  );
-  const [desperation, setDesperation] = useState(() =>
-    parseFloat(
-      localStorage.getItem("desperation") || DEFAULTS.desperation.toString(),
-    ),
-  );
-  const [despairAge, setDespairAge] = useState(() =>
-    parseFloat(
-      localStorage.getItem("despairAge") || DEFAULTS.despairAge.toString(),
-    ),
-  );
-  const [flowerSize, setFlowerSize] = useState(() =>
-    parseFloat(
-      localStorage.getItem("flowerSize") || DEFAULTS.flowerSize.toString(),
-    ),
-  );
-  const [tideSpeed, setTideSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("tideSpeed") || DEFAULTS.tideSpeed.toString(),
-    ),
-  );
-  const [tideColor, setTideColor] = useState(
-    () => localStorage.getItem("tideColor") || DEFAULTS.tideColor,
-  );
-  const [bgColor, setBgColor] = useState(
-    () => localStorage.getItem("bgColor") || DEFAULTS.bgColor,
-  );
-  const [fogColor, setFogColor] = useState(
-    () => localStorage.getItem("fogColor") || DEFAULTS.fogColor,
-  );
-  const [tideThickness, setTideThickness] = useState(() =>
-    parseFloat(
-      localStorage.getItem("tideThickness") ||
-        DEFAULTS.tideThickness.toString(),
-    ),
-  );
-  const [tideOpacity, setTideOpacity] = useState(() =>
-    parseFloat(
-      localStorage.getItem("tideOpacity") || DEFAULTS.tideOpacity.toString(),
-    ),
-  );
-  const [tideSaturation, setTideSaturation] = useState(() =>
-    parseFloat(
-      localStorage.getItem("tideSaturation") ||
-        DEFAULTS.tideSaturation.toString(),
-    ),
-  );
-  const [growthSpeed, setGrowthSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("growthSpeed") || DEFAULTS.growthSpeed.toString(),
-    ),
-  );
-  const [diebackRate, setDiebackRate] = useState(() =>
-    parseFloat(
-      localStorage.getItem("diebackRate") || DEFAULTS.diebackRate.toString(),
-    ),
-  );
-  const [allowBreeding, setAllowBreeding] = useState(() =>
-    localStorage.getItem("allowBreeding") !== null
-      ? localStorage.getItem("allowBreeding") === "true"
-      : DEFAULTS.allowBreeding,
-  );
-  const [hybridCooldown, setHybridCooldown] = useState(() =>
-    parseFloat(
-      localStorage.getItem("hybridCooldown") ||
-        DEFAULTS.hybridCooldown.toString(),
-    ),
-  );
-  const [hybridStickiness, setHybridStickiness] = useState(() =>
-    parseFloat(
-      localStorage.getItem("hybridStickiness") ||
-        DEFAULTS.hybridStickiness.toString(),
-    ),
-  );
-  const [hybridSpinSpeed, setHybridSpinSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("hybridSpinSpeed") ||
-        DEFAULTS.hybridSpinSpeed.toString(),
-    ),
-  );
-  const [branchTendencyVar, setBranchTendencyVar] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchTendencyVar") ||
-        DEFAULTS.branchTendencyVar.toString(),
-    ),
-  );
-  const [ornamentFrequency, setOrnamentFrequency] = useState(() =>
-    parseFloat(
-      localStorage.getItem("ornamentFrequency") ||
-        DEFAULTS.ornamentFrequency.toString(),
-    ),
-  );
-  const [branchingMultiplier, setBranchingMultiplier] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchingMultiplier") ||
-        DEFAULTS.branchingMultiplier.toString(),
-    ),
-  );
-  const [branchBigger, setBranchBigger] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchBigger") || DEFAULTS.branchBigger.toString(),
-    ),
-  );
-  const [branchSplitSizeProb, setBranchSplitSizeProb] = useState(() =>
-    parseFloat(
-      localStorage.getItem("branchSplitSizeProb") ||
-        DEFAULTS.branchSplitSizeProb.toString(),
-    ),
-  );
-  const [maxDOMs, setMaxDOMs] = useState(() =>
-    parseFloat(localStorage.getItem("maxDOMs") || DEFAULTS.maxDOMs.toString()),
-  );
-  const [maxAgents, setMaxAgents] = useState(() =>
-    parseFloat(
-      localStorage.getItem("maxAgents") || DEFAULTS.maxAgents.toString(),
-    ),
-  );
-  const [maxSpecies, setMaxSpecies] = useState(() =>
-    parseFloat(
-      localStorage.getItem("maxSpecies") || DEFAULTS.maxSpecies.toString(),
-    ),
-  );
-  const [ecoFade, setEcoFade] = useState(() =>
-    parseFloat(
-      localStorage.getItem("ecoFade") || DEFAULTS.ecoFade.toString(),
-    ),
-  );
-  const [desiccationSpeed, setDesiccationSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("desiccationSpeed") ||
-        DEFAULTS.desiccationSpeed.toString(),
-    ),
-  );
-  const [minAgents, setMinAgents] = useState(() =>
-    parseFloat(
-      localStorage.getItem("minAgents") || DEFAULTS.minAgents.toString(),
-    ),
-  );
-  const [boundarySize, setBoundarySize] = useState(() =>
-    parseFloat(
-      localStorage.getItem("boundarySize") || DEFAULTS.boundarySize.toString(),
-    ),
-  );
-  const [hybridSize, setHybridSize] = useState(() =>
-    parseFloat(
-      localStorage.getItem("hybridSize") || DEFAULTS.hybridSize.toString(),
-    ),
-  );
-  const [terminationProb, setTerminationProb] = useState(() =>
-    parseFloat(
-      localStorage.getItem("terminationProb") ||
-        DEFAULTS.terminationProb.toString(),
-    ),
-  );
-  const [termProbPostBranch, setTermProbPostBranch] = useState(() =>
-    parseFloat(
-      localStorage.getItem("termProbPostBranch") ||
-        DEFAULTS.termProbPostBranch.toString(),
-    ),
-  );
-  const [taperDuration, setTaperDuration] = useState(() =>
-    parseFloat(
-      localStorage.getItem("taperDuration") ||
-        DEFAULTS.taperDuration.toString(),
-    ),
-  );
-  const [diebackAgeBias, setDiebackAgeBias] = useState(() =>
-    parseFloat(
-      localStorage.getItem("diebackAgeBias") ||
-        DEFAULTS.diebackAgeBias.toString(),
-    ),
-  );
-  const [enableGlow, setEnableGlow] = useState(() => {
-    const stored = localStorage.getItem("enableGlow");
-    return stored !== null ? stored === "true" : DEFAULTS.enableGlow;
-  });
-  const [glowSize, setGlowSize] = useState(() =>
-    parseFloat(
-      localStorage.getItem("glowSize") || DEFAULTS.glowSize.toString(),
-    ),
-  );
-  const [fogVisibility, setFogVisibility] = useState(() =>
-    parseFloat(localStorage.getItem("fogVisibility") || "800"),
-  );
-
-  const [botanyRealism, setBotanyRealism] = useState(() => {
-    const stored = localStorage.getItem("botanyRealism");
-    return stored !== null ? stored === "true" : DEFAULTS.botanyRealism;
-  });
-  const [windVelocity, setWindVelocity] = useState(() =>
-    parseFloat(
-      localStorage.getItem("windVelocity") || DEFAULTS.windVelocity.toString(),
-    ),
-  );
-  const [flutterIntensity, setFlutterIntensity] = useState(() =>
-    parseFloat(
-      localStorage.getItem("flutterIntensity") || DEFAULTS.flutterIntensity.toString(),
-    ),
-  );
-  const [leafScale, setLeafScale] = useState(() =>
-    parseFloat(
-      localStorage.getItem("leafScale") || DEFAULTS.leafScale.toString(),
-    ),
-  );
-  const [leafDensity, setLeafDensity] = useState(() =>
-    parseFloat(
-      localStorage.getItem("leafDensity") || DEFAULTS.leafDensity.toString(),
-    ),
-  );
-  const [relativeLeafSizeDiff, setRelativeLeafSizeDiff] = useState(() =>
-    parseFloat(
-      localStorage.getItem("relativeLeafSizeDiff") || DEFAULTS.relativeLeafSizeDiff.toString(),
-    ),
-  );
-  const [stemCurviness, setStemCurviness] = useState(() =>
-    parseFloat(
-      localStorage.getItem("stemCurviness") || DEFAULTS.stemCurviness.toString(),
-    ),
-  );
-  const [veinStrength, setVeinStrength] = useState(() =>
-    parseFloat(
-      localStorage.getItem("veinStrength") || DEFAULTS.veinStrength.toString(),
-    ),
-  );
-  const [veinGlow, setVeinGlow] = useState(() =>
-    parseFloat(
-      localStorage.getItem("veinGlow") || DEFAULTS.veinGlow.toString(),
-    ),
-  );
-  const [leafGrowthSpeed, setLeafGrowthSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("leafGrowthSpeed") || DEFAULTS.leafGrowthSpeed.toString(),
-    ),
-  );
-  const [phyllotaxisAngle, setPhyllotaxisAngle] = useState(() =>
-    parseFloat(
-      localStorage.getItem("phyllotaxisAngle") || DEFAULTS.phyllotaxisAngle.toString(),
-    ),
-  );
-  const [leafProbability, setLeafProbability] = useState(() =>
-    parseFloat(
-      localStorage.getItem("leafProbability") || DEFAULTS.leafProbability.toString(),
-    ),
-  );
-  const [appendageSpawnRate, setAppendageSpawnRate] = useState(() =>
-    parseFloat(
-      localStorage.getItem("appendageSpawnRate") || DEFAULTS.appendageSpawnRate.toString(),
-    ),
-  );
-  const [glowProbability, setGlowProbability] = useState(() =>
-    parseFloat(
-      localStorage.getItem("glowProbability") || DEFAULTS.glowProbability.toString(),
-    ),
-  );
-
-  const [kioskMode, setKioskMode] = useState(() => {
-    const item = localStorage.getItem("kioskMode");
-    return item !== null ? item === "true" : true;
-  });
-
-  const [maxLineWidth, setMaxLineWidth] = useState(() =>
-    parseFloat(
-      localStorage.getItem("maxLineWidth") || DEFAULTS.maxLineWidth.toString(),
-    ),
-  );
-  const [globalPulseSpeed, setGlobalPulseSpeed] = useState(() =>
-    parseFloat(
-      localStorage.getItem("globalPulseSpeed") ||
-        DEFAULTS.globalPulseSpeed.toString(),
-    ),
-  );
-  const [multicolorAppProb, setMulticolorAppProb] = useState(() =>
-    parseFloat(
-      localStorage.getItem("multicolorAppProb") ||
-        DEFAULTS.multicolorAppProb.toString(),
-    ),
-  );
-  const [sameColorAppProb, setSameColorAppProb] = useState(() =>
-    parseFloat(
-      localStorage.getItem("sameColorAppProb") ||
-        DEFAULTS.sameColorAppProb.toString(),
-    ),
-  );
-  const [maxSaturation, setMaxSaturation] = useState(() =>
-    parseFloat(
-      localStorage.getItem("maxSaturation") ||
-        DEFAULTS.maxSaturation.toString(),
-    ),
-  );
-  const [colorClamp, setColorClamp] = useState(() =>
-    parseFloat(
-      localStorage.getItem("colorClamp") ||
-        (DEFAULTS.colorClamp !== undefined ? DEFAULTS.colorClamp : 0.75).toString(),
-    ),
-  );
-
-  const [feelerFade, setFeelerFade] = useState(() =>
-    parseFloat(
-      localStorage.getItem("feelerFade") ||
-        DEFAULTS.feelerFade.toString(),
-    ),
-  );
-
-  const [cullRate, setCullRate] = useState(() =>
-    parseFloat(
-      localStorage.getItem("cullRate") ||
-        DEFAULTS.cullRate.toString(),
-    ),
-  );
-
-  const [glowTraitIntensity, setGlowTraitIntensity] = useState(() =>
-    parseFloat(localStorage.getItem("glowTraitIntensity") || DEFAULTS.glowTraitIntensity.toString()),
-  );
-  const [glowTraitDistance, setGlowTraitDistance] = useState(() =>
-    parseFloat(localStorage.getItem("glowTraitDistance") || DEFAULTS.glowTraitDistance.toString()),
-  );
-  const [glowTraitReflect, setGlowTraitReflect] = useState(() =>
-    parseFloat(localStorage.getItem("glowTraitReflect") || DEFAULTS.glowTraitReflect.toString()),
-  );
-
-  const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("traitProbs") || "null");
-      if (stored && typeof stored === "object" && stored.leaves === 0.8) {
-        return stored;
-      }
-      return DEFAULTS.traitProbs;
-    } catch {
-      return DEFAULTS.traitProbs;
-    }
-  });
+  const [themeMorphFreq, setThemeMorphFreq] = useState(() => getStoredFloat("themeMorphFreq"));
+  const [themeMorphSpeed, setThemeMorphSpeed] = useState(() => getStoredFloat("themeMorphSpeed"));
+  const [dialLimits, setDialLimits] = useState<Record<string, { min: number; max: number }>>(() => getStoredDialLimits());
+  const [rotationSpeed, setRotationSpeed] = useState(() => getStoredFloat("rotationSpeed"));
+  const [gridHeight, setGridHeight] = useState(() => getStoredFloat("gridHeight"));
+  const [layerGap, setLayerGap] = useState(() => getStoredFloat("layerGap"));
+  const [floorHeight, setFloorHeight] = useState(() => getStoredFloat("floorHeight"));
+  const [ceilingHeight, setCeilingHeight] = useState(() => getStoredFloat("ceilingHeight"));
+  const [cameraProjection, setCameraProjection] = useState(() => getStoredFloat("cameraProjection"));
+  const [showBoundaryBox, setShowBoundaryBox] = useState(() => getStoredBool("showBoundaryBox", false));
+  const [magnetism, setMagnetism] = useState(() => getStoredFloat("magnetism"));
+  const [proximity, setProximity] = useState(() => getStoredFloat("proximity"));
+  const [desperation, setDesperation] = useState(() => getStoredFloat("desperation"));
+  const [despairAge, setDespairAge] = useState(() => getStoredFloat("despairAge"));
+  const [flowerSize, setFlowerSize] = useState(() => getStoredFloat("flowerSize"));
+  const [tideSpeed, setTideSpeed] = useState(() => getStoredFloat("tideSpeed"));
+  const [tideColor, setTideColor] = useState(() => getStoredString("tideColor"));
+  const [bgColor, setBgColor] = useState(() => getStoredString("bgColor"));
+  const [fogColor, setFogColor] = useState(() => getStoredString("fogColor"));
+  const [tideThickness, setTideThickness] = useState(() => getStoredFloat("tideThickness"));
+  const [tideOpacity, setTideOpacity] = useState(() => getStoredFloat("tideOpacity"));
+  const [tideSaturation, setTideSaturation] = useState(() => getStoredFloat("tideSaturation"));
+  const [growthSpeed, setGrowthSpeed] = useState(() => getStoredFloat("growthSpeed"));
+  const [diebackRate, setDiebackRate] = useState(() => getStoredFloat("diebackRate"));
+  const [allowBreeding, setAllowBreeding] = useState(() => getStoredBool("allowBreeding"));
+  const [hybridCooldown, setHybridCooldown] = useState(() => getStoredFloat("hybridCooldown"));
+  const [hybridStickiness, setHybridStickiness] = useState(() => getStoredFloat("hybridStickiness"));
+  const [hybridSpinSpeed, setHybridSpinSpeed] = useState(() => getStoredFloat("hybridSpinSpeed"));
+  const [branchTendencyVar, setBranchTendencyVar] = useState(() => getStoredFloat("branchTendencyVar"));
+  const [ornamentFrequency, setOrnamentFrequency] = useState(() => getStoredFloat("ornamentFrequency"));
+  const [branchingMultiplier, setBranchingMultiplier] = useState(() => getStoredFloat("branchingMultiplier"));
+  const [branchBigger, setBranchBigger] = useState(() => getStoredFloat("branchBigger"));
+  const [branchSplitSizeProb, setBranchSplitSizeProb] = useState(() => getStoredFloat("branchSplitSizeProb"));
+  const [maxDOMs, setMaxDOMs] = useState(() => getStoredFloat("maxDOMs"));
+  const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents"));
+  const [maxSpecies, setMaxSpecies] = useState(() => getStoredFloat("maxSpecies"));
+  const [ecoFade, setEcoFade] = useState(() => getStoredFloat("ecoFade"));
+  const [desiccationSpeed, setDesiccationSpeed] = useState(() => getStoredFloat("desiccationSpeed"));
+  const [minAgents, setMinAgents] = useState(() => getStoredFloat("minAgents"));
+  const [boundarySize, setBoundarySize] = useState(() => getStoredFloat("boundarySize"));
+  const [hybridSize, setHybridSize] = useState(() => getStoredFloat("hybridSize"));
+  const [terminationProb, setTerminationProb] = useState(() => getStoredFloat("terminationProb"));
+  const [termProbPostBranch, setTermProbPostBranch] = useState(() => getStoredFloat("termProbPostBranch"));
+  const [taperDuration, setTaperDuration] = useState(() => getStoredFloat("taperDuration"));
+  const [diebackAgeBias, setDiebackAgeBias] = useState(() => getStoredFloat("diebackAgeBias"));
+  const [enableGlow, setEnableGlow] = useState(() => getStoredBool("enableGlow"));
+  const [glowSize, setGlowSize] = useState(() => getStoredFloat("glowSize"));
+  const [fogVisibility, setFogVisibility] = useState(() => getStoredFloat("fogVisibility", 800));
+  const [botanyRealism, setBotanyRealism] = useState(() => getStoredBool("botanyRealism"));
+  const [windVelocity, setWindVelocity] = useState(() => getStoredFloat("windVelocity"));
+  const [flutterIntensity, setFlutterIntensity] = useState(() => getStoredFloat("flutterIntensity"));
+  const [leafScale, setLeafScale] = useState(() => getStoredFloat("leafScale"));
+  const [leafDensity, setLeafDensity] = useState(() => getStoredFloat("leafDensity"));
+  const [relativeLeafSizeDiff, setRelativeLeafSizeDiff] = useState(() => getStoredFloat("relativeLeafSizeDiff"));
+  const [stemCurviness, setStemCurviness] = useState(() => getStoredFloat("stemCurviness"));
+  const [veinStrength, setVeinStrength] = useState(() => getStoredFloat("veinStrength"));
+  const [veinGlow, setVeinGlow] = useState(() => getStoredFloat("veinGlow"));
+  const [leafGrowthSpeed, setLeafGrowthSpeed] = useState(() => getStoredFloat("leafGrowthSpeed"));
+  const [phyllotaxisAngle, setPhyllotaxisAngle] = useState(() => getStoredFloat("phyllotaxisAngle"));
+  const [leafProbability, setLeafProbability] = useState(() => getStoredFloat("leafProbability"));
+  const [appendageSpawnRate, setAppendageSpawnRate] = useState(() => getStoredFloat("appendageSpawnRate"));
+  const [glowProbability, setGlowProbability] = useState(() => getStoredFloat("glowProbability"));
+  const [kioskMode, setKioskMode] = useState(() => getStoredBool("kioskMode", true));
+  const [maxLineWidth, setMaxLineWidth] = useState(() => getStoredFloat("maxLineWidth"));
+  const [globalPulseSpeed, setGlobalPulseSpeed] = useState(() => getStoredFloat("globalPulseSpeed"));
+  const [multicolorAppProb, setMulticolorAppProb] = useState(() => getStoredFloat("multicolorAppProb"));
+  const [sameColorAppProb, setSameColorAppProb] = useState(() => getStoredFloat("sameColorAppProb"));
+  const [maxSaturation, setMaxSaturation] = useState(() => getStoredFloat("maxSaturation"));
+  const [colorClamp, setColorClamp] = useState(() => getStoredFloat("colorClamp", 0.75));
+  const [feelerFade, setFeelerFade] = useState(() => getStoredFloat("feelerFade"));
+  const [cullRate, setCullRate] = useState(() => getStoredFloat("cullRate"));
+  const [glowTraitIntensity, setGlowTraitIntensity] = useState(() => getStoredFloat("glowTraitIntensity"));
+  const [glowTraitDistance, setGlowTraitDistance] = useState(() => getStoredFloat("glowTraitDistance"));
+  const [glowTraitReflect, setGlowTraitReflect] = useState(() => getStoredFloat("glowTraitReflect"));
+  const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => getStoredTraitProbs());
 
   useEffect(() => {
     localStorage.setItem("snakeSpeed", snakeSpeed.toString());
@@ -823,8 +287,8 @@ const [dialLimits, setDialLimits] = useState<Record<string, {min: number, max: n
       rotationSpeed,
       magnetism,
       proximity,
-    desperation,
-    despairAge,
+      desperation,
+      despairAge,
       flowerSize,
       tideSpeed,
       tideColor,
