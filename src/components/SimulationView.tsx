@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { SimulationEngine } from "../lib/SimulationEngine";
+import { SimulationHoverTooltip } from "./SimulationHoverTooltip";
 
-interface Props {
+export interface SimulationViewProps {
   onLog: (msg: string) => void;
   onStateUpdate: (state: any) => void;
   onConfigChange?: (config: any) => void;
@@ -10,111 +11,6 @@ interface Props {
   onMatingEvent?: (event: { parent1: any; parent2: any; child: any }) => void;
   onFeelerEvent?: (event: { parent: any; feeler: any }) => void;
   stats?: any;
-  [key: string]: any;
-}
-
-export function SimulationView({
-  onLog,
-  onStateUpdate,
-  onInitOrganisms,
-  onMatingEvent,
-  onFeelerEvent,
-  stats,
-  restartTrigger,
-  randomizeTrigger,
-  rotationSpeed,
-  magnetism,
-  proximity,
-  desperation,
-  despairAge,
-  flowerSize,
-  tideSpeed,
-  minAgents,
-  boundarySize,
-  tideColor,
-  bgColor,
-  fogColor,
-  tideThickness,
-  tideOpacity,
-  tideSaturation,
-  growthSpeed,
-  diebackRate,
-  allowBreeding,
-  hybridCooldown,
-  hybridStickiness,
-  hybridSpinSpeed,
-  branchTendencyVar,
-  ornamentFrequency,
-  branchingMultiplier,
-  branchBigger,
-  branchSplitSizeProb,
-  maxDOMs,
-  maxAgents,
-  maxSpecies,
-  ecoFade,
-  desiccationSpeed,
-  enableGlow,
-  glowSize,
-  fogVisibility,
-  traitProbs,
-  hybridSize,
-  terminationProb,
-  termProbPostBranch,
-  taperDuration,
-  diebackAgeBias,
-  maxLineWidth,
-  globalPulseSpeed,
-  multicolorAppProb,
-  sameColorAppProb,
-  maxSaturation,
-  colorClamp,
-  gridHeight,
-  layerGap,
-  floorHeight,
-  ceilingHeight,
-  cameraProjection,
-  showBoundaryBox,
-  feelerFade,
-  cullRate,
-  snakeSpeed,
-  snakeStepSize,
-  snakeWander,
-  bushSpeed,
-  treeSpeed,
-  rhizomeSpeed,
-  bushBranching,
-  widthVariance,
-  branchGrowthBoost,
-  colorMutationShift,
-  treeBranching,
-  snakeBranching,
-  rhizomeBranching,
-  timeScale,
-  postMatingDieoff,
-  theme,
-  themeMorphFreq,
-  themeMorphSpeed,
-  glowTraitIntensity,
-  glowTraitDistance,
-  glowTraitReflect,
-  botanyRealism,
-  windVelocity,
-  flutterIntensity,
-  leafScale,
-  leafDensity,
-  relativeLeafSizeDiff,
-  leafGrowthSpeed,
-  phyllotaxisAngle,
-  leafProbability,
-  appendageSpawnRate,
-  glowProbability,
-  stemCurviness,
-  veinStrength,
-  veinGlow,
-  kioskMode,
-  onKioskTrigger,
-  onConfigChange,
-}: Props & {
   kioskMode?: boolean;
   onKioskTrigger?: () => void;
   restartTrigger?: number;
@@ -169,6 +65,8 @@ export function SimulationView({
   layerGap?: number;
   floorHeight?: number;
   ceilingHeight?: number;
+  cameraProjection?: number;
+  showBoundaryBox?: boolean;
   feelerFade?: number;
   cullRate?: number;
   snakeSpeed?: number;
@@ -206,15 +104,156 @@ export function SimulationView({
   stemCurviness?: number;
   veinStrength?: number;
   veinGlow?: number;
-}) {
+  [key: string]: any;
+}
+
+function applyEngineProps(engine: any, props: Record<string, any>) {
+  if (!engine) return;
+  const directProps = [
+    "tideThickness",
+    "tideOpacity",
+    "tideSaturation",
+    "growthSpeed",
+    "diebackRate",
+    "ornamentFrequency",
+    "branchingMultiplier",
+    "branchBigger",
+    "themeMorphFreq",
+    "themeMorphSpeed",
+    "glowTraitIntensity",
+    "glowTraitDistance",
+    "glowTraitReflect",
+    "kioskMode",
+  ];
+
+  const methodMap: Record<string, string> = {
+    rotationSpeed: "setRotationSpeed",
+    magnetism: "setMagnetism",
+    proximity: "setProximity",
+    desperation: "setDesperation",
+    despairAge: "setDespairAge",
+    flowerSize: "setFlowerSize",
+    minAgents: "setMinAgents",
+    boundarySize: "setBoundarySize",
+    tideSpeed: "setTideSpeed",
+    tideColor: "setTideColor",
+    bgColor: "setBgColor",
+    fogColor: "setFogColor",
+    allowBreeding: "setAllowBreeding",
+    hybridCooldown: "setHybridCooldown",
+    hybridStickiness: "setHybridStickiness",
+    hybridSpinSpeed: "setHybridSpinSpeed",
+    branchTendencyVar: "setBranchTendencyVar",
+    branchSplitSizeProb: "setBranchSplitSizeProb",
+    maxDOMs: "setMaxDOMs",
+    maxAgents: "setMaxAgents",
+    maxSpecies: "setMaxSpecies",
+    ecoFade: "setEcoFade",
+    desiccationSpeed: "setDesiccationSpeed",
+    enableGlow: "setEnableGlow",
+    glowSize: "setGlowSize",
+    fogVisibility: "setFogVisibility",
+    traitProbs: "setTraitProbs",
+    hybridSize: "setHybridSize",
+    terminationProb: "setTerminationProb",
+    termProbPostBranch: "setTermProbPostBranch",
+    taperDuration: "setTaperDuration",
+    diebackAgeBias: "setDiebackAgeBias",
+    maxLineWidth: "setMaxLineWidth",
+    globalPulseSpeed: "setGlobalPulseSpeed",
+    multicolorAppProb: "setMulticolorAppProb",
+    sameColorAppProb: "setSameColorAppProb",
+    maxSaturation: "setMaxSaturation",
+    colorClamp: "setColorClamp",
+    gridHeight: "setGridHeight",
+    layerGap: "setLayerGap",
+    floorHeight: "setFloorHeight",
+    ceilingHeight: "setCeilingHeight",
+    cameraProjection: "setCameraProjection",
+    showBoundaryBox: "setShowBoundaryBox",
+    feelerFade: "setFeelerFade",
+    cullRate: "setCullRate",
+    snakeSpeed: "setSnakeSpeed",
+    snakeStepSize: "setSnakeStepSize",
+    snakeWander: "setSnakeWander",
+    bushSpeed: "setBushSpeed",
+    treeSpeed: "setTreeSpeed",
+    rhizomeSpeed: "setRhizomeSpeed",
+    bushBranching: "setBushBranching",
+    widthVariance: "setWidthVariance",
+    branchGrowthBoost: "setBranchGrowthBoost",
+    colorMutationShift: "setColorMutationShift",
+    treeBranching: "setTreeBranching",
+    snakeBranching: "setSnakeBranching",
+    rhizomeBranching: "setRhizomeBranching",
+    timeScale: "setTimeScale",
+    postMatingDieoff: "setPostMatingDieoff",
+    theme: "setTheme",
+    botanyRealism: "setBotanyRealism",
+    windVelocity: "setWindVelocity",
+    flutterIntensity: "setFlutterIntensity",
+    leafScale: "setLeafScale",
+    leafDensity: "setLeafDensity",
+    relativeLeafSizeDiff: "setRelativeLeafSizeDiff",
+    leafGrowthSpeed: "setLeafGrowthSpeed",
+    phyllotaxisAngle: "setPhyllotaxisAngle",
+    leafProbability: "setLeafProbability",
+    appendageSpawnRate: "setAppendageSpawnRate",
+    glowProbability: "setGlowProbability",
+    stemCurviness: "setStemCurviness",
+    veinStrength: "setVeinStrength",
+    veinGlow: "setVeinGlow",
+  };
+
+  for (const key of directProps) {
+    if (props[key] !== undefined) {
+      engine[key] = props[key];
+    }
+  }
+
+  for (const [key, method] of Object.entries(methodMap)) {
+    if (props[key] !== undefined && typeof engine[method] === "function") {
+      engine[method](props[key]);
+    }
+  }
+}
+
+export function SimulationView(props: SimulationViewProps) {
+  const {
+    onLog,
+    onStateUpdate,
+    onInitOrganisms,
+    onMatingEvent,
+    onFeelerEvent,
+    onKioskTrigger,
+    kioskMode,
+    onConfigChange,
+    restartTrigger,
+    randomizeTrigger,
+    stats,
+    bgColor,
+  } = props;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SimulationEngine | null>(null);
-  const [hoveredStrainName, setHoveredStrainName] = useState<string | null>(null);
-  const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{ age: number; tapering: boolean; appendage?: string } | null>(null);
+  const [hoveredStrainName, setHoveredStrainName] = useState<string | null>(
+    null
+  );
+  const [hoveredAgentInfo, setHoveredAgentInfo] = useState<{
+    age: number;
+    tapering: boolean;
+    appendage?: string;
+  } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const lastRaycastTime = useRef<number>(0);
   const pointerDownStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      applyEngineProps(engineRef.current, props);
+    }
+  }, Object.values(props));
 
   useEffect(() => {
     if (
@@ -225,420 +264,6 @@ export function SimulationView({
       engineRef.current.randomizeColors();
     }
   }, [randomizeTrigger]);
-
-  useEffect(() => {
-    if (engineRef.current && theme !== undefined) {
-      engineRef.current.setTheme(theme);
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    if (engineRef.current && themeMorphFreq !== undefined) {
-      engineRef.current.themeMorphFreq = themeMorphFreq;
-    }
-  }, [themeMorphFreq]);
-
-  useEffect(() => {
-    if (engineRef.current && themeMorphSpeed !== undefined) {
-      engineRef.current.themeMorphSpeed = themeMorphSpeed;
-    }
-  }, [themeMorphSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && rotationSpeed !== undefined) {
-      engineRef.current.setRotationSpeed(rotationSpeed);
-    }
-  }, [rotationSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && gridHeight !== undefined) {
-      engineRef.current.setGridHeight(gridHeight);
-    }
-  }, [gridHeight]);
-
-  useEffect(() => {
-    if (engineRef.current && layerGap !== undefined) {
-      engineRef.current.setLayerGap(layerGap);
-    }
-  }, [layerGap]);
-
-  useEffect(() => {
-    if (engineRef.current && floorHeight !== undefined) {
-      engineRef.current.setFloorHeight(floorHeight);
-    }
-  }, [floorHeight]);
-
-  useEffect(() => {
-    if (engineRef.current && ceilingHeight !== undefined) {
-      engineRef.current.setCeilingHeight(ceilingHeight);
-    }
-  }, [ceilingHeight]);
-
-  useEffect(() => {
-    if (engineRef.current && cameraProjection !== undefined) {
-      engineRef.current.setCameraProjection(cameraProjection);
-    }
-  }, [cameraProjection]);
-
-  useEffect(() => {
-    if (engineRef.current && showBoundaryBox !== undefined) {
-      engineRef.current.setShowBoundaryBox(showBoundaryBox);
-    }
-  }, [showBoundaryBox]);
-
-  useEffect(() => {
-    if (engineRef.current && magnetism !== undefined) {
-      engineRef.current.setMagnetism(magnetism);
-    }
-  }, [magnetism]);
-
-  useEffect(() => {
-    if (engineRef.current && proximity !== undefined) {
-      engineRef.current.setProximity(proximity);
-    }
-  }, [proximity]);
-
-  useEffect(() => {
-    if (engineRef.current && desperation !== undefined) {
-      engineRef.current.setDesperation(desperation);
-    }
-  }, [desperation]);
-
-  useEffect(() => {
-    if (engineRef.current && despairAge !== undefined) {
-      engineRef.current.setDespairAge(despairAge);
-    }
-  }, [despairAge]);
-
-  useEffect(() => {
-    if (engineRef.current && flowerSize !== undefined) {
-      engineRef.current.setFlowerSize(flowerSize);
-    }
-  }, [flowerSize]);
-
-  useEffect(() => {
-    if (engineRef.current && minAgents !== undefined) {
-      engineRef.current.setMinAgents(minAgents);
-    }
-  }, [minAgents]);
-
-  useEffect(() => {
-    if (engineRef.current && boundarySize !== undefined) {
-      engineRef.current.setBoundarySize(boundarySize);
-    }
-  }, [boundarySize]);
-
-  useEffect(() => {
-    if (engineRef.current && tideSpeed !== undefined) {
-      engineRef.current.setTideSpeed(tideSpeed);
-    }
-  }, [tideSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && cullRate !== undefined) {
-      engineRef.current.setCullRate(cullRate);
-    }
-  }, [cullRate]);
-
-  useEffect(() => {
-    if (engineRef.current && snakeSpeed !== undefined) {
-      engineRef.current.setSnakeSpeed(snakeSpeed);
-    }
-  }, [snakeSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && snakeStepSize !== undefined) {
-      engineRef.current.setSnakeStepSize(snakeStepSize);
-    }
-  }, [snakeStepSize]);
-
-  useEffect(() => {
-    if (engineRef.current && snakeWander !== undefined) {
-      engineRef.current.setSnakeWander(snakeWander);
-    }
-  }, [snakeWander]);
-
-  useEffect(() => {
-    if (engineRef.current && bushSpeed !== undefined) {
-      engineRef.current.setBushSpeed(bushSpeed);
-    }
-  }, [bushSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && treeSpeed !== undefined) {
-      engineRef.current.setTreeSpeed(treeSpeed);
-    }
-  }, [treeSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && rhizomeSpeed !== undefined) {
-      engineRef.current.setRhizomeSpeed(rhizomeSpeed);
-    }
-  }, [rhizomeSpeed]);
-
-  useEffect(() => {
-    if (engineRef.current && bushBranching !== undefined) {
-      engineRef.current.setBushBranching(bushBranching);
-    }
-  }, [bushBranching]);
-
-  useEffect(() => {
-    if (engineRef.current && widthVariance !== undefined) {
-      engineRef.current.setWidthVariance(widthVariance);
-    }
-  }, [widthVariance]);
-
-  useEffect(() => {
-    if (engineRef.current && branchGrowthBoost !== undefined) {
-      engineRef.current.setBranchGrowthBoost(branchGrowthBoost);
-    }
-  }, [branchGrowthBoost]);
-
-  useEffect(() => {
-    if (engineRef.current && colorMutationShift !== undefined) {
-      engineRef.current.setColorMutationShift(colorMutationShift);
-    }
-  }, [colorMutationShift]);
-
-  useEffect(() => {
-    if (engineRef.current && treeBranching !== undefined) {
-      engineRef.current.setTreeBranching(treeBranching);
-    }
-  }, [treeBranching]);
-
-  useEffect(() => {
-    if (engineRef.current && snakeBranching !== undefined) {
-      engineRef.current.setSnakeBranching(snakeBranching);
-    }
-  }, [snakeBranching]);
-
-  useEffect(() => {
-    if (engineRef.current && rhizomeBranching !== undefined) {
-      engineRef.current.setRhizomeBranching(rhizomeBranching);
-    }
-  }, [rhizomeBranching]);
-
-  useEffect(() => {
-    if (engineRef.current && timeScale !== undefined) {
-      engineRef.current.setTimeScale(timeScale);
-    }
-  }, [timeScale]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      if (tideColor !== undefined) engineRef.current.setTideColor(tideColor);
-      if (bgColor !== undefined) engineRef.current.setBgColor(bgColor);
-      if (fogColor !== undefined) engineRef.current.setFogColor(fogColor);
-      if (tideThickness !== undefined)
-        engineRef.current.tideThickness = tideThickness;
-      if (tideOpacity !== undefined)
-        engineRef.current.tideOpacity = tideOpacity;
-      if (tideSaturation !== undefined)
-        engineRef.current.tideSaturation = tideSaturation;
-      if (growthSpeed !== undefined)
-        engineRef.current.growthSpeed = growthSpeed;
-      if (diebackRate !== undefined)
-        engineRef.current.diebackRate = diebackRate;
-      if (allowBreeding !== undefined)
-        engineRef.current.setAllowBreeding(allowBreeding);
-      if (hybridCooldown !== undefined)
-        engineRef.current.setHybridCooldown(hybridCooldown);
-      if (hybridStickiness !== undefined)
-        engineRef.current.setHybridStickiness(hybridStickiness);
-      if (hybridSpinSpeed !== undefined)
-        engineRef.current.setHybridSpinSpeed(hybridSpinSpeed);
-      if (branchTendencyVar !== undefined)
-        engineRef.current.setBranchTendencyVar(branchTendencyVar);
-      if (ornamentFrequency !== undefined)
-        engineRef.current.ornamentFrequency = ornamentFrequency;
-      if (branchingMultiplier !== undefined)
-        engineRef.current.branchingMultiplier = branchingMultiplier;
-      if (branchBigger !== undefined)
-        engineRef.current.branchBigger = branchBigger;
-      if (branchSplitSizeProb !== undefined)
-        engineRef.current.setBranchSplitSizeProb(branchSplitSizeProb);
-      if (maxDOMs !== undefined) engineRef.current.setMaxDOMs(maxDOMs);
-      if (maxAgents !== undefined) engineRef.current.setMaxAgents(maxAgents);
-      if (minAgents !== undefined) engineRef.current.setMinAgents(minAgents);
-      if (boundarySize !== undefined) engineRef.current.setBoundarySize(boundarySize);
-      if (maxSpecies !== undefined) engineRef.current.setMaxSpecies(maxSpecies);
-      if (ecoFade !== undefined) engineRef.current.setEcoFade(ecoFade);
-      if (desiccationSpeed !== undefined)
-        engineRef.current.setDesiccationSpeed(desiccationSpeed);
-      if (enableGlow !== undefined) engineRef.current.setEnableGlow(enableGlow);
-      if (glowSize !== undefined) engineRef.current.setGlowSize(glowSize);
-      if (fogVisibility !== undefined)
-        engineRef.current.setFogVisibility(fogVisibility);
-      if (traitProbs !== undefined) engineRef.current.setTraitProbs(traitProbs);
-      if (hybridSize !== undefined) engineRef.current.setHybridSize(hybridSize);
-      if (terminationProb !== undefined)
-        engineRef.current.setTerminationProb(terminationProb);
-      if (termProbPostBranch !== undefined)
-        engineRef.current.setTermProbPostBranch(termProbPostBranch);
-      if (taperDuration !== undefined)
-        engineRef.current.setTaperDuration(taperDuration);
-      if (diebackAgeBias !== undefined)
-        engineRef.current.setDiebackAgeBias(diebackAgeBias);
-      if (maxLineWidth !== undefined)
-        engineRef.current.setMaxLineWidth(maxLineWidth);
-      if (globalPulseSpeed !== undefined)
-        engineRef.current.setGlobalPulseSpeed(globalPulseSpeed);
-      if (multicolorAppProb !== undefined)
-        engineRef.current.setMulticolorAppProb(multicolorAppProb);
-      if (sameColorAppProb !== undefined)
-        engineRef.current.setSameColorAppProb(sameColorAppProb);
-      if (maxSaturation !== undefined)
-        engineRef.current.setMaxSaturation(maxSaturation);
-      if (colorClamp !== undefined)
-        engineRef.current.setColorClamp(colorClamp);
-      if (feelerFade !== undefined)
-        engineRef.current.setFeelerFade(feelerFade);
-      if (cullRate !== undefined)
-        engineRef.current.setCullRate(cullRate);
-      if (snakeSpeed !== undefined)
-        engineRef.current.setSnakeSpeed(snakeSpeed);
-      if (snakeStepSize !== undefined)
-        engineRef.current.setSnakeStepSize(snakeStepSize);
-      if (snakeWander !== undefined)
-        engineRef.current.setSnakeWander(snakeWander);
-      if (bushSpeed !== undefined)
-        engineRef.current.setBushSpeed(bushSpeed);
-      if (treeSpeed !== undefined)
-        engineRef.current.setTreeSpeed(treeSpeed);
-      if (rhizomeSpeed !== undefined)
-        engineRef.current.setRhizomeSpeed(rhizomeSpeed);
-      if (bushBranching !== undefined)
-        engineRef.current.setBushBranching(bushBranching);
-      if (widthVariance !== undefined)
-        engineRef.current.setWidthVariance(widthVariance);
-      if (branchGrowthBoost !== undefined)
-        engineRef.current.setBranchGrowthBoost(branchGrowthBoost);
-      if (colorMutationShift !== undefined)
-        engineRef.current.setColorMutationShift(colorMutationShift);
-      if (treeBranching !== undefined)
-        engineRef.current.setTreeBranching(treeBranching);
-      if (snakeBranching !== undefined)
-        engineRef.current.setSnakeBranching(snakeBranching);
-      if (rhizomeBranching !== undefined)
-        engineRef.current.setRhizomeBranching(rhizomeBranching);
-      if (timeScale !== undefined)
-        engineRef.current.setTimeScale(timeScale);
-      if (postMatingDieoff !== undefined)
-        engineRef.current.setPostMatingDieoff(postMatingDieoff);
-      if (theme !== undefined)
-        engineRef.current.setTheme(theme);
-      if (themeMorphFreq !== undefined)
-        engineRef.current.themeMorphFreq = themeMorphFreq;
-      if (themeMorphSpeed !== undefined)
-        engineRef.current.themeMorphSpeed = themeMorphSpeed;
-      if (glowTraitIntensity !== undefined)
-        engineRef.current.glowTraitIntensity = glowTraitIntensity;
-      if (glowTraitDistance !== undefined)
-        engineRef.current.glowTraitDistance = glowTraitDistance;
-      if (glowTraitReflect !== undefined)
-        engineRef.current.glowTraitReflect = glowTraitReflect;
-      if (botanyRealism !== undefined)
-        engineRef.current.setBotanyRealism(botanyRealism);
-      if (windVelocity !== undefined)
-        engineRef.current.setWindVelocity(windVelocity);
-      if (flutterIntensity !== undefined)
-        engineRef.current.setFlutterIntensity(flutterIntensity);
-      if (leafScale !== undefined)
-        engineRef.current.setLeafScale(leafScale);
-      if (leafDensity !== undefined)
-        engineRef.current.setLeafDensity(leafDensity);
-      if (relativeLeafSizeDiff !== undefined)
-        engineRef.current.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
-      if (leafGrowthSpeed !== undefined)
-        engineRef.current.setLeafGrowthSpeed(leafGrowthSpeed);
-      if (phyllotaxisAngle !== undefined)
-        engineRef.current.setPhyllotaxisAngle(phyllotaxisAngle);
-      if (leafProbability !== undefined)
-        engineRef.current.setLeafProbability(leafProbability);
-      if (appendageSpawnRate !== undefined)
-        engineRef.current.setAppendageSpawnRate(appendageSpawnRate);
-      if (glowProbability !== undefined)
-        engineRef.current.setGlowProbability(glowProbability);
-      if (stemCurviness !== undefined)
-        engineRef.current.setStemCurviness(stemCurviness);
-      if (veinStrength !== undefined)
-        engineRef.current.setVeinStrength(veinStrength);
-      if (veinGlow !== undefined)
-        engineRef.current.setVeinGlow(veinGlow);
-    }
-  }, [
-    tideColor,
-    bgColor,
-    fogColor,
-    tideThickness,
-    tideOpacity,
-    tideSaturation,
-    growthSpeed,
-    diebackRate,
-    allowBreeding,
-    hybridCooldown,
-    hybridStickiness,
-    hybridSpinSpeed,
-    branchTendencyVar,
-    ornamentFrequency,
-    branchingMultiplier,
-    branchBigger,
-    branchSplitSizeProb,
-    maxDOMs,
-    maxAgents,
-    maxSpecies,
-    ecoFade,
-    desiccationSpeed,
-    enableGlow,
-    glowSize,
-    fogVisibility,
-    traitProbs,
-    hybridSize,
-    terminationProb,
-    termProbPostBranch,
-    taperDuration,
-    diebackAgeBias,
-    maxLineWidth,
-    globalPulseSpeed,
-    multicolorAppProb,
-    sameColorAppProb,
-    maxSaturation,
-    feelerFade,
-    cullRate,
-    snakeSpeed,
-    snakeStepSize,
-    snakeWander,
-    bushSpeed,
-    treeSpeed,
-    rhizomeSpeed,
-    timeScale,
-    theme,
-    themeMorphFreq,
-    themeMorphSpeed,
-    glowTraitIntensity,
-    glowTraitDistance,
-    glowTraitReflect,
-    botanyRealism,
-    windVelocity,
-    flutterIntensity,
-    leafScale,
-    leafDensity,
-    relativeLeafSizeDiff,
-    leafGrowthSpeed,
-    phyllotaxisAngle,
-    leafProbability,
-    appendageSpawnRate,
-    glowProbability,
-    stemCurviness,
-    veinStrength,
-    veinGlow,
-  ]);
-
-  useEffect(() => {
-    if (engineRef.current && kioskMode !== undefined) {
-      engineRef.current.kioskMode = kioskMode;
-    }
-  }, [kioskMode]);
 
   useEffect(() => {
     if (engineRef.current && restartTrigger !== undefined) {
@@ -666,122 +291,8 @@ export function SimulationView({
     }
     engineRef.current = engine;
 
-    // Apply initial settings immediately so they are never ignored
-    if (rotationSpeed !== undefined) engine.setRotationSpeed(rotationSpeed);
-    if (magnetism !== undefined) engine.setMagnetism(magnetism);
-    if (proximity !== undefined) engine.setProximity(proximity);
-    if (desperation !== undefined) engine.setDesperation(desperation);
-    if (despairAge !== undefined) engine.setDespairAge(despairAge);
-    if (flowerSize !== undefined) engine.setFlowerSize(flowerSize);
-    if (minAgents !== undefined) engine.setMinAgents(minAgents);
-    if (boundarySize !== undefined) engine.setBoundarySize(boundarySize);
-    if (tideSpeed !== undefined) engine.setTideSpeed(tideSpeed);
+    applyEngineProps(engine, props);
 
-    if (tideColor !== undefined) engine.setTideColor(tideColor);
-    if (bgColor !== undefined) engine.setBgColor(bgColor);
-    if (fogColor !== undefined) engine.setFogColor(fogColor);
-    if (tideThickness !== undefined) engine.tideThickness = tideThickness;
-    if (tideOpacity !== undefined) engine.tideOpacity = tideOpacity;
-    if (tideSaturation !== undefined) engine.tideSaturation = tideSaturation;
-    if (growthSpeed !== undefined) engine.growthSpeed = growthSpeed;
-    if (diebackRate !== undefined) engine.diebackRate = diebackRate;
-    if (allowBreeding !== undefined) engine.setAllowBreeding(allowBreeding);
-    if (hybridCooldown !== undefined) engine.setHybridCooldown(hybridCooldown);
-    if (hybridStickiness !== undefined)
-      engine.setHybridStickiness(hybridStickiness);
-    if (hybridSpinSpeed !== undefined)
-      engine.setHybridSpinSpeed(hybridSpinSpeed);
-    if (branchTendencyVar !== undefined)
-      engine.setBranchTendencyVar(branchTendencyVar);
-    if (ornamentFrequency !== undefined)
-      engine.ornamentFrequency = ornamentFrequency;
-    if (branchingMultiplier !== undefined)
-      engine.branchingMultiplier = branchingMultiplier;
-    if (branchBigger !== undefined) engine.branchBigger = branchBigger;
-    if (branchSplitSizeProb !== undefined)
-      engine.setBranchSplitSizeProb(branchSplitSizeProb);
-    if (maxDOMs !== undefined) engine.setMaxDOMs(maxDOMs);
-    if (maxAgents !== undefined) engine.setMaxAgents(maxAgents);
-    if (maxSpecies !== undefined) engine.setMaxSpecies(maxSpecies);
-    if (ecoFade !== undefined) engine.setEcoFade(ecoFade);
-    if (desiccationSpeed !== undefined)
-      engine.setDesiccationSpeed(desiccationSpeed);
-    if (enableGlow !== undefined) engine.setEnableGlow(enableGlow);
-    if (glowSize !== undefined) engine.setGlowSize(glowSize);
-    if (fogVisibility !== undefined) engine.setFogVisibility(fogVisibility);
-    if (traitProbs !== undefined) engine.setTraitProbs(traitProbs);
-    if (hybridSize !== undefined) engine.setHybridSize(hybridSize);
-    if (terminationProb !== undefined)
-      engine.setTerminationProb(terminationProb);
-    if (termProbPostBranch !== undefined)
-      engine.setTermProbPostBranch(termProbPostBranch);
-    if (taperDuration !== undefined) engine.setTaperDuration(taperDuration);
-    if (diebackAgeBias !== undefined) engine.setDiebackAgeBias(diebackAgeBias);
-    if (maxLineWidth !== undefined) engine.setMaxLineWidth(maxLineWidth);
-    if (globalPulseSpeed !== undefined)
-      engine.setGlobalPulseSpeed(globalPulseSpeed);
-    if (multicolorAppProb !== undefined)
-      engine.setMulticolorAppProb(multicolorAppProb);
-    if (sameColorAppProb !== undefined)
-      engine.setSameColorAppProb(sameColorAppProb);
-    if (colorClamp !== undefined)
-      engine.setColorClamp(colorClamp);
-    if (feelerFade !== undefined)
-      engine.setFeelerFade(feelerFade);
-    if (cullRate !== undefined)
-      engine.setCullRate(cullRate);
-    if (snakeSpeed !== undefined)
-      engine.setSnakeSpeed(snakeSpeed);
-    if (snakeStepSize !== undefined)
-      engine.setSnakeStepSize(snakeStepSize);
-    if (snakeWander !== undefined)
-      engine.setSnakeWander(snakeWander);
-    if (bushSpeed !== undefined)
-      engine.setBushSpeed(bushSpeed);
-    if (treeSpeed !== undefined)
-      engine.setTreeSpeed(treeSpeed);
-    if (rhizomeSpeed !== undefined)
-      engine.setRhizomeSpeed(rhizomeSpeed);
-    if (bushBranching !== undefined)
-      engine.setBushBranching(bushBranching);
-    if (widthVariance !== undefined)
-      engine.setWidthVariance(widthVariance);
-    if (branchGrowthBoost !== undefined)
-      engine.setBranchGrowthBoost(branchGrowthBoost);
-    if (colorMutationShift !== undefined)
-      engine.setColorMutationShift(colorMutationShift);
-    if (treeBranching !== undefined)
-      engine.setTreeBranching(treeBranching);
-    if (snakeBranching !== undefined)
-      engine.setSnakeBranching(snakeBranching);
-    if (rhizomeBranching !== undefined)
-      engine.setRhizomeBranching(rhizomeBranching);
-    if (timeScale !== undefined)
-      engine.setTimeScale(timeScale);
-    if (theme !== undefined)
-      engine.setTheme(theme);
-    if (glowTraitIntensity !== undefined)
-      engine.glowTraitIntensity = glowTraitIntensity;
-    if (glowTraitDistance !== undefined)
-      engine.glowTraitDistance = glowTraitDistance;
-    if (glowTraitReflect !== undefined)
-      engine.glowTraitReflect = glowTraitReflect;
-    if (botanyRealism !== undefined) engine.setBotanyRealism(botanyRealism);
-    if (windVelocity !== undefined) engine.setWindVelocity(windVelocity);
-    if (flutterIntensity !== undefined) engine.setFlutterIntensity(flutterIntensity);
-    if (leafScale !== undefined) engine.setLeafScale(leafScale);
-    if (leafDensity !== undefined) engine.setLeafDensity(leafDensity);
-    if (relativeLeafSizeDiff !== undefined) engine.setRelativeLeafSizeDiff(relativeLeafSizeDiff);
-    if (leafGrowthSpeed !== undefined) engine.setLeafGrowthSpeed(leafGrowthSpeed);
-    if (phyllotaxisAngle !== undefined) engine.setPhyllotaxisAngle(phyllotaxisAngle);
-    if (leafProbability !== undefined) engine.setLeafProbability(leafProbability);
-    if (appendageSpawnRate !== undefined) engine.setAppendageSpawnRate(appendageSpawnRate);
-    if (glowProbability !== undefined) engine.setGlowProbability(glowProbability);
-    if (stemCurviness !== undefined) engine.setStemCurviness(stemCurviness);
-    if (veinStrength !== undefined) engine.setVeinStrength(veinStrength);
-    if (veinGlow !== undefined) engine.setVeinGlow(veinGlow);
-
-    // Spawn initial creatures NOW, after all user settings have been applied.
     engine.initAgents();
     engine.start();
 
@@ -789,7 +300,7 @@ export function SimulationView({
       if (containerRef.current && engineRef.current) {
         engineRef.current.resize(
           containerRef.current.clientWidth,
-          containerRef.current.clientHeight,
+          containerRef.current.clientHeight
         );
       }
     };
@@ -831,7 +342,7 @@ export function SimulationView({
     raycaster.setFromCamera(mouse, engine.camera);
 
     const intersects = raycaster.intersectObject(engine.cylinderMesh, true);
-    
+
     let targetStrainName: string | null = null;
 
     if (intersects.length > 0) {
@@ -846,7 +357,7 @@ export function SimulationView({
       let minDistSq = Infinity;
       const clickRay = raycaster.ray;
 
-      engine.agents.forEach(agent => {
+      engine.agents.forEach((agent) => {
         if (agent.active && !agent.isFeeler) {
           const distSq = clickRay.distanceSqToPoint(agent.position);
           if (distSq < minDistSq && distSq < 8000) {
@@ -863,17 +374,22 @@ export function SimulationView({
 
     if (targetStrainName) {
       let boosted = 0;
-      engine.agents.forEach(agent => {
+      engine.agents.forEach((agent) => {
         if (agent.active && agent.genome.name === targetStrainName) {
           agent.growthBoost = 16.0;
-          agent.thickness = Math.min(agent.thickness * 1.5, agent.genome.thicknessBase * 3.0);
+          agent.thickness = Math.min(
+            agent.thickness * 1.5,
+            agent.genome.thicknessBase * 3.0
+          );
           agent.cooldown = 0;
           boosted++;
         }
       });
 
       if (boosted > 0) {
-        engine.onLog(`🌟 Growth spurt triggered for ${targetStrainName.split(' ')[0]}!`);
+        engine.onLog(
+          `🌟 Growth spurt triggered for ${targetStrainName.split(" ")[0]}!`
+        );
       }
     }
   };
@@ -897,7 +413,7 @@ export function SimulationView({
     raycaster.setFromCamera(mouse, engine.camera);
 
     const intersects = raycaster.intersectObject(engine.cylinderMesh, true);
-    
+
     let targetStrainName: string | null = null;
 
     if (intersects.length > 0) {
@@ -915,7 +431,7 @@ export function SimulationView({
       let minDistSq = Infinity;
       const clickRay = raycaster.ray;
 
-      engine.agents.forEach(agent => {
+      engine.agents.forEach((agent) => {
         if (agent.active && !agent.isFeeler) {
           const distSq = clickRay.distanceSqToPoint(agent.position);
           if (distSq < minDistSq && distSq < 300) {
@@ -934,8 +450,12 @@ export function SimulationView({
       let matchingAgent: any = null;
       let minD = Infinity;
       const clickRay = raycaster.ray;
-      engine.agents.forEach(agent => {
-        if (agent.active && !agent.isFeeler && agent.genome.name === targetStrainName) {
+      engine.agents.forEach((agent) => {
+        if (
+          agent.active &&
+          !agent.isFeeler &&
+          agent.genome.name === targetStrainName
+        ) {
           const distSq = clickRay.distanceSqToPoint(agent.position);
           if (distSq < minD) {
             minD = distSq;
@@ -944,10 +464,16 @@ export function SimulationView({
         }
       });
       if (!matchingAgent) {
-        matchingAgent = engine.agents.find(a => a.active && !a.isFeeler && a.genome.name === targetStrainName);
+        matchingAgent = engine.agents.find(
+          (a) => a.active && !a.isFeeler && a.genome.name === targetStrainName
+        );
       }
       if (matchingAgent) {
-        setHoveredAgentInfo({ age: matchingAgent.age, tapering: !!matchingAgent.tapering, appendage: matchingAgent.genome.appendage });
+        setHoveredAgentInfo({
+          age: matchingAgent.age,
+          tapering: !!matchingAgent.tapering,
+          appendage: matchingAgent.genome.appendage,
+        });
       } else {
         setHoveredAgentInfo(null);
       }
@@ -958,53 +484,6 @@ export function SimulationView({
     engine.hoveredStrainName = targetStrainName;
     setHoveredStrainName(targetStrainName);
   };
-
-  const hoveredStrain = hoveredStrainName && stats?.strains ? stats.strains.find((s: any) => s.name === hoveredStrainName) : null;
-  const totalBiomass = stats?.strains ? stats.strains.reduce((acc: number, s: any) => acc + s.biomass, 0) || 1 : 1;
-  const biomassPercent = hoveredStrain ? (hoveredStrain.biomass / totalBiomass) * 100 : 0;
-
-  let textStyle = {};
-  let barStyle = {};
-  if (hoveredStrain) {
-    const hasGradient = hoveredStrain.color2 && hoveredStrain.color2 !== hoveredStrain.color;
-    textStyle = hasGradient
-      ? {
-          backgroundImage: `linear-gradient(to right, ${hoveredStrain.color}, ${hoveredStrain.color2})`,
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }
-      : { color: hoveredStrain.color };
-    barStyle = hasGradient
-      ? {
-          width: `${biomassPercent}%`,
-          backgroundImage: `linear-gradient(to right, ${hoveredStrain.color}, ${hoveredStrain.color2})`,
-        }
-      : { width: `${biomassPercent}%`, backgroundColor: hoveredStrain.color };
-  }
-
-  let lifespanPercent = 100;
-  let lifespanColor = "bg-green-500";
-  let lifespanText = "Optimal";
-  if (hoveredAgentInfo) {
-    const remaining = Math.max(5, Math.min(100, 100 - (hoveredAgentInfo.age / 400) * 100));
-    lifespanPercent = remaining;
-    if (hoveredAgentInfo.tapering) {
-      lifespanColor = "bg-gray-500";
-      lifespanText = "Deleting";
-    } else if (remaining <= 15 || hoveredAgentInfo.age >= 380) {
-      lifespanColor = "bg-red-500 animate-pulse";
-      lifespanText = "End of Life";
-    } else if (remaining <= 50) {
-      lifespanColor = "bg-yellow-500";
-      lifespanText = "Maturing";
-    } else {
-      lifespanColor = "bg-green-500";
-      lifespanText = "Flourishing";
-    }
-  }
-
-  const popupLeft = mousePos.x + 180 > window.innerWidth ? mousePos.x - 170 : mousePos.x + 15;
-  const popupTop = mousePos.y + 140 > window.innerHeight ? mousePos.y - 130 : mousePos.y + 15;
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-0">
@@ -1027,49 +506,12 @@ export function SimulationView({
           opacity: stats?.kioskFadeProgress || 0,
         }}
       />
-      {hoveredStrain && (
-        <div
-          className="fixed z-[9999] pointer-events-none bg-[#001220]/95 border border-[#87CEEB]/50 p-3 shadow-2xl text-[#87CEEB] text-[10px] rounded min-w-[160px] max-w-[220px]"
-          style={{ top: popupTop, left: popupLeft }}
-        >
-          <div className="flex justify-between items-center mb-1 font-bold pb-1 border-b border-[#87CEEB]/30">
-            <span className="truncate mr-2" style={textStyle}>
-              {hoveredStrain.name}
-            </span>
-            {hoveredStrain.isDying && (
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0 animate-pulse shadow-[0_0_4px_rgba(239,68,68,0.8)]" />
-            )}
-          </div>
-          <div className="flex justify-between mb-1 gap-2">
-            <span>Archetype:</span>
-            <span className="capitalize">{hoveredStrain.archetype || "unknown"}</span>
-          </div>
-          <div className="flex justify-between mb-1 gap-2">
-            <span>Appendage:</span>
-            <span className="capitalize">{hoveredStrain.appendage || hoveredAgentInfo?.appendage || "none"}</span>
-          </div>
-          <div className="flex justify-between mb-1 gap-2">
-            <span>Biomass:</span>
-            <span>{biomassPercent.toFixed(1)}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/5 overflow-hidden rounded mt-1.5 mb-2">
-            <div
-              className="h-full transition-all duration-300 ease-out"
-              style={barStyle as React.CSSProperties}
-            />
-          </div>
-          <div className="flex justify-between mb-1 gap-2 border-t border-[#87CEEB]/20 pt-2">
-            <span>Lifespan:</span>
-            <span>{lifespanText}</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/5 overflow-hidden rounded mt-1">
-            <div
-              className={`h-full transition-all duration-300 ease-out ${lifespanColor}`}
-              style={{ width: `${lifespanPercent}%` }}
-            />
-          </div>
-        </div>
-      )}
+      <SimulationHoverTooltip
+        hoveredStrainName={hoveredStrainName}
+        hoveredAgentInfo={hoveredAgentInfo}
+        mousePos={mousePos}
+        stats={stats}
+      />
     </div>
   );
 }

@@ -5,27 +5,37 @@ import {
   Agent,
   Segment,
   MAX_POINTS,
-  GEO_TYPES,
-  PULSE_TARGETS,
-  ARCHETYPES,
   Archetype,
-  MOVEMENT_TYPES,
   SpeciesLifecycleState,
 } from "./SimulationTypes";
-import {
-  setupShaderMaterial,
-  getWeightedAppendage,
-  breedGenomes,
-  mutateGenome,
-  getRandomWeightedArchetype,
-  formatGenomeName,
-} from "./SimulationGenetics";
 import { updateSimulation } from "./SimulationUpdate";
 import { setupSimulationScene } from "./SimulationRenderer";
 import {
   updateMeshSegments,
   processDyingSegments,
 } from "./SimulationMeshUpdate";
+import {
+  generateRandomGenome,
+  randomizeColors,
+  updateBoundaryMesh,
+  setupCameraProjection,
+  setupBoundarySize,
+  setupSceneBackground,
+  setupFogColor,
+  setupFogVisibility,
+  setupTheme,
+  spawnNewSpecies,
+  setupInitialCreatures,
+  resetCamera,
+  executeReset,
+  initSpeciesLifecycle,
+  killSpecies,
+  spawnHybridArtifact,
+  updateGridHelpers,
+  handleScreenFade,
+  emitStateUpdate,
+  getTrackedPositions,
+} from "./SimulationSceneSetup";
 
 export class SimulationEngine {
   scene: THREE.Scene = new THREE.Scene();
@@ -244,163 +254,11 @@ export class SimulationEngine {
   }
 
   private generateRandomGenome(baseName: string, forceArchetype?: any): Genome {
-    const color = new THREE.Color().setHSL(
-      Math.random(),
-      0.7 + Math.random() * 0.3,
-      0.4 + Math.random() * 0.4,
-    );
-    
-    const archetype = forceArchetype || getRandomWeightedArchetype();
-    const movementType = MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)];
-
-    // Per-archetype genome parameters for clearly distinct growth forms
-    let thicknessBase: number;
-    let minThickness: number;
-    let thicknessDecay: number;
-    let bifurcationRate: number;
-    let stepSize: number;
-    let branchTendency: number;
-
-    if (archetype === "bush") {
-      // BUSH: Thin stems, extremely high bifurcation → dense bushy mass of tendrils
-      thicknessBase = (0.6 + Math.random() * 1.2) * 0.70;      // Thin but visible stems
-      minThickness = (0.08 + Math.random() * 0.15) * 0.70;     // Recovery kicks in while still visible
-      thicknessDecay = 0.9993 + Math.random() * 0.0005;
-      bifurcationRate = 0.25 + Math.random() * 0.15;             // Prolific branching rate
-      stepSize = (0.5 + Math.random() * 0.3) * 0.70;             // Sprawling steps
-      branchTendency = Math.exp((Math.random() - 0.3) * this.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 12.0 : 5.0);
-    } else if (archetype === "tree") {
-      // TREE: Thick trunk, low initial branching that explodes into canopy later
-      thicknessBase = (3.0 + Math.random() * 4.0) * 0.70;       // Thick trunk
-      minThickness = (0.2 + Math.random() * 1.0) * 0.70;
-      thicknessDecay = 0.9996 + Math.random() * 0.0004;
-      bifurcationRate = 0.005 + Math.random() * 0.015;           // Low branching (trunk phase dominates)
-      stepSize = (1.0 + Math.random() * 1.0) * 0.70;             // Long strides → tall trunks
-      branchTendency = Math.exp((Math.random() - 0.5) * this.branchTendencyVar * 0.2) * (Math.random() > 0.7 ? 6.0 : 0.8);
-    } else if (archetype === "snake") {
-      // SNAKE: Medium-thin, almost no branching, long sinuous unbranched forms
-      thicknessBase = (1.0 + Math.random() * 2.0) * 0.70;       // Medium thickness
-      minThickness = (0.3 + Math.random() * 0.8) * 0.70;
-      thicknessDecay = 0.9998 + Math.random() * 0.0002;          // Very slow decay → stays thick
-      bifurcationRate = 0.002 + Math.random() * 0.005;           // Extremely low branching
-      stepSize = (1.2 + Math.random() * 1.2) * 0.70;             // Long strides → elongated forms
-      branchTendency = Math.exp((Math.random() - 0.5) * this.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.0 : 0.2);
-    } else {
-      // RHIZOME: Thick swollen nodes, high bifurcation, short stubby
-      thicknessBase = 12.0 + Math.random() * 6.0;
-      minThickness = 5.0 + Math.random() * 3.0;
-      thicknessDecay = 0.9995 + Math.random() * 0.0004;
-      bifurcationRate = 0.25 + Math.random() * 0.20;
-      stepSize = 0.2 + Math.random() * 0.15;
-      branchTendency = 20.0 + Math.random() * 15.0;
-    }
-
-    return {
-      name: formatGenomeName(archetype),
-      archetype: archetype,
-      movementType: movementType,
-      color: color,
-      thicknessBase: thicknessBase,
-      minThickness: minThickness,
-      thicknessDecay: thicknessDecay,
-      stepSize: stepSize,
-      bifurcationRate: bifurcationRate,
-      wanderIntensity: archetype === "rhizome" ? 1.0 + Math.random() * 0.8 : archetype === "bush" ? 0.8 + Math.random() * 0.5 : 0.01 + Math.random() * 0.05,
-      branchTendency: branchTendency,
-      wavingSpeed: Math.random() * 0.05,
-      wavingAmplitude: Math.random() * 0.08,
-      geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
-      appendage: getWeightedAppendage(this.traitProbs),
-      multicolorAppendage: false,
-      sameColorAppendage: Math.random() < this.sameColorAppProb,
-      stability: 0.8,
-      pulseTarget:
-        Math.random() < 0.05
-          ? PULSE_TARGETS[
-              Math.floor(Math.random() * (PULSE_TARGETS.length - 1)) + 1
-            ]
-          : "none",
-      pulseSpeed: 0.003 + Math.random() * 0.007,
-      gradientGrowth: Math.random() < (this.traitProbs["gradient"] || 0.1),
-      gradientType: 1 + Math.floor(Math.random() * 4),
-      createdAt: this.time,
-      singleton: archetype === "snake" && Math.random() < 0.5,
-      isGlowing: Math.random() < (this.traitProbs.glow ?? 0.1),
-      
-      // Procedural Leaf Genes
-      leafDivision: Math.random(),
-      vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
-      canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
-      phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
-      succulence: Math.random(),
-
-      // Recessive Gene Carriers
-      recessive: {
-        archetype: ARCHETYPES.find(a => a !== archetype) || ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)],
-        movementType: MOVEMENT_TYPES.find(m => m !== movementType) || MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)],
-        geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
-        appendage: getWeightedAppendage(this.traitProbs),
-        color: new THREE.Color().setHSL((color.getHSL({h:0,s:0,l:0}).h + 0.50 + (Math.random() - 0.5) * 0.04 + 1.0) % 1.0, 0.68, 0.52),
-        isGlowing: Math.random() < 0.3,
-        vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
-        canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
-        phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
-      },
-    };
+    return generateRandomGenome(this, baseName, forceArchetype);
   }
 
   randomizeColors() {
-    const uniqueGenomes = new Set<Genome>();
-    this.agents.forEach((a) => uniqueGenomes.add(a.genome));
-
-    const alphaGenome = Array.from(uniqueGenomes).find((g) =>
-      g.name.startsWith("Alpha"),
-    );
-    const betaGenome = Array.from(uniqueGenomes).find((g) =>
-      g.name.startsWith("Beta"),
-    );
-
-    const colorMap = new Map<string, THREE.Color>();
-
-    if (alphaGenome && betaGenome) {
-      const baseHue = Math.random();
-      if (this.theme !== 1) {
-        alphaGenome.color.setHSL(baseHue, 0.9, 0.52);
-        betaGenome.color.setHSL((baseHue + 0.5) % 1.0, 0.9, 0.52);
-      }
-
-      colorMap.set(alphaGenome.name, alphaGenome.color.clone());
-      colorMap.set(betaGenome.name, betaGenome.color.clone());
-
-      const bgHue = (baseHue + 2 / 3) % 1.0;
-      const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
-      const bgHex = "#" + bgColorObj.getHexString();
-      this.setBgColor(bgHex);
-      if (this.onConfigChange) {
-        this.onConfigChange({ bgColor: bgHex });
-      }
-    }
-
-    uniqueGenomes.forEach((g) => {
-      if (!g.name.startsWith("Alpha") && !g.name.startsWith("Beta")) {
-        const newColor = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-        g.color.copy(newColor);
-        colorMap.set(g.name, newColor);
-      }
-    });
-
-    if (this.cylinderMesh.instanceColor) {
-      for (let i = 0; i < MAX_POINTS; i++) {
-        const seg = this.segments[i];
-        if (seg) {
-          const newColor = colorMap.get(seg.strainName);
-          if (newColor) {
-            this.cylinderMesh.setColorAt(i, newColor);
-          }
-        }
-      }
-      this.cylinderMesh.instanceColor.needsUpdate = true;
-    }
+    randomizeColors(this);
   }
 
   cameraZoom: number = 1.15;
@@ -426,43 +284,7 @@ export class SimulationEngine {
   }
 
   updateBoundaryMesh() {
-    if (!this.scene) return;
-
-    if (this.boundaryMesh) {
-      this.scene.remove(this.boundaryMesh);
-      if (this.boundaryMesh.geometry) this.boundaryMesh.geometry.dispose();
-      if (this.boundaryMesh.material) {
-        if (Array.isArray(this.boundaryMesh.material)) {
-          this.boundaryMesh.material.forEach(m => m.dispose());
-        } else {
-          this.boundaryMesh.material.dispose();
-        }
-      }
-      this.boundaryMesh = undefined;
-    }
-
-    if (!this.showBoundaryBox) return;
-
-    const b = this.boundarySize;
-    let geo: THREE.BufferGeometry;
-
-    if (this.boundaryShape === "sphere") {
-      const sphereGeo = new THREE.SphereGeometry(b, 24, 16);
-      geo = new THREE.WireframeGeometry(sphereGeo);
-    } else {
-      const boxGeo = new THREE.BoxGeometry(b * 2, b * 2, b * 2);
-      geo = new THREE.EdgesGeometry(boxGeo);
-    }
-
-    const mat = new THREE.LineBasicMaterial({
-      color: 0x87CEEB,
-      transparent: true,
-      opacity: 0.5,
-    });
-
-    this.boundaryMesh = new THREE.LineSegments(geo, mat);
-    this.boundaryMesh.position.set(0, this.creatureCenterY, 0);
-    this.scene.add(this.boundaryMesh);
+    updateBoundaryMesh(this);
   }
 
   setGridHeight(height: number) {
@@ -480,30 +302,7 @@ export class SimulationEngine {
     this.ceilingHeight = h;
   }
   setCameraProjection(val: number) {
-    this.cameraProjection = val;
-    if (this.camera && this.controls) {
-      const baseFOV = 45.0;
-      const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, val));
-      const distFactor = Math.tan((baseFOV * Math.PI / 360)) / Math.tan((targetFOV * Math.PI / 360));
-      const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
-      const baseDist = 137.42;
-      const newDist = baseDist * distFactor;
-      this.camera.fov = targetFOV;
-      this.camera.position.copy(this.controls.target).addScaledVector(dir, newDist);
-      this.camera.updateProjectionMatrix();
-
-      // Dynamic fog near/far planes to ensure orthographic view never goes dark
-      if (this.scene && this.scene.fog && (this.scene.fog instanceof THREE.Fog)) {
-        this.scene.fog.near = 120 * distFactor;
-        this.scene.fog.far = (this.fogVisibility || 800) * distFactor;
-      }
-
-      if (this.ambientLight) {
-        this.ambientLight.intensity = THREE.MathUtils.lerp(2.2, 1.2, val);
-      }
-
-      this.controls.update();
-    }
+    setupCameraProjection(this, val);
   }
 
   setRotationSpeed(speed: number) {
@@ -548,19 +347,7 @@ export class SimulationEngine {
   }
   creatureCenterY: number = 18.921075;
   setBoundarySize(val: number) {
-    this.boundarySize = val;
-    this.updateBoundaryMesh();
-    if (this.camera && this.controls) {
-      const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
-      const baseFOV = 45.0;
-      const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, this.cameraProjection));
-      const distFactor = Math.tan((baseFOV * Math.PI / 360)) / Math.tan((targetFOV * Math.PI / 360));
-      const baseDist = val * 2.7484;
-      const newDist = baseDist * distFactor;
-      this.camera.position.copy(this.controls.target).addScaledVector(dir, newDist);
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
-    }
+    setupBoundarySize(this, val);
   }
   setTideSpeed(val: number) {
     this.tideSpeed = val;
@@ -584,58 +371,16 @@ export class SimulationEngine {
     this.glowSize = val;
   }
   setFogVisibility(val: number) {
-    this.fogVisibility = val;
-    if (this.scene.fog) {
-      (this.scene.fog as THREE.Fog).far = val;
-      (this.scene.fog as THREE.Fog).near = Math.max(10, val / 4);
-    }
+    setupFogVisibility(this, val);
   }
   setTheme(val: number, manual: boolean = true) {
-    if (manual) {
-      this.lastThemeMorphTime = this.frameCount;
-    }
-    if (this.nextTheme !== val) {
-      if (this.themeProgress < 1.0) {
-        this.theme = this.nextTheme;
-        this.themeColor1 = this.nextThemeColor1;
-        this.themeColor2 = this.nextThemeColor2;
-      }
-      
-      this.nextTheme = val;
-      this.themeProgress = 0.0;
-      this.manualThemeTransition = manual;
-      
-      const tc1 = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-      const tc2 = new THREE.Color().setHSL((tc1.getHSL({h:0,s:0,l:0}).h + 0.5) % 1.0, 0.8, 0.5);
-      this.nextThemeColor1 = "#" + tc1.getHexString();
-      this.nextThemeColor2 = "#" + tc2.getHexString();
-    }
+    setupTheme(this, val, manual);
   }
   setBgColor(c: string) {
-    this.bgColor = c;
-    const color = new THREE.Color(c);
-    this.scene.background = color;
-    if (this.scene.fog) {
-      this.scene.fog.color.copy(color);
-    }
-    if (this.floorGridMat && this.floorGridMat.uniforms.fogColor) {
-      this.floorGridMat.uniforms.fogColor.value.copy(color);
-    }
-    if (this.ceilingGridMat && this.ceilingGridMat.uniforms.fogColor) {
-      this.ceilingGridMat.uniforms.fogColor.value.copy(color);
-    }
+    setupSceneBackground(this, c);
   }
   setFogColor(c: string) {
-    const color = new THREE.Color(c);
-    if (this.scene.fog) {
-      this.scene.fog.color.copy(color);
-    }
-    if (this.floorGridMat && this.floorGridMat.uniforms.fogColor) {
-      this.floorGridMat.uniforms.fogColor.value.copy(color);
-    }
-    if (this.ceilingGridMat && this.ceilingGridMat.uniforms.fogColor) {
-      this.ceilingGridMat.uniforms.fogColor.value.copy(color);
-    }
+    setupFogColor(this, c);
   }
   setPostMatingDieoff(val: boolean) {
     this.postMatingDieoff = val;
@@ -724,53 +469,7 @@ export class SimulationEngine {
   }
 
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
-    const archetypes: Archetype[] = ["bush", "tree", "snake", "rhizome"];
-    const arch = forceArchetype || archetypes[Math.floor(Math.random() * archetypes.length)];
-    const familyNames = ["Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda"];
-    const nameStr = `${familyNames[Math.floor(Math.random() * familyNames.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
-    const genome = this.generateRandomGenome(nameStr, arch);
-    genome.appendage = getWeightedAppendage(this.traitProbs);
-    // Archetype-specific thickness for spawned species (don't override bush's thin stems)
-    const variance = 1.0 + (this.widthVariance - 0.5) * 2.0;
-    if (arch === "bush") {
-      genome.thicknessBase = (0.6 + Math.random() * 1.2 * variance) * 0.70;
-    } else if (arch === "tree") {
-      genome.thicknessBase = (3.5 + Math.random() * 3.0 * variance) * 0.70;
-    } else if (arch === "snake") {
-      genome.thicknessBase = (1.2 + Math.random() * 2.0 * variance) * 0.70;
-    } else {
-      // rhizome — keep the values from generateRandomGenome
-    }
-    genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
-
-    this.genomeMap.set(genome.name, genome);
-    this.initSpeciesLifecycle(genome.name);
-
-    const pos = new THREE.Vector3(
-      (Math.random() - 0.5) * 80,
-      (Math.random() - 0.5) * 30,
-      (Math.random() - 0.5) * 80
-    );
-
-    const agent: Agent = {
-      position: pos.clone(),
-      lastPosition: pos.clone(),
-      direction: new THREE.Vector3(
-        Math.random() - 0.5,
-        Math.random() - 0.5,
-        Math.random() - 0.5
-      ).normalize(),
-      genome: genome,
-      active: true,
-      age: 0,
-      thickness: genome.thicknessBase * 1.5,
-      id: this.nextAgentId++,
-      cooldown: 200
-    };
-
-    this.agents.push(agent);
-    this.onLog(`🌱 Emergence of new species: ${genome.name} [${arch.toUpperCase()}] to maintain minimum 3 species.`);
-    return genome;
+    return spawnNewSpecies(this, forceArchetype);
   }
 
   setDiebackAgeBias(val: number) {
@@ -859,280 +558,20 @@ export class SimulationEngine {
     this.hybridSize = val;
   }
 
+  setupInitialCreatures() {
+    setupInitialCreatures(this);
+  }
+
   initAgents() {
-    this.agents = [];
-    this.biomassMap.clear();
-    this.pointCount = 0;
-    this.segments = [];
-    this.hybridSegments = [];
-    this.hybridCount = 0;
-    if (this.dyingStrains) this.dyingStrains.clear();
-    if (this.dyingStems) this.dyingStems.clear();
-    if (this.suppressedStrains) this.suppressedStrains.clear();
-    if (this.speciesAbove3Percent) this.speciesAbove3Percent.clear();
-    this.time = 0;
-    this.frameCount = 0;
-    const idm = new THREE.Matrix4().set(
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-    );
-    for (let i = 0; i < MAX_POINTS; i++) {
-      this.cylinderMesh.setMatrixAt(i, idm);
-    }
-    const cylPackAAttr = this.cylinderMesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-    if (cylPackAAttr) {
-      for (let i = 0; i < MAX_POINTS; i++) {
-        cylPackAAttr.setZ(i, 0.0); // 0.0 = Fully opaque, 0% decay
-      }
-      cylPackAAttr.needsUpdate = true;
-    }
-
-    for (const app of this.appendages.values()) {
-      for (let i = 0; i < app.mesh.count; i++) {
-        app.mesh.setMatrixAt(i, idm);
-      }
-      const appPackAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-      if (appPackAAttr) {
-        for (let i = 0; i < app.mesh.count; i++) {
-          appPackAAttr.setZ(i, 0.0);
-        }
-        appPackAAttr.needsUpdate = true;
-      }
-      app.mesh.instanceMatrix.needsUpdate = true;
-      app.mesh.count = 0;
-      app.segments = [];
-      app.dyingSet.clear();
-      app.count = 0;
-    }
-
-    const zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
-    for (const mesh of this.hybridMeshes) {
-      for (let i = 0; i < 2000; i++) {
-        mesh.setMatrixAt(i, zeroMatrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.count = 0;
-    }
-
-    this.cylinderMesh.instanceMatrix.needsUpdate = true;
-    this.cylinderMesh.count = 0;
-
-    const alphaArchetype = getRandomWeightedArchetype();
-    let betaArchetype = getRandomWeightedArchetype();
-    while (betaArchetype === alphaArchetype) {
-      betaArchetype = getRandomWeightedArchetype();
-    }
-
-    const getHashForFamilyAndRange = (family: number, range: "alpha" | "beta"): number => {
-      const targetSelector = family === 5 
-        ? 0.8 + Math.random() * 0.2 
-        : family * 0.16 + Math.random() * 0.16;
-
-      const hMin = range === "alpha" ? 0.0 : 0.5;
-      const hMax = range === "alpha" ? 0.5 : 1.0;
-
-      const kMin = Math.ceil(hMin * 7.3 - targetSelector);
-      const kMax = Math.floor(hMax * 7.3 - targetSelector);
-
-      const k = kMin + Math.floor(Math.random() * (kMax - kMin + 1));
-      return (k + targetSelector) / 7.3;
-    };
-
-    const alphaFamily = Math.floor(Math.random() * 6);
-    let betaFamily = Math.floor(Math.random() * 6);
-    while (betaFamily === alphaFamily) {
-      betaFamily = Math.floor(Math.random() * 6);
-    }
-
-    const alphaGenome = this.generateRandomGenome("Alpha", alphaArchetype);
-    alphaGenome.appendage = getWeightedAppendage(this.traitProbs);
-    alphaGenome.genomeHash = getHashForFamilyAndRange(alphaFamily, "alpha");
-
-    let betaGenome = this.generateRandomGenome("Beta", betaArchetype);
-    betaGenome.appendage = getWeightedAppendage(this.traitProbs);
-    betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
-
-    let attempts = 0;
-    while (
-      attempts < 50 &&
-      (betaGenome.geometryType === alphaGenome.geometryType ||
-       betaGenome.movementType === alphaGenome.movementType ||
-       betaGenome.archetype === alphaGenome.archetype ||
-       betaGenome.canopyZone === alphaGenome.canopyZone)
-    ) {
-      attempts++;
-      betaGenome = this.generateRandomGenome("Beta", betaArchetype);
-      betaGenome.appendage = getWeightedAppendage(this.traitProbs);
-      betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
-    }
-
-    // Archetype-specific thickness — preserve the archetype's character
-    const getArchetypeThickness = (arch: Archetype) => {
-      const variance = 1.0 + (this.widthVariance - 0.5) * 2.0; // 0->0, 0.5->1, 1->2
-      if (arch === "bush") {
-        return (0.6 + Math.random() * 1.2 * variance) * 0.70;
-      } else if (arch === "tree") {
-        return (3.5 + Math.random() * 2.5 * variance) * 0.70;
-      } else if (arch === "snake") {
-        return (1.2 + Math.random() * 2.0 * variance) * 0.70;
-      } else {
-        return (5.0 + Math.random() * 3.5 * variance) * 0.70;
-      }
-    };
-    alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);
-    betaGenome.thicknessBase = getArchetypeThickness(betaArchetype);
-
-    // Assign distinct vernation and phyllotaxis modes
-    alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
-    let betaVern = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
-    while (betaVern === alphaGenome.vernationType) {
-      betaVern = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
-    }
-    betaGenome.vernationType = betaVern;
-
-    alphaGenome.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
-    let betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
-    while (betaPhyllo === alphaGenome.phyllotaxisMode) {
-      betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
-    }
-    betaGenome.phyllotaxisMode = betaPhyllo;
-
-    let alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
-    if (this.theme === 1) { // Albino theme: Ensure bright contrasting color
-      alphaGenome.color.setHSL(0.1, 0.02, 0.95); // Pure white albino
-      betaGenome.color.setHSL(0.55, 1.0, 0.55);  // Bright vivid cyan/teal contrast
-    } else {
-      alphaHue = Math.random();
-      alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
-      betaGenome.color.setHSL((alphaHue + 0.5) % 1.0, 0.9, 0.52);
-    }
-
-    const bgHue = (alphaHue + 2 / 3) % 1.0;
-    const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
-    const bgHex = "#" + bgColorObj.getHexString();
-    this.setBgColor(bgHex);
-    
-    // Generate theme colors
-    const tc1 = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-    const tc2 = new THREE.Color().setHSL((tc1.getHSL({h:0,s:0,l:0}).h + 0.5) % 1.0, 0.8, 0.5);
-    this.themeColor1 = "#" + tc1.getHexString();
-    this.themeColor2 = "#" + tc2.getHexString();
-    this.nextThemeColor1 = this.themeColor1;
-    this.nextThemeColor2 = this.themeColor2;
-    this.nextTheme = this.theme;
-    this.themeProgress = 1.0;
-    this.lastThemeMorphTime = 0;
-
-    if (this.onConfigChange) {
-      this.onConfigChange({ bgColor: bgHex });
-    }
-
-    // Startup Rule: At most ONE founder organism can have multicolor appendages or rainbow gradient growth
-    if (alphaGenome.gradientGrowth) {
-      betaGenome.gradientGrowth = false;
-      betaGenome.multicolorAppendage = false;
-      betaGenome.sameColorAppendage = true;
-    } else if (betaGenome.gradientGrowth) {
-      alphaGenome.multicolorAppendage = false;
-      alphaGenome.sameColorAppendage = true;
-      betaGenome.multicolorAppendage = false;
-      betaGenome.sameColorAppendage = true;
-    } else if (alphaGenome.multicolorAppendage) {
-      betaGenome.multicolorAppendage = false;
-      betaGenome.sameColorAppendage = true;
-    }
-
-    // Organism A (Alpha Strain) placed on the LEFT side of screen (X = -40), pointing right (+1) towards center
-    this.agents.push({
-      position: new THREE.Vector3(-40, 0, 0),
-      direction: new THREE.Vector3(
-        1,
-        (Math.random() - 0.5) * 0.2,
-        (Math.random() - 0.5) * 0.2,
-      ).normalize(),
-      genome: alphaGenome,
-      id: this.nextAgentId++,
-      active: true,
-      age: 0,
-      lastPosition: new THREE.Vector3(-40, 0, 0),
-      thickness: alphaGenome.thicknessBase * 2.0,
-      cooldown: 0,
-    });
-
-    // Organism B (Beta Strain) placed on the RIGHT side of screen (X = +40), pointing left (-1) towards center
-    this.agents.push({
-      id: this.nextAgentId++,
-      position: new THREE.Vector3(40, 0, 0),
-      direction: new THREE.Vector3(
-        -1,
-        (Math.random() - 0.5) * 0.2,
-        (Math.random() - 0.5) * 0.2,
-      ).normalize(),
-      genome: betaGenome,
-      active: true,
-      age: 0,
-      lastPosition: new THREE.Vector3(40, 0, 0),
-      thickness: betaGenome.thicknessBase * 2.0,
-      cooldown: 0,
-    });
-
-    this.initSpeciesLifecycle(alphaGenome.name);
-    this.initSpeciesLifecycle(betaGenome.name);
-
-    this.matingCount = 0;
-    this.feelerCount = 0;
-    this.hasAnyOrganismBred = false;
-    if (this.onInitOrganisms) {
-      this.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
-    }
+    setupInitialCreatures(this);
   }
 
   resetCamera() {
-    if (this.camera && this.controls) {
-      const creatureCenterY = this.creatureCenterY || 18.921075;
-      const wasAutoRotate = this.controls.autoRotate;
-      this.controls.autoRotate = false;
-
-      this.controls.target.set(0, creatureCenterY, 0);
-      this.camera.position.set(0, creatureCenterY, 137.42);
-      this.camera.up.set(0, 1, 0);
-      this.camera.lookAt(this.controls.target);
-      this.camera.updateProjectionMatrix();
-
-      this.controls.saveState();
-      this.controls.reset();
-
-      this.camera.position.set(0, creatureCenterY, 137.42);
-      this.controls.target.set(0, creatureCenterY, 0);
-      this.controls.update();
-
-      this.controls.autoRotate = wasAutoRotate;
-      this.setCameraProjection(this.cameraProjection);
-    }
+    resetCamera(this);
   }
 
   executeReset() {
-    this.time = 0;
-    this.lastKioskTime = 0;
-    this.lastKioskRealTime = performance.now();
-    this.kioskFadeProgress = 0;
-    this.kioskFadingOut = false;
-    this.resetCamera();
-    this.initAgents();
+    executeReset(this);
   }
 
   restart() {
@@ -1219,39 +658,11 @@ export class SimulationEngine {
   }
 
   initSpeciesLifecycle(strainName: string) {
-    if (!this.speciesLifecycleMap.has(strainName)) {
-      this.speciesLifecycleMap.set(strainName, {
-        phase: 'GROWING',
-        createdAt: this.unscaledTime,
-        hasBred: false,
-        matingCount: 0,
-      });
-    }
-    return this.speciesLifecycleMap.get(strainName)!;
+    return initSpeciesLifecycle(this, strainName);
   }
 
   killSpecies(strainName: string, reason: string) {
-    let state = this.speciesLifecycleMap.get(strainName);
-    if (!state) {
-      state = this.initSpeciesLifecycle(strainName);
-    }
-    if (state.phase === 'END_OF_LIFE') return;
-
-    state.phase = 'END_OF_LIFE';
-    state.deathStartTick = this.unscaledTime;
-    state.reason = reason;
-
-    for (const agent of this.agents) {
-      if (agent.active && agent.genome.name === strainName) {
-        agent.tapering = true;
-        agent.forceTapering = true;
-        agent.fadeAge = 0;
-      }
-    }
-
-    if (!this.dyingStrains) this.dyingStrains = new Set();
-    this.dyingStrains.add(strainName);
-    this.onLog(`⏳ Species ${strainName.split(' ')[0]} entering end-of-life (${reason})`);
+    killSpecies(this, strainName, reason);
   }
 
   processDying(
@@ -1264,53 +675,15 @@ export class SimulationEngine {
   }
 
   spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color, strainName?: string, strainBName?: string, agentAId?: number, agentBId?: number) {
-    if (this.hybridMeshes.length === 0) return;
-
-    const currentCount = this.hybridCount % 2000;
-
-    this.dummy.position.copy(pos);
-    this.dummy.rotation.set(
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
+    spawnHybridArtifact(
+      this,
+      pos,
+      color,
+      strainName,
+      strainBName,
+      agentAId,
+      agentBId,
     );
-    this.dummy.scale.set(this.hybridSize, this.hybridSize, this.hybridSize);
-    this.dummy.updateMatrix();
-
-    const variant = Math.floor(Math.random() * this.hybridMeshes.length);
-    const mesh = this.hybridMeshes[variant];
-
-    mesh.setMatrixAt(currentCount, this.dummy.matrix);
-    mesh.setColorAt(currentCount, color);
-
-    this.hybridSegments[currentCount] = {
-      index: currentCount,
-      timestamp: this.time,
-      matrix: this.dummy.matrix.clone(),
-      thickness: this.hybridSize,
-      strainName: strainName || "hybrid",
-      strainBName: strainBName || "hybrid",
-      agentAId: agentAId,
-      agentBId: agentBId,
-      variant: variant,
-      color: color.clone(),
-    };
-
-    this.dyingHybrids.delete(currentCount);
-
-    this.hybridCount++;
-
-    // We will recalculate counts for all meshes later if we want, but actually
-    // when updating we use the segment variant to update the right mesh.
-    // Easiest is to set count = 2000 and have zero-scale matrix for unused, OR
-    // we update 'count' in a loop elsewhere.
-    // For now, let's just make all meshes draw up to 2000 and empty ones will have invisible matrices,
-    // or we can just set count to 2000 for all hybrid meshes.
-    for (const m of this.hybridMeshes) {
-      m.count = 2000;
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
-    }
   }
 
   update() {
@@ -1319,60 +692,8 @@ export class SimulationEngine {
 
   animate = () => {
     this.reqId = requestAnimationFrame(this.animate);
-
-    // Update Dual Bioluminescent Grid Helpers (Follows Camera in XZ plane, centered vertically on creatures at creatureCenterY)
-    if (this.camera) {
-      const camY = this.camera.position.y;
-      const baseGap = this.boundarySize + 2.0;
-      const layerGapOffset = (this.layerGap - 100) / 2;
-      const floorY = this.creatureCenterY - baseGap - layerGapOffset + this.floorHeight;
-      const ceilingY = this.creatureCenterY + baseGap + layerGapOffset + this.ceilingHeight;
-
-      if (this.floorGridMesh) {
-        this.floorGridMesh.position.x = this.camera.position.x;
-        this.floorGridMesh.position.y = floorY;
-        this.floorGridMesh.position.z = this.camera.position.z;
-        this.floorGridMesh.visible = (camY > floorY);
-      }
-      if (this.ceilingGridMesh) {
-        this.ceilingGridMesh.position.x = this.camera.position.x;
-        this.ceilingGridMesh.position.y = ceilingY;
-        this.ceilingGridMesh.position.z = this.camera.position.z;
-        this.ceilingGridMesh.visible = (camY < ceilingY);
-      }
-
-      // Smooth opacity fading when camera approaches plane boundary
-      const floorAlpha = THREE.MathUtils.clamp((camY - floorY) / 25.0, 0.0, 1.0);
-      const ceilingAlpha = THREE.MathUtils.clamp((ceilingY - camY) / 25.0, 0.0, 1.0);
-
-      if (this.floorGridMat && this.floorGridMat.uniforms.planeOpacity) {
-        this.floorGridMat.uniforms.planeOpacity.value = floorAlpha;
-      }
-      if (this.ceilingGridMat && this.ceilingGridMat.uniforms.planeOpacity) {
-        this.ceilingGridMat.uniforms.planeOpacity.value = ceilingAlpha;
-      }
-      if (this.floorGridMat && this.floorGridMat.uniforms.cameraPos) {
-        this.floorGridMat.uniforms.cameraPos.value.copy(this.controls ? this.controls.target : this.camera.position);
-      }
-      if (this.ceilingGridMat && this.ceilingGridMat.uniforms.cameraPos) {
-        this.ceilingGridMat.uniforms.cameraPos.value.copy(this.controls ? this.controls.target : this.camera.position);
-      }
-    }
-
-    // Handle Smooth Screen Fade & Camera Reset on Restart
-    if (this.fadeState === "out") {
-      this.fadeProgress = Math.min(1.0, this.fadeProgress + 0.08);
-      if (this.fadeProgress >= 1.0) {
-        this.executeReset();
-        this.fadeState = "in";
-      }
-    } else if (this.fadeState === "in") {
-      this.fadeProgress = Math.max(0.0, this.fadeProgress - 0.08);
-      if (this.fadeProgress <= 0.0) {
-        this.fadeState = "idle";
-      }
-    }
-
+    updateGridHelpers(this);
+    handleScreenFade(this);
     this.update();
     this.renderer.render(this.scene, this.camera);
 
@@ -1386,96 +707,12 @@ export class SimulationEngine {
     }
 
     if (this.reqId % 15 === 0) {
-      const strains: {
-        name: string;
-        color: string;
-        color2: string;
-        biomass: number;
-        genome: any;
-        archetype?: string;
-        isDying?: boolean;
-      }[] = [];
-      this.biomassMap.forEach((v, k) => {
-        if (v > 0 && !k.startsWith("Feeler-")) {
-          const genome = this.genomeMap.get(k);
-          if (genome) {
-            const color2 = genome.gradientGrowth
-              ? "#" +
-                genome.color.clone().offsetHSL(0.5, 0, 0).getHexString()
-              : "#" + genome.color.getHexString();
-            strains.push({
-              name: k,
-              color: "#" + genome.color.getHexString(),
-              color2,
-              biomass: v,
-              genome: genome,
-              archetype: genome.archetype,
-              isDying: this.dyingStrains?.has(k),
-            });
-          }
-        }
-      });
-
-      let activeCount = 0;
-      for (let i = 0; i < this.agents.length; i++) {
-        if (this.agents[i].active && !this.agents[i].tapering && !this.agents[i].isFeeler) activeCount++;
-      }
-
-      let totalActiveGeometries = 0;
-      for (let i = 0; i < this.maxDOMs; i++) {
-        if (this.segments[i] && !this.dyingStems.has(i))
-          totalActiveGeometries++;
-      }
-      for (const app of this.appendages.values()) {
-        const lim = Math.floor(this.maxDOMs / 4);
-        for (let i = 0; i < lim; i++) {
-          if (app.segments[i] && !app.dyingSet.has(i)) totalActiveGeometries++;
-        }
-      }
-
-        this.onStateUpdate({
-          geometryCount: totalActiveGeometries,
-          totalAgents: activeCount,
-          kioskFadeProgress: this.kioskFadeProgress,
-          strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
-          tideValue: this.tideValue,
-          cameraPosition: {
-            x: this.camera.position.x,
-            y: this.camera.position.y,
-            z: this.camera.position.z,
-            zoom: this.camera.zoom,
-          },
-          theme: this.theme,
-          nextTheme: this.nextTheme,
-          themeProgress: this.themeProgress,
-          trackedPositions: this.getTrackedPositions(),
-        });
+      emitStateUpdate(this);
     }
   };
 
   getTrackedPositions() {
-    if (!this.camera || !this.width || !this.height) return null;
-
-    this.camera.updateMatrixWorld();
-
-    const projectPos = (pos: THREE.Vector3) => {
-      const v = pos.clone();
-      v.project(this.camera);
-      const x = (v.x * 0.5 + 0.5) * this.width;
-      const y = (-v.y * 0.5 + 0.5) * this.height;
-      return { x, y, isBehind: v.z > 1 };
-    };
-
-    // Fixed initial spawn locations (Alpha on screen left, Beta on screen right) so vector lines indicate the first position without crossing over
-    const alphaPos = new THREE.Vector3(-40, 0, 0);
-    const betaPos = new THREE.Vector3(40, 0, 0);
-
-    return {
-      org1: projectPos(alphaPos),
-      org2: projectPos(betaPos),
-      mating: this.lastMatingWorldPos ? projectPos(this.lastMatingWorldPos) : null,
-      feeler: this.lastFeelerWorldPos ? projectPos(this.lastFeelerWorldPos) : null,
-    };
+    return getTrackedPositions(this);
   }
 
   start() {
