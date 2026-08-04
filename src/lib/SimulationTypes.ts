@@ -124,4 +124,13 @@ export interface Segment {
   countsForBiomass?: boolean;
 }
 
+export interface SpeciesLifecycleState {
+  phase: 'GROWING' | 'MATURE' | 'END_OF_LIFE';
+  createdAt: number;
+  hasBred: boolean;
+  matingCount: number;
+  deathStartTick?: number;
+  reason?: string;
+}
+
 export const MAX_POINTS = 24000;

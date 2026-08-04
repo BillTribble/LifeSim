@@ -1031,6 +1031,10 @@ export function processAgents(
                  agent.fadeAge = agent.fadeAge || 0;
                }
                nearestPartner.hasBred = true;
+               const s1 = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
+               if (s1) { s1.hasBred = true; s1.matingCount = (s1.matingCount || 0) + 1; s1.phase = 'MATURE'; }
+               const s2 = (engine as any).speciesLifecycleMap?.get(nearestPartner.genome.name);
+               if (s2) { s2.hasBred = true; s2.matingCount = (s2.matingCount || 0) + 1; s2.phase = 'MATURE'; }
                if (canEnterDeleting(engine, activeAgents, 1)) {
                  nearestPartner.tapering = true;
                  nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
@@ -1111,13 +1115,15 @@ export function processAgents(
       // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
       const maxLifespan = 400 * Math.max(0.5, engine.timeScale);
       if (!agent.tapering && agent.hasBred && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
-        // Don't kill the last agent of a species when we have fewer than 3 living species
-        const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;
-        if (canEnterDeleting(engine, activeAgents, 1) && (!wouldKillSpecies || nonTaperingStrains.size > engine.minAgents)) {
-          agent.tapering = true;
-          agent.fadeAge = 0;
-          const reason = (agent.matingCount && agent.matingCount >= 3) ? `mated ${agent.matingCount}x` : `exceeded max lifespan ${(maxLifespan / 60).toFixed(1)}s`;
-          engine.onLog(`⏳ ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] entering end-of-life (${reason}, age: ${(agent.age / 60).toFixed(1)}s)`);
+        if (canEnterDeleting(engine, activeAgents, 1)) {
+          const reason = (agent.matingCount && agent.matingCount >= 3) ? "bred 3 times" : "reached max lifespan";
+          if (typeof (engine as any).killSpecies === 'function') {
+            (engine as any).killSpecies(agent.genome.name, reason);
+          } else {
+            agent.tapering = true;
+            agent.fadeAge = 0;
+            engine.onLog(`⏳ ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] entering deleting phase (${reason})`);
+          }
         }
       }
 

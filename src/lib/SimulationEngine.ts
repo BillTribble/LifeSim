@@ -10,6 +10,7 @@ import {
   ARCHETYPES,
   Archetype,
   MOVEMENT_TYPES,
+  SpeciesLifecycleState,
 } from "./SimulationTypes";
 import {
   setupShaderMaterial,
@@ -87,6 +88,7 @@ export class SimulationEngine {
   feelerCount: number = 0;
   nextAgentId: number = 1;
   strainFeelerCooldown: Map<string, number> = new Map();
+  speciesLifecycleMap: Map<string, SpeciesLifecycleState> = new Map();
   hasAnyOrganismBred: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
@@ -742,6 +744,7 @@ export class SimulationEngine {
     genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
 
     this.genomeMap.set(genome.name, genome);
+    this.initSpeciesLifecycle(genome.name);
 
     const pos = new THREE.Vector3(
       (Math.random() - 0.5) * 80,
@@ -1087,6 +1090,9 @@ export class SimulationEngine {
       cooldown: 0,
     });
 
+    this.initSpeciesLifecycle(alphaGenome.name);
+    this.initSpeciesLifecycle(betaGenome.name);
+
     this.matingCount = 0;
     this.feelerCount = 0;
     this.hasAnyOrganismBred = false;
@@ -1210,6 +1216,42 @@ export class SimulationEngine {
         }
       }
     }
+  }
+
+  initSpeciesLifecycle(strainName: string) {
+    if (!this.speciesLifecycleMap.has(strainName)) {
+      this.speciesLifecycleMap.set(strainName, {
+        phase: 'GROWING',
+        createdAt: this.unscaledTime,
+        hasBred: false,
+        matingCount: 0,
+      });
+    }
+    return this.speciesLifecycleMap.get(strainName)!;
+  }
+
+  killSpecies(strainName: string, reason: string) {
+    let state = this.speciesLifecycleMap.get(strainName);
+    if (!state) {
+      state = this.initSpeciesLifecycle(strainName);
+    }
+    if (state.phase === 'END_OF_LIFE') return;
+
+    state.phase = 'END_OF_LIFE';
+    state.deathStartTick = this.unscaledTime;
+    state.reason = reason;
+
+    for (const agent of this.agents) {
+      if (agent.active && agent.genome.name === strainName) {
+        agent.tapering = true;
+        agent.forceTapering = true;
+        agent.fadeAge = 0;
+      }
+    }
+
+    if (!this.dyingStrains) this.dyingStrains = new Set();
+    this.dyingStrains.add(strainName);
+    this.onLog(`⏳ Species ${strainName.split(' ')[0]} entering end-of-life (${reason})`);
   }
 
   processDying(
