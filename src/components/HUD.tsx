@@ -278,22 +278,29 @@ export function HUD({
             </div>
 
 
-            <button
-              onClick={() => {
-                const nextHUD = !showHUD;
-                setShowHUD(nextHUD);
-                if (nextHUD) {
-                  setIsControlsExpanded(true);
-                }
-              }}
-              className="flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 py-1 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
-              title="HUD Interface"
-            >
-              <div className={`w-2 h-2 rounded-full transition-all duration-300 ${showHUD ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" : "bg-[#87CEEB]"}`} />
-              <span className="text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap">
-                INTERFACE
-              </span>
-            </button>
+            <div className="flex flex-col items-end">
+              <button
+                onClick={() => {
+                  const nextHUD = !showHUD;
+                  setShowHUD(nextHUD);
+                  if (nextHUD) {
+                    setIsControlsExpanded(true);
+                  }
+                }}
+                className="flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 py-1 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
+                title="HUD Interface"
+              >
+                <div className={`w-2 h-2 rounded-full transition-all duration-300 ${showHUD ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" : "bg-[#87CEEB]"}`} />
+                <span className="text-[10px] font-mono text-[#D2B48C] tracking-wider uppercase whitespace-nowrap">
+                  INTERFACE
+                </span>
+              </button>
+              {showHUD && (
+                <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none">
+                  v{state.version || "1.1"}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
