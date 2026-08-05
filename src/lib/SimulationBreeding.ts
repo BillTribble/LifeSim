@@ -441,18 +441,7 @@ export function handleBreedingAndFeelers(
                 }
               }
             } else {
-              if (typeof engine.killSpecies === 'function') {
-                engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
-              } else {
-                for (let idx = 0; idx < activeAgents.length; idx++) {
-                  if (activeAgents[idx].genome.name === victimSpeciesName) {
-                    activeAgents[idx].tapering = true;
-                    activeAgents[idx].forceTapering = true;
-                  }
-                }
-                if (!engine.dyingStrains) engine.dyingStrains = new Set();
-                engine.dyingStrains.add(victimSpeciesName);
-              }
+              engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
             }
             // Instantly reflect this in the projected count so we don't count the dying species anymore
             if (!isFeelerSacrifice) {
@@ -515,8 +504,7 @@ export function handleBreedingAndFeelers(
           engine.hasAnyOrganismBred = true;
           agent.hasBred = true;
           if (canEnterDeleting(engine, activeAgents, 1)) {
-            agent.tapering = true;
-            agent.fadeAge = agent.fadeAge || 0;
+            engine.killSpecies(agent.genome.name, "mating completed");
           }
           nearestPartner.hasBred = true;
           const s1 = (engine as any).speciesLifecycleMap?.get(
@@ -536,8 +524,7 @@ export function handleBreedingAndFeelers(
             s2.phase = "MATURE";
           }
           if (canEnterDeleting(engine, activeAgents, 1)) {
-            nearestPartner.tapering = true;
-            nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
+            engine.killSpecies(nearestPartner.genome.name, "mating completed");
           }
 
           if (agent.isFeeler && agent.parentAgent) {
@@ -615,16 +602,17 @@ export function handleBreedingAndFeelers(
               agent.matingCount >= 3 &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
-              agent.tapering = true;
-              agent.forceTapering = true;
+              engine.killSpecies(agent.genome.name, "mating completed 3x");
             }
 
             if (
               nearestPartner.matingCount >= 3 &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
-              nearestPartner.tapering = true;
-              nearestPartner.forceTapering = true;
+              engine.killSpecies(
+                nearestPartner.genome.name,
+                "mating completed 3x",
+              );
             }
           }
 

@@ -79,19 +79,7 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           engine.speciesAbove3Percent.add(strainName);
         } else if (ratio < 0.03 && engine.speciesAbove3Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
           engine.speciesAbove3Percent.delete(strainName);
-          if (typeof (engine as any).killSpecies === 'function') {
-            (engine as any).killSpecies(strainName, 'dropped below 3% ratio');
-          } else {
-            for (let i = 0; i < activeAgents.length; i++) {
-              if (activeAgents[i].genome.name === strainName && activeAgents[i].hasBred) {
-                activeAgents[i].tapering = true;
-                activeAgents[i].forceTapering = true;
-                activeAgents[i].fadeAge = activeAgents[i].fadeAge || 0;
-              }
-            }
-            if (!engine.dyingStrains) engine.dyingStrains = new Set();
-            engine.dyingStrains.add(strainName);
-          }
+          engine.killSpecies(strainName, 'dropped below 3% ratio');
           const genome3 = engine.genomeMap?.get(strainName);
           const arch3 = genome3?.archetype || 'bush';
           engine.onLog(`📉 Species ${strainName} [${arch3.toUpperCase()}] dropped below 3% and was culled to make space.`);
