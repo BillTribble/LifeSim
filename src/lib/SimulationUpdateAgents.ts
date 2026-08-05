@@ -434,22 +434,11 @@ export function processAgents(
           agent.thickness *= 0.94;
         }
 
-        // Natural termination: if a living non-snake branch shrinks down to 0.001, finish tapering and deactivate
-        // But never kill the last agent of a species when we have fewer than 3 living species
-        if (!agent.tapering && arch !== 'snake' && agent.thickness <= 0.001) {
-          const wouldKillSpecies = (strainCounts.get(agent.genome.name) || 0) <= 1;
-          if (canEnterDeleting(engine, activeAgents, 1) && (!wouldKillSpecies || nonTaperingStrains.size > engine.minAgents)) {
-            if (wouldKillSpecies) {
-              engine.killSpecies(
-                agent.genome.name,
-                "natural branch termination",
-              );
-            } else {
-              agent.tapering = true;
-              agent.forceTapering = true;
-              agent.fadeAge = 0;
-            }
-          }
+        if (!agent.tapering && arch !== "snake" && agent.thickness <= 0.001) {
+          agent.active = false; // Branch tip has completed its natural anatomical growth
+          currentActiveCount--;
+          const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+          strainCounts.set(agent.genome.name, Math.max(0, newCount));
         }
       }
 

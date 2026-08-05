@@ -297,7 +297,7 @@ export function HUD({
               </button>
               {showHUD && (
                 <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none">
-                  v{state.version || "1.2"}
+                  v{state.version || "1.3"}
                 </div>
               )}
             </div>
