@@ -78,7 +78,7 @@ High: Heavily branching bushes explode in rapid growth.
 Low: Branching does not speed up growth."
           label="BRANCH_SPD"
           min={0.0}
-          max={3.0}
+          max={10.0}
           step={0.1}
           value={state.branchGrowthBoost}
           onChange={setters.setBranchGrowthBoost}

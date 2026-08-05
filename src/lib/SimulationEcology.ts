@@ -101,42 +101,30 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
   }
 }
 
-export function performCapacityCulling(engine: SimulationEngine, activeNotTapering: Agent[]): void {
-  if (engine.hasAnyOrganismBred && activeNotTapering.length > engine.maxAgents * 0.5) { // Optimization: only run if mildly crowded
+export function performCapacityCulling(
+  engine: SimulationEngine,
+  activeNotTapering: Agent[],
+): void {
+  if (
+    engine.hasAnyOrganismBred &&
+    activeNotTapering.length > engine.maxAgents * 3.0
+  ) {
     const strainGroups = new Map<string, typeof activeNotTapering>();
-    activeNotTapering.forEach(a => {
+    activeNotTapering.forEach((a) => {
       const arr = strainGroups.get(a.genome.name);
       if (arr) arr.push(a);
       else strainGroups.set(a.genome.name, [a]);
     });
 
-    if (strainGroups.size <= Math.max(3, engine.minAgents)) {
+    // NOTHING should get marked for deleting if we don't have 4+ creatures
+    if (strainGroups.size < 4) {
       return;
     }
 
-    const activeSpeciesCount = strainGroups.size || 1;
-    const globalLimit = engine.maxAgents;
-    // The "fair share" if ecoFade is 1:
-    const perSpeciesLimit = Math.max(1, Math.floor(globalLimit / activeSpeciesCount));
-    const fade = engine.ecoFade || 0;
-
-    // What's the max agents this specific species is allowed to have before culling?
-    const effectiveLimitPerSpecies = Math.max(1, Math.floor(fade * perSpeciesLimit + (1 - fade) * globalLimit));
-
-    // Pass 1: Cull species that have exceeded their effective quota
-    for (const [strainName, agents] of strainGroups.entries()) {
-      if (agents.length > effectiveLimitPerSpecies) {
-        agents.sort((a, b) => b.age - a.age); // Oldest first
-        const numToTaper = agents.length - effectiveLimitPerSpecies;
-        for (let i = 0; i < numToTaper; i++) {
-          agents[i].tapering = true;
-          agents[i].forceTapering = true;
-        }
-      }
-    }
-    
-    // Pass 2: Failsafe global cut (in case ecoFade < 1 and sum exceeds maxAgents)
-    const survivors = engine.agents.filter(a => !a.tapering && !a.isFeeler && a.hasBred);
+    const globalLimit = engine.maxAgents * 3.0;
+    const survivors = engine.agents.filter(
+      (a) => !a.tapering && !a.isFeeler && a.hasBred,
+    );
     if (survivors.length > globalLimit) {
       survivors.sort((a, b) => b.age - a.age);
       const overflow = survivors.length - globalLimit;

@@ -186,7 +186,7 @@ export function processAgents(
 
       // Branching-driven growth speed boost: creatures doing lots of branching grow faster!
       const branchCountForBoost = strainCounts.get(agent.genome.name) || 1;
-      const branchSpeedBoost = 1.0 + Math.min(3.0, Math.max(0, branchCountForBoost - 1) * 0.06 * (engine.branchGrowthBoost || 1.0));
+      const branchSpeedBoost = 1.0 + Math.min(10.0, Math.max(0, branchCountForBoost - 1) * 0.06 * (engine.branchGrowthBoost || 1.0));
       effectiveStepSize *= branchSpeedBoost;
 
       agent.age++;
@@ -691,15 +691,14 @@ export function processAgents(
 
       if (agent.tapering) {
         agent.fadeAge = (agent.fadeAge || 0) + 1;
-        if (agent.fadeAge < 180 && !agent.isFeeler) {
-          // Phase 1 (Ticks 0 to 180 / ~3s): Tapering to fine sculptural tips
+        if (agent.fadeAge < 45 && !agent.isFeeler) {
+          // Phase 1 (Ticks 0 to 45 / ~0.75s): Tapering to fine sculptural tips
           agent.thickness = Math.max(0.1, agent.thickness * 0.96);
-        } else if (agent.fadeAge < 360 && !agent.isFeeler) {
-          // Phase 2 (Ticks 180 to 360 / ~3s): 3-Second Pause in completed tapered form
-          // No thickness change, pauses beautifully on screen
+        } else if (agent.fadeAge < 90 && !agent.isFeeler) {
+          // Phase 2 (Ticks 45 to 90 / ~0.75s): Pause in completed tapered form
         } else {
-          // Phase 3 (At tick 360, or tick 25 for feelers): Trigger 3-Second Transparency Dissolve
-          const maxFade = agent.isFeeler ? 25 : 360;
+          // Phase 3 (At tick 90, or tick 25 for feelers): Trigger Transparency Dissolve
+          const maxFade = agent.isFeeler ? 25 : 90;
           if (agent.fadeAge >= maxFade) {
             agent.active = false;
             currentActiveCount--;

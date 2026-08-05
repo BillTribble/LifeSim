@@ -9,12 +9,13 @@ export function canEnterDeleting(
   countAsRemoved: number = 1,
 ): boolean {
   if (!engine.hasAnyOrganismBred) return false;
-  const livingNonFeelerAgents = activeAgents.filter(
-    (a) => a.active && !a.tapering && !a.isFeeler,
-  ).length;
-  return (
-    livingNonFeelerAgents >= 3 && livingNonFeelerAgents - countAsRemoved >= 2
-  );
+  const livingSpecies = new Set<string>();
+  for (const a of activeAgents) {
+    if (a.active && !a.tapering && !a.isFeeler) {
+      livingSpecies.add(a.genome.name);
+    }
+  }
+  return livingSpecies.size >= 4 && (livingSpecies.size - countAsRemoved) >= 3;
 }
 
 export function createFeelerGenome(agent: Agent): any {
