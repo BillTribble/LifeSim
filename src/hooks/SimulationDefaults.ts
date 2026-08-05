@@ -153,7 +153,7 @@ export const DEFAULTS: Record<string, any> = {
     "z": 137.42,
     "zoom": 1
   },
-  "version": "1.1"
+  "version": "1.2"
 };
 
 export const DEFAULT_PALETTE: string[] = [

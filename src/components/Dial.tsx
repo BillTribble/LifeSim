@@ -20,6 +20,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startVal = useRef(value);
+  const lastShiftState = useRef(false);
   const [hover, setHover] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [showDialog, setShowDialog] = useState(false);
@@ -37,6 +38,7 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
     isDragging.current = true;
     startY.current = e.clientY;
     startVal.current = value;
+    lastShiftState.current = e.shiftKey;
     if (containerRef.current) {
         containerRef.current.setPointerCapture(e.pointerId);
     }
@@ -44,6 +46,11 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
+    if (e.shiftKey !== lastShiftState.current) {
+      startY.current = e.clientY;
+      startVal.current = value;
+      lastShiftState.current = e.shiftKey;
+    }
     const deltaY = startY.current - e.clientY;
     const range = max - min;
     const precisionMultiplier = e.shiftKey ? 0.1 : 1.0;

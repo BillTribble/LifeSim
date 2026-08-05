@@ -110,7 +110,7 @@ export default function App() {
       pulseSpeed: state.globalPulseSpeed,
       saturation: state.maxSaturation,
       cameraPosition: stats.cameraPosition,
-      version: "1.1",
+      version: "1.2",
     };
     navigator.clipboard.writeText(JSON.stringify(settings, null, 2));
     setCopied(true);
