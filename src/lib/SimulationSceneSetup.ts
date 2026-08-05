@@ -555,14 +555,20 @@ export function initSpeciesLifecycle(engine: SimulationEngine, strainName: strin
 }
 
 export function killSpecies(engine: SimulationEngine, strainName: string, reason: string): void {
-  // NOTHING should get marked for deleting if we don't have 4+ creatures (distinct living species)
   const livingSpecies = new Set<string>();
   for (const a of engine.agents) {
-    if (a.active && !a.tapering && !a.isFeeler) {
+    if (
+      a.active &&
+      !a.tapering &&
+      !a.isFeeler &&
+      (engine.biomassMap.get(a.genome.name) || 0) > 0 &&
+      !(engine.dyingStrains && engine.dyingStrains.has(a.genome.name))
+    ) {
       livingSpecies.add(a.genome.name);
     }
   }
   if (livingSpecies.size < 4) {
+    engine.onLog(`🛡️ Deletion blocked for ${strainName.split(" ")[0]} (${reason}): only ${livingSpecies.size} living species present (min 4).`);
     return;
   }
 
@@ -573,6 +579,7 @@ export function killSpecies(engine: SimulationEngine, strainName: string, reason
   state.phase = "END_OF_LIFE";
   state.deathStartTick = engine.unscaledTime;
   state.reason = reason;
+  engine.onLog(`⏳ Species ${strainName.split(" ")[0]} entering end-of-life (${reason}) — ${livingSpecies.size} species present.`);
 
   for (const agent of engine.agents) {
     if (agent.active && agent.genome.name === strainName) {

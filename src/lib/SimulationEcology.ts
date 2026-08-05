@@ -115,10 +115,8 @@ export function performCapacityCulling(
     );
     if (survivors.length > globalLimit) {
       survivors.sort((a, b) => b.age - a.age);
-      const overflow = survivors.length - globalLimit;
       for (let i = 0; i < overflow; i++) {
-        survivors[i].tapering = true;
-        survivors[i].forceTapering = true;
+        engine.killSpecies(survivors[i].genome.name, "capacity overflow");
       }
     }
   }

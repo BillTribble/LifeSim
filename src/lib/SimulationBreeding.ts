@@ -11,7 +11,13 @@ export function canEnterDeleting(
   if (!engine.hasAnyOrganismBred) return false;
   const livingSpecies = new Set<string>();
   for (const a of activeAgents) {
-    if (a.active && !a.tapering && !a.isFeeler) {
+    if (
+      a.active &&
+      !a.tapering &&
+      !a.isFeeler &&
+      (engine.biomassMap.get(a.genome.name) || 0) > 0 &&
+      !(engine.dyingStrains && engine.dyingStrains.has(a.genome.name))
+    ) {
       livingSpecies.add(a.genome.name);
     }
   }

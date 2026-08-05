@@ -17,7 +17,16 @@ function assert(condition: boolean, testId: string, desc: string) {
 }
 
 // 1. Test QA-LFE-03: Minimum Species Floor Protection in canEnterDeleting
-const mockEngine = { hasAnyOrganismBred: true } as any;
+const mockEngine = {
+  hasAnyOrganismBred: true,
+  biomassMap: new Map([
+    ["Alpha-101", 10],
+    ["Beta-202", 10],
+    ["Gamma-303", 10],
+    ["Delta-404", 10],
+  ]),
+  dyingStrains: new Set(),
+} as any;
 const threeSpeciesAgents = [
   { active: true, tapering: false, isFeeler: false, genome: { name: "Alpha-101" } },
   { active: true, tapering: false, isFeeler: false, genome: { name: "Beta-202" } },
