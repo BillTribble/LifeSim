@@ -429,10 +429,28 @@ export function handleBreedingAndFeelers(
                 activeAgents[idx].isFeeler
               ) {
                 isFeelerSacrifice = true;
+                break;
               }
-              if (activeAgents[idx].genome.name === victimSpeciesName) {
-                activeAgents[idx].tapering = true;
-                activeAgents[idx].forceTapering = true;
+            }
+            if (isFeelerSacrifice) {
+              for (let idx = 0; idx < activeAgents.length; idx++) {
+                if (activeAgents[idx].genome.name === victimSpeciesName) {
+                  activeAgents[idx].tapering = true;
+                  activeAgents[idx].forceTapering = true;
+                }
+              }
+            } else {
+              if (typeof engine.killSpecies === 'function') {
+                engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
+              } else {
+                for (let idx = 0; idx < activeAgents.length; idx++) {
+                  if (activeAgents[idx].genome.name === victimSpeciesName) {
+                    activeAgents[idx].tapering = true;
+                    activeAgents[idx].forceTapering = true;
+                  }
+                }
+                if (!engine.dyingStrains) engine.dyingStrains = new Set();
+                engine.dyingStrains.add(victimSpeciesName);
               }
             }
             // Instantly reflect this in the projected count so we don't count the dying species anymore
@@ -443,13 +461,9 @@ export function handleBreedingAndFeelers(
             if (isFeelerSacrifice) {
               engine.onLog(`Feeler terminated for child creation.`);
             } else {
-              if (!engine.dyingStrains) engine.dyingStrains = new Set();
-              if (!engine.dyingStrains.has(victimSpeciesName)) {
-                engine.onLog(
-                  `Breeding recorded. Culling oldest species: ${victimSpeciesName.split(" ")[0]}.`,
-                );
-              }
-              engine.dyingStrains.add(victimSpeciesName);
+              engine.onLog(
+                `Breeding recorded. Culling oldest species: ${victimSpeciesName.split(" ")[0]}.`,
+              );
             }
           }
         }
@@ -469,6 +483,9 @@ export function handleBreedingAndFeelers(
             engine.glowProbability,
           );
           childGenome.createdAt = engine.time;
+          if (typeof engine.initSpeciesLifecycle === 'function') {
+            engine.initSpeciesLifecycle(childGenome.name);
+          }
           const childDir = agent.direction
             .clone()
             .lerp(nearestPartner.direction, 0.5)
