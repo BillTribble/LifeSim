@@ -314,6 +314,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   if (engine.dyingStems) engine.dyingStems.clear();
   if (engine.suppressedStrains) engine.suppressedStrains.clear();
   if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.clear();
+  if (engine.speciesLifecycleMap) engine.speciesLifecycleMap.clear();
   engine.time = 0;
   engine.frameCount = 0;
   const idm = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
