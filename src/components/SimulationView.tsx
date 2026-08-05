@@ -206,13 +206,17 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
   };
 
   for (const key of directProps) {
-    if (props[key] !== undefined) {
+    if (props[key] !== undefined && engine[key] !== props[key]) {
       engine[key] = props[key];
     }
   }
 
   for (const [key, method] of Object.entries(methodMap)) {
-    if (props[key] !== undefined && typeof engine[method] === "function") {
+    if (
+      props[key] !== undefined &&
+      engine[key] !== props[key] &&
+      typeof engine[method] === "function"
+    ) {
       engine[method](props[key]);
     }
   }

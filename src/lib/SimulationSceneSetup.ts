@@ -174,6 +174,7 @@ export function updateBoundaryMesh(engine: SimulationEngine): void {
 }
 
 export function setupCameraProjection(engine: SimulationEngine, val: number): void {
+  if (engine.cameraProjection === val) return;
   engine.cameraProjection = val;
   if (engine.camera && engine.controls) {
     const baseFOV = 45.0;
@@ -198,6 +199,7 @@ export function setupCameraProjection(engine: SimulationEngine, val: number): vo
 }
 
 export function setupBoundarySize(engine: SimulationEngine, val: number): void {
+  if (engine.boundarySize === val) return;
   engine.boundarySize = val;
   engine.updateBoundaryMesh();
   if (engine.camera && engine.controls) {
