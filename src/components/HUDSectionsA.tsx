@@ -14,11 +14,16 @@ export function SystemSection({ searchQuery, state, setters }: HUDSectionProps) 
   if (
     !hasMatch(searchQuery, [
       "ROT_VEL",
+      "ROT_X",
+      "ROT_Y",
+      "YAW",
+      "PITCH",
       "MAX_DOMS",
       "MAX_AGENTS",
       "MIN_AGENTS",
       "MAX_SPECIES",
       "RADIUS",
+      "SQUASH",
       "ROTATION",
       "MEMORY",
       "ORGANISMS",
@@ -38,22 +43,45 @@ export function SystemSection({ searchQuery, state, setters }: HUDSectionProps) 
           searchQuery={searchQuery}
           state={state}
           setters={setters}
-          tooltip="ROTATION VELOCITY
-Controls the base camera rotation speed.
-High: Fast spinning view.
-Low: Slow or stationary view."
-          label="ROT_VEL"
-          min={0.01}
-          max={5.0}
+          keywords={["camera spin", "orbit speed", "horizontal turn"]}
+          tooltip="HORIZONTAL ROTATION VELOCITY (YAW)
+Controls camera orbit around the vertical axis.
+0 (Top): Stationary.
+Right (Pos): Orbit clockwise.
+Left (Neg): Orbit counter-clockwise."
+          label="ROT_X"
+          min={-2.0}
+          max={2.0}
           step={0.01}
           value={state.rotationSpeed}
           onChange={setters.setRotationSpeed}
+          polar={true}
           color="#87CEEB"
         />
         <SmartDial
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["camera tilt", "vertical pitch", "elevation angle"]}
+          tooltip="VERTICAL ROTATION VELOCITY (PITCH)
+Controls camera orbit around the horizontal plane.
+0 (Top): Stationary.
+Right (Pos): Pitch upwards.
+Left (Neg): Pitch downwards."
+          label="ROT_Y"
+          min={-2.0}
+          max={2.0}
+          step={0.01}
+          value={state.rotationSpeedY}
+          onChange={setters.setRotationSpeedY}
+          polar={true}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["memory limit", "render capacity", "max segments"]}
           tooltip="MAX MEMORY POINTS
 Limits total rendering complexity.
 High: Richer visuals, lower performance.
@@ -70,6 +98,7 @@ Low: Simpler visuals, faster performance."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["branch limit", "active stems", "growth capacity"]}
           tooltip="MAX ORGANISMS
 Upper limit for population.
 High: Crowded ecosystem.
@@ -86,6 +115,7 @@ Low: Sparse ecosystem."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["population floor", "minimum creatures", "extinction buffer"]}
           tooltip="MIN ORGANISMS
 Lower limit for population.
 High: Ecosystem never dies out.
@@ -102,6 +132,7 @@ Low: Ecosystem can become almost empty."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["species capacity", "biodiversity cap", "strain limit"]}
           tooltip="MAX SPECIES
 Maximum active genetic strains.
 High: High biodiversity.
@@ -118,6 +149,7 @@ Low: Monoculture."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["boundary size", "arena width", "world radius"]}
           tooltip="BOUNDARY RADIUS
 Size of the simulation area.
 High: Vast open space.
@@ -128,6 +160,24 @@ Low: Confined, dense space."
           step={10}
           value={state.boundarySize}
           onChange={setters.setBoundarySize}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["vertical flatten", "height ratio", "aspect shape"]}
+          tooltip="BOUNDARY SQUASH
+Squashes vertical space height for landscape screens.
+1.0: Equal proportions (sphere / cube).
+< 1.0: Squashed height (ovoid / rectangular ribbon).
+Ceiling & floor track with squashed area height."
+          label="SQUASH"
+          min={0.1}
+          max={2.0}
+          step={0.01}
+          value={state.boundarySquash}
+          onChange={setters.setBoundarySquash}
           color="#87CEEB"
         />
       </div>
@@ -161,6 +211,7 @@ export function LandscapeSection({ searchQuery, state, setters }: HUDSectionProp
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["strata spacing", "floor ceiling gap", "layer distance"]}
           tooltip="LAYER GAP
 Relative vertical distance/gap between floor and ceiling landscape layers."
           label="LAYER_GAP"
@@ -175,6 +226,7 @@ Relative vertical distance/gap between floor and ceiling landscape layers."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["bottom offset", "ground elevation", "lower strata"]}
           tooltip="FLOOR HEIGHT
 Individual vertical offset for the bottom floor landscape layer."
           label="FLOOR_HEIGHT"
@@ -189,6 +241,7 @@ Individual vertical offset for the bottom floor landscape layer."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["top offset", "sky elevation", "upper strata"]}
           tooltip="CEILING HEIGHT
 Individual vertical offset for the top ceiling landscape layer."
           label="CEILING_HEIGHT"
@@ -203,6 +256,7 @@ Individual vertical offset for the top ceiling landscape layer."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["orthographic fov", "perspective depth", "lens flat"]}
           tooltip="CAMERA PROJECTION
 Slide between flat orthographic (0 = no perspective) and full 3D perspective (1.0)."
           label="PROJECTION"
@@ -243,6 +297,11 @@ export function BotanySection({ searchQuery, state, setters }: HUDSectionProps) 
       "LEAF",
       "LEAVES",
       "BOTANY",
+      "foliage",
+      "frond",
+      "petal",
+      "breeze",
+      "sway",
     ])
   ) {
     return null;
@@ -257,6 +316,7 @@ export function BotanySection({ searchQuery, state, setters }: HUDSectionProps) 
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["foliage size", "frond scale", "petal dimension"]}
           tooltip="LEAF SCALE
 Size of foliage leaves."
           label="LEAF_SCALE"
@@ -271,6 +331,7 @@ Size of foliage leaves."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["leaf count", "foliage density", "branch greenery"]}
           tooltip="LEAF DENSITY
 Density of foliage coverage along stems."
           label="LEAF_DENSITY"
@@ -285,6 +346,7 @@ Density of foliage coverage along stems."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["size variation", "leaf randomness", "foliage diversity"]}
           tooltip="LEAF SIZE DIFF
 Variability in individual leaf sizes."
           label="LEAF_SIZE_DIFF"
@@ -299,6 +361,7 @@ Variability in individual leaf sizes."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["leaf sprout speed", "foliage rate", "bud develop time"]}
           tooltip="LEAF GROWTH SPEED
 Rate at which new leaves unfurl."
           label="LEAF_SPD"
@@ -313,6 +376,7 @@ Rate at which new leaves unfurl."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["golden ratio angle", "leaf spiral", "phyllotaxis rotation"]}
           tooltip="PHYLLOTAXIS ANGLE
 Divergence angle between consecutive leaves."
           label="LEAF_ANGLE"
@@ -327,6 +391,7 @@ Divergence angle between consecutive leaves."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["leaf spawn chance", "foliage probability", "bloom rate"]}
           tooltip="LEAF PROBABILITY
 Chance of spawning leaves on eligible nodes."
           label="LEAF_PROB"
@@ -341,6 +406,7 @@ Chance of spawning leaves on eligible nodes."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["breeze force", "plant sway", "air turbulence"]}
           tooltip="WIND VELOCITY
 Sway velocity imparted by wind on foliage."
           label="WIND_VEL"
@@ -355,6 +421,7 @@ Sway velocity imparted by wind on foliage."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["leaf shake", "foliage tremble", "wind vibration"]}
           tooltip="FLUTTER INTENSITY
 Rapid fluttering motion of individual leaves."
           label="FLUTTER"
@@ -382,6 +449,10 @@ export function ConfigTideSection({ searchQuery, state, setters }: HUDSectionPro
       "CLOUD",
       "CONFIG",
       "FOG",
+      "wave",
+      "ocean",
+      "water",
+      "haze",
     ])
   ) {
     return null;
@@ -396,6 +467,7 @@ export function ConfigTideSection({ searchQuery, state, setters }: HUDSectionPro
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["wave speed", "ocean pulse", "water frequency"]}
           tooltip="TIDE SPEED
 Speed of tide cloud pulses."
           label="TIDE_SPEED"
@@ -410,6 +482,7 @@ Speed of tide cloud pulses."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["wave height", "ocean depth", "water thickness"]}
           tooltip="TIDE THICKNESS
 Vertical thickness of tide cloud layer."
           label="TIDE_THICK"
@@ -424,6 +497,7 @@ Vertical thickness of tide cloud layer."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["water transparency", "wave alpha", "ocean visibility"]}
           tooltip="TIDE OPACITY
 Transparency of tide cloud layer."
           label="TIDE_OPACITY"
@@ -438,6 +512,7 @@ Transparency of tide cloud layer."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["water saturation", "wave color intensity", "ocean vividness"]}
           tooltip="TIDE SATURATION
 Color saturation of tide cloud layer."
           label="TIDE_SAT"
@@ -452,6 +527,7 @@ Color saturation of tide cloud layer."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["fog distance", "atmospheric depth", "haze clarity"]}
           tooltip="FOG VISIBILITY
 Distance of atmospheric fog fade."
           label="FOG_VIS"

@@ -52,8 +52,12 @@ export function updateMeshSegments(
     if (genome.geometryType === "ribbon") {
       scaleX = thickness * 2.2;
       scaleY = Math.max(0.6, thickness * 0.8);
+      scaleZ = distance * 1.02;
     } else if (genome.geometryType === "segmented") {
-      scaleZ = distance * 0.6;
+      const gap = engine.segmentGap !== undefined ? engine.segmentGap : 0.12;
+      scaleZ = distance * Math.max(0.05, 1.0 - gap);
+    } else {
+      scaleZ = distance * 1.02;
     }
   }
 
@@ -142,7 +146,7 @@ export function updateMeshSegments(
         scaleX = baseScale * 2.2;
         scaleY = baseScale * 0.4;
         scaleZ = baseScale * 2.2;
-      } else if (genome.appendage === "leaves") {
+      } else if (genome.appendage === "leaves" || genome.appendage === "ferns") {
         scaleX = baseScale * 2.0;
         scaleY = baseScale * 2.0;
         scaleZ = baseScale * 2.2;
@@ -154,14 +158,26 @@ export function updateMeshSegments(
         scaleX = baseScale * 2.2;
         scaleY = baseScale * 2.2;
         scaleZ = baseScale * 2.8;
-      } else if (
-        genome.appendage === "hair" ||
-        genome.appendage === "curlyHair" ||
-        genome.appendage === "spirals"
-      ) {
+      } else if (genome.appendage === "spirals") {
+        scaleX = baseScale * 1.1;
+        scaleY = baseScale * 1.1;
+        scaleZ = baseScale * 1.1;
+      } else if (genome.appendage === "curlyHair") {
+        scaleX = baseScale * 1.1;
+        scaleY = baseScale * 1.1;
+        scaleZ = baseScale * 1.1;
+      } else if (genome.appendage === "hair") {
         scaleX = baseScale * 2.2;
         scaleY = baseScale * 2.2;
         scaleZ = baseScale * 2.2;
+      } else if (genome.appendage === "sparkles") {
+        scaleX = baseScale * 1.4;
+        scaleY = baseScale * 1.4;
+        scaleZ = baseScale * 1.4;
+      } else if (genome.appendage === "buds") {
+        scaleX = baseScale * 1.8;
+        scaleY = baseScale * 1.8;
+        scaleZ = baseScale * 1.8;
       } else {
         scaleX = baseScale * 2.0;
         scaleY = baseScale * 2.0;
@@ -259,9 +275,11 @@ export function updateMeshSegments(
   } else {
     const config = engine.appendages.get(genome.appendage);
     if (config) {
+      const appLimit = Math.floor(engine.maxDOMs / 4);
       config.dyingSet.delete(targetIndex);
-      config.count = Math.min(config.count + 1, Math.floor(engine.maxDOMs / 4));
-      config.mesh.count = config.count;
+      config.count++;
+      config.mesh.count = Math.min(config.count, appLimit);
+      const lastStemIdx = (engine.pointCount > 0 ? engine.pointCount - 1 : 0) % engine.maxDOMs;
       config.segments[targetIndex] = {
         index: targetIndex,
         timestamp: engine.time,
@@ -269,8 +287,8 @@ export function updateMeshSegments(
         thickness,
         strainName: genome.name,
         agentId: agentId,
-        parentIndex: targetIndexStem,
-        parentTimestamp: engine.time,
+        parentIndex: lastStemIdx,
+        parentTimestamp: engine.segments[lastStemIdx]?.timestamp ?? engine.time,
         randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,
         countsForBiomass: false,
       };

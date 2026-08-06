@@ -109,15 +109,21 @@ export function performCapacityCulling(
       return;
     }
 
-    const globalLimit = engine.maxAgents * 3.0;
-    const survivors = engine.agents.filter(
-      (a) => !a.tapering && !a.isFeeler && a.hasBred,
-    );
-    if (survivors.length > globalLimit) {
-      survivors.sort((a, b) => b.age - a.age);
-      for (let i = 0; i < overflow; i++) {
-        engine.killSpecies(survivors[i].genome.name, "capacity overflow");
+    // Kill only ONE oldest bred species per frame to prevent mass die-off
+    let oldestName: string | null = null;
+    let oldestAge = -Infinity;
+    for (const a of activeNotTapering) {
+      if (a.hasBred && !a.isFeeler) {
+        const age = engine.time - (a.genome.createdAt || 0);
+        if (age > oldestAge) {
+          oldestAge = age;
+          oldestName = a.genome.name;
+        }
       }
+    }
+    if (oldestName) {
+      engine.onLog(`⚠️ Capacity overflow (${activeNotTapering.length} agents > ${engine.maxAgents * 3.0} limit) — culling oldest: ${oldestName}`);
+      engine.killSpecies(oldestName, "capacity overflow");
     }
   }
 }

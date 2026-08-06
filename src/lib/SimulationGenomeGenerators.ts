@@ -80,25 +80,31 @@ export function selectMendelianAlleles<T>(
 
 export function clampArchetypeGenome(res: Genome): Genome {
   if (res.archetype === "rhizome") {
-    res.thicknessBase = Math.max(res.thicknessBase, 10.0);
-    res.minThickness = Math.max(res.minThickness, 4.0);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.8, 5.2);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 1.2, 2.5);
     res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.9995, 0.9999);
-    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.15 + Math.random() * 0.10);
-    res.branchTendency = Math.max(res.branchTendency || 0.5, 15.0 + Math.random() * 10.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.4, 0.55);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.06, 0.16);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 4.5, 11.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.60);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.7);
   } else if (res.archetype === "bush") {
-    res.thicknessBase = Math.min(res.thicknessBase, 1.2);
-    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.25 + Math.random() * 0.15);
-    res.branchTendency = Math.max(res.branchTendency || 0.5, 3.0 + Math.random() * 4.0);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.9, 2.0);
+    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.20 + Math.random() * 0.12);
+    res.branchTendency = Math.max(res.branchTendency || 0.5, 3.5 + Math.random() * 4.0);
     res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 0.65);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
-    res.thicknessBase = Math.max(res.thicknessBase, 2.5 + Math.random() * 1.5);
-    res.stepSize = Math.max(res.stepSize, 0.6);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 3.2, 5.8);
+    res.minThickness = Math.max(res.minThickness, 0.4);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.016, 0.040);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 2.0, 5.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 1.0, 1.8);
   } else if (res.archetype === "snake") {
+    res.thicknessBase = Math.max(res.thicknessBase, 3.5 + Math.random() * 2.0);
+    res.minThickness = Math.max(res.minThickness, 1.8);
     res.bifurcationRate = Math.min(res.bifurcationRate, 0.01);
-    res.branchTendency = Math.min(res.branchTendency, 1.0);
+    res.branchTendency = Math.min(res.branchTendency, 1.5);
+    res.stepSize = Math.max(res.stepSize, 2.0);
   }
   if (!res.appendage) {
     res.appendage = getWeightedAppendage({});

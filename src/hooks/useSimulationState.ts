@@ -37,6 +37,7 @@ export function useSimulationState() {
   const [themeMorphSpeed, setThemeMorphSpeed] = useState(() => getStoredFloat("themeMorphSpeed"));
   const [dialLimits, setDialLimits] = useState<Record<string, { min: number; max: number }>>(() => getStoredDialLimits());
   const [rotationSpeed, setRotationSpeed] = useState(() => getStoredFloat("rotationSpeed"));
+  const [rotationSpeedY, setRotationSpeedY] = useState(() => getStoredFloat("rotationSpeedY", 0.0));
   const [gridHeight, setGridHeight] = useState(() => getStoredFloat("gridHeight"));
   const [layerGap, setLayerGap] = useState(() => getStoredFloat("layerGap"));
   const [floorHeight, setFloorHeight] = useState(() => getStoredFloat("floorHeight"));
@@ -44,9 +45,12 @@ export function useSimulationState() {
   const [cameraProjection, setCameraProjection] = useState(() => getStoredFloat("cameraProjection"));
   const [showBoundaryBox, setShowBoundaryBox] = useState(() => getStoredBool("showBoundaryBox", false));
   const [magnetism, setMagnetism] = useState(() => getStoredFloat("magnetism"));
+  const [seekAmount, setSeekAmount] = useState(() => getStoredFloat("seekAmount"));
   const [proximity, setProximity] = useState(() => getStoredFloat("proximity"));
   const [desperation, setDesperation] = useState(() => getStoredFloat("desperation"));
   const [despairAge, setDespairAge] = useState(() => getStoredFloat("despairAge"));
+  const [maxMatings, setMaxMatings] = useState(() => getStoredFloat("maxMatings"));
+  const [startColorMode, setStartColorMode] = useState<string>(() => getStoredString("startColorMode") || "complementary");
   const [flowerSize, setFlowerSize] = useState(() => getStoredFloat("flowerSize"));
   const [tideSpeed, setTideSpeed] = useState(() => getStoredFloat("tideSpeed"));
   const [tideColor, setTideColor] = useState(() => getStoredString("tideColor"));
@@ -56,6 +60,7 @@ export function useSimulationState() {
   const [tideOpacity, setTideOpacity] = useState(() => getStoredFloat("tideOpacity"));
   const [tideSaturation, setTideSaturation] = useState(() => getStoredFloat("tideSaturation"));
   const [growthSpeed, setGrowthSpeed] = useState(() => getStoredFloat("growthSpeed"));
+  const [widthGrowthEffect, setWidthGrowthEffect] = useState(() => getStoredFloat("widthGrowthEffect", 0.0));
   const [diebackRate, setDiebackRate] = useState(() => getStoredFloat("diebackRate"));
   const [allowBreeding, setAllowBreeding] = useState(() => getStoredBool("allowBreeding"));
   const [hybridCooldown, setHybridCooldown] = useState(() => getStoredFloat("hybridCooldown"));
@@ -73,9 +78,11 @@ export function useSimulationState() {
   const [desiccationSpeed, setDesiccationSpeed] = useState(() => getStoredFloat("desiccationSpeed"));
   const [minAgents, setMinAgents] = useState(() => getStoredFloat("minAgents"));
   const [boundarySize, setBoundarySize] = useState(() => getStoredFloat("boundarySize"));
+  const [boundarySquash, setBoundarySquash] = useState(() => getStoredFloat("boundarySquash", 1.0));
   const [hybridSize, setHybridSize] = useState(() => getStoredFloat("hybridSize"));
   const [terminationProb, setTerminationProb] = useState(() => getStoredFloat("terminationProb"));
   const [termProbPostBranch, setTermProbPostBranch] = useState(() => getStoredFloat("termProbPostBranch"));
+  const [segmentGap, setSegmentGap] = useState(() => getStoredFloat("segmentGap", 0.12));
   const [taperDuration, setTaperDuration] = useState(() => getStoredFloat("taperDuration"));
   const [diebackAgeBias, setDiebackAgeBias] = useState(() => getStoredFloat("diebackAgeBias"));
   const [enableGlow, setEnableGlow] = useState(() => getStoredBool("enableGlow"));
@@ -129,10 +136,14 @@ export function useSimulationState() {
     localStorage.setItem("themeMorphFreq", themeMorphFreq.toString());
     localStorage.setItem("themeMorphSpeed", themeMorphSpeed.toString());
     localStorage.setItem("rotationSpeed", rotationSpeed.toString());
+    localStorage.setItem("rotationSpeedY", rotationSpeedY.toString());
     localStorage.setItem("magnetism", magnetism.toString());
+    localStorage.setItem("seekAmount", seekAmount.toString());
     localStorage.setItem("proximity", proximity.toString());
     localStorage.setItem("desperation", desperation.toString());
     localStorage.setItem("despairAge", despairAge.toString());
+    localStorage.setItem("maxMatings", maxMatings.toString());
+    localStorage.setItem("startColorMode", startColorMode);
     localStorage.setItem("flowerSize", flowerSize.toString());
     localStorage.setItem("tideSpeed", tideSpeed.toString());
     localStorage.setItem("tideColor", tideColor);
@@ -141,6 +152,7 @@ export function useSimulationState() {
     localStorage.setItem("tideOpacity", tideOpacity.toString());
     localStorage.setItem("tideSaturation", tideSaturation.toString());
     localStorage.setItem("growthSpeed", growthSpeed.toString());
+    localStorage.setItem("widthGrowthEffect", widthGrowthEffect.toString());
     localStorage.setItem("diebackRate", diebackRate.toString());
     localStorage.setItem("allowBreeding", allowBreeding.toString());
     localStorage.setItem("hybridCooldown", hybridCooldown.toString());
@@ -157,10 +169,12 @@ export function useSimulationState() {
     localStorage.setItem("ecoFade", ecoFade.toString());
     localStorage.setItem("minAgents", minAgents.toString());
     localStorage.setItem("boundarySize", boundarySize.toString());
+    localStorage.setItem("boundarySquash", boundarySquash.toString());
     localStorage.setItem("desiccationSpeed", desiccationSpeed.toString());
     localStorage.setItem("hybridSize", hybridSize.toString());
     localStorage.setItem("terminationProb", terminationProb.toString());
     localStorage.setItem("termProbPostBranch", termProbPostBranch.toString());
+    localStorage.setItem("segmentGap", segmentGap.toString());
     localStorage.setItem("taperDuration", taperDuration.toString());
     localStorage.setItem("diebackAgeBias", diebackAgeBias.toString());
     localStorage.setItem("kioskMode", kioskMode.toString());
@@ -197,10 +211,14 @@ export function useSimulationState() {
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
     rotationSpeed,
+    rotationSpeedY,
     magnetism,
+    seekAmount,
     proximity,
     desperation,
     despairAge,
+    maxMatings,
+    startColorMode,
     flowerSize,
     tideSpeed,
     tideColor,
@@ -210,6 +228,7 @@ export function useSimulationState() {
     tideOpacity,
     tideSaturation,
     growthSpeed,
+    widthGrowthEffect,
     diebackRate,
     hybridCooldown,
     hybridStickiness,
@@ -225,6 +244,7 @@ export function useSimulationState() {
     ecoFade,
     minAgents,
     boundarySize,
+    boundarySquash,
     desiccationSpeed,
     enableGlow,
     glowSize,
@@ -248,6 +268,7 @@ export function useSimulationState() {
     hybridSize,
     terminationProb,
     termProbPostBranch,
+    segmentGap,
     taperDuration,
     diebackAgeBias,
     maxLineWidth,
@@ -285,10 +306,14 @@ export function useSimulationState() {
       snakeStepSize,
       snakeSpeed,
       rotationSpeed,
+      rotationSpeedY,
       magnetism,
+      seekAmount,
       proximity,
       desperation,
       despairAge,
+      maxMatings,
+      startColorMode,
       flowerSize,
       tideSpeed,
       tideColor,
@@ -298,6 +323,7 @@ export function useSimulationState() {
       tideOpacity,
       tideSaturation,
       growthSpeed,
+      widthGrowthEffect,
       diebackRate,
       allowBreeding,
       hybridCooldown,
@@ -314,10 +340,12 @@ export function useSimulationState() {
       ecoFade,
       minAgents,
       boundarySize,
+      boundarySquash,
       desiccationSpeed,
       hybridSize,
       terminationProb,
       termProbPostBranch,
+      segmentGap,
       taperDuration,
       diebackAgeBias,
       enableGlow,
@@ -356,6 +384,7 @@ export function useSimulationState() {
       glowTraitDistance,
       glowTraitReflect,
       dialLimits,
+      version: DEFAULTS.version || "1.9",
     },
     setters: {
       setThemeMorphSpeed,
@@ -376,10 +405,14 @@ export function useSimulationState() {
       setSnakeStepSize,
       setSnakeSpeed,
       setRotationSpeed,
+      setRotationSpeedY,
       setMagnetism,
+      setSeekAmount,
       setProximity,
       setDesperation,
       setDespairAge,
+      setMaxMatings,
+      setStartColorMode,
       setFlowerSize: (v: number) => {
         setFlowerSize(v);
         setLeafScale(v);
@@ -392,6 +425,7 @@ export function useSimulationState() {
       setTideOpacity,
       setTideSaturation,
       setGrowthSpeed,
+      setWidthGrowthEffect,
       setDiebackRate,
       setAllowBreeding,
       setHybridCooldown,
@@ -407,11 +441,13 @@ export function useSimulationState() {
       setEcoFade,
       setMinAgents,
       setBoundarySize,
+      setBoundarySquash,
       setDesiccationSpeed,
       setHybridSize,
       setHybridSpinSpeed,
       setTerminationProb,
       setTermProbPostBranch,
+      setSegmentGap,
       setTaperDuration,
       setDiebackAgeBias,
       setEnableGlow,
@@ -484,10 +520,14 @@ export function useSimulationState() {
         setSnakeStepSize(DEFAULTS.snakeStepSize);
         setSnakeSpeed(DEFAULTS.snakeSpeed);
         setRotationSpeed(DEFAULTS.rotationSpeed);
+        setRotationSpeedY(DEFAULTS.rotationSpeedY);
         setMagnetism(DEFAULTS.magnetism);
+        setSeekAmount(DEFAULTS.seekAmount);
         setProximity(DEFAULTS.proximity);
         setDesperation(DEFAULTS.desperation);
         setDespairAge(DEFAULTS.despairAge);
+        setMaxMatings(DEFAULTS.maxMatings);
+        setStartColorMode(DEFAULTS.startColorMode);
         setFlowerSize(DEFAULTS.flowerSize);
         setTideSpeed(DEFAULTS.tideSpeed);
         setTideColor(DEFAULTS.tideColor);
@@ -497,6 +537,7 @@ export function useSimulationState() {
         setTideOpacity(DEFAULTS.tideOpacity);
         setTideSaturation(DEFAULTS.tideSaturation);
         setGrowthSpeed(DEFAULTS.growthSpeed);
+        setWidthGrowthEffect(DEFAULTS.widthGrowthEffect);
         setDiebackRate(DEFAULTS.diebackRate);
         setAllowBreeding(DEFAULTS.allowBreeding);
         setGridHeight(DEFAULTS.gridHeight);
@@ -521,10 +562,12 @@ export function useSimulationState() {
         setEcoFade(DEFAULTS.ecoFade);
         setMinAgents(DEFAULTS.minAgents);
         setBoundarySize(DEFAULTS.boundarySize);
+        setBoundarySquash(DEFAULTS.boundarySquash);
         setDesiccationSpeed(DEFAULTS.desiccationSpeed);
         setHybridSize(DEFAULTS.hybridSize);
         setTerminationProb(DEFAULTS.terminationProb);
         setTermProbPostBranch(DEFAULTS.termProbPostBranch);
+        setSegmentGap(DEFAULTS.segmentGap);
         setTaperDuration(DEFAULTS.taperDuration);
         setDiebackAgeBias(DEFAULTS.diebackAgeBias);
         setEnableGlow(DEFAULTS.enableGlow);

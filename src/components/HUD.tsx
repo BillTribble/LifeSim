@@ -45,6 +45,7 @@ interface HUDProps {
   handleCopySettings: () => void;
   copied: boolean;
   uptime: number;
+  sessionCode?: string;
 }
 
 export function HUD({
@@ -58,6 +59,7 @@ export function HUD({
   handleCopySettings,
   copied,
   uptime,
+  sessionCode,
 }: HUDProps) {
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
@@ -70,6 +72,7 @@ export function HUD({
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const controlsRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (showHUD) {
@@ -200,6 +203,32 @@ export function HUD({
                               })}
                           </div>
                       </div>
+                      <div className="flex flex-col gap-1.5 border-b border-purple-500/30 pb-3">
+                        <span className="text-[#D2B48C] font-bold text-[8px] tracking-wider">START MODE (BETA HUE)</span>
+                        <div className="grid grid-cols-2 gap-1.5 font-mono text-[8px]">
+                          {[
+                            { id: "complementary", label: "COMPLEMENT", desc: "Opposite 180°" },
+                            { id: "analogous", label: "ANALOGOUS", desc: "Adjacent ±30°" },
+                          ].map((mode) => {
+                            const isSelected = (state.startColorMode || "complementary") === mode.id;
+                            return (
+                              <button
+                                key={mode.id}
+                                onClick={() => setters.setStartColorMode(mode.id)}
+                                className={`p-1.5 border rounded flex flex-col items-center justify-center transition-colors ${
+                                  isSelected
+                                    ? "bg-purple-500/50 border-purple-400 text-white font-bold"
+                                    : "bg-transparent border-purple-500/30 hover:border-purple-400/80 text-[#D2B48C]/70 hover:text-[#D2B48C]"
+                                }`}
+                                title={mode.desc}
+                              >
+                                <span>{mode.label}</span>
+                                <span className="text-[7px] opacity-70">{mode.desc}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center gap-2 border-b border-purple-500/20 pb-3">
                           <span className="text-[#D2B48C]">AUTO MORPH</span>
@@ -296,8 +325,13 @@ export function HUD({
                 </span>
               </button>
               {showHUD && (
-                <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none">
-                  v{state.version || "1.5"}
+                <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none flex flex-col items-center">
+                  <span>v{state.version || "1.9"}</span>
+                  {sessionCode && (
+                    <span className="text-[7px] text-[#D2B48C]/70 tracking-wider font-mono">
+                      {sessionCode}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -314,10 +348,24 @@ export function HUD({
                   <Share2 className="w-3 h-3" />
                   BIOMASS
                 </div>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isBiomassCollapsed ? "rotate-180" : ""}`} />
+                <div className="flex items-center gap-1.5">
+                  {stats.hybridCount !== undefined && (
+                    <span 
+                      className="text-[7px] px-1 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold tracking-normal" 
+                      title={`Total Hybrids Born: ${stats.hybridCount}`}
+                    >
+                      ⚡{stats.hybridCount}
+                    </span>
+                  )}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isBiomassCollapsed ? "rotate-180" : ""}`} />
+                </div>
               </h2>
               {!isBiomassCollapsed && (
                 <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                  <div className="flex justify-between items-center text-[#87CEEB] bg-white/5 px-1.5 py-1 rounded border border-[#87CEEB]/20 mb-1">
+                    <span className="text-[7px] text-[#D2B48C]/80 uppercase tracking-wider font-bold">Hybrids</span>
+                    <span className="text-[8px] text-amber-300 font-bold font-mono">⚡ {stats.hybridCount ?? 0}</span>
+                  </div>
                   {(() => {
                   const filteredStrains = stats.strains.filter((s: any) => !s.name.startsWith("Feeler-"));
                   const archetypeTotals: Record<string, number> = {};
@@ -372,7 +420,14 @@ export function HUD({
                             />
                           )}
                         </div>
-                        <span>{percent.toFixed(1)}%</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {strain.matingCount !== undefined && strain.matingCount > 0 && (
+                            <span className="text-[7px] px-1 py-0.5 rounded bg-[#87CEEB]/15 text-[#87CEEB] font-bold" title={`${strain.matingCount} hybridizations`}>
+                              {strain.matingCount}×
+                            </span>
+                          )}
+                          <span>{percent.toFixed(1)}%</span>
+                        </div>
                       </div>
                       <div className="h-1.5 w-full bg-white/5 overflow-hidden">
                         <div
@@ -384,6 +439,12 @@ export function HUD({
                         <div className="fixed left-40 sm:left-48 top-32 hidden group-hover:flex flex-col bg-[#001220]/95 border border-[#87CEEB]/50 p-3 z-[9999] min-w-[200px] shadow-2xl text-[#87CEEB] text-[9px] sm:text-[10px] pointer-events-none rounded whitespace-nowrap">
                           <div className="font-bold text-[10px] sm:text-[11px] border-b border-[#87CEEB]/30 pb-1 mb-1 shadow-sm">
                             {strain.name} traits
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Hybrids:</span>
+                            <span className="font-mono text-[#87CEEB]">
+                              {strain.matingCount || 0}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span>Color:</span>
@@ -582,6 +643,7 @@ export function HUD({
                 <div className="flex items-center gap-2 bg-black/40 border border-[#D2B48C]/30 px-3 py-1 rounded w-48 sm:w-64">
                   <Search className="w-3.5 h-3.5 text-[#87CEEB]" />
                   <input
+                    ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -589,7 +651,16 @@ export function HUD({
                     className="bg-transparent text-[10px] text-white focus:outline-none w-full placeholder:text-[#D2B48C]/50"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="text-[#D2B48C]/60 hover:text-white text-[10px]">✕</button>
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="text-[#D2B48C]/60 hover:text-white text-[10px] cursor-pointer"
+                      title="Clear search"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

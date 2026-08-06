@@ -29,18 +29,12 @@ export function processAgents(
     }
   }
 
-  // Startup & Ecosystem Minimum Rules:
-  // 1. Before any organism has bred, enforce a MINIMUM 2 ACTIVE LIVING CREATURES limit so Organism A or B never dies off alone.
-  // 2. After breeding has occurred, enforce a MINIMUM 3 ACTIVE SPECIES limit to maintain ecosystem diversity.
+  // Emergency extinction recovery: If all organisms have died and no agents are active, re-seed founder species
   const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
-  if (!engine.hasAnyOrganismBred) {
-    if (livingNonFeelerAgents < Math.min(2, engine.minAgents)) {
-      engine.spawnNewSpecies();
-    }
-  } else {
-    if (livingNonFeelerAgents < engine.minAgents || nonTaperingStrains.size < Math.min(3, engine.minAgents)) {
-      engine.spawnNewSpecies();
-    }
+  if (livingNonFeelerAgents === 0 && activeAgents.filter(a => a.active).length === 0 && engine.agents.length > 0) {
+    engine.onLog("🌱 Ecosystem extinct — spawning emergency founder species.");
+    engine.spawnNewSpecies();
+    engine.spawnNewSpecies();
   }
 
   // Cap maximum species by tapering the oldest variant when capacity exceeded
@@ -97,8 +91,20 @@ export function processAgents(
       agent.growthBoost = Math.max(1.0, agent.growthBoost - 0.03 * engine.timeScale);
     }
     
+    // Width-dependent growth speed modifier
+    let widthSpeedMult = 1.0;
+    if (engine.widthGrowthEffect) {
+      const refThickness = Math.max(0.1, agent.thickness);
+      widthSpeedMult = Math.pow(1.0 / refThickness, engine.widthGrowthEffect);
+      widthSpeedMult = Math.max(0.1, Math.min(5.0, widthSpeedMult));
+    }
+
+    // Branching-driven growth speed boost: creatures doing lots of branching grow faster!
+    const branchCountForBoost = strainCounts.get(agent.genome.name) || 1;
+    const branchGrowthMultiplier = 1.0 + Math.min(5.0, Math.max(0, branchCountForBoost - 1) * 0.05 * (engine.branchGrowthBoost || 1.0));
+
     // Blend smoothly from normal speed to heavily nerfed (0.2x) speed
-    const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8) * agent.growthBoost;
+    const speedMult = baseSpeedMult * (1.0 - agent.suppressionFade * 0.8) * agent.growthBoost * widthSpeedMult * branchGrowthMultiplier;
     
     agent.growthAccumulator = (agent.growthAccumulator || 0) + engine.growthSpeed * speedMult * engine.timeScale;
     let iterations: number;
@@ -135,36 +141,37 @@ export function processAgents(
 
       if (genome.archetype === "bush") {
         // BUSH: Broad sprawling shrub canopy
-        effectiveBifurcationRate *= 6.0 * engine.bushBranching;
+        effectiveBifurcationRate *= 6.0 * (engine.bushBranching ?? 1.0);
         effectiveStepSize *= 0.65;
         effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
         // Tree: Short vertical trunk -> Prolific canopy branching into fine limbs and twigs
         const trunkDurationTicks = 60 * Math.max(0.5, engine.timeScale);
-        if (agent.age < trunkDurationTicks) {
+        if (!agent.isCanopy && agent.age < trunkDurationTicks) {
           // Phase 1: Straight vertical trunk
-          effectiveBifurcationRate *= 0.01 * engine.treeBranching;
+          effectiveBifurcationRate *= 0.01 * (engine.treeBranching ?? 1.0);
           effectiveStepSize *= 1.3;
           effectiveWanderIntensity *= 0.02; // Rigid, straight trunk
           // Pull trunk gently upward toward +Y
           agent.direction.lerp(new THREE.Vector3(0, 1, 0), 0.08).normalize();
         } else {
           // Phase 2: Canopy — prolific branching with straight, wooden limbs (no snake wobble!)
-          const canopyAge = agent.age - trunkDurationTicks;
+          agent.isCanopy = true;
+          const canopyAge = agent.age >= trunkDurationTicks ? agent.age - trunkDurationTicks : 50;
           const canopyProgress = Math.min(1.0, canopyAge / 300);
           const branchRamp = 15.0 + canopyProgress * 25.0; // Ramps from 15x to 40x so it branches prolifically!
-          effectiveBifurcationRate *= branchRamp * engine.treeBranching;
+          effectiveBifurcationRate *= branchRamp * (engine.treeBranching ?? 1.0);
           effectiveStepSize *= 0.7 - canopyProgress * 0.25; // Twigs get shorter as branches multiply
           effectiveWanderIntensity *= 0.3; // Low wander so tree branches remain straight and wooden, not wobbly!
           // Give limbs a slight upward canopy lift
           agent.direction.lerp(new THREE.Vector3(0, 0.4, 0), 0.03).normalize();
         }
       } else if (genome.archetype === "snake") {
-        effectiveBifurcationRate *= 0.05 * engine.snakeBranching;
+        effectiveBifurcationRate *= 0.05 * (engine.snakeBranching ?? 1.0);
         effectiveWanderIntensity *= engine.snakeWander;
         effectiveStepSize *= engine.snakeStepSize;
       } else if (genome.archetype === "rhizome") {
-        effectiveBifurcationRate *= 12.0 * engine.rhizomeBranching;
+        effectiveBifurcationRate *= 12.0 * (engine.rhizomeBranching ?? 1.0);
         effectiveStepSize *= 0.45;
         effectiveWanderIntensity *= 0.7;
       }
@@ -175,8 +182,6 @@ export function processAgents(
       effectiveBifurcationRate *= Math.max(1.0, widthBoost);
       effectiveWanderIntensity *= Math.max(1.0, 1.0 + (widthBoost - 1.0) * 0.5);
 
-      // Branching-driven growth speed boost: creatures doing lots of branching grow faster!
-      const branchCountForBoost = strainCounts.get(agent.genome.name) || 1;
       const branchSpeedBoost = 1.0 + Math.min(10.0, Math.max(0, branchCountForBoost - 1) * 0.06 * (engine.branchGrowthBoost || 1.0));
       effectiveStepSize *= branchSpeedBoost;
 
@@ -188,53 +193,32 @@ export function processAgents(
       let avoidanceForce = new THREE.Vector3();
       let avoidanceCount = 0;
 
-      const isYoungHybrid = isHybrid && agent.age < 2400;
-      const onCooldown = agent.cooldown > 0;
-
       for (let j = 0; j < activeAgents.length; j++) {
         const other = activeAgents[j];
-        if (other === agent) continue;
+        if (other === agent || other.isFeeler) continue;
 
         const dSq = agent.position.distanceToSquared(other.position);
+        const isSame = other.genome.name === agent.genome.name;
+        const isSimilar = isSame || (other.genome.archetype === agent.genome.archetype && other.genome.movementType === agent.genome.movementType);
 
-        if (isYoungHybrid || onCooldown) {
-          if (dSq < 10000) {
-            avoidanceForce.add(
-              new THREE.Vector3()
-                .subVectors(agent.position, other.position)
-                .normalize(),
-            );
-            avoidanceCount++;
+        if (!isSimilar) {
+          // Global seeking without detection radius limit: find nearest agent of different species
+          if (dSq < nearestDistSq) {
+            nearestDistSq = dSq;
+            nearestTarget = other;
           }
         } else {
-          const isSame = other.genome.name === agent.genome.name;
-          const isSimilar = isSame || (other.genome.archetype === agent.genome.archetype && other.genome.movementType === agent.genome.movementType);
-
-          if (!isSimilar && other.cooldown <= 0) {
-            if (dSq < nearestDistSq) {
-              nearestDistSq = dSq;
-              nearestTarget = other;
-            }
-          } else if (isSimilar) {
-            // Same or similar species repel each other
-            if (dSq < 10000) {
-              avoidanceForce.add(
-                new THREE.Vector3().subVectors(agent.position, other.position).normalize()
-              );
-              avoidanceCount++;
-            }
+          // Gentle local separation between same/similar species to prevent overlapping
+          if (dSq < 2500) {
+            avoidanceForce.add(
+              new THREE.Vector3().subVectors(agent.position, other.position).normalize()
+            );
+            avoidanceCount++;
           }
         }
       }
 
-      const snakeMagMod = genome.archetype === "snake" ? 0.02 : 1.0;
-
-      if (
-        !isYoungHybrid &&
-        !onCooldown &&
-        nearestTarget &&
-        nearestDistSq < 60000
-      ) {
+      if (nearestTarget) {
         const dist = Math.sqrt(nearestDistSq);
         if (dist < 150) {
            // Symbiosis: Mutual spiraling when close
@@ -261,18 +245,22 @@ export function processAgents(
            agent.thickness = Math.min(agent.thickness * 1.01, genome.thicknessBase * 1.5);
            agent.age = Math.max(0, agent.age - 0.5); // Extend lifespan
         } else {
-           const seek = new THREE.Vector3()
+           // Smooth, responsive global homing towards partner organism
+           const toTarget = new THREE.Vector3()
              .subVectors(nearestTarget.position, agent.position)
-             .normalize()
-             .multiplyScalar(engine.magnetism * 4.0 * snakeMagMod);
-           agent.direction.add(seek).normalize();
+             .normalize();
+           const seekStrength = Math.min(
+             1.0,
+             Math.max(0.08, (engine.magnetism || 0.08) * 3.5) + (engine.seekAmount || 0.0) * 0.65
+           );
+           agent.direction.lerp(toTarget, seekStrength).normalize();
         }
       }
 
       if (avoidanceCount > 0) {
         avoidanceForce
           .divideScalar(avoidanceCount)
-          .multiplyScalar(engine.magnetism * 1.0 * snakeMagMod);
+          .multiplyScalar((engine.magnetism || 0.08) * 1.5);
         agent.direction.add(avoidanceForce).normalize();
       }
 
@@ -343,25 +331,34 @@ export function processAgents(
 
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
 
-      const b = engine.boundarySize;
+      const bX = engine.boundarySize;
+      const bZ = engine.boundarySize;
+      const squash = engine.boundarySquash ?? 1.0;
+      const bY = Math.max(5.0, engine.boundarySize * squash);
       const creatureCenterY = engine.creatureCenterY || 18.921075;
       let bounced = false;
 
       if (engine.boundaryShape === "sphere") {
-        // Perfect Sphere centered at (0, creatureCenterY, 0)
+        // Ellipsoid / Ovoid centered at (0, creatureCenterY, 0)
         const dy = agent.position.y - creatureCenterY;
-        const distSq = agent.position.x * agent.position.x + dy * dy + agent.position.z * agent.position.z;
-        if (distSq > b * b) {
-          const dist = Math.sqrt(distSq);
-          const scale = b / dist;
+        const normX = agent.position.x / bX;
+        const normY = dy / bY;
+        const normZ = agent.position.z / bZ;
+        const distSq = normX * normX + normY * normY + normZ * normZ;
+        if (distSq > 1.0) {
+          const scale = 1.0 / Math.sqrt(distSq);
           
-          // Outward normal vector for sphere
-          const normal = new THREE.Vector3(agent.position.x, dy, agent.position.z).normalize();
-          
-          // Push agent back to sphere surface
+          // Push agent back to ellipsoid surface
           agent.position.x = agent.position.x * scale;
           agent.position.y = creatureCenterY + dy * scale;
           agent.position.z = agent.position.z * scale;
+          
+          // Outward normal vector for ellipsoid
+          const normal = new THREE.Vector3(
+            agent.position.x / (bX * bX),
+            (agent.position.y - creatureCenterY) / (bY * bY),
+            agent.position.z / (bZ * bZ),
+          ).normalize();
           
           // Reflect direction: R = D - 2(D.N)N
           const dot = agent.direction.dot(normal);
@@ -370,19 +367,19 @@ export function processAgents(
           bounced = true;
         }
       } else {
-        // Perfect Equilateral Cube centered at (0, creatureCenterY, 0)
-        if (agent.position.x > b) {
-          agent.position.x = b;
+        // Rectangular Box centered at (0, creatureCenterY, 0)
+        if (agent.position.x > bX) {
+          agent.position.x = bX;
           agent.direction.x *= -1;
           bounced = true;
-        } else if (agent.position.x < -b) {
-          agent.position.x = -b;
+        } else if (agent.position.x < -bX) {
+          agent.position.x = -bX;
           agent.direction.x *= -1;
           bounced = true;
         }
 
-        const minY = creatureCenterY - b;
-        const maxY = creatureCenterY + b;
+        const minY = creatureCenterY - bY;
+        const maxY = creatureCenterY + bY;
         if (agent.position.y > maxY) {
           agent.position.y = maxY;
           agent.direction.y *= -1;
@@ -393,12 +390,12 @@ export function processAgents(
           bounced = true;
         }
 
-        if (agent.position.z > b) {
-          agent.position.z = b;
+        if (agent.position.z > bZ) {
+          agent.position.z = bZ;
           agent.direction.z *= -1;
           bounced = true;
-        } else if (agent.position.z < -b) {
-          agent.position.z = -b;
+        } else if (agent.position.z < -bZ) {
+          agent.position.z = -bZ;
           agent.direction.z *= -1;
           bounced = true;
         }
@@ -466,8 +463,7 @@ export function processAgents(
           (genome.appendage === "hair" ||
             genome.appendage === "curlyHair" ||
             genome.appendage === "spirals") &&
-          Math.random() < 0.55 * engine.ornamentFrequency &&
-          engine.pointCount < MAX_POINTS - 10
+          Math.random() < 0.55 * engine.ornamentFrequency
         ) {
           const rad = Math.random() * Math.PI * 2;
           const ax1 = new THREE.Vector3()
@@ -499,8 +495,7 @@ export function processAgents(
           (genome.appendage === "thorns" ||
             genome.appendage === "crystals" ||
             genome.appendage === "sparkles") &&
-          Math.random() < 0.45 * engine.ornamentFrequency &&
-          engine.pointCount < MAX_POINTS - 10
+          Math.random() < 0.45 * engine.ornamentFrequency
         ) {
           const rad = Math.random() * Math.PI * 2;
           const ax1 = new THREE.Vector3()
@@ -525,8 +520,8 @@ export function processAgents(
             true,
             agent.id,
           );
-        } else if (engine.pointCount < MAX_POINTS - 10) {
-          if (genome.appendage === "leaves") {
+        } else {
+          if (genome.appendage === "leaves" || genome.appendage === "ferns") {
             const baseInterval = genome.phyllotaxisMode === "whorled" ? 15 : 5;
             const nodeInterval = Math.max(1, Math.round((baseInterval * Math.max(1.0, engine.leafScale)) / engine.leafDensity));
             if (agent.age % nodeInterval === 0 && Math.random() < engine.leafProbability) {
@@ -593,28 +588,39 @@ export function processAgents(
 
       const allowedToBranch = myStrainCount < maxForArchetype;
 
+      if (agent.branchCooldown && agent.branchCooldown > 0) {
+        agent.branchCooldown--;
+      }
+
+      // Dynamic branch tendency factoring in live BRANCH_VAR dial
+      const liveBranchTendency = (genome.branchTendency || 1.0) * ((engine.branchTendencyVar || 20.0) / 20.0);
+      const brMult = Math.max(0.1, engine.branchingMultiplier ?? 1.0);
+      
+      // Dynamic minimum interval before next branch: high branchingMultiplier reduces delay between branch nodes
+      const baseMinInterval = genome.archetype === "rhizome" ? 4 : (genome.archetype === "bush" ? 5 : 8);
+      const minInterval = Math.max(2, Math.floor(baseMinInterval / (1.0 + Math.log10(Math.max(1, brMult)))));
+      const branchReady = (agent.branchCooldown || 0) <= 0 && agent.age >= minInterval;
+
+      const branchProb = effectiveBifurcationRate * liveBranchTendency * brMult * 0.01;
+
       if (
         allowedToBranch &&
         !agent.isFeeler &&
         !agent.tapering &&
-        agent.age > (genome.archetype === "rhizome" ? 5 : 12) + Math.random() * 15 &&
+        branchReady &&
         activeAgents.length + newAgents.length < engine.maxAgents * 3.0 &&
-        Math.random() <
-          effectiveBifurcationRate *
-            genome.branchTendency *
-            engine.branchingMultiplier
+        Math.random() < branchProb
       ) {
+        agent.branchCooldown = minInterval + Math.floor(Math.random() * 3);
 
-        // Partially reset age to allow varied branching distances instead of rigid grids
-        agent.age = Math.floor(Math.random() * 10);
         const forkAngle = Math.PI / 4 + (Math.random() - 0.5) * 0.5;
         const newDirection = agent.direction
           .clone()
           .applyAxisAngle(
             new THREE.Vector3(
-              Math.random(),
-              Math.random(),
-              Math.random(),
+              Math.random() - 0.5,
+              Math.random() - 0.5,
+              Math.random() - 0.5,
             ).normalize(),
             forkAngle,
           );
@@ -625,13 +631,13 @@ export function processAgents(
         // When branching, parent stem ALSO loses thickness (except snakes which remain constant; rhizomes swell into fat knobby joints)
         if (genome.archetype === "bush") {
           thicknessMod *= 0.70;    // Children thin quickly → wispy tendrils
-          agent.thickness *= 0.80; // Parent thins significantly
+          agent.thickness *= 0.85; // Parent thins moderately
         } else if (genome.archetype === "rhizome") {
           thicknessMod *= 1.15; // Swell into a fat knobby ginger joint!
           agent.thickness *= 0.95; // Parent rhizome stem remains thick and swollen!
         } else if (genome.archetype === "tree") {
           thicknessMod *= 0.85;
-          agent.thickness *= 0.85;
+          agent.thickness *= 0.90;
         }
 
         const branchGenome = agent.genome;
@@ -642,11 +648,22 @@ export function processAgents(
           direction: newDirection,
           genome: branchGenome,
           active: true,
-          age: 0,
+          age: agent.isCanopy ? 30 : 0,
+          isCanopy: agent.isCanopy,
           thickness: agent.thickness,
           targetThickness: agent.thickness * thicknessMod,
           cooldown: 300,
+          id: engine.nextAgentId++,
+          parentAgent: agent,
+          parentId: agent.id,
         });
+
+        // TERM_BRANCH: Post-branch termination penalty
+        // When termProbPostBranch > 0.5, creating a branch carries a risk of parent stem ending
+        const postBranchRisk = (Math.max(0.5, engine.termProbPostBranch || 0.5) - 0.5) * 0.05 * (engine.terminationProb || 0.02);
+        if (postBranchRisk > 0 && Math.random() < postBranchRisk) {
+          agent.tapering = true;
+        }
       }
 
       handleBreedingAndFeelers(
@@ -661,13 +678,36 @@ export function processAgents(
 
 
       // 4-STAGE LIFESPAN MODEL:
-      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred (hasBred) OR hits age timeout (600 ticks ~ 10s), growth stops & dying begins!
-      const maxLifespan = 400 * Math.max(0.5, engine.timeScale);
-      if (!agent.tapering && agent.hasBred && ((agent.matingCount && agent.matingCount >= 3) || agent.age > maxLifespan)) {
+      // Stage 1 & 2: Growth & Breeding -> Once an organism has bred maxMatings times OR hits age timeout, growth stops & dying begins!
+      const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+      const minMatingLifespan = (maxM + 1) * (engine.hybridCooldown || 340) * 1.2;
+      const maxLifespan = Math.max(minMatingLifespan, 1200 * Math.max(0.5, engine.timeScale));
+      const lifecycle = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
+      const speciesMCount = lifecycle?.matingCount || agent.matingCount || 0;
+      const hasSpeciesBred = !!(agent.hasBred || lifecycle?.hasBred);
+      const shouldDieFromMating = hasSpeciesBred && speciesMCount >= maxM;
+      const shouldDieFromAge = agent.age > maxLifespan;
+
+      if (!agent.tapering && (shouldDieFromMating || shouldDieFromAge)) {
         if (canEnterDeleting(engine, activeAgents, 1)) {
-          const reason = (agent.matingCount && agent.matingCount >= 3) ? "bred 3 times" : "reached max lifespan";
+          const reason = shouldDieFromMating ? `bred ${maxM} times` : "reached max lifespan";
           engine.killSpecies(agent.genome.name, reason);
+        } else if (shouldDieFromAge && agent.age > maxLifespan * 1.5) {
+          // If the species cannot be deleted yet due to minimum species threshold (3 species),
+          // individual ancient branches taper their tips so they don't grow infinitely
+          agent.tapering = true;
+          agent.fadeAge = 0;
         }
+      }
+
+      // If the whole species is in dyingStrains, or if this is a feeler whose host parent died, taper out
+      const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
+      const isOrphanedFeeler = agent.isFeeler && agent.parentAgent && (agent.parentAgent.tapering || !agent.parentAgent.active);
+      if ((isStrainDying || isOrphanedFeeler) && !agent.tapering) {
+        agent.tapering = true;
+        agent.forceTapering = true;
+        agent.fadeAge = 0;
+        agent.taperBudget = undefined;
       }
 
       if (agent.tapering) {
@@ -693,11 +733,16 @@ export function processAgents(
               engine.markAgentSegmentsDying(agent.id);
             }
 
-            // Deactivate all remaining branch agents of this organism so no ghost branch tips linger
+            // Deactivate all branches and feelers linked to this organism so no ghost branches or feelers linger
             for (let j = 0; j < activeAgents.length; j++) {
               const other = activeAgents[j];
-              if (other.active && other.genome.name === agent.genome.name) {
+              const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
+              const isSameStrain = other.genome.name === agent.genome.name;
+              const isFeelerOfStrain = other.realGenome && other.realGenome.name === agent.genome.name;
+              if (other.active && (isDescendant || isSameStrain || isFeelerOfStrain)) {
                 other.active = false;
+                other.tapering = true;
+                other.forceTapering = true;
                 currentActiveCount--;
               }
             }

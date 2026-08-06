@@ -20,6 +20,7 @@ import {
   updateBoundaryMesh,
   setupCameraProjection,
   setupBoundarySize,
+  setupBoundarySquash,
   setupSceneBackground,
   setupFogColor,
   setupFogVisibility,
@@ -57,6 +58,8 @@ export class SimulationEngine {
   ceilingGridMat?: THREE.ShaderMaterial;
   floorGridMesh?: THREE.GridHelper;
   ceilingGridMesh?: THREE.GridHelper;
+  silhouetteTarget?: THREE.WebGLRenderTarget;
+  silhouettePixelBuffer?: Uint8Array;
 
   pointCount: number = 0;
   segments: Segment[] = [];
@@ -95,6 +98,7 @@ export class SimulationEngine {
   onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
   onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
   matingCount: number = 0;
+  totalHybridCount: number = 0;
   feelerCount: number = 0;
   nextAgentId: number = 1;
   strainFeelerCooldown: Map<string, number> = new Map();
@@ -104,44 +108,49 @@ export class SimulationEngine {
   lastFeelerWorldPos?: THREE.Vector3;
 
   rotationSpeed: number = 0.13;
+  rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
-  magnetism: number = 0.08361988738043864;
-  proximity: number = 1538.23896997661;
-  desperation: number = 4.333947682994568;
-  despairAge: number = 3185.029905594175;
-  flowerSize: number = 1.8;
-  globalPulseSpeed: number = 0.8637093147800061;
-  maxLineWidth: number = 1.5;
+  magnetism: number = 0.08708895046646814;
+  seekAmount: number = 0.0;
+  proximity: number = 362.21842356693804;
+  desperation: number = 6.900969569643401;
+  despairAge: number = 1310.6350448360784;
+  maxMatings: number = 1;
+  startColorMode: string = "analogous";
+  flowerSize: number = 1.0;
+  globalPulseSpeed: number = 0.6760780934052621;
+  maxLineWidth: number = 15.969935502148255;
   widthVariance: number = 0.5;
-  branchGrowthBoost: number = 1.0;
+  branchGrowthBoost: number = 1.5;
   colorMutationShift: number = 0.06;
-  multicolorAppProb: number = 0.3155126730950826;
-  sameColorAppProb: number = 0.4968205547416572;
-  tideSpeed: number = 1.2393635516813024;
+  multicolorAppProb: number = 0.2190675672205824;
+  sameColorAppProb: number = 0.32405154770477973;
+  tideSpeed: number = 1.5952414033038085;
   tideValue: number = 0;
-  tideColorTop: string = "#0b939c";
-  tideColorBottom: string = "#3e5e50";
-  tideThickness: number = 74.92111043533596;
-  tideOpacity: number = 0.12871529096468015;
-  tideSaturation: number = 0.0162554822004225;
-  maxSaturation: number = 0.3135869032532054;
+  tideColorTop: string = "#2c7abe";
+  tideColorBottom: string = "#5c3e5e";
+  tideThickness: number = 377.1499619661219;
+  tideOpacity: number = 0.25457806871050703;
+  tideSaturation: number = 0.9915627848373325;
+  maxSaturation: number = 0.43933066036466184;
   colorClamp: number = 1;
   growthSpeed: number = 0.11;
-  diebackRate: number = 5.50616330309604;
+  widthGrowthEffect: number = 0.0;
+  diebackRate: number = 8.111775230578985;
   allowBreeding: boolean = true;
-  hybridCooldown: number = 650;
+  hybridCooldown: number = 339.6557860499387;
   postMatingDieoff: boolean = true;
-  hybridStickiness: number = 48.44796525279812;
+  hybridStickiness: number = 42.874691796901615;
   hybridSpinSpeed: number = 0.2;
-  ornamentFrequency: number = 9.525004244851067;
-  branchingMultiplier: number = 163.34538034535345;
-  branchTendencyVar: number = 11.779000158227072;
-  desiccationSpeed: number = 12.842754552113087;
+  ornamentFrequency: number = 6.343394210305978;
+  branchingMultiplier: number = 500;
+  branchTendencyVar: number = 20.13801242680057;
+  desiccationSpeed: number = 9.174839585959253;
 
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.3;
+  leafScale: number = 0.55;
   leafDensity: number = 0.35;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
@@ -157,20 +166,21 @@ export class SimulationEngine {
 
   maxDOMs: number = 341000;
   lastMaxDOMs: number = 341000;
-  minAgents: number = 3;
-  boundarySize: number = 80;
+  minAgents: number = 6;
+  boundarySize: number = 120;
+  boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
   maxSpecies: number = 14;
-  ecoFade: number = 0.8944272063480259;
+  ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
-  branchSplitSizeProb: number = 0.7936089206087223;
-  branchBigger: number = 0.9929495875268578;
+  branchSplitSizeProb: number = 0.6199182775180784;
+  branchBigger: number = 0.8195623433742498;
   enableGlow: boolean = false;
   glowSize: number = 0.5;
-  fogVisibility: number = 826.8761838338102;
+  fogVisibility: number = 760.9755555176774;
   tideCullIndex: number = 0;
 
-  kioskMode: boolean = true;
+  kioskMode: boolean = false;
   lastKioskTime: number = 0;
   lastKioskRealTime: number = 0;
   kioskFadeProgress: number = 0;
@@ -205,7 +215,10 @@ export class SimulationEngine {
     crystals: 0.5,
     spores: 0.5,
     scales: 0.5,
-    spirals: 0.5
+    spirals: 0.5,
+    ferns: 0.5,
+    sparkles: 0.3,
+    buds: 0.4
   };
 
   dyingStems = new Set<number>();
@@ -216,28 +229,29 @@ export class SimulationEngine {
   colorDummy = new THREE.Color();
 
   terminationProb: number = 0.02;
-  termProbPostBranch: number = 2.0;
+  termProbPostBranch: number = 0.5;
+  segmentGap: number = 0.12;
   taperDuration: number = 1.5;
   feelerFade: number = 10.0;
   diebackAgeBias: number = 2.0;
   cullRate: number = 5.0;
 
-  snakeSpeed: number = 3.0;
-  snakeStepSize: number = 1.0;
+  snakeSpeed: number = 1.5;
+  snakeStepSize: number = 1.8;
   snakeWander: number = 1.0;
   bushSpeed: number = 1.0;
-  treeSpeed: number = 1.0;
+  treeSpeed: number = 1.2;
   rhizomeSpeed: number = 1.0;
 
-  bushBranching: number = 8.0;
-  treeBranching: number = 1.0;
+  bushBranching: number = 5.5;
+  treeBranching: number = 1.8;
   snakeBranching: number = 1.0;
-  rhizomeBranching: number = 1.0;
+  rhizomeBranching: number = 4.0;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
   lastHybridSize: number = 2.0;
-  lastLeafScale: number = 1.0;
+  lastLeafScale: number = 0.55;
   lastRelativeLeafSizeDiff: number = 0.2;
   lastStemCurviness: number = 1.0;
 
@@ -309,6 +323,9 @@ export class SimulationEngine {
     this.rotationSpeed = speed;
     if (this.controls) this.controls.autoRotateSpeed = speed;
   }
+  setRotationSpeedY(speed: number) {
+    this.rotationSpeedY = speed;
+  }
   setCameraZoom(zoom: number) {
     this.cameraZoom = zoom;
     if (this.camera) {
@@ -327,6 +344,9 @@ export class SimulationEngine {
   setMagnetism(val: number) {
     this.magnetism = val;
   }
+  setSeekAmount(val: number) {
+    this.seekAmount = val;
+  }
   setProximity(val: number) {
     this.proximity = val;
   }
@@ -338,6 +358,12 @@ export class SimulationEngine {
   setDespairAge(val: number) {
     this.despairAge = val;
   }
+  setMaxMatings(val: number) {
+    this.maxMatings = Math.max(1, Math.round(val));
+  }
+  setStartColorMode(val: string) {
+    this.startColorMode = val;
+  }
   setFlowerSize(val: number) {
     this.flowerSize = val;
     this.leafScale = val;
@@ -348,6 +374,9 @@ export class SimulationEngine {
   creatureCenterY: number = 18.921075;
   setBoundarySize(val: number) {
     setupBoundarySize(this, val);
+  }
+  setBoundarySquash(val: number) {
+    setupBoundarySquash(this, val);
   }
   setTideSpeed(val: number) {
     this.tideSpeed = val;
@@ -408,6 +437,9 @@ export class SimulationEngine {
   }
   setTermProbPostBranch(val: number) {
     this.termProbPostBranch = val;
+  }
+  setSegmentGap(val: number) {
+    this.segmentGap = val;
   }
   setMaxAgents(val: number) {
     this.maxAgents = val;
@@ -480,6 +512,9 @@ export class SimulationEngine {
   }
   setGrowthSpeed(g: number) {
     this.growthSpeed = g;
+  }
+  setWidthGrowthEffect(val: number) {
+    this.widthGrowthEffect = val;
   }
   setBotanyRealism(val: boolean) {
     this.botanyRealism = val;
@@ -639,6 +674,8 @@ export class SimulationEngine {
     const now = this.unscaledTime;
     if (!this.dyingStrains) this.dyingStrains = new Set();
     this.dyingStrains.add(strainName);
+    const liveAgents = this.agents.filter(a => a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName).length;
+    this.onLog(`🔻 markStrainSegmentsDying(${strainName}) — active living agents: ${liveAgents}`);
 
     for (let i = 0; i < this.maxDOMs; i++) {
       const seg = this.segments[i];

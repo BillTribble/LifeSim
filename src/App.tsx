@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
 import { triggerRandomize } from "./utils/randomize";
 import { ActivityLog, LogEntry } from "./components/ActivityLog";
+import { generateSessionCode } from "./utils/sessionCode";
 
 export default function App() {
   const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
+  const [sessionCode, setSessionCode] = useState(() => generateSessionCode());
+  const sessionCodeRef = useRef(sessionCode);
+  sessionCodeRef.current = sessionCode;
   const { state, setters } = useSimulationState();
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -16,6 +20,8 @@ export default function App() {
   const handleLog = (msg: string) => {
     const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLogs((prev) => [{ id: Date.now() + Math.random(), text: msg, time }, ...prev.slice(0, 49)]);
+    // Persist to disk via Vite dev server middleware with session code
+    fetch('/api/log', { method: 'POST', body: `[${sessionCodeRef.current}] ${msg}` }).catch(() => {});
   };
 
   const getScaledDuration = () => Math.max(10000, Math.round(10000 * (0.4 / Math.max(0.1, state.timeScale))));
@@ -76,6 +82,7 @@ export default function App() {
   const [stats, setStats] = useState({
     geometryCount: 0,
     totalAgents: 0,
+    hybridCount: 0,
     strains: [] as {
       name: string;
       color: string;
@@ -103,6 +110,7 @@ export default function App() {
       deathRate: state.diebackRate,
       slowMotion: state.timeScale,
       rotationVelocity: state.rotationSpeed,
+      rotationVelocityY: state.rotationSpeedY,
       swarmCohesion: state.magnetism,
       detectionRange: state.proximity,
       extrusionSpeed: state.growthSpeed,
@@ -110,7 +118,7 @@ export default function App() {
       pulseSpeed: state.globalPulseSpeed,
       saturation: state.maxSaturation,
       cameraPosition: stats.cameraPosition,
-      version: "1.5",
+      version: "1.9",
     };
     navigator.clipboard.writeText(JSON.stringify(settings, null, 2));
     setCopied(true);
@@ -130,14 +138,60 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // Periodic state snapshot to disk log every 3 seconds
+  const lastSnapshotRef = React.useRef(0);
+  const lastGeoAlert = React.useRef(0);
   const handleStateUpdate = (newState: any) => {
     setStats(newState);
+    const now = Date.now();
+
+    // ALERT: detect stems disappearing while agents are alive
+    if (newState.geometryCount !== undefined && newState.totalAgents !== undefined) {
+      if (newState.geometryCount < 10 && newState.totalAgents > 0 && now - lastGeoAlert.current > 5000) {
+        lastGeoAlert.current = now;
+        const alert = `🚨 [INVISIBLE BUG] geometries=${newState.geometryCount} but agents=${newState.totalAgents} — stems vanished while creatures alive!`;
+        console.error(alert);
+        fetch('/api/log', { method: 'POST', body: alert }).catch(() => {});
+      }
+    }
+
+    if (now - lastSnapshotRef.current >= 3000) {
+      lastSnapshotRef.current = now;
+      const strains = newState.strains || [];
+      const speciesSummary = strains.map((s: any) =>
+        `${s.name || "?"}(${s.biomass?.toFixed?.(0) || 0}${s.isDying ? ",DYING" : ""})`
+      ).join(", ");
+
+      const sf = newState.screenFill;
+      let fillSummary = "";
+      if (sf) {
+        const speciesFill = (sf.speciesBreakdown || []).map((sp: any) =>
+          `${sp.name}[${(sp.archetype || "?").toUpperCase()}]=${sp.fillPct.toFixed(1)}%(${sp.pixels}px)`
+        ).join(", ");
+        fillSummary = ` | [SCREEN_FILL] total=${sf.totalFillPct.toFixed(1)}% (${sf.totalOccupiedPixels}/${sf.totalPixels}px) [${speciesFill}]`;
+      }
+
+      const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+      const snapshot = `[SNAPSHOT] [${sessionCodeRef.current}] species=${strains.length} agents=${newState.totalAgents ?? "?"} geom=${newState.geometryCount ?? "?"}${fillSummary} | ${speciesSummary} | ${dials}`;
+      fetch('/api/log', { method: 'POST', body: snapshot }).catch(() => {});
+    }
   };
 
   const handleRestart = () => {
+    const nextCode = generateSessionCode();
+    setSessionCode(nextCode);
+    sessionCodeRef.current = nextCode;
     setRestartKey((prev) => prev + 1);
     setUptime(0);
+    const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    fetch('/api/log', { method: 'POST', body: `=== SESSION RESTART [${nextCode}] === | ${dials}` }).catch(() => {});
   };
+
+  // Log session start on mount
+  React.useEffect(() => {
+    const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    fetch('/api/log', { method: 'POST', body: `=== SESSION START [${sessionCodeRef.current}] === | ${dials}` }).catch(() => {});
+  }, []);
 
   return (
     <div className="relative w-screen h-screen bg-[#001220] text-[#D2B48C] font-sans overflow-hidden select-none">
@@ -162,10 +216,14 @@ export default function App() {
         restartTrigger={restartKey}
         randomizeTrigger={randomizeKey}
         rotationSpeed={state.rotationSpeed}
+        rotationSpeedY={state.rotationSpeedY}
         magnetism={state.magnetism}
+        seekAmount={state.seekAmount}
         proximity={state.proximity}
         desperation={state.desperation}
         despairAge={state.despairAge}
+        maxMatings={state.maxMatings}
+        startColorMode={state.startColorMode}
         flowerSize={state.flowerSize}
         tideSpeed={state.tideSpeed}
         tideColor={state.tideColor}
@@ -175,6 +233,7 @@ export default function App() {
         tideOpacity={state.tideOpacity}
         tideSaturation={state.tideSaturation}
         growthSpeed={state.growthSpeed}
+        widthGrowthEffect={state.widthGrowthEffect}
         diebackRate={state.diebackRate}
         allowBreeding={state.allowBreeding}
         hybridCooldown={state.hybridCooldown}
@@ -191,6 +250,7 @@ export default function App() {
         ecoFade={state.ecoFade}
         minAgents={state.minAgents}
         boundarySize={state.boundarySize}
+        boundarySquash={state.boundarySquash}
         desiccationSpeed={state.desiccationSpeed}
         enableGlow={state.enableGlow}
         glowSize={state.glowSize}
@@ -199,6 +259,7 @@ export default function App() {
         hybridSize={state.hybridSize}
         terminationProb={state.terminationProb}
         termProbPostBranch={state.termProbPostBranch}
+        segmentGap={state.segmentGap}
         taperDuration={state.taperDuration}
         diebackAgeBias={state.diebackAgeBias}
         maxLineWidth={state.maxLineWidth}
@@ -268,6 +329,7 @@ export default function App() {
         handleCopySettings={handleCopySettings}
         copied={copied}
         uptime={uptime}
+        sessionCode={sessionCode}
       />
 
       <style>{`

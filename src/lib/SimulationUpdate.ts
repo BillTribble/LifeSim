@@ -43,16 +43,23 @@ export function updateSimulation(engine: SimulationEngine) {
   }
 
   if (engine.controls && engine.camera) {
-    const rotSpeed = engine.rotationSpeed ?? 0.1;
-    if (rotSpeed > 0) {
+    const rotSpeedX = engine.rotationSpeed ?? 0;
+    const rotSpeedY = engine.rotationSpeedY ?? 0;
+    if (rotSpeedX !== 0 || rotSpeedY !== 0) {
       engine.controls.autoRotate = false;
-      const angleStep = (Math.PI / 1800) * rotSpeed;
       const target = engine.controls.target || new THREE.Vector3(0, 0, 0);
       const offset = new THREE.Vector3().subVectors(engine.camera.position, target);
       const spherical = new THREE.Spherical().setFromVector3(offset);
 
-      // Horizontal yaw auto-rotation around Y axis (vertical auto-rotation = 0)
-      spherical.theta -= angleStep;
+      if (rotSpeedX !== 0) {
+        const angleStepX = (Math.PI / 1800) * rotSpeedX;
+        spherical.theta -= angleStepX;
+      }
+
+      if (rotSpeedY !== 0) {
+        const angleStepY = (Math.PI / 1800) * rotSpeedY;
+        spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi - angleStepY));
+      }
 
       offset.setFromSpherical(spherical);
       engine.camera.position.copy(target).add(offset);
@@ -503,7 +510,7 @@ export function updateSimulation(engine: SimulationEngine) {
   // Ensure any leaf, flower, or appendage whose parent stem is dying dissolves in exact lockstep with its parent,
   // and any leaf whose parent stem is missing or deleted is instantly erased without delay.
   for (const app of engine.appendages.values()) {
-    const appLim = Math.floor(engine.maxDOMs / 4);
+    const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
     if (appLim > 0) {
       let appChanged = false;
       for (let i = 0; i < appLim; i++) {
@@ -511,10 +518,10 @@ export function updateSimulation(engine: SimulationEngine) {
         if (seg) {
           const parentSeg = engine.segments[seg.parentIndex];
           const parentDying = engine.dyingStems.has(seg.parentIndex);
-          const parentMissing = !parentSeg || parentSeg.timestamp !== seg.parentTimestamp;
+          const parentMissing = !parentSeg || (parentSeg.strainName !== seg.strainName && engine.time - seg.timestamp > 180);
 
           if (parentMissing) {
-            // Parent stem is completely gone, dead, or overwritten -> Erase hanging appendage instantly on this frame
+            // Parent stem is completely gone, dead, or overwritten -> Erase hanging appendage
             engine.dummy.matrix.identity();
             engine.dummy.scale.set(0, 0, 0);
             engine.dummy.updateMatrix();
@@ -767,5 +774,39 @@ export function updateSimulation(engine: SimulationEngine) {
     engine.onLog(
       `📊 [CENSUS] Pop: ${total} (Avg Age: ${avgAgeSecs}s, Max: ${maxAgeSecs}s) | Screen Fill: ${screenFillPct}% | Rhizome: ${gPct}% | Bush: ${bPct}% | Tree: ${tPct}% | Snake: ${sPct}%`
     );
+  }
+
+  // Geometry diagnostics every 180 frames (~3s) — track live vs dying stems
+  if (engine.frameCount % 180 === 0) {
+    let liveSegs = 0;
+    let dyingSegs = engine.dyingStems.size;
+    let emptySlots = 0;
+    const strainLiveSegs: Record<string, number> = {};
+    for (let i = 0; i < engine.maxDOMs; i++) {
+      if (engine.segments[i]) {
+        if (!engine.dyingStems.has(i)) {
+          liveSegs++;
+          const sName = engine.segments[i].strainName || "unknown";
+          strainLiveSegs[sName] = (strainLiveSegs[sName] || 0) + 1;
+        }
+      } else {
+        emptySlots++;
+      }
+    }
+    const activeAgentCount = engine.agents.filter(a => a.active && !a.isFeeler).length;
+    const taperingCount = engine.agents.filter(a => a.active && a.tapering && !a.isFeeler).length;
+    const dyingStrainsList = engine.dyingStrains ? Array.from(engine.dyingStrains).join(",") : "none";
+    const strainSegSummary = Object.entries(strainLiveSegs).map(([k, v]) => `${k}:${v}`).join(", ");
+
+    engine.onLog(
+      `🔬 [GEOM] live=${liveSegs} dying=${dyingSegs} empty=${emptySlots} meshCount=${engine.cylinderMesh.count} | agents=${activeAgentCount} (tap=${taperingCount}) | liveSegs=[${strainSegSummary || "none"}] | dyingStrains=[${dyingStrainsList}]`
+    );
+
+    // ALERT: geometry vanished while agents alive
+    if (liveSegs < 10 && activeAgentCount > 0) {
+      engine.onLog(
+        `🚨 [INVISIBLE BUG DETECTED] Only ${liveSegs} live segments but ${activeAgentCount} active agents! Ring buffer head=${engine.pointCount % engine.maxDOMs} maxDOMs=${engine.maxDOMs}`
+      );
+    }
   }
 }

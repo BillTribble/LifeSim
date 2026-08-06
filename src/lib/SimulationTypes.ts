@@ -19,7 +19,7 @@ export const APPENDAGES = [
   "buds",
 ] as const;
 export type Archetype = "bush" | "tree" | "snake" | "rhizome";
-export const ARCHETYPES: Archetype[] = ["bush", "tree", "snake", "rhizome"];
+export const ARCHETYPES: Archetype[] = ["bush", "tree", "rhizome"];
 
 export type MovementType = "wiggle" | "spiral" | "orthogonal";
 export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"];
@@ -97,12 +97,15 @@ export interface Agent {
   realGenome?: Genome;
   parentAgent?: Agent;
   growthBoost?: number;
+  isCanopy?: boolean;
+  branchCooldown?: number;
   hasBred?: boolean;
   matingCount?: number;
   fadeAge?: number;
   taperBudget?: number;
   dieAfterTicks?: number;
   id?: number;
+  parentId?: number;
 }
 
 export interface Segment {

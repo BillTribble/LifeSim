@@ -22,28 +22,43 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.camera.position.set(initCamX, initCamY, initCamZ);
     engine.camera.updateProjectionMatrix();
     
-    engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true });
-    engine.renderer.setSize(width, height);
-    engine.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
-    engine.controls.target.set(0, creatureCenterY, 0);
-    engine.camera.position.set(0, creatureCenterY, -137.42);
-    engine.camera.up.set(0, 1, 0);
-    engine.camera.lookAt(engine.controls.target);
-    engine.controls.enableDamping = true;
-    engine.controls.dampingFactor = 0.05;
-    engine.controls.autoRotate = false;
-    engine.controls.autoRotateSpeed = 0.4;
-    engine.controls.enablePan = true;
-    engine.controls.enableZoom = true;
-    engine.controls.minAzimuthAngle = -Infinity;
-    engine.controls.maxAzimuthAngle = Infinity;
-    // Allow vertical mouse pitch rotation while auto-rotate spins horizontally around Y axis
-    engine.controls.minPolarAngle = 0.05;
-    engine.controls.maxPolarAngle = Math.PI - 0.05;
-    engine.controls.saveState();
-    engine.controls.update();
+    try {
+      engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true });
+      engine.renderer.setSize(width, height);
+      engine.renderer.setPixelRatio(typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 2) : 1);
+      engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
+      engine.controls.target.set(0, creatureCenterY, 0);
+      engine.camera.position.set(0, creatureCenterY, -137.42);
+      engine.camera.up.set(0, 1, 0);
+      engine.camera.lookAt(engine.controls.target);
+      engine.controls.enableDamping = true;
+      engine.controls.dampingFactor = 0.05;
+      engine.controls.autoRotate = false;
+      engine.controls.autoRotateSpeed = 0.4;
+      engine.controls.enablePan = true;
+      engine.controls.enableZoom = true;
+      engine.controls.minAzimuthAngle = -Infinity;
+      engine.controls.maxAzimuthAngle = Infinity;
+      engine.controls.minPolarAngle = 0.05;
+      engine.controls.maxPolarAngle = Math.PI - 0.05;
+      engine.controls.saveState();
+      engine.controls.update();
+    } catch {
+      engine.renderer = {
+        setSize: () => {},
+        setPixelRatio: () => {},
+        render: () => {},
+        setRenderTarget: () => {},
+        getRenderTarget: () => null,
+        readRenderTargetPixels: () => {},
+        domElement: engine.canvas || {},
+      } as any;
+      engine.controls = {
+        target: new THREE.Vector3(0, creatureCenterY, 0),
+        update: () => {},
+        saveState: () => {},
+      } as any;
+    }
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     engine.ambientLight = ambientLight;
@@ -221,10 +236,29 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       reflectivity: 1.0
     }));
 
+    function createFernGeometry(): THREE.BufferGeometry {
+      const geo = new THREE.PlaneGeometry(1.0, 2.2, 8, 16);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const t = Math.max(0, Math.min(1, (y + 1.1) / 2.2));
+        const widthFactor = Math.sin(Math.pow(t, 0.7) * Math.PI) * (1.0 - t * 0.2);
+        pos.setX(i, x * Math.max(0.08, widthFactor));
+        const archZ = Math.sin(t * Math.PI * 0.5) * 0.45;
+        const ripple = Math.sin(y * 22.0) * 0.04 * (1.0 - t * 0.5);
+        pos.setZ(i, archZ + ripple);
+      }
+      geo.computeVertexNormals();
+      geo.translate(0, 1.1, 0);
+      return geo;
+    }
+
     const appendagesConfig: Record<string, THREE.BufferGeometry> = {
       flowers: new THREE.ConeGeometry(0.5, 1, 12).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
       lillyPads: new THREE.SphereGeometry(0.5, 8, 8),
       leaves: new THREE.BoxGeometry(1, 1, 0.05, 32, 48, 1).translate(0, 0.5, 0),
+      ferns: createFernGeometry(),
       petals: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
       needles: new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
       thorns: new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(-Math.PI / 2),
@@ -233,12 +267,14 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       crystals: new THREE.OctahedronGeometry(0.6),
       spores: new THREE.DodecahedronGeometry(0.5),
       scales: new THREE.PlaneGeometry(0.8, 0.8),
-      spirals: new THREE.TorusGeometry(0.5, 0.15, 8, 16)
+      spirals: new THREE.TorusGeometry(0.5, 0.15, 8, 16),
+      sparkles: new THREE.OctahedronGeometry(0.35, 0).scale(0.9, 1.4, 0.9),
+      buds: new THREE.SphereGeometry(0.4, 8, 8).scale(0.8, 1.25, 0.8).translate(0, 0.4, 0)
     };
 
     const appendageCount = Math.floor(MAX_POINTS / 4);
     for (const [key, geo] of Object.entries(appendagesConfig)) {
-        const useMat = key === 'leaves' ? leafMaterial : material;
+        const useMat = (key === 'leaves' || key === 'ferns') ? leafMaterial : material;
         const mesh = new THREE.InstancedMesh(geo, useMat, appendageCount);
         initMeshAttributes(mesh, appendageCount);
         

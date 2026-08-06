@@ -9,19 +9,24 @@ interface SmartDialProps {
   setters: any;
   searchQuery?: string;
   tooltip?: string;
+  keywords?: string[];
   step: number;
   value: number;
   onChange: (val: number) => void;
   color?: string;
   formatValue?: (val: number) => React.ReactNode;
   hideValue?: boolean;
+  polar?: boolean;
 }
 
 export function SmartDial(props: SmartDialProps) {
-  const { label, min: defaultMin, max: defaultMax, state, setters, searchQuery, tooltip, ...rest } = props;
+  const { label, min: defaultMin, max: defaultMax, state, setters, searchQuery, tooltip, keywords, ...rest } = props;
   if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    const match = label?.toLowerCase().includes(q) || tooltip?.toLowerCase().includes(q);
+    const q = searchQuery.toLowerCase().trim();
+    const match =
+      label?.toLowerCase().includes(q) ||
+      tooltip?.toLowerCase().includes(q) ||
+      keywords?.some((k) => k.toLowerCase().includes(q));
     if (!match) return null;
   }
   const limits = state.dialLimits?.[label as string];

@@ -25,33 +25,33 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
   let thicknessBase: number, minThickness: number, thicknessDecay: number, bifurcationRate: number, stepSize: number, branchTendency: number;
 
   if (archetype === "bush") {
-    thicknessBase = (0.6 + Math.random() * 1.2) * 0.7;
-    minThickness = (0.08 + Math.random() * 0.15) * 0.7;
+    thicknessBase = (1.62 + Math.random() * 0.9) * 0.7;
+    minThickness = (0.24 + Math.random() * 0.20) * 0.7;
     thicknessDecay = 0.9993 + Math.random() * 0.0005;
-    bifurcationRate = 0.25 + Math.random() * 0.15;
-    stepSize = (0.5 + Math.random() * 0.3) * 0.7;
-    branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 12.0 : 5.0);
+    bifurcationRate = 0.22 + Math.random() * 0.12;
+    stepSize = (0.55 + Math.random() * 0.3) * 0.7;
+    branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 10.0 : 4.5);
   } else if (archetype === "tree") {
-    thicknessBase = (3.0 + Math.random() * 4.0) * 0.7;
-    minThickness = (0.2 + Math.random() * 1.0) * 0.7;
+    thicknessBase = (5.4 + Math.random() * 2.4) * 0.7;
+    minThickness = (0.55 + Math.random() * 1.0) * 0.7;
     thicknessDecay = 0.9996 + Math.random() * 0.0004;
-    bifurcationRate = 0.005 + Math.random() * 0.015;
-    stepSize = (1.0 + Math.random() * 1.0) * 0.7;
-    branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.7 ? 6.0 : 0.8);
+    bifurcationRate = 0.024 + Math.random() * 0.018;
+    stepSize = (1.45 + Math.random() * 0.8) * 0.7;
+    branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 3.8 : 2.0);
   } else if (archetype === "snake") {
-    thicknessBase = (1.0 + Math.random() * 2.0) * 0.7;
-    minThickness = (0.3 + Math.random() * 0.8) * 0.7;
+    thicknessBase = (5.0 + Math.random() * 2.5) * 0.7;
+    minThickness = (2.5 + Math.random() * 1.4) * 0.7;
     thicknessDecay = 0.9998 + Math.random() * 0.0002;
-    bifurcationRate = 0.002 + Math.random() * 0.005;
-    stepSize = (1.2 + Math.random() * 1.2) * 0.7;
-    branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.0 : 0.2);
+    bifurcationRate = 0.003 + Math.random() * 0.006;
+    stepSize = (2.6 + Math.random() * 1.4) * 0.7;
+    branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
   } else {
-    thicknessBase = 12.0 + Math.random() * 6.0;
-    minThickness = 5.0 + Math.random() * 3.0;
+    thicknessBase = (5.0 + Math.random() * 2.4) * 0.7;
+    minThickness = (2.2 + Math.random() * 1.2) * 0.7;
     thicknessDecay = 0.9995 + Math.random() * 0.0004;
-    bifurcationRate = 0.25 + Math.random() * 0.2;
-    stepSize = 0.2 + Math.random() * 0.15;
-    branchTendency = 20.0 + Math.random() * 15.0;
+    bifurcationRate = 0.11 + Math.random() * 0.08;
+    stepSize = (0.5 + Math.random() * 0.25) * 0.7;
+    branchTendency = 7.0 + Math.random() * 5.0;
   }
 
   return {
@@ -107,14 +107,24 @@ export function randomizeColors(engine: SimulationEngine): void {
   const colorMap = new Map<string, THREE.Color>();
 
   if (alphaGenome && betaGenome) {
-    const baseHue = Math.random();
+    const bgHue = Math.random();
+    // Alpha is complementary to the background color (180° / 0.5 hue offset)
+    const alphaHue = (bgHue + 0.5) % 1.0;
     if (engine.theme !== 1) {
-      alphaGenome.color.setHSL(baseHue, 0.9, 0.52);
-      betaGenome.color.setHSL((baseHue + 0.5) % 1.0, 0.9, 0.52);
+      alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
+      let betaOffset = 0.5;
+      if (engine.startColorMode === "analogous") {
+        const sign = Math.random() < 0.5 ? 1 : -1;
+        const matingShift = engine.colorMutationShift || 0.06;
+        betaOffset = sign * matingShift * (0.8 + Math.random() * 0.4);
+      } else {
+        betaOffset = 0.5;
+      }
+      const betaHue = ((alphaHue + betaOffset) % 1.0 + 1.0) % 1.0;
+      betaGenome.color.setHSL(betaHue, 0.9, 0.52);
     }
     colorMap.set(alphaGenome.name, alphaGenome.color.clone());
     colorMap.set(betaGenome.name, betaGenome.color.clone());
-    const bgHue = (baseHue + 2 / 3) % 1.0;
     const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
     const bgHex = "#" + bgColorObj.getHexString();
     engine.setBgColor(bgHex);
@@ -158,12 +168,66 @@ export function updateBoundaryMesh(engine: SimulationEngine): void {
   if (!engine.showBoundaryBox) return;
 
   const b = engine.boundarySize;
+  const squash = engine.boundarySquash ?? 1.0;
+  const bY = b * squash;
   let geo: THREE.BufferGeometry;
   if (engine.boundaryShape === "sphere") {
-    const sphereGeo = new THREE.SphereGeometry(b, 24, 16);
-    geo = new THREE.WireframeGeometry(sphereGeo);
+    // Generate clean, elegant meridian and parallel circle rings (no busy diagonal triangulation)
+    const points: THREE.Vector3[] = [];
+    const segments = 48;
+
+    // 1. Horizontal Equator Ring (XZ plane at y=0)
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * b, 0, Math.sin(theta1) * b),
+        new THREE.Vector3(Math.cos(theta2) * b, 0, Math.sin(theta2) * b)
+      );
+    }
+
+    // 2. Vertical XY Meridian Ring
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * b, Math.sin(theta1) * bY, 0),
+        new THREE.Vector3(Math.cos(theta2) * b, Math.sin(theta2) * bY, 0)
+      );
+    }
+
+    // 3. Vertical YZ Meridian Ring
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(0, Math.sin(theta1) * bY, Math.cos(theta1) * b),
+        new THREE.Vector3(0, Math.sin(theta2) * bY, Math.cos(theta2) * b)
+      );
+    }
+
+    // 4. Upper and Lower Parallel Rings (at ±45° latitude)
+    const latAngle = Math.PI / 4;
+    const latR = b * Math.cos(latAngle);
+    const latY = bY * Math.sin(latAngle);
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      // Upper ring
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * latR, latY, Math.sin(theta1) * latR),
+        new THREE.Vector3(Math.cos(theta2) * latR, latY, Math.sin(theta2) * latR)
+      );
+      // Lower ring
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * latR, -latY, Math.sin(theta1) * latR),
+        new THREE.Vector3(Math.cos(theta2) * latR, -latY, Math.sin(theta2) * latR)
+      );
+    }
+
+    geo = new THREE.BufferGeometry().setFromPoints(points);
   } else {
-    const boxGeo = new THREE.BoxGeometry(b * 2, b * 2, b * 2);
+    const boxGeo = new THREE.BoxGeometry(b * 2, bY * 2, b * 2);
     geo = new THREE.EdgesGeometry(boxGeo);
   }
 
@@ -171,6 +235,12 @@ export function updateBoundaryMesh(engine: SimulationEngine): void {
   engine.boundaryMesh = new THREE.LineSegments(geo, mat);
   engine.boundaryMesh.position.set(0, engine.creatureCenterY, 0);
   engine.scene.add(engine.boundaryMesh);
+}
+
+export function setupBoundarySquash(engine: SimulationEngine, val: number): void {
+  if (engine.boundarySquash === val) return;
+  engine.boundarySquash = val;
+  engine.updateBoundaryMesh();
 }
 
 export function setupCameraProjection(engine: SimulationEngine, val: number): void {
@@ -266,7 +336,7 @@ export function setupTheme(engine: SimulationEngine, val: number, manual: boolea
 }
 
 export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Archetype): Genome {
-  const archetypes: Archetype[] = ["bush", "tree", "snake", "rhizome"];
+  const archetypes: Archetype[] = ARCHETYPES;
   const arch = forceArchetype || archetypes[Math.floor(Math.random() * archetypes.length)];
   const familyNames = ["Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda"];
   const nameStr = `${familyNames[Math.floor(Math.random() * familyNames.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
@@ -406,13 +476,13 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   const getArchetypeThickness = (arch: Archetype) => {
     const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
     if (arch === "bush") {
-      return (0.6 + Math.random() * 1.2 * variance) * 0.7;
+      return (1.62 + Math.random() * 0.9 * variance) * 0.7;
     } else if (arch === "tree") {
-      return (3.5 + Math.random() * 2.5 * variance) * 0.7;
+      return (5.4 + Math.random() * 2.4 * variance) * 0.7;
     } else if (arch === "snake") {
-      return (1.2 + Math.random() * 2.0 * variance) * 0.7;
+      return (5.0 + Math.random() * 2.5 * variance) * 0.7;
     } else {
-      return (5.0 + Math.random() * 3.5 * variance) * 0.7;
+      return (5.0 + Math.random() * 2.4 * variance) * 0.7;
     }
   };
   alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);
@@ -437,15 +507,40 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     alphaGenome.color.setHSL(0.1, 0.02, 0.95);
     betaGenome.color.setHSL(0.55, 1.0, 0.55);
   } else {
-    alphaHue = Math.random();
-    alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
-    betaGenome.color.setHSL((alphaHue + 0.5) % 1.0, 0.9, 0.52);
-  }
+    // If background color is set, derive background hue from it; otherwise pick a new random background hue
+    let bgHue = Math.random();
+    if (engine.bgColor) {
+      try {
+        const currentBg = new THREE.Color(engine.bgColor);
+        const hsl = { h: 0, s: 0, l: 0 };
+        currentBg.getHSL(hsl);
+        bgHue = hsl.h;
+      } catch {
+        bgHue = Math.random();
+      }
+    }
 
-  const bgHue = (alphaHue + 2 / 3) % 1.0;
-  const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
-  const bgHex = "#" + bgColorObj.getHexString();
-  engine.setBgColor(bgHex);
+    // Starting color for Alpha is complementary to the background color (180° / 0.5 hue offset)
+    alphaHue = (bgHue + 0.5) % 1.0;
+    alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
+
+    let betaOffset = 0.5; // Default: Opposite complementary (+180°)
+    if (engine.startColorMode === "analogous") {
+      const sign = Math.random() < 0.5 ? 1 : -1;
+      const matingShift = engine.colorMutationShift || 0.06;
+      betaOffset = sign * matingShift * (0.8 + Math.random() * 0.4); // Same close distance as creature mating
+    } else {
+      betaOffset = 0.5; // Opposite complementary (+180°)
+    }
+
+    const betaHue = ((alphaHue + betaOffset) % 1.0 + 1.0) % 1.0;
+    betaGenome.color.setHSL(betaHue, 0.9, 0.52);
+
+    const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
+    const bgHex = "#" + bgColorObj.getHexString();
+    engine.setBgColor(bgHex);
+    if (engine.onConfigChange) engine.onConfigChange({ bgColor: bgHex });
+  }
 
   const tc1 = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
   const tc2 = new THREE.Color().setHSL((tc1.getHSL({ h: 0, s: 0, l: 0 }).h + 0.5) % 1.0, 0.8, 0.5);
@@ -456,8 +551,6 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.nextTheme = engine.theme;
   engine.themeProgress = 1.0;
   engine.lastThemeMorphTime = 0;
-
-  if (engine.onConfigChange) engine.onConfigChange({ bgColor: bgHex });
 
   if (alphaGenome.gradientGrowth) {
     betaGenome.gradientGrowth = false;
@@ -568,7 +661,7 @@ export function killSpecies(engine: SimulationEngine, strainName: string, reason
     }
   }
   if (livingSpecies.size < 4) {
-    engine.onLog(`🛡️ Deletion blocked for ${strainName.split(" ")[0]} (${reason}): only ${livingSpecies.size} living species present (min 4).`);
+    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): only ${livingSpecies.size} living species present (min 4).`);
     return;
   }
 
@@ -579,20 +672,26 @@ export function killSpecies(engine: SimulationEngine, strainName: string, reason
   state.phase = "END_OF_LIFE";
   state.deathStartTick = engine.unscaledTime;
   state.reason = reason;
-  engine.onLog(`⏳ Species ${strainName.split(" ")[0]} entering end-of-life (${reason}) — ${livingSpecies.size} species present.`);
+
+  const remainingNames = Array.from(livingSpecies).filter(n => n !== strainName).join(", ");
+  engine.onLog(`⏳ Species ${strainName} entering end-of-life (${reason}) — ${livingSpecies.size} species present. Remaining: [${remainingNames}]`);
 
   for (const agent of engine.agents) {
-    if (agent.active && agent.genome.name === strainName) {
+    const isDirect = agent.genome.name === strainName;
+    const isFeelerOfStrain = (agent.realGenome && agent.realGenome.name === strainName);
+    const isChildOfStrain = (agent.parentAgent && (agent.parentAgent.genome.name === strainName || (agent.parentAgent.realGenome && agent.parentAgent.realGenome.name === strainName)));
+    if (agent.active && (isDirect || isFeelerOfStrain || isChildOfStrain)) {
       agent.tapering = true;
       agent.forceTapering = true;
       agent.fadeAge = 0;
+      agent.taperBudget = undefined;
     }
   }
 
   if (!engine.dyingStrains) engine.dyingStrains = new Set();
   engine.dyingStrains.add(strainName);
   engine.markStrainSegmentsDying(strainName);
-  engine.onLog(`⏳ Species ${strainName.split(" ")[0]} entering end-of-life (${reason})`);
+  engine.onLog(`🔻 dyingStrains now: [${Array.from(engine.dyingStrains).join(", ")}]`);
 }
 
 export function spawnHybridArtifact(
@@ -643,7 +742,8 @@ export function spawnHybridArtifact(
 export function updateGridHelpers(engine: SimulationEngine): void {
   if (engine.camera) {
     const camY = engine.camera.position.y;
-    const baseGap = engine.boundarySize + 2.0;
+    const bY = engine.boundarySize * (engine.boundarySquash ?? 1.0);
+    const baseGap = bY + 2.0;
     const layerGapOffset = (engine.layerGap - 100) / 2;
     const floorY = engine.creatureCenterY - baseGap - layerGapOffset + engine.floorHeight;
     const ceilingY = engine.creatureCenterY + baseGap + layerGapOffset + engine.ceilingHeight;
@@ -692,6 +792,11 @@ export function handleScreenFade(engine: SimulationEngine): void {
   }
 }
 
+import { measureScreenFillSilhouette, ScreenFillData } from "./SimulationSilhouette";
+
+let lastSilhouetteData: ScreenFillData | null = null;
+let lastSilhouetteFrame = 0;
+
 export function emitStateUpdate(engine: SimulationEngine): void {
   const strains: {
     name: string;
@@ -701,12 +806,14 @@ export function emitStateUpdate(engine: SimulationEngine): void {
     genome: any;
     archetype?: string;
     isDying?: boolean;
+    matingCount?: number;
   }[] = [];
   engine.biomassMap.forEach((v, k) => {
     if (v > 0 && !k.startsWith("Feeler-")) {
       const genome = engine.genomeMap.get(k);
       if (genome) {
         const color2 = genome.gradientGrowth ? "#" + genome.color.clone().offsetHSL(0.5, 0, 0).getHexString() : "#" + genome.color.getHexString();
+        const lifecycle = engine.speciesLifecycleMap?.get(k);
         strains.push({
           name: k,
           color: "#" + genome.color.getHexString(),
@@ -715,6 +822,7 @@ export function emitStateUpdate(engine: SimulationEngine): void {
           genome: genome,
           archetype: genome.archetype,
           isDying: engine.dyingStrains?.has(k),
+          matingCount: lifecycle?.matingCount || 0,
         });
       }
     }
@@ -736,11 +844,19 @@ export function emitStateUpdate(engine: SimulationEngine): void {
     }
   }
 
+  // Measure Downscaled GPU Silhouette Buffer every ~60 frames (1 sec)
+  if (engine.frameCount - lastSilhouetteFrame >= 60 || !lastSilhouetteData) {
+    lastSilhouetteFrame = engine.frameCount;
+    lastSilhouetteData = measureScreenFillSilhouette(engine);
+  }
+
   engine.onStateUpdate({
     geometryCount: totalActiveGeometries,
     totalAgents: activeCount,
+    hybridCount: engine.totalHybridCount || 0,
     kioskFadeProgress: engine.kioskFadeProgress,
     strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
+    screenFill: lastSilhouetteData,
     tideValue: engine.tideValue,
     cameraPosition: {
       x: engine.camera.position.x,

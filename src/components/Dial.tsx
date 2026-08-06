@@ -13,9 +13,10 @@ interface DialProps {
   onLimitsChange?: (min: number, max: number) => void;
   formatValue?: (val: number) => React.ReactNode;
   hideValue?: boolean;
+  polar?: boolean;
 }
 
-export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange, formatValue, hideValue }: DialProps) {
+export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label, tooltip, onLimitsChange, formatValue, hideValue, polar }: DialProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
@@ -72,8 +73,15 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
     }
   };
 
-  const percent = (value - min) / (max - min);
-  const angle = -135 + percent * 270;
+  let angle: number;
+  if (polar) {
+    const maxAbs = Math.max(Math.abs(min), Math.abs(max)) || 1;
+    const normalized = Math.max(-1, Math.min(1, value / maxAbs));
+    angle = normalized * 135;
+  } else {
+    const percent = (value - min) / (max - min);
+    angle = -135 + percent * 270;
+  }
 
   const onMouseEnter = () => {
     if (containerRef.current) {
@@ -139,6 +147,12 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
         className="relative w-8 h-8 rounded-full border-2 bg-[#001220]/80 cursor-ns-resize shadow-md"
         style={{ borderColor: color, boxShadow: `0 0 5px ${color}40` }}
       >
+        {polar && (
+          <div
+            className="absolute top-0.5 left-1/2 -translate-x-1/2 w-0.5 h-1 rounded-full bg-white/40 pointer-events-none"
+            title="Zero Center"
+          />
+        )}
         <div 
           className="absolute top-0 left-0 w-full h-full pointer-events-none"
           style={{ transform: `rotate(${angle}deg)` }}
@@ -151,7 +165,11 @@ export function Dial({ value, min, max, step, onChange, color = '#87CEEB', label
       </div>
       {!hideValue && (
         <span className="text-[8px] font-mono opacity-80" style={{ color }}>
-          {formatValue ? formatValue(value) : (Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1))}
+          {formatValue
+            ? formatValue(value)
+            : polar
+              ? (value === 0 ? "0.00" : (value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)))
+              : (Number.isInteger(step) ? value.toFixed(0) : value.toFixed(step <= 0.0001 ? 4 : step <= 0.001 ? 3 : step < 0.1 ? 2 : 1))}
         </span>
       )}
     </div>

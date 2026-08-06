@@ -16,14 +16,19 @@ export interface SimulationViewProps {
   restartTrigger?: number;
   randomizeTrigger?: number;
   rotationSpeed?: number;
+  rotationSpeedY?: number;
   magnetism?: number;
+  seekAmount?: number;
   proximity?: number;
   desperation?: number;
   despairAge?: number;
+  maxMatings?: number;
+  startColorMode?: string;
   flowerSize?: number;
   tideSpeed?: number;
   minAgents?: number;
   boundarySize?: number;
+  boundarySquash?: number;
   tideColor?: string;
   bgColor?: string;
   fogColor?: string;
@@ -31,6 +36,7 @@ export interface SimulationViewProps {
   tideOpacity?: number;
   tideSaturation?: number;
   growthSpeed?: number;
+  widthGrowthEffect?: number;
   diebackRate?: number;
   allowBreeding?: boolean;
   hybridCooldown?: number;
@@ -53,6 +59,7 @@ export interface SimulationViewProps {
   hybridSize?: number;
   terminationProb?: number;
   termProbPostBranch?: number;
+  segmentGap?: number;
   taperDuration?: number;
   diebackAgeBias?: number;
   maxLineWidth?: number;
@@ -128,13 +135,19 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
 
   const methodMap: Record<string, string> = {
     rotationSpeed: "setRotationSpeed",
+    rotationSpeedY: "setRotationSpeedY",
     magnetism: "setMagnetism",
+    seekAmount: "setSeekAmount",
     proximity: "setProximity",
     desperation: "setDesperation",
     despairAge: "setDespairAge",
+    maxMatings: "setMaxMatings",
+    startColorMode: "setStartColorMode",
     flowerSize: "setFlowerSize",
+    widthGrowthEffect: "setWidthGrowthEffect",
     minAgents: "setMinAgents",
     boundarySize: "setBoundarySize",
+    boundarySquash: "setBoundarySquash",
     tideSpeed: "setTideSpeed",
     tideColor: "setTideColor",
     bgColor: "setBgColor",
@@ -157,6 +170,7 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     hybridSize: "setHybridSize",
     terminationProb: "setTerminationProb",
     termProbPostBranch: "setTermProbPostBranch",
+    segmentGap: "setSegmentGap",
     taperDuration: "setTaperDuration",
     diebackAgeBias: "setDiebackAgeBias",
     maxLineWidth: "setMaxLineWidth",
@@ -248,6 +262,7 @@ export function SimulationView(props: SimulationViewProps) {
     age: number;
     tapering: boolean;
     appendage?: string;
+    matingCount?: number;
   } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const lastRaycastTime = useRef<number>(0);
@@ -473,10 +488,15 @@ export function SimulationView(props: SimulationViewProps) {
         );
       }
       if (matchingAgent) {
+        const isStrainDeleting = !!(
+          engine.dyingStrains && engine.dyingStrains.has(targetStrainName)
+        );
+        const lifecycle = (engine as any).speciesLifecycleMap?.get(targetStrainName);
         setHoveredAgentInfo({
           age: matchingAgent.age,
-          tapering: !!matchingAgent.tapering,
+          tapering: isStrainDeleting,
           appendage: matchingAgent.genome.appendage,
+          matingCount: matchingAgent.matingCount || lifecycle?.matingCount || 0,
         });
       } else {
         setHoveredAgentInfo(null);

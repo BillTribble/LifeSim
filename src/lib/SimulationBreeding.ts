@@ -146,7 +146,7 @@ export function updateFeelerSeeking(
       const homingVector = new THREE.Vector3()
         .subVectors(nearestPos, agent.position)
         .normalize();
-      agent.direction.lerp(homingVector, 0.92).normalize();
+      agent.direction.lerp(homingVector, 0.45).normalize();
     }
   }
 }
@@ -195,12 +195,12 @@ export function handleBreedingAndFeelers(
     !agent.hasBred &&
     !agent.tapering &&
     !hasActiveFeeler &&
-    (agent.age > 70 || strainAge > 180) &&
+    (agent.age > 90 || strainAge > 180) &&
     agent.cooldown <= 0
   ) {
     const feelerChance = Math.min(
-      0.85,
-      (agent.age - 120) * 0.04 * engine.timeScale,
+      0.35,
+      (agent.age - 100) * 0.015 * engine.timeScale,
     );
     if (Math.random() < feelerChance) {
       const feelerGenome = createFeelerGenome(agent);
@@ -221,7 +221,7 @@ export function handleBreedingAndFeelers(
       });
       agent.cooldown = 45;
       engine.onLog(
-        `📡 ${agent.genome.name.split(" ")[0]} extending sensory feelers to breed (Age ${agent.age}).`,
+        `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
       );
     }
   }
@@ -240,7 +240,7 @@ export function handleBreedingAndFeelers(
   if (canBreed) {
     let bestPartner: any = null;
     let nearestDistSq = Infinity;
-    let bestDiffScore = -Infinity;
+    let targetContactPos: THREE.Vector3 | null = null;
 
     for (let j = 0; j < activeAgents.length; j++) {
       if (j === i) continue;
@@ -254,26 +254,30 @@ export function handleBreedingAndFeelers(
         partnerEvalGenome.createdAt !== undefined
           ? engine.time - partnerEvalGenome.createdAt
           : 0;
+
+      // Feelers can mate with any living non-tapering partner species
       const partnerFertile =
         !partner.tapering &&
-        !partner.hasBred &&
-        partner.cooldown <= 0 &&
-        (partner.isFeeler ||
-          partner.age > 150 ||
-          partnerEvalGenome.stability < 0.5 ||
-          partnerStrainAge > 2000);
+        (agent.isFeeler ||
+          (!partner.hasBred &&
+            partner.cooldown <= 0 &&
+            (partner.isFeeler ||
+              partner.age > 100 ||
+              partnerEvalGenome.stability < 0.5 ||
+              partnerStrainAge > 1000)));
 
       if (
         !partnerFertile ||
-        partner.cooldown > 0 ||
         bredThisFrame.has(partner)
       )
         continue;
 
       if (evalGenome.name !== partnerEvalGenome.name) {
         let distSq = agent.position.distanceToSquared(partner.position);
+        let closestPos = partner.position.clone();
+
         if (agent.isFeeler || partner.isFeeler) {
-          for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 3) {
+          for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 2) {
             const seg = engine.segments[sIdx];
             if (
               seg &&
@@ -281,10 +285,12 @@ export function handleBreedingAndFeelers(
               seg.strainName === partnerEvalGenome.name
             ) {
               const m = seg.matrix.elements;
-              const d = agent.position.distanceToSquared(
-                new THREE.Vector3(m[12], m[13], m[14]),
-              );
-              if (d < distSq) distSq = d;
+              const segPos = new THREE.Vector3(m[12], m[13], m[14]);
+              const d = agent.position.distanceToSquared(segPos);
+              if (d < distSq) {
+                distSq = d;
+                closestPos = segPos;
+              }
             }
           }
         }
@@ -292,13 +298,14 @@ export function handleBreedingAndFeelers(
         if (distSq < nearestDistSq) {
           nearestDistSq = distSq;
           bestPartner = partner;
+          targetContactPos = closestPos;
         }
       }
     }
 
-    if (bestPartner) {
+    if (bestPartner && targetContactPos) {
       const distSq = nearestDistSq;
-      const isDesperate = strainAge > 2000 || agent.age > engine.despairAge;
+      const isDesperate = strainAge > 1500 || agent.age > engine.despairAge;
       const reachMultiplier = isDesperate ? engine.desperation : 1.0;
       const reach =
         engine.proximity *
@@ -306,16 +313,19 @@ export function handleBreedingAndFeelers(
         reachMultiplier *
         reachMultiplier;
 
-      const towardsPartner = bestPartner.position
+      const towardsPartner = targetContactPos
         .clone()
         .sub(agent.position)
         .normalize();
       if (agent.isFeeler) {
         agent.direction.copy(towardsPartner);
       } else if (distSq < reach) {
-        // If desperate, forcefully reach out; else gently steer
+        // Blend between standard creature steering and feeler-like direct copy based on engine.seekAmount
+        const feelerSimilarity = Math.max(0.0, Math.min(1.0, engine.seekAmount || 0.0));
+        const baseLerp = isDesperate ? 0.8 : 0.2;
+        const effectiveLerp = baseLerp + (1.0 - baseLerp) * feelerSimilarity;
         agent.direction
-          .lerp(towardsPartner, isDesperate ? 0.8 : 0.2)
+          .lerp(towardsPartner, effectiveLerp)
           .normalize();
       }
 
@@ -362,18 +372,18 @@ export function handleBreedingAndFeelers(
         );
         if (isDesperate && !isSuppressed) {
           engine.onLog(
-            `Aging ${agent.genome.name.split(" ")[0]} seeking hybridization partner.`,
+            `Aging ${agent.genome.name} seeking hybridization partner.`,
           );
         } else {
           engine.onLog(
-            `Suppressed ${agent.genome.name.split(" ")[0]} extended sensory feeler.`,
+            `Suppressed ${agent.genome.name} extended sensory feeler.`,
           );
         }
       }
 
       // Require physical touching based on agent thicknesses to breed
       const touchDist =
-        (agent.thickness + bestPartner.thickness) * 1.5 + 1.0;
+        (agent.thickness + bestPartner.thickness) * 2.0 + 3.0;
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
@@ -441,7 +451,10 @@ export function handleBreedingAndFeelers(
             }
             if (isFeelerSacrifice) {
               for (let idx = 0; idx < activeAgents.length; idx++) {
-                if (activeAgents[idx].genome.name === victimSpeciesName) {
+                if (
+                  activeAgents[idx].genome.name === victimSpeciesName &&
+                  activeAgents[idx].isFeeler
+                ) {
                   activeAgents[idx].tapering = true;
                   activeAgents[idx].forceTapering = true;
                 }
@@ -458,7 +471,7 @@ export function handleBreedingAndFeelers(
               engine.onLog(`Feeler terminated for child creation.`);
             } else {
               engine.onLog(
-                `Breeding recorded. Culling oldest species: ${victimSpeciesName.split(" ")[0]}.`,
+                `Breeding recorded. Culling oldest species: ${victimSpeciesName}.`,
               );
             }
           }
@@ -506,12 +519,9 @@ export function handleBreedingAndFeelers(
             cooldown: engine.hybridCooldown,
           });
 
-          // Post-Breeding Transition: Once parents breed, mark them as bred so they taper out and die neatly
+          // Post-Breeding Transition: Mark parents as bred; species end-of-life occurs after 3 matings or max lifespan
           engine.hasAnyOrganismBred = true;
           agent.hasBred = true;
-          if (canEnterDeleting(engine, activeAgents, 1)) {
-            engine.killSpecies(agent.genome.name, "mating completed");
-          }
           nearestPartner.hasBred = true;
           const s1 = (engine as any).speciesLifecycleMap?.get(
             agent.genome.name,
@@ -528,9 +538,6 @@ export function handleBreedingAndFeelers(
             s2.hasBred = true;
             s2.matingCount = (s2.matingCount || 0) + 1;
             s2.phase = "MATURE";
-          }
-          if (canEnterDeleting(engine, activeAgents, 1)) {
-            engine.killSpecies(nearestPartner.genome.name, "mating completed");
           }
 
           if (agent.isFeeler && agent.parentAgent) {
@@ -570,8 +577,9 @@ export function handleBreedingAndFeelers(
             agent.id,
             nearestPartner.id,
           );
+          engine.totalHybridCount = (engine.totalHybridCount || 0) + 1;
           engine.onLog(
-            `💖 Offspring ${childGenome.name.split(" ")[0]} [${childGenome.archetype.toUpperCase()}] spawned from ${agent.genome.name} [${(agent.genome.archetype || "bush").toUpperCase()}] × ${nearestPartner.genome.name} [${(nearestPartner.genome.archetype || "bush").toUpperCase()}]`,
+            `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${agent.genome.name} [${(agent.genome.archetype || "bush").toUpperCase()}] × ${nearestPartner.genome.name} [${(nearestPartner.genome.archetype || "bush").toUpperCase()}]`,
           );
 
           if (engine.matingCount < 3) {
@@ -600,24 +608,32 @@ export function handleBreedingAndFeelers(
 
           // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
           if (engine.postMatingDieoff !== false) {
-            agent.matingCount = (agent.matingCount || 0) + 1;
-            nearestPartner.matingCount =
-              (nearestPartner.matingCount || 0) + 1;
+            const actualAgent1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
+            const actualAgent2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
+
+            actualAgent1.matingCount = (actualAgent1.matingCount || 0) + 1;
+            actualAgent2.matingCount = (actualAgent2.matingCount || 0) + 1;
+
+            const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+            const mCount1 = (s1?.matingCount || actualAgent1.matingCount || 0);
+            const mCount2 = (s2?.matingCount || actualAgent2.matingCount || 0);
 
             if (
-              agent.matingCount >= 3 &&
+              !actualAgent1.isFeeler &&
+              mCount1 >= maxM &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
-              engine.killSpecies(agent.genome.name, "mating completed 3x");
+              engine.killSpecies(actualAgent1.genome.name, `mating completed ${maxM}x`);
             }
 
             if (
-              nearestPartner.matingCount >= 3 &&
+              !actualAgent2.isFeeler &&
+              mCount2 >= maxM &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
               engine.killSpecies(
-                nearestPartner.genome.name,
-                "mating completed 3x",
+                actualAgent2.genome.name,
+                `mating completed ${maxM}x`,
               );
             }
           }

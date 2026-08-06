@@ -53,7 +53,7 @@ export interface FormattedAgentInfo {
 }
 
 export function formatHoveredAgentInfo(
-  hoveredAgentInfo: { age: number; tapering: boolean; appendage?: string } | null
+  hoveredAgentInfo: { age: number; tapering: boolean; appendage?: string; matingCount?: number } | null
 ): FormattedAgentInfo {
   let lifespanPercent = 100;
   let lifespanColor = "bg-green-500";
@@ -96,7 +96,7 @@ export function formatTooltipPosition(mousePos: { x: number; y: number }) {
 
 export interface SimulationHoverTooltipProps {
   hoveredStrainName: string | null;
-  hoveredAgentInfo: { age: number; tapering: boolean; appendage?: string } | null;
+  hoveredAgentInfo: { age: number; tapering: boolean; appendage?: string; matingCount?: number } | null;
   mousePos: { x: number; y: number };
   stats?: any;
 }
@@ -149,6 +149,10 @@ export function SimulationHoverTooltip({
           className="h-full transition-all duration-300 ease-out"
           style={barStyle as React.CSSProperties}
         />
+      </div>
+      <div className="flex justify-between mb-1 gap-2">
+        <span>Hybrids:</span>
+        <span className="font-mono">{hoveredStrain.matingCount ?? hoveredAgentInfo?.matingCount ?? 0}</span>
       </div>
       <div className="flex justify-between mb-1 gap-2 border-t border-[#87CEEB]/20 pt-2">
         <span>Lifespan:</span>

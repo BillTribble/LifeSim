@@ -83,6 +83,24 @@ assert(
   "Hover tooltip displays 'Flourishing' when tapering is false and age is young"
 );
 
+// 5. Test QA-LFE-10: Organism vs Branch Tapering Separation
+const isStrainAInDying = mockEngine.dyingStrains.has("Alpha-101");
+const tooltipNonDyingStrain = formatHoveredAgentInfo({ age: 100, tapering: isStrainAInDying });
+assert(
+  tooltipNonDyingStrain.lifespanText === "Flourishing",
+  "QA-LFE-10-BRANCH",
+  "Flourishing organism with merged/tapering branch tip displays 'Flourishing', not 'Deleting'"
+);
+
+mockEngine.dyingStrains.add("Alpha-101");
+const isStrainADyingNow = mockEngine.dyingStrains.has("Alpha-101");
+const tooltipDyingStrain = formatHoveredAgentInfo({ age: 100, tapering: isStrainADyingNow });
+assert(
+  tooltipDyingStrain.lifespanText === "Deleting",
+  "QA-LFE-10-SPECIES",
+  "Organism whose strain is in dyingStrains displays 'Deleting'"
+);
+
 console.log(`\n=== QA TEST SUITE COMPLETED: ${passed} PASSED, ${failed} FAILED ===`);
 if (failed > 0) {
   process.exit(1);
