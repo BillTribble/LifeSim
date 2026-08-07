@@ -237,11 +237,15 @@ export class SimulationEngine {
   cullRate: number = 5.0;
 
   snakeSpeed: number = 1.4;
-  snakeStepSize: number = 1.7;
+  snakeStepSize: number = 1.2;
   snakeWander: number = 1.0;
   bushSpeed: number = 1.10;
   treeSpeed: number = 1.20;
   rhizomeSpeed: number = 0.75;
+
+  bushStepSize: number = 0.45;
+  treeStepSize: number = 0.90;
+  rhizomeStepSize: number = 0.40;
 
   bushBranching: number = 9.5;
   treeBranching: number = 1.8;
@@ -465,6 +469,15 @@ export class SimulationEngine {
   }
   setSnakeStepSize(val: number) {
     this.snakeStepSize = val;
+  }
+  setBushStepSize(val: number) {
+    this.bushStepSize = val;
+  }
+  setTreeStepSize(val: number) {
+    this.treeStepSize = val;
+  }
+  setRhizomeStepSize(val: number) {
+    this.rhizomeStepSize = val;
   }
   setSnakeWander(val: number) {
     this.snakeWander = val;

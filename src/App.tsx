@@ -282,6 +282,9 @@ export default function App() {
         bushSpeed={state.bushSpeed}
         treeSpeed={state.treeSpeed}
         rhizomeSpeed={state.rhizomeSpeed}
+        bushStepSize={state.bushStepSize}
+        treeStepSize={state.treeStepSize}
+        rhizomeStepSize={state.rhizomeStepSize}
         bushBranching={state.bushBranching}
         widthVariance={state.widthVariance}
         branchGrowthBoost={state.branchGrowthBoost}

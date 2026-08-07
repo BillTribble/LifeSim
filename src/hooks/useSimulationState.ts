@@ -23,6 +23,9 @@ export function useSimulationState() {
   const [bushSpeed, setBushSpeed] = useState(() => getStoredFloat("bushSpeed"));
   const [treeSpeed, setTreeSpeed] = useState(() => getStoredFloat("treeSpeed"));
   const [rhizomeSpeed, setRhizomeSpeed] = useState(() => getStoredFloat("rhizomeSpeed"));
+  const [bushStepSize, setBushStepSize] = useState(() => getStoredFloat("bushStepSize"));
+  const [treeStepSize, setTreeStepSize] = useState(() => getStoredFloat("treeStepSize"));
+  const [rhizomeStepSize, setRhizomeStepSize] = useState(() => getStoredFloat("rhizomeStepSize"));
   const [bushBranching, setBushBranching] = useState(() => getStoredFloat("bushBranching"));
   const [widthVariance, setWidthVariance] = useState(() => getStoredFloat("widthVariance"));
   const [branchGrowthBoost, setBranchGrowthBoost] = useState(() => getStoredFloat("branchGrowthBoost"));
@@ -123,6 +126,9 @@ export function useSimulationState() {
     localStorage.setItem("bushSpeed", bushSpeed.toString());
     localStorage.setItem("treeSpeed", treeSpeed.toString());
     localStorage.setItem("rhizomeSpeed", rhizomeSpeed.toString());
+    localStorage.setItem("bushStepSize", bushStepSize.toString());
+    localStorage.setItem("treeStepSize", treeStepSize.toString());
+    localStorage.setItem("rhizomeStepSize", rhizomeStepSize.toString());
     localStorage.setItem("bushBranching", bushBranching.toString());
     localStorage.setItem("treeBranching", treeBranching.toString());
     localStorage.setItem("snakeBranching", snakeBranching.toString());
@@ -295,6 +301,9 @@ export function useSimulationState() {
       rhizomeSpeed,
       treeSpeed,
       bushSpeed,
+      bushStepSize,
+      treeStepSize,
+      rhizomeStepSize,
       bushBranching,
       widthVariance,
       branchGrowthBoost,
@@ -394,6 +403,9 @@ export function useSimulationState() {
       setRhizomeSpeed,
       setTreeSpeed,
       setBushSpeed,
+      setBushStepSize,
+      setTreeStepSize,
+      setRhizomeStepSize,
       setBushBranching,
       setWidthVariance,
       setBranchGrowthBoost,
@@ -509,6 +521,9 @@ export function useSimulationState() {
         setRhizomeSpeed(DEFAULTS.rhizomeSpeed);
         setTreeSpeed(DEFAULTS.treeSpeed);
         setBushSpeed(DEFAULTS.bushSpeed);
+        setBushStepSize(DEFAULTS.bushStepSize);
+        setTreeStepSize(DEFAULTS.treeStepSize);
+        setRhizomeStepSize(DEFAULTS.rhizomeStepSize);
         setBushBranching(DEFAULTS.bushBranching);
         setWidthVariance(DEFAULTS.widthVariance);
         setBranchGrowthBoost(DEFAULTS.branchGrowthBoost);

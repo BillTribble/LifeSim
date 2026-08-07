@@ -29,28 +29,28 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     minThickness = (0.24 + Math.random() * 0.15) * 0.7;
     thicknessDecay = 0.9993 + Math.random() * 0.0005;
     bifurcationRate = 0.32 + Math.random() * 0.10;
-    stepSize = (0.70 + Math.random() * 0.25) * 0.7;
+    stepSize = (0.45 + Math.random() * 0.15) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 10.0 : 5.0);
   } else if (archetype === "tree") {
     thicknessBase = (5.2 + Math.random() * 2.0) * 0.7;
     minThickness = (0.55 + Math.random() * 1.0) * 0.7;
     thicknessDecay = 0.9996 + Math.random() * 0.0004;
     bifurcationRate = 0.024 + Math.random() * 0.016;
-    stepSize = (1.40 + Math.random() * 0.5) * 0.7;
+    stepSize = (0.90 + Math.random() * 0.30) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 4.0 : 2.2);
   } else if (archetype === "snake") {
     thicknessBase = (4.8 + Math.random() * 2.2) * 0.7;
     minThickness = (2.4 + Math.random() * 1.2) * 0.7;
     thicknessDecay = 0.9998 + Math.random() * 0.0002;
     bifurcationRate = 0.003 + Math.random() * 0.006;
-    stepSize = (2.6 + Math.random() * 1.3) * 0.7;
+    stepSize = (1.8 + Math.random() * 0.8) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
   } else {
     thicknessBase = (8.0 + Math.random() * 2.5) * 0.7;
     minThickness = (2.60 + Math.random() * 1.2) * 0.7;
     thicknessDecay = 0.9995 + Math.random() * 0.0004;
     bifurcationRate = 0.035 + Math.random() * 0.020;
-    stepSize = (0.55 + Math.random() * 0.20) * 0.7;
+    stepSize = (0.40 + Math.random() * 0.15) * 0.7;
     branchTendency = 4.0 + Math.random() * 2.5;
   }
 

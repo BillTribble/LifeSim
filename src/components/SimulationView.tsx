@@ -82,6 +82,9 @@ export interface SimulationViewProps {
   bushSpeed?: number;
   treeSpeed?: number;
   rhizomeSpeed?: number;
+  bushStepSize?: number;
+  treeStepSize?: number;
+  rhizomeStepSize?: number;
   bushBranching?: number;
   widthVariance?: number;
   branchGrowthBoost?: number;
@@ -193,6 +196,9 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     bushSpeed: "setBushSpeed",
     treeSpeed: "setTreeSpeed",
     rhizomeSpeed: "setRhizomeSpeed",
+    bushStepSize: "setBushStepSize",
+    treeStepSize: "setTreeStepSize",
+    rhizomeStepSize: "setRhizomeStepSize",
     bushBranching: "setBushBranching",
     widthVariance: "setWidthVariance",
     branchGrowthBoost: "setBranchGrowthBoost",

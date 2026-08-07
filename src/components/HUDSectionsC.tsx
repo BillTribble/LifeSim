@@ -212,6 +212,11 @@ export function SpeedsSection({ searchQuery, state, setters }: HUDSectionProps) 
       "shrub",
       "timber",
       "tuber",
+      "segment",
+      "length",
+      "BUSH_LEN",
+      "TREE_LEN",
+      "RHIZ_LEN",
     ])
   ) {
     return null;
@@ -219,7 +224,7 @@ export function SpeedsSection({ searchQuery, state, setters }: HUDSectionProps) 
   return (
     <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content] snap-start">
       <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">
-        SPEEDS
+        SPEEDS & SEGMENTS
       </span>
       <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
         <SmartDial
@@ -294,6 +299,23 @@ Low: Slowly growing bushes."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["bush segment length", "shrub step size", "hedge joint spacing"]}
+          tooltip="BUSH SEGMENT LENGTH
+Segment length & step size for bush-types.
+High: Longer, blockier branch segments.
+Low: Shorter, tightly curved smooth tendrils."
+          label="BUSH_LEN"
+          min={0.05}
+          max={3.0}
+          step={0.05}
+          value={state.bushStepSize}
+          onChange={setters.setBushStepSize}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
           keywords={["trunk speed", "tree growth rate", "timber velocity"]}
           tooltip="TREE SPEED
 Growth speed for tree-types.
@@ -311,6 +333,23 @@ Low: Slow, ancient trees."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["tree segment length", "trunk step size", "timber joint spacing"]}
+          tooltip="TREE SEGMENT LENGTH
+Segment length & step size for tree-types.
+High: Longer, straighter trunk/branch sections.
+Low: Shorter, snug organic tree joints."
+          label="TREE_LEN"
+          min={0.05}
+          max={3.0}
+          step={0.05}
+          value={state.treeStepSize}
+          onChange={setters.setTreeStepSize}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
           keywords={["root speed", "tuber advance", "spore velocity"]}
           tooltip="RHIZOME SPEED
 Movement speed for rhizome-types.
@@ -322,6 +361,23 @@ Low: Slow, drifting rhizomes."
           step={0.1}
           value={state.rhizomeSpeed}
           onChange={setters.setRhizomeSpeed}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["rhizome segment length", "tuber step size", "root joint spacing"]}
+          tooltip="RHIZOME SEGMENT LENGTH
+Segment length & step size for rhizome-types.
+High: Long, chunky tuber sections.
+Low: Tight, snug, bulbous ginger joints."
+          label="RHIZ_LEN"
+          min={0.05}
+          max={3.0}
+          step={0.05}
+          value={state.rhizomeStepSize}
+          onChange={setters.setRhizomeStepSize}
           color="#87CEEB"
         />
       </div>

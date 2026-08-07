@@ -142,7 +142,7 @@ export function processAgents(
       if (genome.archetype === "bush") {
         // BUSH: Broad sprawling shrub canopy
         effectiveBifurcationRate *= 6.0 * (engine.bushBranching ?? 1.0);
-        effectiveStepSize *= 0.65;
+        effectiveStepSize *= (engine.bushStepSize ?? 0.45);
         effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
         // Tree: Short vertical trunk -> Prolific canopy branching into fine limbs and twigs
@@ -150,7 +150,7 @@ export function processAgents(
         if (!agent.isCanopy && agent.age < trunkDurationTicks) {
           // Phase 1: Straight vertical trunk
           effectiveBifurcationRate *= 0.01 * (engine.treeBranching ?? 1.0);
-          effectiveStepSize *= 1.3;
+          effectiveStepSize *= (engine.treeStepSize ?? 0.90) * 1.3;
           effectiveWanderIntensity *= 0.02; // Rigid, straight trunk
           // Pull trunk gently upward toward +Y
           agent.direction.lerp(new THREE.Vector3(0, 1, 0), 0.08).normalize();
@@ -161,7 +161,7 @@ export function processAgents(
           const canopyProgress = Math.min(1.0, canopyAge / 300);
           const branchRamp = 15.0 + canopyProgress * 25.0; // Ramps from 15x to 40x so it branches prolifically!
           effectiveBifurcationRate *= branchRamp * (engine.treeBranching ?? 1.0);
-          effectiveStepSize *= 0.7 - canopyProgress * 0.25; // Twigs get shorter as branches multiply
+          effectiveStepSize *= (engine.treeStepSize ?? 0.90) * (0.7 - canopyProgress * 0.25); // Twigs get shorter as branches multiply
           effectiveWanderIntensity *= 0.3; // Low wander so tree branches remain straight and wooden, not wobbly!
           // Give limbs a slight upward canopy lift
           agent.direction.lerp(new THREE.Vector3(0, 0.4, 0), 0.03).normalize();
@@ -172,7 +172,7 @@ export function processAgents(
         effectiveStepSize *= engine.snakeStepSize;
       } else if (genome.archetype === "rhizome") {
         effectiveBifurcationRate *= 12.0 * (engine.rhizomeBranching ?? 1.0);
-        effectiveStepSize *= 0.45;
+        effectiveStepSize *= (engine.rhizomeStepSize ?? 0.40);
         effectiveWanderIntensity *= 0.7;
       }
 
