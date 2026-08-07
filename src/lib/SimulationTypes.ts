@@ -106,6 +106,7 @@ export interface Agent {
   dieAfterTicks?: number;
   id?: number;
   parentId?: number;
+  branchDepth?: number;
 }
 
 export interface Segment {

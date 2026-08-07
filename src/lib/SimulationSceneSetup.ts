@@ -25,8 +25,8 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
   let thicknessBase: number, minThickness: number, thicknessDecay: number, bifurcationRate: number, stepSize: number, branchTendency: number;
 
   if (archetype === "bush") {
-    thicknessBase = (1.65 + Math.random() * 0.5) * 0.7;
-    minThickness = (0.24 + Math.random() * 0.15) * 0.7;
+    thicknessBase = (2.20 + Math.random() * 0.6) * 0.7;
+    minThickness = (0.35 + Math.random() * 0.15) * 0.7;
     thicknessDecay = 0.9993 + Math.random() * 0.0005;
     bifurcationRate = 0.32 + Math.random() * 0.10;
     stepSize = (0.45 + Math.random() * 0.15) * 0.7;
@@ -476,7 +476,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   const getArchetypeThickness = (arch: Archetype) => {
     const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
     if (arch === "bush") {
-      return (1.65 + Math.random() * 0.5 * variance) * 0.7;
+      return (2.20 + Math.random() * 0.6 * variance) * 0.7;
     } else if (arch === "tree") {
       return (5.2 + Math.random() * 2.0 * variance) * 0.7;
     } else if (arch === "snake") {

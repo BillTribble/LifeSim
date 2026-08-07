@@ -182,8 +182,10 @@ export function processAgents(
       effectiveBifurcationRate *= Math.max(1.0, widthBoost);
       effectiveWanderIntensity *= Math.max(1.0, 1.0 + (widthBoost - 1.0) * 0.5);
 
-      const branchSpeedBoost = 1.0 + Math.min(10.0, Math.max(0, branchCountForBoost - 1) * 0.06 * (engine.branchGrowthBoost || 1.0));
-      effectiveStepSize *= branchSpeedBoost;
+      // Hierarchical branch scaling: Higher-order branches and twigs get progressively smaller and shorter
+      const branchDepth = agent.branchDepth || 0;
+      const depthScale = Math.max(0.35, Math.pow(0.85, branchDepth));
+      effectiveStepSize *= depthScale;
 
       agent.age++;
       if (agent.cooldown > 0) agent.cooldown--;
@@ -415,9 +417,9 @@ export function processAgents(
         const arch = genome.archetype || 'bush';
         let archDecay = 0.995;
         if (arch === 'snake') archDecay = 0.9999;
-        else if (arch === 'bush') archDecay = 0.997;   // Keep bush branches thick and surviving as dense shrubs
-        else if (arch === 'tree') archDecay = agent.age < 150 ? 0.997 : 0.992; // Thick trunk, then gradual canopy thinning
-        else if (arch === 'rhizome') archDecay = 0.9992; // Retain thick swollen volume for ginger tubers!
+        else if (arch === 'bush') archDecay = 0.996;   // Bush branches steadily taper down to delicate tips
+        else if (arch === 'tree') archDecay = agent.age < 60 ? 0.995 : 0.988; // Trunk tapers smoothly, canopy limbs taper down to slender twigs
+        else if (arch === 'rhizome') archDecay = 0.9985; // Retain thick swollen volume for ginger tubers with gentle tapering
 
         agent.thickness *= archDecay;
         
@@ -630,17 +632,18 @@ export function processAgents(
 
         // When branching, parent stem ALSO loses thickness (bush thins to filigree, tree stays sturdy, rhizome swells)
         if (genome.archetype === "bush") {
-          thicknessMod *= 0.72;    // Children thin to delicate tendrils
-          agent.thickness *= 0.88; // Parent thins moderately
+          thicknessMod *= 0.70;    // Children thin to delicate tendrils
+          agent.thickness *= 0.82; // Parent thins moderately
         } else if (genome.archetype === "rhizome") {
-          thicknessMod *= 1.15; // Swell into a fat knobby ginger joint!
-          agent.thickness *= 0.98; // Parent rhizome stem remains thick and swollen!
+          thicknessMod *= 1.10; // Swell into a fat knobby ginger joint!
+          agent.thickness *= 0.95; // Parent rhizome stem remains thick and swollen!
         } else if (genome.archetype === "tree") {
-          thicknessMod *= 0.88; // Structural timber limb
-          agent.thickness *= 0.90;
+          thicknessMod *= 0.75; // Limbs get progressively thinner than trunk
+          agent.thickness *= 0.85;
         }
 
         const branchGenome = agent.genome;
+        const childThickness = agent.thickness * thicknessMod;
 
         newAgents.push({
           position: agent.position.clone(),
@@ -650,12 +653,13 @@ export function processAgents(
           active: true,
           age: agent.isCanopy ? 30 : 0,
           isCanopy: agent.isCanopy,
-          thickness: agent.thickness,
-          targetThickness: agent.thickness * thicknessMod,
+          thickness: childThickness,
+          targetThickness: childThickness,
           cooldown: 300,
           id: engine.nextAgentId++,
           parentAgent: agent,
           parentId: agent.id,
+          branchDepth: (agent.branchDepth || 0) + 1,
         });
 
         // TERM_BRANCH: Post-branch termination penalty

@@ -239,11 +239,11 @@ export class SimulationEngine {
   snakeSpeed: number = 1.4;
   snakeStepSize: number = 1.2;
   snakeWander: number = 1.0;
-  bushSpeed: number = 1.10;
+  bushSpeed: number = 1.50;
   treeSpeed: number = 1.20;
   rhizomeSpeed: number = 0.75;
 
-  bushStepSize: number = 0.45;
+  bushStepSize: number = 0.55;
   treeStepSize: number = 0.90;
   rhizomeStepSize: number = 0.40;
 
