@@ -628,15 +628,15 @@ export function processAgents(
         const isThickBranch = Math.random() < engine.branchSplitSizeProb;
         let thicknessMod = isThickBranch ? 0.82 + engine.branchBigger * 0.3 : 0.70;
 
-        // When branching, parent stem ALSO loses thickness (except snakes which remain constant; rhizomes swell into fat knobby joints)
+        // When branching, parent stem ALSO loses thickness (bush thins to filigree, tree stays sturdy, rhizome swells)
         if (genome.archetype === "bush") {
-          thicknessMod *= 0.70;    // Children thin quickly → wispy tendrils
-          agent.thickness *= 0.85; // Parent thins moderately
+          thicknessMod *= 0.72;    // Children thin to delicate tendrils
+          agent.thickness *= 0.88; // Parent thins moderately
         } else if (genome.archetype === "rhizome") {
           thicknessMod *= 1.15; // Swell into a fat knobby ginger joint!
-          agent.thickness *= 0.95; // Parent rhizome stem remains thick and swollen!
+          agent.thickness *= 0.98; // Parent rhizome stem remains thick and swollen!
         } else if (genome.archetype === "tree") {
-          thicknessMod *= 0.85;
+          thicknessMod *= 0.88; // Structural timber limb
           agent.thickness *= 0.90;
         }
 
@@ -726,9 +726,11 @@ export function processAgents(
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
 
-            // Immediately mark all segments of this entire strain to dissolve simultaneously over 3 seconds
-            if ((engine as any).markStrainSegmentsDying) {
-              (engine as any).markStrainSegmentsDying(agent.genome.name);
+            const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
+            if (newCount <= 0 || isStrainDying) {
+              if ((engine as any).markStrainSegmentsDying) {
+                (engine as any).markStrainSegmentsDying(agent.genome.name);
+              }
             } else {
               engine.markAgentSegmentsDying(agent.id);
             }

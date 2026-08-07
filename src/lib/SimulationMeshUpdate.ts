@@ -122,7 +122,9 @@ export function updateMeshSegments(
       targetMesh = config.mesh;
       targetIndex = config.count % appendageLimit;
 
-      const baseScale = 2.0 * (engine.flowerSize || 1.0) * 0.70;
+      const isLeafType = genome.appendage === "leaves" || genome.appendage === "ferns";
+      const scaleDial = isLeafType ? (engine.leafScale ?? 0.55) : (engine.flowerSize ?? 1.0);
+      const baseScale = 2.0 * scaleDial * 0.70;
       if (genome.appendage === "flowers") {
         scaleX = baseScale * 1.8;
         scaleY = baseScale * 1.8;

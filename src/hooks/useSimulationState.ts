@@ -384,7 +384,7 @@ export function useSimulationState() {
       glowTraitDistance,
       glowTraitReflect,
       dialLimits,
-      version: DEFAULTS.version || "1.9",
+      version: DEFAULTS.version || "0.3",
     },
     setters: {
       setThemeMorphSpeed,

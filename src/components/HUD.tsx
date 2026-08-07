@@ -326,7 +326,7 @@ export function HUD({
               </button>
               {showHUD && (
                 <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none flex flex-col items-center">
-                  <span>v{state.version || "1.9"}</span>
+                  <span>v{state.version || "0.3"}</span>
                   {sessionCode && (
                     <span className="text-[7px] text-[#D2B48C]/70 tracking-wider font-mono">
                       {sessionCode}

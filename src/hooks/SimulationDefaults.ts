@@ -5,19 +5,19 @@ export const DEFAULTS: Record<string, any> = {
   "theme": 0,
   "timeScale": 0.8,
   "postMatingDieoff": true,
-  "rhizomeSpeed": 1,
-  "treeSpeed": 1.2,
-  "bushSpeed": 1,
-  "bushBranching": 5.5,
+  "rhizomeSpeed": 0.75,
+  "treeSpeed": 1.20,
+  "bushSpeed": 1.10,
+  "bushBranching": 9.5,
   "widthVariance": 0.5,
   "branchGrowthBoost": 1.5,
   "colorMutationShift": 0.06,
   "treeBranching": 1.8,
   "snakeBranching": 1,
-  "rhizomeBranching": 4.0,
+  "rhizomeBranching": 1.4,
   "snakeWander": 1,
-  "snakeStepSize": 1.8,
-  "snakeSpeed": 1.5,
+  "snakeStepSize": 1.7,
+  "snakeSpeed": 1.4,
   "rotationSpeed": 0.13,
   "rotationSpeedY": 0.0,
   "magnetism": 0.08708895046646814,
@@ -163,7 +163,7 @@ export const DEFAULTS: Record<string, any> = {
     "z": 106.27255398950481,
     "zoom": 1
   },
-  "version": "1.9"
+  "version": "0.3"
 };
 
 export const DEFAULT_PALETTE: string[] = [
@@ -179,7 +179,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-08-06-v27";
+export const CURRENT_SCHEMA = "2026-08-07-v0.3";
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);

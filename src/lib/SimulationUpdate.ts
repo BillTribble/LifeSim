@@ -329,14 +329,18 @@ export function updateSimulation(engine: SimulationEngine) {
             engine.dummy.position.y += waveCos * 1.5;
           }
 
+          const isLeafApp =
+            mesh === engine.appendages.get("leaves")?.mesh ||
+            mesh === engine.appendages.get("ferns")?.mesh;
+
           const sizeMult =
             mesh === engine.cylinderMesh
               ? 1.0
               : isHybrid
                 ? engine.hybridSize || 2.0
-                : mesh === engine.appendages.get("leaves")?.mesh
-                  ? engine.leafScale * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
-                  : engine.flowerSize;
+                : isLeafApp
+                  ? (engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))
+                  : (engine.flowerSize || 1.0);
           engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulseEffect);
           engine.dummy.updateMatrix();
           mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -506,9 +510,8 @@ export function updateSimulation(engine: SimulationEngine) {
 
   performBiomassSweep(engine);
 
-  // INSTANT APPENDAGE SYNC & ORPHAN CLEANUP:
-  // Ensure any leaf, flower, or appendage whose parent stem is dying dissolves in exact lockstep with its parent,
-  // and any leaf whose parent stem is missing or deleted is instantly erased without delay.
+  // INSTANT APPENDAGE SYNC:
+  // Ensure any leaf, flower, or appendage whose strain or parent stem is dying dissolves in exact lockstep
   for (const app of engine.appendages.values()) {
     const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
     if (appLim > 0) {
@@ -518,23 +521,11 @@ export function updateSimulation(engine: SimulationEngine) {
         if (seg) {
           const parentSeg = engine.segments[seg.parentIndex];
           const parentDying = engine.dyingStems.has(seg.parentIndex);
-          const parentMissing = !parentSeg || (parentSeg.strainName !== seg.strainName && engine.time - seg.timestamp > 180);
+          const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
 
-          if (parentMissing) {
-            // Parent stem is completely gone, dead, or overwritten -> Erase hanging appendage
-            engine.dummy.matrix.identity();
-            engine.dummy.scale.set(0, 0, 0);
-            engine.dummy.updateMatrix();
-            app.mesh.setMatrixAt(i, engine.dummy.matrix);
-            app.segments[i] = undefined as any;
-            app.dyingSet.delete(i);
-            appChanged = true;
-
-            const packAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-            if (packAAttr) {
-              packAAttr.setZ(i, 1.0);
-              packAAttr.needsUpdate = true;
-            }
+          if (isStrainDying && !app.dyingSet.has(i)) {
+            // Whole species is dying -> dissolve appendage smoothly
+            engine.markDying(app.segments, app.dyingSet, i, engine.unscaledTime);
           } else if (parentDying && parentSeg && parentSeg.dyingStart && !app.dyingSet.has(i)) {
             // Sync leaf dissolve timestamp to exact same timestamp as parent stem
             engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);

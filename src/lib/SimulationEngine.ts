@@ -236,17 +236,17 @@ export class SimulationEngine {
   diebackAgeBias: number = 2.0;
   cullRate: number = 5.0;
 
-  snakeSpeed: number = 1.5;
-  snakeStepSize: number = 1.8;
+  snakeSpeed: number = 1.4;
+  snakeStepSize: number = 1.7;
   snakeWander: number = 1.0;
-  bushSpeed: number = 1.0;
-  treeSpeed: number = 1.2;
-  rhizomeSpeed: number = 1.0;
+  bushSpeed: number = 1.10;
+  treeSpeed: number = 1.20;
+  rhizomeSpeed: number = 0.75;
 
-  bushBranching: number = 5.5;
+  bushBranching: number = 9.5;
   treeBranching: number = 1.8;
   snakeBranching: number = 1.0;
-  rhizomeBranching: number = 4.0;
+  rhizomeBranching: number = 1.4;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
