@@ -137,4 +137,4 @@ export interface SpeciesLifecycleState {
   reason?: string;
 }
 
-export const MAX_POINTS = 24000;
+export const MAX_POINTS = 500000;

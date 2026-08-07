@@ -18,8 +18,13 @@ export function updateMeshSegments(
     const config = engine.appendages.get(genome.appendage);
     const appIndex = config ? config.count % appendageLimit : targetIndexStem;
 
-    const forward = new THREE.Vector3().subVectors(p2, p1).normalize();
-    if (forward.lengthSq() < 0.0001) forward.set(0, 0, 1);
+    const forward = new THREE.Vector3().subVectors(p2, p1);
+    const distance = forward.length();
+    if (distance < 0.0001) {
+      forward.set(0, 0, 1);
+    } else {
+      forward.normalize();
+    }
 
     // Build perpendicular reference vector
     const ref = Math.abs(forward.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
@@ -40,12 +45,17 @@ export function updateMeshSegments(
     engine.dummy.lookAt(targetPoint);
   } else {
     engine.dummy.position.copy(p1);
-    engine.dummy.lookAt(p2);
+    const distance = p1.distanceTo(p2);
+    if (distance > 0.0001) {
+      engine.dummy.lookAt(p2);
+    } else {
+      engine.dummy.quaternion.identity();
+    }
   }
 
-  const distance = p1.distanceTo(p2);
-  let scaleX = thickness;
-  let scaleY = thickness;
+  const distance = Math.max(0.001, p1.distanceTo(p2));
+  let scaleX = Math.max(0.001, thickness);
+  let scaleY = Math.max(0.001, thickness);
   let scaleZ = distance;
 
   if (!isAppendage) {
