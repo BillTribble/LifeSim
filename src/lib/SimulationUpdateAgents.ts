@@ -450,12 +450,12 @@ export function processAgents(
         else if (arch === 'tree') minBranchesForArch = engine.treeMinBranches ?? 1;
         else if (arch === 'snake') minBranchesForArch = engine.snakeMinBranches ?? 1;
 
-        const activeLivingBranchesOfStrain = activeAgents.filter(
-          a => a.active && !a.isFeeler && a.genome.name === genome.name
+        const nonTaperingBranchesOfStrain = activeAgents.filter(
+          a => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name
         ).length;
 
         // If the species is at or below its minimum branches floor, it CANNOT terminate naturally!
-        const canTerminateBranch = activeLivingBranchesOfStrain > minBranchesForArch;
+        const canTerminateBranch = nonTaperingBranchesOfStrain > minBranchesForArch;
 
         if (agent.tapering) {
           // TAPERING GRACE PERIOD:
@@ -486,8 +486,14 @@ export function processAgents(
 
           agent.thickness *= archDecay;
 
-          // Natural tip termination check: ONLY allowed if species has MORE than its minimum branches
-          if (canTerminateBranch && arch !== 'snake') {
+          if (!canTerminateBranch) {
+            // Keep minimum branches alive, healthy, and substantial so they continue growing and branching indefinitely!
+            const floorThickness = Math.max(0.6, genome.thicknessBase * 0.35);
+            if (agent.thickness < floorThickness) {
+              agent.thickness = floorThickness;
+            }
+          } else if (arch !== 'snake') {
+            // Natural tip termination check: ONLY allowed for surplus side branches above the minimum floor
             const branchAgeLimit = branchDepth === 0 ? 400 : Math.max(60, 200 - branchDepth * 40);
             const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.5);
             if (agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= 0.22)) {

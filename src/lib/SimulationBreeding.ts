@@ -390,8 +390,7 @@ export function handleBreedingAndFeelers(
       }
 
       // Require physical touching based on agent thicknesses to breed
-      const touchDist =
-        (agent.thickness + bestPartner.thickness) * 2.0 + 3.0;
+      const touchDist = Math.max(8.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 2.5 + 4.0);
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
