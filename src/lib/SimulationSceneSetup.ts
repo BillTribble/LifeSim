@@ -46,12 +46,13 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     stepSize = (1.8 + Math.random() * 0.8) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
   } else {
-    thicknessBase = (8.0 + Math.random() * 2.5) * 0.7;
-    minThickness = (2.60 + Math.random() * 1.2) * 0.7;
-    thicknessDecay = 0.9995 + Math.random() * 0.0004;
-    bifurcationRate = 0.035 + Math.random() * 0.020;
-    stepSize = (0.40 + Math.random() * 0.15) * 0.7;
-    branchTendency = 4.0 + Math.random() * 2.5;
+    // Rhizome (classic ginger root archetype: plump, organic meandering tubers)
+    thicknessBase = (4.5 + Math.random() * 1.5) * 0.7;
+    minThickness = (1.20 + Math.random() * 0.4) * 0.7;
+    thicknessDecay = 0.9992 + Math.random() * 0.0006;
+    bifurcationRate = 0.030 + Math.random() * 0.015;
+    stepSize = (0.55 + Math.random() * 0.15) * 0.7;
+    branchTendency = 3.5 + Math.random() * 1.5;
   }
 
   return {
@@ -482,7 +483,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     } else if (arch === "snake") {
       return (4.8 + Math.random() * 2.2 * variance) * 0.7;
     } else {
-      return (8.0 + Math.random() * 2.5 * variance) * 0.7;
+      return (4.5 + Math.random() * 1.5 * variance) * 0.7;
     }
   };
   alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);

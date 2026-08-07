@@ -80,13 +80,13 @@ export function selectMendelianAlleles<T>(
 
 export function clampArchetypeGenome(res: Genome): Genome {
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.8, 5.2);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 1.2, 2.5);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.9995, 0.9999);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.06, 0.16);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 4.5, 11.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.60);
-    res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.7);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.2, 4.2);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.7, 1.4);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.9995);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.02, 0.06);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 2.5, 6.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.65);
+    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.5, 0.5, 1.5);
   } else if (res.archetype === "bush") {
     res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.9, 2.0);
     res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.20 + Math.random() * 0.12);

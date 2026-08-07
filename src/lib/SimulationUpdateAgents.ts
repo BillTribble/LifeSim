@@ -173,7 +173,7 @@ export function processAgents(
       } else if (genome.archetype === "rhizome") {
         effectiveBifurcationRate *= 12.0 * (engine.rhizomeBranching ?? 1.0);
         effectiveStepSize *= (engine.rhizomeStepSize ?? 0.40);
-        effectiveWanderIntensity *= 0.7;
+        effectiveWanderIntensity *= 12.0;
       }
 
       // Width-driven branching & rotation: thicker agents branch more and wander more (rhododendron behavior)
