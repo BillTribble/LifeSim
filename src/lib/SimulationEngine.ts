@@ -245,12 +245,12 @@ export class SimulationEngine {
 
   bushStepSize: number = 0.55;
   treeStepSize: number = 0.90;
-  rhizomeStepSize: number = 0.40;
+  rhizomeStepSize: number = 0.30;
 
   bushBranching: number = 9.5;
   treeBranching: number = 1.8;
   snakeBranching: number = 1.0;
-  rhizomeBranching: number = 1.4;
+  rhizomeBranching: number = 2.5;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;

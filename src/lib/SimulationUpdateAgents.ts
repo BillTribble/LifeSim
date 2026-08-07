@@ -419,7 +419,7 @@ export function processAgents(
         if (arch === 'snake') archDecay = 0.9999;
         else if (arch === 'bush') archDecay = 0.996;   // Bush branches steadily taper down to delicate tips
         else if (arch === 'tree') archDecay = agent.age < 60 ? 0.995 : 0.988; // Trunk tapers smoothly, canopy limbs taper down to slender twigs
-        else if (arch === 'rhizome') archDecay = 0.9985; // Retain thick swollen volume for ginger tubers with gentle tapering
+        else if (arch === 'rhizome') archDecay = 0.993; // Classic Ginger: rootlets taper continuously toward pointed organic root tips
 
         agent.thickness *= archDecay;
         
@@ -599,7 +599,7 @@ export function processAgents(
       const brMult = Math.max(0.1, engine.branchingMultiplier ?? 1.0);
       
       // Dynamic minimum interval before next branch: high branchingMultiplier reduces delay between branch nodes
-      const baseMinInterval = genome.archetype === "rhizome" ? 4 : (genome.archetype === "bush" ? 5 : 8);
+      const baseMinInterval = genome.archetype === "rhizome" ? 3 : (genome.archetype === "bush" ? 5 : 8);
       const minInterval = Math.max(2, Math.floor(baseMinInterval / (1.0 + Math.log10(Math.max(1, brMult)))));
       const branchReady = (agent.branchCooldown || 0) <= 0 && agent.age >= minInterval;
 
@@ -615,7 +615,9 @@ export function processAgents(
       ) {
         agent.branchCooldown = minInterval + Math.floor(Math.random() * 3);
 
-        const forkAngle = Math.PI / 4 + (Math.random() - 0.5) * 0.5;
+        const forkAngle = genome.archetype === "rhizome"
+          ? (Math.PI / 3 + (Math.random() - 0.5) * 0.4) // Classic lateral root offshoot angle
+          : (Math.PI / 4 + (Math.random() - 0.5) * 0.5);
         const newDirection = agent.direction
           .clone()
           .applyAxisAngle(
@@ -630,13 +632,16 @@ export function processAgents(
         const isThickBranch = Math.random() < engine.branchSplitSizeProb;
         let thicknessMod = isThickBranch ? 0.82 + engine.branchBigger * 0.3 : 0.70;
 
-        // When branching, parent stem ALSO loses thickness (bush thins to filigree, tree stays sturdy, rhizome swells)
+        // When branching:
+        // Bush: Children thin to delicate tendrils (0.70x), parent thins moderately
+        // Rhizome (Ginger): Little rootlets sprout as smaller side branches (0.72x) that taper nicely, parent retains tuber bulk (0.92x)
+        // Tree: Structural timber limbs (0.75x) thinner than trunk
         if (genome.archetype === "bush") {
           thicknessMod *= 0.70;    // Children thin to delicate tendrils
           agent.thickness *= 0.82; // Parent thins moderately
         } else if (genome.archetype === "rhizome") {
-          thicknessMod *= 1.10; // Swell into a fat knobby ginger joint!
-          agent.thickness *= 0.95; // Parent rhizome stem remains thick and swollen!
+          thicknessMod *= 0.72; // Smaller rootlets popping out
+          agent.thickness *= 0.92; // Main root tuber retains bulk
         } else if (genome.archetype === "tree") {
           thicknessMod *= 0.75; // Limbs get progressively thinner than trunk
           agent.thickness *= 0.85;
