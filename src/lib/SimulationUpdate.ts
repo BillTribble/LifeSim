@@ -512,23 +512,33 @@ export function updateSimulation(engine: SimulationEngine) {
 
   // INSTANT APPENDAGE SYNC:
   // Ensure any leaf, flower, or appendage whose strain or parent stem is dying dissolves in exact lockstep
-  for (const app of engine.appendages.values()) {
+  for (const [appName, app] of engine.appendages.entries()) {
     const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
     if (appLim > 0) {
       let appChanged = false;
       for (let i = 0; i < appLim; i++) {
         const seg = app.segments[i];
-        if (seg) {
-          const parentSeg = engine.segments[seg.parentIndex];
-          const parentDying = engine.dyingStems.has(seg.parentIndex);
+        if (seg && !app.dyingSet.has(i)) {
           const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
 
-          if (isStrainDying && !app.dyingSet.has(i)) {
+          if (isStrainDying) {
             // Whole species is dying -> dissolve appendage smoothly
             engine.markDying(app.segments, app.dyingSet, i, engine.unscaledTime);
-          } else if (parentDying && parentSeg && parentSeg.dyingStart && !app.dyingSet.has(i)) {
-            // Sync leaf dissolve timestamp to exact same timestamp as parent stem
-            engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);
+          } else if (seg.parentIndex !== undefined) {
+            const parentSeg = engine.segments[seg.parentIndex];
+            const parentDying = engine.dyingStems.has(seg.parentIndex);
+            
+            // STRICT IDENTITY CHECK: Parent stem segment must match strain name and birth timestamp
+            // Prevents ring-buffer recycled slot from killing unrelated healthy appendages!
+            if (
+              parentDying &&
+              parentSeg &&
+              parentSeg.strainName === seg.strainName &&
+              parentSeg.timestamp === seg.parentTimestamp &&
+              parentSeg.dyingStart
+            ) {
+              engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);
+            }
           }
         }
       }
@@ -797,6 +807,57 @@ export function updateSimulation(engine: SimulationEngine) {
     if (liveSegs < 10 && activeAgentCount > 0) {
       engine.onLog(
         `🚨 [INVISIBLE BUG DETECTED] Only ${liveSegs} live segments but ${activeAgentCount} active agents! Ring buffer head=${engine.pointCount % engine.maxDOMs} maxDOMs=${engine.maxDOMs}`
+      );
+    }
+  }
+
+  // Appendage Health & Diagnostics Census logged every 240 frames (~4s)
+  if (engine.frameCount % 240 === 0) {
+    const appCounts: Record<string, { alive: number; dying: number }> = {};
+    let totalLiveAppendages = 0;
+
+    for (const [appName, app] of engine.appendages.entries()) {
+      const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
+      let alive = 0;
+      let dying = 0;
+      for (let i = 0; i < appLim; i++) {
+        const seg = app.segments[i];
+        if (seg) {
+          if (app.dyingSet.has(i)) {
+            dying++;
+          } else {
+            alive++;
+            totalLiveAppendages++;
+          }
+        }
+      }
+      if (alive > 0 || dying > 0) {
+        appCounts[appName] = { alive, dying };
+      }
+    }
+
+    const agentAppGenes: Record<string, number> = {};
+    for (const agent of engine.agents) {
+      if (agent.active && !agent.isFeeler && agent.genome.appendage && (agent.genome.appendage as string) !== "none") {
+        agentAppGenes[agent.genome.appendage] = (agentAppGenes[agent.genome.appendage] || 0) + 1;
+      }
+    }
+
+    const appBreakdown = Object.entries(appCounts)
+      .map(([k, v]) => `${k}:${v.alive} (dying:${v.dying})`)
+      .join(", ");
+    const geneSummary = Object.entries(agentAppGenes)
+      .map(([k, v]) => `${k}:${v} agt`)
+      .join(", ");
+
+    engine.onLog(
+      `🌸 [APPENDAGE CENSUS] Total Live: ${totalLiveAppendages} | Active: [${appBreakdown || "none"}] | Genome Traits: [${geneSummary || "none"}]`
+    );
+
+    // Warning: If agents with appendage genes exist but 0 live appendages render on screen
+    if (Object.keys(agentAppGenes).length > 0 && totalLiveAppendages === 0 && engine.frameCount > 60) {
+      engine.onLog(
+        `⚠️ [APPENDAGE DISAPPEARANCE WARNING] ${Object.keys(agentAppGenes).length} strains carry appendage traits (${geneSummary}), but 0 appendages are alive!`
       );
     }
   }
