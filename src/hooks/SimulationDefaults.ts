@@ -3,7 +3,7 @@ export const DEFAULTS: Record<string, any> = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 1,
   "theme": 0,
-  "timeScale": 0.8,
+  "timeScale": 0.4,
   "postMatingDieoff": true,
   "rhizomeSpeed": 0.75,
   "treeSpeed": 1.20,
@@ -99,7 +99,7 @@ export const DEFAULTS: Record<string, any> = {
     "buds": 0.4
   },
   "maxLineWidth": 15.969935502148255,
-  "globalPulseSpeed": 0.6760780934052621,
+  "globalPulseSpeed": 0.2,
   "multicolorAppProb": 0.2190675672205824,
   "sameColorAppProb": 0.32405154770477973,
   "maxSaturation": 0.43933066036466184,
@@ -152,13 +152,13 @@ export const DEFAULTS: Record<string, any> = {
   "appendageSize": 1,
   "hybridDecay": 42.874691796901615,
   "deathRate": 8.111775230578985,
-  "slowMotion": 0.8,
+  "slowMotion": 0.4,
   "rotationVelocity": 0.13,
   "swarmCohesion": 0.08708895046646814,
   "detectionRange": 362.21842356693804,
   "extrusionSpeed": 0.11,
   "fadeSpeed": 9.174839585959253,
-  "pulseSpeed": 0.6760780934052621,
+  "pulseSpeed": 0.2,
   "saturation": 0.43933066036466184,
   "cameraPosition": {
     "x": -209.7286059950399,
@@ -166,7 +166,7 @@ export const DEFAULTS: Record<string, any> = {
     "z": 106.27255398950481,
     "zoom": 1
   },
-  "version": "0.3"
+  "version": "0.3.1"
 };
 
 export const DEFAULT_PALETTE: string[] = [
@@ -182,7 +182,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-08-07-v0.3";
+export const CURRENT_SCHEMA = "2026-08-07-v0.3.1";
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);

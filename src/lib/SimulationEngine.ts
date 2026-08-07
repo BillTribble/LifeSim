@@ -84,7 +84,7 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 1;
+  timeScale: number = 0.4;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -118,7 +118,7 @@ export class SimulationEngine {
   maxMatings: number = 1;
   startColorMode: string = "analogous";
   flowerSize: number = 1.0;
-  globalPulseSpeed: number = 0.6760780934052621;
+  globalPulseSpeed: number = 0.2;
   maxLineWidth: number = 15.969935502148255;
   widthVariance: number = 0.5;
   branchGrowthBoost: number = 1.5;
