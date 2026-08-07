@@ -8,6 +8,37 @@ import {
   handleBreedingAndFeelers,
 } from "./SimulationBreeding";
 
+function extrudePointedTerminalCap(
+  engine: SimulationEngine,
+  agent: Agent,
+  genome: any,
+  startThickness: number,
+) {
+  if (agent.isFeeler) return;
+  const currThickness = Math.max(0.05, startThickness);
+  const dir = agent.direction.clone().normalize();
+  if (dir.lengthSq() < 0.001) dir.set(0, 1, 0);
+
+  const stepDist = Math.max(0.12, THREE.MathUtils.clamp(currThickness * 0.35, 0.15, 0.8));
+  let currPos = agent.position.clone();
+
+  // Extrude 4 smooth conical tapering micro-caps down to needle point (0.01)
+  const taperFactors = [0.65, 0.35, 0.12, 0.01];
+  for (let k = 0; k < taperFactors.length; k++) {
+    const nextPos = currPos.clone().addScaledVector(dir, stepDist * (1.0 - k * 0.15));
+    const segThick = currThickness * taperFactors[k];
+    engine.addLineSegment(
+      currPos,
+      nextPos,
+      agent.realGenome || genome,
+      Math.max(0.001, segThick),
+      false,
+      agent.id,
+    );
+    currPos = nextPos;
+  }
+}
+
 export function processAgents(
   engine: SimulationEngine,
   activeAgents: Agent[],
@@ -449,6 +480,7 @@ export function processAgents(
           agent.thickness *= taperDecay;
 
           if (agent.thickness <= 0.08) {
+            extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
             agent.active = false; // Branch tip has completed its taper and stopped
             currentActiveCount--;
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
@@ -749,6 +781,7 @@ export function processAgents(
         } else {
           const maxFade = agent.isFeeler ? 25 : 360;
           if (agent.fadeAge >= maxFade) {
+            extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
             agent.active = false;
             currentActiveCount--;
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
@@ -766,6 +799,7 @@ export function processAgents(
                 const isSameStrain = other.genome.name === agent.genome.name;
                 const isFeelerOfStrain = other.realGenome && other.realGenome.name === agent.genome.name;
                 if (other.active && (isDescendant || isSameStrain || isFeelerOfStrain)) {
+                  extrudePointedTerminalCap(engine, other, other.genome, other.thickness);
                   other.active = false;
                   other.tapering = true;
                   other.forceTapering = true;
@@ -788,6 +822,7 @@ export function processAgents(
                 const other = activeAgents[j];
                 const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
                 if (other.active && isDescendant) {
+                  extrudePointedTerminalCap(engine, other, other.genome, other.thickness);
                   other.active = false;
                   other.tapering = true;
                   currentActiveCount--;
@@ -797,11 +832,6 @@ export function processAgents(
           }
         }
       } 
-      
-      if (!agent.tapering && agent.active) {
-        // Healthy active organisms maintain their natural thickness Base
-        agent.thickness = Math.max(agent.thickness, genome.thicknessBase);
-      }
     }
   }
 
