@@ -349,23 +349,11 @@ export function HUD({
                   BIOMASS
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {stats.hybridCount !== undefined && (
-                    <span 
-                      className="text-[7px] px-1 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold tracking-normal" 
-                      title={`Total Hybrids Born: ${stats.hybridCount}`}
-                    >
-                      ⚡{stats.hybridCount}
-                    </span>
-                  )}
                   <ChevronDown className={`w-3 h-3 transition-transform ${isBiomassCollapsed ? "rotate-180" : ""}`} />
                 </div>
               </h2>
               {!isBiomassCollapsed && (
                 <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
-                  <div className="flex justify-between items-center text-[#87CEEB] bg-white/5 px-1.5 py-1 rounded border border-[#87CEEB]/20 mb-1">
-                    <span className="text-[7px] text-[#D2B48C]/80 uppercase tracking-wider font-bold">Hybrids</span>
-                    <span className="text-[8px] text-amber-300 font-bold font-mono">⚡ {stats.hybridCount ?? 0}</span>
-                  </div>
                   {(() => {
                   const filteredStrains = stats.strains.filter((s: any) => !s.name.startsWith("Feeler-"));
                   const archetypeTotals: Record<string, number> = {};
@@ -421,11 +409,16 @@ export function HUD({
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {strain.matingCount !== undefined && strain.matingCount > 0 && (
-                            <span className="text-[7px] px-1 py-0.5 rounded bg-[#87CEEB]/15 text-[#87CEEB] font-bold" title={`${strain.matingCount} hybridizations`}>
-                              {strain.matingCount}×
-                            </span>
-                          )}
+                          <span 
+                            className={`text-[7px] px-1 py-0.2 rounded font-mono font-bold ${
+                              (strain.matingCount || 0) > 0 
+                                ? "bg-amber-400/20 text-amber-300 border border-amber-400/30" 
+                                : "bg-white/5 text-[#87CEEB]/50"
+                            }`} 
+                            title={`Hybridizations: ${strain.matingCount || 0} / ${state.maxMatings || 1}`}
+                          >
+                            ⚡{strain.matingCount || 0}
+                          </span>
                           <span>{percent.toFixed(1)}%</span>
                         </div>
                       </div>

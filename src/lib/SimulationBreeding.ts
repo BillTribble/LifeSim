@@ -54,9 +54,10 @@ export function trySpawnTaperingFeeler(
   newAgents: Agent[],
   engine: SimulationEngine,
 ): void {
-  if (!agent.hasBred && !agent.isFeeler && agent.cooldown <= 0) {
-    const evalGenome =
-      agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+  const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
+  if (mCount < maxM && !agent.isFeeler && !agent.tapering && agent.cooldown <= 0) {
     const hasActiveFeeler =
       activeAgents.some(
         (a) =>
@@ -190,9 +191,12 @@ export function handleBreedingAndFeelers(
           (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
           a.genome.name === evalGenome.name),
     );
+  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
+
   if (
     !agent.isFeeler &&
-    !agent.hasBred &&
+    mCount < maxM &&
     !agent.tapering &&
     !hasActiveFeeler &&
     (agent.age > 90 || strainAge > 180) &&
@@ -228,7 +232,7 @@ export function handleBreedingAndFeelers(
 
   const isFertile =
     !agent.tapering &&
-    !agent.hasBred &&
+    mCount < maxM &&
     agent.cooldown <= 0 &&
     (agent.isFeeler ||
       agent.age > 150 ||
@@ -254,12 +258,16 @@ export function handleBreedingAndFeelers(
         partnerEvalGenome.createdAt !== undefined
           ? engine.time - partnerEvalGenome.createdAt
           : 0;
+      const partnerMCount =
+        (engine as any).speciesLifecycleMap?.get(partnerEvalGenome.name)?.matingCount ||
+        partner.matingCount ||
+        0;
 
       // Feelers can mate with any living non-tapering partner species
       const partnerFertile =
         !partner.tapering &&
         (agent.isFeeler ||
-          (!partner.hasBred &&
+          (partnerMCount < maxM &&
             partner.cooldown <= 0 &&
             (partner.isFeeler ||
               partner.age > 100 ||
@@ -519,41 +527,56 @@ export function handleBreedingAndFeelers(
             cooldown: engine.hybridCooldown,
           });
 
-          // Post-Breeding Transition: Mark parents as bred; species end-of-life occurs after 3 matings or max lifespan
+          // Post-Breeding Transition: Synchronize species-level mating counts and cooldowns
           engine.hasAnyOrganismBred = true;
-          agent.hasBred = true;
-          nearestPartner.hasBred = true;
-          const s1 = (engine as any).speciesLifecycleMap?.get(
-            agent.genome.name,
-          );
+          const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+          const host1Strain = agent.isFeeler && agent.realGenome ? agent.realGenome.name : agent.genome.name;
+          const host2Strain = nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome.name : nearestPartner.genome.name;
+
+          const s1 = (engine as any).speciesLifecycleMap?.get(host1Strain);
+          const s2 = (engine as any).speciesLifecycleMap?.get(host2Strain);
+
           if (s1) {
-            s1.hasBred = true;
             s1.matingCount = (s1.matingCount || 0) + 1;
-            s1.phase = "MATURE";
+            if (s1.matingCount >= maxM) {
+              s1.hasBred = true;
+              s1.phase = "MATURE";
+            }
           }
-          const s2 = (engine as any).speciesLifecycleMap?.get(
-            nearestPartner.genome.name,
-          );
           if (s2) {
-            s2.hasBred = true;
             s2.matingCount = (s2.matingCount || 0) + 1;
-            s2.phase = "MATURE";
+            if (s2.matingCount >= maxM) {
+              s2.hasBred = true;
+              s2.phase = "MATURE";
+            }
           }
 
-          if (agent.isFeeler && agent.parentAgent) {
-            agent.parentAgent.hasBred = true;
-          }
-          if (nearestPartner.isFeeler && nearestPartner.parentAgent) {
-            nearestPartner.parentAgent.hasBred = true;
+          const mCount1 = s1?.matingCount || (agent.matingCount || 0) + 1;
+          const mCount2 = s2?.matingCount || (nearestPartner.matingCount || 0) + 1;
+
+          // Apply cooldown to ALL active agents and feelers of both parent strains to prevent duplicate rapid collisions
+          const cd = engine.hybridCooldown || 340;
+          for (let j = 0; j < activeAgents.length; j++) {
+            const a = activeAgents[j];
+            const aStrain = a.isFeeler && a.realGenome ? a.realGenome.name : a.genome.name;
+            if (aStrain === host1Strain) {
+              a.cooldown = Math.max(a.cooldown, cd);
+              a.matingCount = mCount1;
+              if (mCount1 >= maxM) {
+                a.hasBred = true;
+              }
+            } else if (aStrain === host2Strain) {
+              a.cooldown = Math.max(a.cooldown, cd);
+              a.matingCount = mCount2;
+              if (mCount2 >= maxM) {
+                a.hasBred = true;
+              }
+            }
           }
 
-          // Schedule any active feelers for either parent organism to die 3 seconds (180 ticks) after mating
-          const host1 =
-            agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
-          const host2 =
-            nearestPartner.isFeeler && nearestPartner.parentAgent
-              ? nearestPartner.parentAgent
-              : nearestPartner;
+          // Schedule active feelers that participated in mating to dissolve smoothly
+          const host1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
+          const host2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
           for (const fa of activeAgents) {
             if (
               fa.active &&
@@ -572,14 +595,14 @@ export function handleBreedingAndFeelers(
           engine.spawnHybridArtifact(
             midPoint,
             childGenome.color,
-            agent.genome.name,
-            nearestPartner.genome.name,
+            host1Strain,
+            host2Strain,
             agent.id,
             nearestPartner.id,
           );
           engine.totalHybridCount = (engine.totalHybridCount || 0) + 1;
           engine.onLog(
-            `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${agent.genome.name} [${(agent.genome.archetype || "bush").toUpperCase()}] × ${nearestPartner.genome.name} [${(nearestPartner.genome.archetype || "bush").toUpperCase()}]`,
+            `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${host1Strain} × ${host2Strain} (Mating: ${host1Strain}=${mCount1}/${maxM}, ${host2Strain}=${mCount2}/${maxM})`,
           );
 
           if (engine.matingCount < 3) {
@@ -600,39 +623,24 @@ export function handleBreedingAndFeelers(
             }
           }
 
-          agent.cooldown = engine.hybridCooldown;
-          nearestPartner.cooldown = engine.hybridCooldown;
-
           bredThisFrame.add(agent);
           bredThisFrame.add(nearestPartner);
 
-          // Post-mating rapid die-off: Once creatures mate, they immediately taper and dissolve smoothly all at once
+          // Post-mating die-off ONLY when species has reached maxMatings limit
           if (engine.postMatingDieoff !== false) {
-            const actualAgent1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
-            const actualAgent2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
-
-            actualAgent1.matingCount = (actualAgent1.matingCount || 0) + 1;
-            actualAgent2.matingCount = (actualAgent2.matingCount || 0) + 1;
-
-            const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
-            const mCount1 = (s1?.matingCount || actualAgent1.matingCount || 0);
-            const mCount2 = (s2?.matingCount || actualAgent2.matingCount || 0);
-
             if (
-              !actualAgent1.isFeeler &&
               mCount1 >= maxM &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
-              engine.killSpecies(actualAgent1.genome.name, `mating completed ${maxM}x`);
+              engine.killSpecies(host1Strain, `mating completed ${maxM}x`);
             }
 
             if (
-              !actualAgent2.isFeeler &&
               mCount2 >= maxM &&
               canEnterDeleting(engine, activeAgents, 1)
             ) {
               engine.killSpecies(
-                actualAgent2.genome.name,
+                host2Strain,
                 `mating completed ${maxM}x`,
               );
             }

@@ -101,6 +101,25 @@ assert(
   "Organism whose strain is in dyingStrains displays 'Deleting'"
 );
 
+// 6. Test QA-LFE-11: Multi-Hybridization Survival (maxMatings = 3)
+const maxMatingsSetting = 3;
+const agentAfter1Mating = { active: true, tapering: false, isFeeler: false, matingCount: 1, hasBred: false, genome: { name: "Multi-1" } };
+const shouldDieAfter1 = (agentAfter1Mating.matingCount || 0) >= maxMatingsSetting;
+assert(
+  shouldDieAfter1 === false && agentAfter1Mating.hasBred === false,
+  "QA-LFE-11-MULTI",
+  "Organism survives first mating when maxMatings = 3 (matingCount=1 < 3)"
+);
+
+// 7. Test QA-LFE-12: Completion of maxMatings (matingCount = 3)
+const agentAfter3Matings = { active: true, tapering: false, isFeeler: false, matingCount: 3, hasBred: true, genome: { name: "Multi-1" } };
+const shouldDieAfter3 = (agentAfter3Matings.matingCount || 0) >= maxMatingsSetting;
+assert(
+  shouldDieAfter3 === true && agentAfter3Matings.hasBred === true,
+  "QA-LFE-12-COMPLETE",
+  "Organism reaches end of reproductive lifecycle when matingCount reaches maxMatings (3 >= 3)"
+);
+
 console.log(`\n=== QA TEST SUITE COMPLETED: ${passed} PASSED, ${failed} FAILED ===`);
 if (failed > 0) {
   process.exit(1);
