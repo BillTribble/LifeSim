@@ -409,35 +409,55 @@ export function processAgents(
 
       // Step-by-step progressive stem tapering decay along the length of the branch
       if (!agent.isFeeler) {
+        const arch = genome.archetype || 'bush';
+        const branchDepth = agent.branchDepth || 0;
+
         // Archetype-specific progressive thickness decay:
         // Snake: 0.9999 (can travel indefinitely without shrinking)
-        // Bush: 0.992 (steady shrinking into bushy tips)
-        // Tree: 0.996 during trunk (age < 150), 0.990 during canopy burst
-        // Rhizome: 0.985 (rapid shrinking into fine thread tips)
-        const arch = genome.archetype || 'bush';
+        // Bush: Main stem 0.992, sub-branches 0.982/0.972 (steady shrinking into bushy delicate tips)
+        // Tree: Trunk 0.996, canopy limbs 0.982, twigs 0.968 (sturdy trunk, tapering canopy)
+        // Rhizome (Classic Ginger): Tuber 0.994, rootlet offshoots 0.976, sub-rootlets 0.962 (knobby roots with pointed tips)
         let archDecay = 0.995;
-        if (arch === 'snake') archDecay = 0.9999;
-        else if (arch === 'bush') archDecay = 0.996;   // Bush branches steadily taper down to delicate tips
-        else if (arch === 'tree') archDecay = agent.age < 60 ? 0.995 : 0.988; // Trunk tapers smoothly, canopy limbs taper down to slender twigs
-        else if (arch === 'rhizome') archDecay = 0.993; // Classic Ginger: rootlets taper continuously toward pointed organic root tips
-
-        agent.thickness *= archDecay;
-        
-        // If agent is in tapering phase, aggressively taper to zero (0.001)
-        if (isDying && agent.taperBudget !== undefined) {
-          const taperAge = agent.taperBudget;
-          const taperDecay = Math.max(0.70, 0.90 - taperAge * 0.008);
-          agent.thickness *= taperDecay;
-          agent.taperBudget++;
-        } else if (agent.tapering) {
-          agent.thickness *= 0.94;
+        if (arch === 'snake') {
+          archDecay = 0.9999;
+        } else if (arch === 'bush') {
+          archDecay = branchDepth === 0 ? 0.992 : (branchDepth === 1 ? 0.982 : 0.972);
+        } else if (arch === 'tree') {
+          archDecay = agent.age < 50 && branchDepth === 0 ? 0.996 : (branchDepth === 0 ? 0.991 : (branchDepth === 1 ? 0.980 : 0.968));
+        } else if (arch === 'rhizome') {
+          archDecay = branchDepth === 0 ? 0.994 : (branchDepth === 1 ? 0.976 : 0.962);
         }
 
-        if (!agent.tapering && arch !== "snake" && agent.thickness <= 0.001) {
-          agent.active = false; // Branch tip has completed its natural anatomical growth
-          currentActiveCount--;
-          const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
-          strainCounts.set(agent.genome.name, Math.max(0, newCount));
+        agent.thickness *= archDecay;
+
+        // Natural tip termination for side branches and aged branch tips
+        // If this isn't the primary trunk/root of an only-living-species, branch tips naturally taper to a stop
+        const branchAgeLimit = branchDepth === 0 ? 350 : Math.max(50, 180 - branchDepth * 40);
+        const termChance = (engine.terminationProb || 0.05) * 0.04 * (1.0 + branchDepth * 0.6);
+        if (!agent.tapering && arch !== 'snake' && (agent.age > branchAgeLimit || Math.random() < termChance)) {
+          const myStrainCount = strainCounts.get(agent.genome.name) || 1;
+          if (myStrainCount > 1 || branchDepth > 0) {
+            agent.tapering = true;
+            agent.taperBudget = 0;
+          }
+        }
+        
+        // If agent is in tapering phase (natural branch finish or species EOL)
+        if (agent.tapering) {
+          agent.taperBudget = (agent.taperBudget || 0) + 1;
+          const taperDecay = Math.max(0.70, 0.92 - agent.taperBudget * 0.01);
+          agent.thickness *= taperDecay;
+
+          if (agent.thickness <= 0.08) {
+            agent.active = false; // Branch tip has completed its taper and stopped
+            currentActiveCount--;
+            const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+            strainCounts.set(agent.genome.name, Math.max(0, newCount));
+          }
+        } else if (arch !== "snake" && branchDepth > 0 && agent.thickness <= 0.18) {
+          // Direct tip exhaustion: rootlet/twig has reached its pointed tip threshold, initiate final taper stop
+          agent.tapering = true;
+          agent.taperBudget = 0;
         }
       }
 
