@@ -245,7 +245,7 @@ export function updateMeshSegments(
     packAAttr.setW(targetIndex, genomeHash);
     
     // Pack B: [growth, vernation, succulence, leafDivision]
-    packBAttr.setX(targetIndex, 0.01); // growth starts at 0.01
+    packBAttr.setX(targetIndex, isAppendage ? 0.01 : 1.0); // Stems start fully solid (1.0), appendages grow out
     
     let vernVal = 0.0;
     if (genome.vernationType === "convolute") vernVal = 1.0;

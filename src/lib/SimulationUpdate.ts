@@ -548,18 +548,6 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
-  // UNCONDITIONAL RING BUFFER OVERWRITE SWEEP: Mark overwritten/stale stem segments as dying.
-  const sweepDist = 50 + Math.floor(engine.growthSpeed * 10);
-  const overwriteHead = engine.pointCount % engine.maxDOMs;
-  for (let j = 0; j < sweepDist; j++) {
-    const idx = (overwriteHead + j) % engine.maxDOMs;
-    if (engine.segments[idx] && !engine.dyingStems.has(idx)) {
-      if (engine.time - engine.segments[idx].timestamp > 100) {
-        engine.markDying(engine.segments, engine.dyingStems, idx);
-      }
-    }
-  }
-
   engine.processDying(engine.segments, engine.dyingStems, engine.cylinderMesh);
   for (const app of engine.appendages.values()) {
     engine.processDying(app.segments, app.dyingSet, app.mesh, true);
