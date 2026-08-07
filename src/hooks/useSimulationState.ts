@@ -33,6 +33,10 @@ export function useSimulationState() {
   const [treeBranching, setTreeBranching] = useState(() => getStoredFloat("treeBranching"));
   const [snakeBranching, setSnakeBranching] = useState(() => getStoredFloat("snakeBranching"));
   const [rhizomeBranching, setRhizomeBranching] = useState(() => getStoredFloat("rhizomeBranching"));
+  const [bushMinBranches, setBushMinBranches] = useState(() => getStoredFloat("bushMinBranches"));
+  const [rhizomeMinBranches, setRhizomeMinBranches] = useState(() => getStoredFloat("rhizomeMinBranches"));
+  const [treeMinBranches, setTreeMinBranches] = useState(() => getStoredFloat("treeMinBranches"));
+  const [snakeMinBranches, setSnakeMinBranches] = useState(() => getStoredFloat("snakeMinBranches"));
   const [timeScale, setTimeScale] = useState(() => getStoredTimeScale());
   const [postMatingDieoff, setPostMatingDieoff] = useState(() => getStoredBool("postMatingDieoff", true));
   const [theme, setTheme] = useState(0); // Always start in normal theme
@@ -133,6 +137,10 @@ export function useSimulationState() {
     localStorage.setItem("treeBranching", treeBranching.toString());
     localStorage.setItem("snakeBranching", snakeBranching.toString());
     localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
+    localStorage.setItem("bushMinBranches", bushMinBranches.toString());
+    localStorage.setItem("rhizomeMinBranches", rhizomeMinBranches.toString());
+    localStorage.setItem("treeMinBranches", treeMinBranches.toString());
+    localStorage.setItem("snakeMinBranches", snakeMinBranches.toString());
     localStorage.setItem("widthVariance", widthVariance.toString());
     localStorage.setItem("branchGrowthBoost", branchGrowthBoost.toString());
     localStorage.setItem("colorMutationShift", colorMutationShift.toString());
@@ -311,6 +319,10 @@ export function useSimulationState() {
       treeBranching,
       snakeBranching,
       rhizomeBranching,
+      bushMinBranches,
+      rhizomeMinBranches,
+      treeMinBranches,
+      snakeMinBranches,
       snakeWander,
       snakeStepSize,
       snakeSpeed,
@@ -447,6 +459,10 @@ export function useSimulationState() {
       setBranchingMultiplier,
       setBranchBigger,
       setBranchSplitSizeProb,
+      setBushMinBranches,
+      setRhizomeMinBranches,
+      setTreeMinBranches,
+      setSnakeMinBranches,
       setMaxDOMs,
       setMaxAgents,
       setMaxSpecies,
@@ -531,6 +547,10 @@ export function useSimulationState() {
         setTreeBranching(DEFAULTS.treeBranching);
         setSnakeBranching(DEFAULTS.snakeBranching);
         setRhizomeBranching(DEFAULTS.rhizomeBranching);
+        setBushMinBranches(DEFAULTS.bushMinBranches);
+        setRhizomeMinBranches(DEFAULTS.rhizomeMinBranches);
+        setTreeMinBranches(DEFAULTS.treeMinBranches);
+        setSnakeMinBranches(DEFAULTS.snakeMinBranches);
         setSnakeWander(DEFAULTS.snakeWander);
         setSnakeStepSize(DEFAULTS.snakeStepSize);
         setSnakeSpeed(DEFAULTS.snakeSpeed);

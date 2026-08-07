@@ -92,6 +92,10 @@ export interface SimulationViewProps {
   treeBranching?: number;
   snakeBranching?: number;
   rhizomeBranching?: number;
+  bushMinBranches?: number;
+  rhizomeMinBranches?: number;
+  treeMinBranches?: number;
+  snakeMinBranches?: number;
   timeScale?: number;
   postMatingDieoff?: boolean;
   theme?: number;
@@ -206,6 +210,10 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     treeBranching: "setTreeBranching",
     snakeBranching: "setSnakeBranching",
     rhizomeBranching: "setRhizomeBranching",
+    bushMinBranches: "setBushMinBranches",
+    rhizomeMinBranches: "setRhizomeMinBranches",
+    treeMinBranches: "setTreeMinBranches",
+    snakeMinBranches: "setSnakeMinBranches",
     timeScale: "setTimeScale",
     postMatingDieoff: "setPostMatingDieoff",
     theme: "setTheme",

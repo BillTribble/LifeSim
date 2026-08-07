@@ -251,6 +251,10 @@ export class SimulationEngine {
   treeBranching: number = 1.8;
   snakeBranching: number = 1.0;
   rhizomeBranching: number = 2.5;
+  bushMinBranches: number = 2;
+  rhizomeMinBranches: number = 4;
+  treeMinBranches: number = 1;
+  snakeMinBranches: number = 1;
 
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
@@ -502,6 +506,18 @@ export class SimulationEngine {
   }
   setRhizomeBranching(val: number) {
     this.rhizomeBranching = val;
+  }
+  setBushMinBranches(val: number) {
+    this.bushMinBranches = val;
+  }
+  setRhizomeMinBranches(val: number) {
+    this.rhizomeMinBranches = val;
+  }
+  setTreeMinBranches(val: number) {
+    this.treeMinBranches = val;
+  }
+  setSnakeMinBranches(val: number) {
+    this.snakeMinBranches = val;
   }
   setWidthVariance(val: number) {
     this.widthVariance = val;

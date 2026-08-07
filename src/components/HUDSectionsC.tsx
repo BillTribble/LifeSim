@@ -16,6 +16,11 @@ export function BranchingSection({ searchQuery, state, setters }: HUDSectionProp
       "TREE_BR",
       "SNAK_BR",
       "RHIZ_BR",
+      "BUSH_MIN",
+      "RHIZ_MIN",
+      "TREE_MIN",
+      "SNAK_MIN",
+      "MIN_BRANCH",
       "ARCHETYPE",
       "TERM_BRANCH",
       "B_MUTATE",
@@ -187,6 +192,70 @@ Low: Minimal rhizome splits."
           step={0.5}
           value={state.rhizomeBranching}
           onChange={setters.setRhizomeBranching}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["bush minimum branches", "shrub branch floor", "bush survival"]}
+          tooltip="BUSH MIN BRANCHES
+Minimum active branches kept alive for bush species before any branches can terminate.
+Default: 2."
+          label="BUSH_MIN"
+          min={1}
+          max={10}
+          step={1}
+          value={state.bushMinBranches ?? 2}
+          onChange={setters.setBushMinBranches}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["rhizome minimum branches", "ginger branch floor", "root survival"]}
+          tooltip="RHIZOME MIN BRANCHES
+Minimum active branches kept alive for rhizome species before any branches can terminate.
+Default: 4."
+          label="RHIZ_MIN"
+          min={1}
+          max={10}
+          step={1}
+          value={state.rhizomeMinBranches ?? 4}
+          onChange={setters.setRhizomeMinBranches}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["tree minimum branches", "tree branch floor", "tree survival"]}
+          tooltip="TREE MIN BRANCHES
+Minimum active branches kept alive for tree species before any branches can terminate.
+Default: 1."
+          label="TREE_MIN"
+          min={1}
+          max={10}
+          step={1}
+          value={state.treeMinBranches ?? 1}
+          onChange={setters.setTreeMinBranches}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["snake minimum branches", "snake branch floor", "snake survival"]}
+          tooltip="SNAKE MIN BRANCHES
+Minimum active agents kept alive for snake species before any can terminate.
+Default: 1."
+          label="SNAK_MIN"
+          min={1}
+          max={10}
+          step={1}
+          value={state.snakeMinBranches ?? 1}
+          onChange={setters.setSnakeMinBranches}
           color="#87CEEB"
         />
       </div>

@@ -292,6 +292,10 @@ export default function App() {
         treeBranching={state.treeBranching}
         snakeBranching={state.snakeBranching}
         rhizomeBranching={state.rhizomeBranching}
+        bushMinBranches={state.bushMinBranches}
+        rhizomeMinBranches={state.rhizomeMinBranches}
+        treeMinBranches={state.treeMinBranches}
+        snakeMinBranches={state.snakeMinBranches}
         timeScale={state.timeScale}
         postMatingDieoff={state.postMatingDieoff}
         theme={state.theme}

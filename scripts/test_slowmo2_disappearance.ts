@@ -22,9 +22,8 @@ console.log("  20-SECOND SLOW-MO (timeScale=2.0) DISAPPEARANCE TEST SUITE  ");
 console.log("===============================================================");
 
 async function runDisappearanceTest(timeScale: number) {
-  const container = {} as any;
-  const renderer = new MockWebGLRenderer() as any;
-  const engine = new SimulationEngine(container, renderer);
+  const canvas = {} as any;
+  const engine = new SimulationEngine(canvas, 1920, 1080);
   engine.timeScale = timeScale;
   engine.growthSpeed = 1.0;
   engine.maxSpecies = 16;

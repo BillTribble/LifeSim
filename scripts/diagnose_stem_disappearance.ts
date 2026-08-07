@@ -17,9 +17,8 @@ class MockWebGLRenderer {
 }
 
 async function diagnose() {
-  const container = {} as any;
-  const renderer = new MockWebGLRenderer() as any;
-  const engine = new SimulationEngine(container, renderer);
+  const canvas = {} as any;
+  const engine = new SimulationEngine(canvas, 1920, 1080);
 
   // Exact dials from user screenshot:
   engine.growthSpeed = 0.11;
