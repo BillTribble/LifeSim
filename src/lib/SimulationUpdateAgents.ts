@@ -727,7 +727,6 @@ export function processAgents(
         } else if (agent.fadeAge < 360 && !agent.isFeeler) {
           // Phase 2 (Ticks 180 to 360 / ~3s): Pause in completed tapered form
         } else {
-          // Phase 3 (At tick 360, or tick 25 for feelers): Trigger Transparency Dissolve
           const maxFade = agent.isFeeler ? 25 : 360;
           if (agent.fadeAge >= maxFade) {
             agent.active = false;
@@ -736,41 +735,45 @@ export function processAgents(
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
 
             const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
-            if (newCount <= 0 || isStrainDying) {
+            if (isStrainDying) {
               if ((engine as any).markStrainSegmentsDying) {
                 (engine as any).markStrainSegmentsDying(agent.genome.name);
               }
-            } else {
-              engine.markAgentSegmentsDying(agent.id);
-            }
+              // Deactivate all sister branches and feelers of this dying strain
+              for (let j = 0; j < activeAgents.length; j++) {
+                const other = activeAgents[j];
+                const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
+                const isSameStrain = other.genome.name === agent.genome.name;
+                const isFeelerOfStrain = other.realGenome && other.realGenome.name === agent.genome.name;
+                if (other.active && (isDescendant || isSameStrain || isFeelerOfStrain)) {
+                  other.active = false;
+                  other.tapering = true;
+                  other.forceTapering = true;
+                  currentActiveCount--;
+                }
+              }
 
-            // Deactivate all branches and feelers linked to this organism so no ghost branches or feelers linger
-            for (let j = 0; j < activeAgents.length; j++) {
-              const other = activeAgents[j];
-              const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
-              const isSameStrain = other.genome.name === agent.genome.name;
-              const isFeelerOfStrain = other.realGenome && other.realGenome.name === agent.genome.name;
-              if (other.active && (isDescendant || isSameStrain || isFeelerOfStrain)) {
-                other.active = false;
-                other.tapering = true;
-                other.forceTapering = true;
-                currentActiveCount--;
+              const lifespanSecs = (agent.age / 60.0).toFixed(1);
+              engine.onLog(
+                `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] completed lifecycle after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x)`
+              );
+            } else {
+              // Individual branch or feeler finished its lifecycle while organism is still alive
+              if (agent.isFeeler) {
+                // Feelers dissolve cleanly
+                engine.markAgentSegmentsDying(agent.id);
+              }
+              // Deactivate only child sub-branches spawned by this specific branch tip
+              for (let j = 0; j < activeAgents.length; j++) {
+                const other = activeAgents[j];
+                const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
+                if (other.active && isDescendant) {
+                  other.active = false;
+                  other.tapering = true;
+                  currentActiveCount--;
+                }
               }
             }
-
-            // Check if this was the last active agent of its strain
-            const remainingOfStrain = activeAgents.filter(
-              a => a.active && a.genome.name === agent.genome.name
-            ).length;
-            if (remainingOfStrain <= 0) {
-              if (!engine.dyingStrains) engine.dyingStrains = new Set();
-              engine.dyingStrains.add(agent.genome.name);
-            }
-
-            const lifespanSecs = (agent.age / 60.0).toFixed(1);
-            engine.onLog(
-              `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] died after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x, fadeAge: ${agent.fadeAge})`
-            );
           }
         }
       } 
