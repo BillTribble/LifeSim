@@ -430,6 +430,67 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.cylinderMesh.instanceMatrix.needsUpdate = true;
   engine.cylinderMesh.count = 0;
 
+  const getArchetypeThickness = (arch: Archetype) => {
+    const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
+    if (arch === "bush") {
+      return (2.20 + Math.random() * 0.6 * variance) * 0.7;
+    } else if (arch === "tree") {
+      return (5.2 + Math.random() * 2.0 * variance) * 0.7;
+    } else if (arch === "snake") {
+      return (4.8 + Math.random() * 2.2 * variance) * 0.7;
+    } else {
+      return (4.5 + Math.random() * 1.5 * variance) * 0.7;
+    }
+  };
+
+  if (engine.designerMode) {
+    const arch: Archetype = engine.designerArchetype || "bush";
+    const designerGenome = generateRandomGenome(engine, "Designer", arch);
+    designerGenome.name = formatGenomeName(arch);
+    designerGenome.appendage = getWeightedAppendage(engine.traitProbs);
+    designerGenome.thicknessBase = getArchetypeThickness(arch);
+    designerGenome.color = new THREE.Color().setHSL(0.55, 0.9, 0.52);
+    designerGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
+    designerGenome.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+
+    engine.genomeMap.set(designerGenome.name, designerGenome);
+    initSpeciesLifecycle(engine, designerGenome.name);
+
+    // Fixed spot at bottom of view above dials, growing upwards
+    const spawnPos = new THREE.Vector3(0, 0, 0);
+    const spawnDir = new THREE.Vector3(0, 1, 0);
+
+    engine.agents.push({
+      id: engine.nextAgentId++,
+      position: spawnPos.clone(),
+      direction: spawnDir.clone(),
+      genome: designerGenome,
+      active: true,
+      age: 0,
+      lastPosition: spawnPos.clone(),
+      thickness: designerGenome.thicknessBase * 2.0,
+      cooldown: 0,
+    });
+
+    engine.matingCount = 0;
+    engine.feelerCount = 0;
+    engine.hasAnyOrganismBred = false;
+
+    if (engine.camera && engine.controls) {
+      engine.controls.target.set(0, 15, 0);
+      engine.camera.position.set(0, 15, -95);
+      engine.camera.up.set(0, 1, 0);
+      engine.camera.lookAt(engine.controls.target);
+      engine.camera.updateProjectionMatrix();
+      engine.controls.update();
+    }
+
+    if (engine.onDesignerStrainName) {
+      engine.onDesignerStrainName(designerGenome.name);
+    }
+    return;
+  }
+
   const alphaArchetype = getRandomWeightedArchetype();
   let betaArchetype = getRandomWeightedArchetype();
   while (betaArchetype === alphaArchetype) {
@@ -474,18 +535,6 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
   }
 
-  const getArchetypeThickness = (arch: Archetype) => {
-    const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
-    if (arch === "bush") {
-      return (2.20 + Math.random() * 0.6 * variance) * 0.7;
-    } else if (arch === "tree") {
-      return (5.2 + Math.random() * 2.0 * variance) * 0.7;
-    } else if (arch === "snake") {
-      return (4.8 + Math.random() * 2.2 * variance) * 0.7;
-    } else {
-      return (4.5 + Math.random() * 1.5 * variance) * 0.7;
-    }
-  };
   alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);
   betaGenome.thicknessBase = getArchetypeThickness(betaArchetype);
 
@@ -604,12 +653,13 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
 
 export function resetCamera(engine: SimulationEngine): void {
   if (engine.camera && engine.controls) {
-    const creatureCenterY = engine.creatureCenterY || 18.921075;
+    const creatureCenterY = engine.designerMode ? 15.0 : (engine.creatureCenterY || 18.921075);
+    const camZ = engine.designerMode ? -95.0 : 137.42;
     const wasAutoRotate = engine.controls.autoRotate;
     engine.controls.autoRotate = false;
 
     engine.controls.target.set(0, creatureCenterY, 0);
-    engine.camera.position.set(0, creatureCenterY, 137.42);
+    engine.camera.position.set(0, creatureCenterY, camZ);
     engine.camera.up.set(0, 1, 0);
     engine.camera.lookAt(engine.controls.target);
     engine.camera.updateProjectionMatrix();
@@ -617,7 +667,7 @@ export function resetCamera(engine: SimulationEngine): void {
     engine.controls.saveState();
     engine.controls.reset();
 
-    engine.camera.position.set(0, creatureCenterY, 137.42);
+    engine.camera.position.set(0, creatureCenterY, camZ);
     engine.controls.target.set(0, creatureCenterY, 0);
     engine.controls.update();
 

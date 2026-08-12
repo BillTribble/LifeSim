@@ -118,6 +118,9 @@ export interface SimulationViewProps {
   stemCurviness?: number;
   veinStrength?: number;
   veinGlow?: number;
+  designerMode?: boolean;
+  designerArchetype?: any;
+  onDesignerStrainName?: (name: string) => void;
   [key: string]: any;
 }
 
@@ -141,6 +144,8 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
   ];
 
   const methodMap: Record<string, string> = {
+    designerMode: "setDesignerMode",
+    designerArchetype: "setDesignerArchetype",
     rotationSpeed: "setRotationSpeed",
     rotationSpeedY: "setRotationSpeedY",
     magnetism: "setMagnetism",
@@ -208,6 +213,10 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     branchGrowthBoost: "setBranchGrowthBoost",
     colorMutationShift: "setColorMutationShift",
     treeBranching: "setTreeBranching",
+    treeBranchDelay: "setTreeBranchDelay",
+    bushTaper: "setBushTaper",
+    treeTaper: "setTreeTaper",
+    rhizomeTaper: "setRhizomeTaper",
     snakeBranching: "setSnakeBranching",
     rhizomeBranching: "setRhizomeBranching",
     bushMinBranches: "setBushMinBranches",
@@ -318,6 +327,7 @@ export function SimulationView(props: SimulationViewProps) {
     if (onFeelerEvent) engine.onFeelerEvent = onFeelerEvent;
     if (onKioskTrigger) engine.onKioskTrigger = onKioskTrigger;
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
+    if (props.onDesignerStrainName) engine.onDesignerStrainName = props.onDesignerStrainName;
     if (onConfigChange) {
       engine.onConfigChange = onConfigChange;
       onConfigChange({ bgColor: engine.bgColor });

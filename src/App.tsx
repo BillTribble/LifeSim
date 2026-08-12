@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
+import { ArchetypeDesigner } from "./components/ArchetypeDesigner";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
 import { triggerRandomize } from "./utils/randomize";
 import { ActivityLog, LogEntry } from "./components/ActivityLog";
 import { generateSessionCode } from "./utils/sessionCode";
+import { Archetype } from "./lib/SimulationTypes";
 
 export default function App() {
+  const [mode, setMode] = useState<"simulation" | "designer">("simulation");
+  const [designerArchetype, setDesignerArchetype] = useState<Archetype>("bush");
+  const [designerStrainName, setDesignerStrainName] = useState<string>("");
   const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
   const [sessionCode, setSessionCode] = useState(() => generateSessionCode());
@@ -290,6 +295,10 @@ export default function App() {
         branchGrowthBoost={state.branchGrowthBoost}
         colorMutationShift={state.colorMutationShift}
         treeBranching={state.treeBranching}
+        treeBranchDelay={state.treeBranchDelay}
+        bushTaper={state.bushTaper}
+        treeTaper={state.treeTaper}
+        rhizomeTaper={state.rhizomeTaper}
         snakeBranching={state.snakeBranching}
         rhizomeBranching={state.rhizomeBranching}
         bushMinBranches={state.bushMinBranches}
@@ -321,23 +330,44 @@ export default function App() {
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
         onFeelerEvent={handleFeelerEvent}
+        designerMode={mode === "designer"}
+        designerArchetype={designerArchetype}
+        onDesignerStrainName={setDesignerStrainName}
       />
 
-      <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
+      {mode === "simulation" && (
+        <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
+      )}
 
-      <HUD
-        showHUD={showHUD}
-        setShowHUD={setShowHUD}
-        stats={stats}
-        state={state}
-        setters={setters}
-        handleRestart={handleRestart}
-        setRandomizeKey={setRandomizeKey}
-        handleCopySettings={handleCopySettings}
-        copied={copied}
-        uptime={uptime}
-        sessionCode={sessionCode}
-      />
+      {mode === "simulation" ? (
+        <HUD
+          showHUD={showHUD}
+          setShowHUD={setShowHUD}
+          stats={stats}
+          state={state}
+          setters={setters}
+          handleRestart={handleRestart}
+          setRandomizeKey={setRandomizeKey}
+          handleCopySettings={handleCopySettings}
+          copied={copied}
+          uptime={uptime}
+          sessionCode={sessionCode}
+          onOpenDesigner={() => setMode("designer")}
+        />
+      ) : (
+        <ArchetypeDesigner
+          currentArchetype={designerArchetype}
+          onSelectArchetype={(arch) => {
+            setDesignerArchetype(arch);
+            handleRestart();
+          }}
+          strainName={designerStrainName}
+          state={state}
+          setters={setters}
+          handleRestart={handleRestart}
+          onCloseDesigner={() => setMode("simulation")}
+        />
+      )}
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

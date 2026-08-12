@@ -31,6 +31,10 @@ export function useSimulationState() {
   const [branchGrowthBoost, setBranchGrowthBoost] = useState(() => getStoredFloat("branchGrowthBoost"));
   const [colorMutationShift, setColorMutationShift] = useState(() => getStoredFloat("colorMutationShift"));
   const [treeBranching, setTreeBranching] = useState(() => getStoredFloat("treeBranching"));
+  const [treeBranchDelay, setTreeBranchDelay] = useState(() => getStoredFloat("treeBranchDelay", 60));
+  const [bushTaper, setBushTaper] = useState(() => getStoredFloat("bushTaper", 1.0));
+  const [treeTaper, setTreeTaper] = useState(() => getStoredFloat("treeTaper", 1.0));
+  const [rhizomeTaper, setRhizomeTaper] = useState(() => getStoredFloat("rhizomeTaper", 1.0));
   const [snakeBranching, setSnakeBranching] = useState(() => getStoredFloat("snakeBranching"));
   const [rhizomeBranching, setRhizomeBranching] = useState(() => getStoredFloat("rhizomeBranching"));
   const [bushMinBranches, setBushMinBranches] = useState(() => getStoredFloat("bushMinBranches"));
@@ -135,6 +139,10 @@ export function useSimulationState() {
     localStorage.setItem("rhizomeStepSize", rhizomeStepSize.toString());
     localStorage.setItem("bushBranching", bushBranching.toString());
     localStorage.setItem("treeBranching", treeBranching.toString());
+    localStorage.setItem("treeBranchDelay", treeBranchDelay.toString());
+    localStorage.setItem("bushTaper", bushTaper.toString());
+    localStorage.setItem("treeTaper", treeTaper.toString());
+    localStorage.setItem("rhizomeTaper", rhizomeTaper.toString());
     localStorage.setItem("snakeBranching", snakeBranching.toString());
     localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
     localStorage.setItem("bushMinBranches", bushMinBranches.toString());
@@ -317,6 +325,10 @@ export function useSimulationState() {
       branchGrowthBoost,
       colorMutationShift,
       treeBranching,
+      treeBranchDelay,
+      bushTaper,
+      treeTaper,
+      rhizomeTaper,
       snakeBranching,
       rhizomeBranching,
       bushMinBranches,
@@ -423,6 +435,10 @@ export function useSimulationState() {
       setBranchGrowthBoost,
       setColorMutationShift,
       setTreeBranching,
+      setTreeBranchDelay,
+      setBushTaper,
+      setTreeTaper,
+      setRhizomeTaper,
       setSnakeBranching,
       setRhizomeBranching,
       setSnakeWander,

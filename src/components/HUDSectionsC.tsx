@@ -246,6 +246,74 @@ Default: 1."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
+          keywords={["tree branch delay", "tree trunk height", "tree trunk length", "branch delay"]}
+          tooltip="TREE TRUNK DURATION / BRANCH DELAY
+How long the tree grows a straight vertical trunk before canopy branching begins.
+Low: Branches almost immediately near base.
+High: Grows a tall straight trunk before branching."
+          label="TREE_DELAY"
+          min={0}
+          max={300}
+          step={5}
+          value={state.treeBranchDelay ?? 60}
+          onChange={setters.setTreeBranchDelay}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["bush taper", "bush twig length", "bush tapering"]}
+          tooltip="BUSH TAPERING & TWIG LENGTH
+Controls how quickly bush twigs taper and terminate.
+High: Shorter twigs, faster tapering.
+Low: Long, sprawling whispy twigs."
+          label="BUSH_TAPER"
+          min={0.1}
+          max={10.0}
+          step={0.1}
+          value={state.bushTaper ?? 1.0}
+          onChange={setters.setBushTaper}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["tree taper", "tree twig length", "tree canopy tapering"]}
+          tooltip="TREE TAPERING & TWIG LENGTH
+Controls how quickly tree canopy twigs taper and terminate.
+High: Compact woody canopy, shorter twigs.
+Low: Long whispy tendrils extending far out."
+          label="TREE_TAPER"
+          min={0.1}
+          max={10.0}
+          step={0.1}
+          value={state.treeTaper ?? 1.0}
+          onChange={setters.setTreeTaper}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["rhizome taper", "root runner length", "rhizome tapering"]}
+          tooltip="RHIZOME TAPERING & TWIG LENGTH
+Controls how quickly rhizome runners taper and terminate.
+High: Compact root clusters, shorter runners.
+Low: Expansive long trailing roots."
+          label="RHIZ_TAPER"
+          min={0.1}
+          max={10.0}
+          step={0.1}
+          value={state.rhizomeTaper ?? 1.0}
+          onChange={setters.setRhizomeTaper}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
           keywords={["snake minimum branches", "snake branch floor", "snake survival"]}
           tooltip="SNAKE MIN BRANCHES
 Minimum active agents kept alive for snake species before any can terminate.

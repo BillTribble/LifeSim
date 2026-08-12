@@ -14,6 +14,7 @@ import {
   Tv,
   RotateCcw,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
@@ -46,6 +47,7 @@ interface HUDProps {
   copied: boolean;
   uptime: number;
   sessionCode?: string;
+  onOpenDesigner?: () => void;
 }
 
 export function HUD({
@@ -60,6 +62,7 @@ export function HUD({
   copied,
   uptime,
   sessionCode,
+  onOpenDesigner,
 }: HUDProps) {
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
@@ -133,11 +136,11 @@ export function HUD({
         className={`absolute inset-0 z-40 pointer-events-none flex flex-col p-2 sm:p-4 m-1 sm:m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
       >
         <header className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 mb-2 sm:mb-6 text-[10px] font-mono pb-2 pointer-events-none z-20 w-full">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 pointer-events-none">
+          <div className="flex items-center gap-2 sm:gap-3 pointer-events-none flex-wrap sm:flex-nowrap">
             {/* Top-Left Persistent Buttons */}
             <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
               <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-cyan-500/50 px-2 py-0.5 sm:py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
+                className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-cyan-500/50 px-2.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
                 onClick={handleRestart}
                 title="Restart ecosystem"
               >
@@ -146,7 +149,7 @@ export function HUD({
               </div>
 
               <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-purple-500/50 px-2 py-0.5 sm:py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
+                className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-purple-500/50 px-2.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
                 onClick={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
                 title="Randomize all simulation settings and theme"
               >
@@ -155,10 +158,10 @@ export function HUD({
               </div>
             </div>
 
-            <div className={`flex flex-wrap items-center gap-2 sm:gap-3 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
+            <div className={`flex items-center gap-2 sm:gap-3 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
               <div className="relative shrink-0">
                 <div
-                  className={`flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2 py-1 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80" : "opacity-100"}`}
+                  className={`h-7 flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2.5 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80 hover:opacity-100" : "opacity-100"}`}
                   onClick={() => {
                     setThemePanelOpen(!themePanelOpen);
                     setCloudPanelOpen(false);
@@ -169,9 +172,9 @@ export function HUD({
                   }}
                   title="Theme Settings"
                 >
-                  <Palette className="w-3.5 h-3.5 text-pink-400" />
+                  <Palette className="w-3.5 h-3.5 text-pink-400 shrink-0" />
                   <span>{["NORMAL", "ALBINO", "COMPLEMENT", "DUOTONE"][state.theme] || "THEME"}</span>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-3 h-3 shrink-0" />
                 </div>
                 
                 {themePanelOpen && (
@@ -250,18 +253,18 @@ export function HUD({
               </div>
 
               <div
-                className="flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto opacity-80 shrink-0"
+                className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 hover:opacity-100 border border-[#D2B48C]/30 px-2.5 rounded bg-[#001220]/60 shadow-sm transition-all shrink-0 text-[#D2B48C]"
                 onClick={handleCopySettings}
                 title="Copy all settings to clipboard"
               >
                 <Database
-                  className={`w-3.5 h-3.5 ${copied ? "text-green-500" : "text-blue-400"}`}
+                  className={`w-3.5 h-3.5 shrink-0 ${copied ? "text-green-500" : "text-blue-400"}`}
                 />
                 <span>{copied ? "SETTINGS_COPIED" : "COPY_SETTINGS"}</span>
               </div>
 
               <div
-                className={`flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 border px-2 py-0.5 rounded transition-colors shrink-0 ${
+                className={`h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 hover:opacity-100 border px-2.5 rounded transition-colors shrink-0 ${
                   state.kioskMode
                     ? "bg-purple-500/20 border-purple-400 text-purple-300"
                     : "bg-[#001220]/60 border-[#D2B48C]/30 text-[#D2B48C]/60 hover:text-[#D2B48C]"
@@ -269,27 +272,28 @@ export function HUD({
                 onClick={() => setters.setKioskMode && setters.setKioskMode(!state.kioskMode)}
                 title="KIOSK MODE — Periodically fades out and randomizes the ecosystem"
               >
-                <Tv className={`w-3.5 h-3.5 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
+                <Tv className={`w-3.5 h-3.5 shrink-0 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
                 <span>KIOSK: {state.kioskMode ? "ON" : "OFF"}</span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
-              <div className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 border border-[#D2B48C]/50 px-1.5 sm:px-2 py-0.5 rounded bg-[#001220]/70 backdrop-blur-md shadow-sm opacity-90 hover:opacity-100 transition-opacity shrink-0"
+              <div className="h-7 pointer-events-auto flex items-center gap-1.5 border border-[#D2B48C]/50 px-2.5 rounded bg-[#001220]/70 backdrop-blur-md shadow-sm opacity-90 hover:opacity-100 transition-opacity shrink-0"
                 title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
               >
                 <span className="text-[9px] sm:text-[10px] font-mono text-[#D2B48C]">SLOW_MO</span>
-                <div className="scale-[0.65] origin-center -my-2 -mx-1 shrink-0">
+                <div className="scale-[0.6] origin-center -my-3 -mx-1 shrink-0 flex items-center justify-center">
                   <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
                 </div>
                 <span className="text-[9px] font-mono shrink-0" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-2 sm:gap-4 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto shrink-0">
-            <div className={`flex flex-wrap items-center gap-2 sm:gap-4 transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-auto flex" : "opacity-0 invisible pointer-events-none hidden w-0 overflow-hidden"}`}>
+
+          <div className="flex gap-2 sm:gap-3 text-right justify-end text-[9px] sm:text-[10px] items-center pointer-events-none ml-auto shrink-0">
+            {showHUD && (
               <div
-                className="flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2 py-0.5 rounded pointer-events-auto"
+                className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2.5 rounded pointer-events-auto bg-[#001220]/60 shadow-sm transition-colors text-[#D2B48C] shrink-0"
                 onClick={() => {
                   setPresetPanelOpen(!presetPanelOpen);
                   setMutationPanelOpen(false);
@@ -300,14 +304,24 @@ export function HUD({
                 }}
                 title="Presets"
               >
-                <Database className="w-3 h-3 text-[#D2B48C]" />
+                <Database className="w-3.5 h-3.5 text-[#D2B48C] shrink-0" />
                 <span>PRESETS</span>
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3 shrink-0" />
               </div>
-            </div>
+            )}
 
+            {showHUD && onOpenDesigner && (
+              <button
+                onClick={onOpenDesigner}
+                className="h-7 flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 px-2.5 rounded text-emerald-300 hover:text-white pointer-events-auto backdrop-blur-md transition-all shadow-sm select-none shrink-0 font-mono font-bold"
+                title="Open Archetype Designer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="tracking-wider uppercase">DESIGNER</span>
+              </button>
+            )}
 
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-end relative shrink-0">
               <button
                 onClick={() => {
                   const nextHUD = !showHUD;
@@ -316,7 +330,7 @@ export function HUD({
                     setIsControlsExpanded(true);
                   }
                 }}
-                className="flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 py-1 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
+                className="h-7 flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
                 title="HUD Interface"
               >
                 <div className={`w-2 h-2 rounded-full transition-all duration-300 ${showHUD ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" : "bg-[#87CEEB]"}`} />
@@ -325,7 +339,7 @@ export function HUD({
                 </span>
               </button>
               {showHUD && (
-                <div className="text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none flex flex-col items-center">
+                <div className="absolute top-full right-0 text-[8px] font-mono text-[#87CEEB] tracking-widest mt-0.5 px-2 select-none flex flex-col items-end whitespace-nowrap">
                   <span>v{state.version || "0.3.1"}</span>
                   {sessionCode && (
                     <span className="text-[7px] text-[#D2B48C]/70 tracking-wider font-mono">

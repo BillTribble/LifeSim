@@ -15,6 +15,44 @@ const logPlugin = () => ({
         res.end('ok');
       });
     });
+
+    server.middlewares.use('/api/save-defaults', (req, res) => {
+      if (req.method !== 'POST') {
+        res.statusCode = 405;
+        res.end('Method Not Allowed');
+        return;
+      }
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const newSettings = JSON.parse(body);
+          const defaultsFilePath = path.resolve(__dirname, 'src/hooks/SimulationDefaults.ts');
+          let content = fs.readFileSync(defaultsFilePath, 'utf8');
+          const startStr = 'export const DEFAULTS: Record<string, any> = ';
+          const startIdx = content.indexOf(startStr);
+          const endStr = ';\n\nexport const DEFAULT_PALETTE';
+          const endIdx = content.indexOf(endStr);
+          if (startIdx !== -1 && endIdx !== -1) {
+            const currentDefaults = JSON.parse(content.slice(startIdx + startStr.length, endIdx));
+            const mergedDefaults = { ...currentDefaults, ...newSettings };
+            const defaultsStr = JSON.stringify(mergedDefaults, null, 2);
+            content = content.slice(0, startIdx + startStr.length) + defaultsStr + content.slice(endIdx);
+            fs.writeFileSync(defaultsFilePath, content, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true, message: 'Defaults successfully saved to SimulationDefaults.ts' }));
+            return;
+          }
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: false, error: 'Could not find DEFAULTS anchor in SimulationDefaults.ts' }));
+        } catch (err) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: false, error: String(err) }));
+        }
+      });
+    });
   }
 });
 

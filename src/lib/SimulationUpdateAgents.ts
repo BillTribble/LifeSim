@@ -61,15 +61,17 @@ export function processAgents(
   }
 
   // Emergency extinction recovery: If all organisms have died and no agents are active, re-seed founder species
-  const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
-  if (livingNonFeelerAgents === 0 && activeAgents.filter(a => a.active).length === 0 && engine.agents.length > 0) {
-    engine.onLog("🌱 Ecosystem extinct — spawning emergency founder species.");
-    engine.spawnNewSpecies();
-    engine.spawnNewSpecies();
+  if (!engine.designerMode) {
+    const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
+    if (livingNonFeelerAgents === 0 && activeAgents.filter(a => a.active).length === 0 && engine.agents.length > 0) {
+      engine.onLog("🌱 Ecosystem extinct — spawning emergency founder species.");
+      engine.spawnNewSpecies();
+      engine.spawnNewSpecies();
+    }
   }
 
   // Cap maximum species by tapering the oldest variant when capacity exceeded
-  if (canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxSpecies) {
+  if (!engine.designerMode && canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxSpecies) {
     let oldestGenomeName: string | null = null;
     let oldestAge = -Infinity;
     for (const a of activeAgents) {
@@ -175,8 +177,8 @@ export function processAgents(
         effectiveStepSize *= (engine.bushStepSize ?? 0.45);
         effectiveWanderIntensity *= 0.75;
       } else if (genome.archetype === "tree") {
-        // Tree: Short vertical trunk -> Prolific canopy branching into fine limbs and twigs
-        const trunkDurationTicks = 60 * Math.max(0.5, engine.timeScale);
+        // Tree: Vertical trunk -> Prolific canopy branching into fine limbs and twigs
+        const trunkDurationTicks = (engine.treeBranchDelay ?? 60) * Math.max(0.5, engine.timeScale);
         if (!agent.isCanopy && agent.age < trunkDurationTicks) {
           // Phase 1: Straight vertical trunk
           effectiveBifurcationRate *= 0.01 * (engine.treeBranching ?? 1.0);
@@ -474,16 +476,22 @@ export function processAgents(
         } else {
           // Natural progressive decay during active healthy growth
           let archDecay = 0.995;
+          const archTaper = arch === 'bush' ? (engine.bushTaper ?? 1.0) : arch === 'tree' ? (engine.treeTaper ?? 1.0) : (engine.rhizomeTaper ?? 1.0);
+
           if (arch === 'snake') {
             archDecay = 0.9999;
           } else if (arch === 'bush') {
-            archDecay = branchDepth === 0 ? 0.994 : (branchDepth === 1 ? 0.985 : 0.978);
+            const baseDecay = branchDepth === 0 ? 0.994 : (branchDepth === 1 ? 0.985 : 0.978);
+            archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           } else if (arch === 'tree') {
-            archDecay = agent.age < 50 && branchDepth === 0 ? 0.997 : (branchDepth === 0 ? 0.993 : (branchDepth === 1 ? 0.984 : 0.975));
+            const baseDecay = agent.age < (engine.treeBranchDelay ?? 60) && branchDepth === 0 ? 0.998 : (branchDepth === 0 ? 0.993 : (branchDepth === 1 ? 0.984 : 0.972));
+            archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           } else if (arch === 'rhizome') {
-            archDecay = branchDepth === 0 ? 0.995 : (branchDepth === 1 ? 0.980 : 0.970);
+            const baseDecay = branchDepth === 0 ? 0.995 : (branchDepth === 1 ? 0.980 : 0.970);
+            archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           }
 
+          archDecay = Math.max(0.90, Math.min(0.9999, archDecay));
           agent.thickness *= archDecay;
 
           if (!canTerminateBranch) {
@@ -494,9 +502,10 @@ export function processAgents(
             }
           } else if (arch !== 'snake') {
             // Natural tip termination check: ONLY allowed for surplus side branches above the minimum floor
-            const branchAgeLimit = branchDepth === 0 ? 400 : Math.max(60, 200 - branchDepth * 40);
-            const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.5);
-            if (agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= 0.22)) {
+            const branchAgeLimit = (branchDepth === 0 ? 400 : Math.max(60, 200 - branchDepth * 40)) / Math.max(0.2, archTaper);
+            const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.5) * archTaper;
+            const minTwigThreshold = 0.22 * Math.sqrt(Math.max(0.1, archTaper));
+            if (agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= minTwigThreshold)) {
               agent.tapering = true;
               agent.taperBudget = 0;
             }
@@ -738,15 +747,17 @@ export function processAgents(
         }
       }
 
-      handleBreedingAndFeelers(
-        agent,
-        i,
-        activeAgents,
-        newAgents,
-        bredThisFrame,
-        engine,
-        nonTaperingStrains,
-      );
+      if (!engine.designerMode) {
+        handleBreedingAndFeelers(
+          agent,
+          i,
+          activeAgents,
+          newAgents,
+          bredThisFrame,
+          engine,
+          nonTaperingStrains,
+        );
+      }
 
 
       // 4-STAGE LIFESPAN MODEL:

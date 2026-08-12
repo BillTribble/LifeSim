@@ -107,6 +107,10 @@ export class SimulationEngine {
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
 
+  designerMode: boolean = false;
+  designerArchetype: Archetype = "bush";
+  onDesignerStrainName?: (name: string) => void;
+
   rotationSpeed: number = 0.13;
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
@@ -249,6 +253,10 @@ export class SimulationEngine {
 
   bushBranching: number = 9.5;
   treeBranching: number = 1.8;
+  treeBranchDelay: number = 60;
+  bushTaper: number = 1.0;
+  treeTaper: number = 1.0;
+  rhizomeTaper: number = 1.0;
   snakeBranching: number = 1.0;
   rhizomeBranching: number = 2.5;
   bushMinBranches: number = 2;
@@ -501,6 +509,18 @@ export class SimulationEngine {
   setTreeBranching(val: number) {
     this.treeBranching = val;
   }
+  setTreeBranchDelay(val: number) {
+    this.treeBranchDelay = val;
+  }
+  setBushTaper(val: number) {
+    this.bushTaper = val;
+  }
+  setTreeTaper(val: number) {
+    this.treeTaper = val;
+  }
+  setRhizomeTaper(val: number) {
+    this.rhizomeTaper = val;
+  }
   setSnakeBranching(val: number) {
     this.snakeBranching = val;
   }
@@ -527,6 +547,22 @@ export class SimulationEngine {
   }
   setColorMutationShift(val: number) {
     this.colorMutationShift = val;
+  }
+
+  setDesignerMode(val: boolean) {
+    if (this.designerMode !== val) {
+      this.designerMode = val;
+      this.restart();
+    }
+  }
+
+  setDesignerArchetype(val: Archetype) {
+    if (this.designerArchetype !== val) {
+      this.designerArchetype = val;
+      if (this.designerMode) {
+        this.restart();
+      }
+    }
   }
 
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
