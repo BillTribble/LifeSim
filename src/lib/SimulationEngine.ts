@@ -95,11 +95,12 @@ export class SimulationEngine {
   onStateUpdate: (state: any) => void = () => {};
   onConfigChange?: (config: any) => void;
   onInitOrganisms?: (event: { alpha: Genome; beta: Genome }) => void;
-  onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number }) => void;
+  onMatingEvent?: (event: { parent1: Genome; parent2: Genome; child: Genome; count?: number; isFeeler?: boolean }) => void;
   onFeelerEvent?: (event: { parent: Genome; feeler: Genome; count?: number }) => void;
   matingCount: number = 0;
   totalHybridCount: number = 0;
   feelerCount: number = 0;
+  feelerProb: number = 0.455;
   nextAgentId: number = 1;
   strainFeelerCooldown: Map<string, number> = new Map();
   speciesLifecycleMap: Map<string, SpeciesLifecycleState> = new Map();
@@ -115,7 +116,7 @@ export class SimulationEngine {
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
   magnetism: number = 0.08708895046646814;
-  seekAmount: number = 0.0;
+  seekAmount: number = 0.38;
   proximity: number = 362.21842356693804;
   desperation: number = 6.900969569643401;
   despairAge: number = 1310.6350448360784;
@@ -471,6 +472,9 @@ export class SimulationEngine {
   }
   setFeelerFade(val: number) {
     this.feelerFade = val;
+  }
+  setFeelerProb(val: number) {
+    this.feelerProb = val;
   }
 
   setCullRate(val: number) {

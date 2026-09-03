@@ -31,11 +31,11 @@ export function createFeelerGenome(agent: Agent): any {
     archetype: "snake" as any,
     thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
     minThickness: 0.5,
-    stepSize: 0.8,
-    wanderIntensity: 0.75,
+    stepSize: 1.3,
+    wanderIntensity: 0.15,
     bifurcationRate: 0.0001,
     branchTendency: 0,
-    wavingAmplitude: 0.5,
+    wavingAmplitude: 0.15,
     wavingSpeed: 0.05,
     isGlowing: true,
     thicknessDecay: 0.9999,
@@ -114,20 +114,21 @@ export function updateFeelerSeeking(
     }
   }
   if (!agent.tapering) {
-    // Omniscient seeking: find nearest SEGMENT of any creature of a different strain
+    // Omniscient seeking: find nearest segment or live agent of any other strain (including feelers)
     const myStrainName = agent.realGenome
       ? agent.realGenome.name
       : agent.genome.name;
     let nearestPos: THREE.Vector3 | null = null;
     let minDSq = Infinity;
-    // Search all live segments for the closest point on any other organism
+
+    // 1. Search all live segments for the closest point on any other organism
     for (let sIdx = 0; sIdx < engine.segments.length; sIdx++) {
       const seg = engine.segments[sIdx];
       if (
         !seg ||
         seg.dyingStart ||
         seg.strainName === myStrainName ||
-        seg.strainName.startsWith("Feeler-")
+        (agent.realGenome && seg.strainName === agent.genome.name)
       )
         continue;
       const m = seg.matrix.elements;
@@ -143,11 +144,27 @@ export function updateFeelerSeeking(
         nearestPos = new THREE.Vector3(sx, sy, sz);
       }
     }
+
+    // 2. Search active agent heads of any other strain (especially other feelers!)
+    for (let aIdx = 0; aIdx < engine.agents.length; aIdx++) {
+      const other = engine.agents[aIdx];
+      if (!other.active || other === agent || other.tapering) continue;
+      const otherStrain = other.realGenome ? other.realGenome.name : other.genome.name;
+      if (otherStrain === myStrainName) continue;
+      const dSq = agent.position.distanceToSquared(other.position);
+      // Give bonus priority to active feelers so two feelers home directly towards each other!
+      const effectiveDSq = other.isFeeler ? dSq * 0.5 : dSq;
+      if (effectiveDSq < minDSq) {
+        minDSq = effectiveDSq;
+        nearestPos = other.position.clone();
+      }
+    }
+
     if (nearestPos) {
       const homingVector = new THREE.Vector3()
         .subVectors(nearestPos, agent.position)
         .normalize();
-      agent.direction.lerp(homingVector, 0.45).normalize();
+      agent.direction.lerp(homingVector, 0.7).normalize();
     }
   }
 }
@@ -194,50 +211,62 @@ export function handleBreedingAndFeelers(
   const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
   const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
 
+  const feelerProb = (engine as any).feelerProb ?? 0.45;
+  const lifecycle = (engine as any).speciesLifecycleMap?.get(evalGenome.name);
   if (
     !agent.isFeeler &&
     mCount < maxM &&
     !agent.tapering &&
     !hasActiveFeeler &&
-    (agent.age > 90 || strainAge > 180) &&
+    (agent.age > 8 || strainAge > 40) &&
     agent.cooldown <= 0
   ) {
-    const feelerChance = Math.min(
-      0.35,
-      (agent.age - 100) * 0.015 * engine.timeScale,
-    );
-    if (Math.random() < feelerChance) {
-      const feelerGenome = createFeelerGenome(agent);
+    if (lifecycle && !lifecycle.feelerAttempted) {
+      lifecycle.feelerAttempted = true;
+      if (Math.random() < feelerProb) {
+        const feelerGenome = createFeelerGenome(agent);
 
-      const spawnDir = agent.direction.clone();
-      newAgents.push({
-        position: agent.position.clone(),
-        lastPosition: agent.position.clone(),
-        direction: spawnDir,
-        genome: feelerGenome,
-        active: true,
-        age: 0,
-        thickness: feelerGenome.thicknessBase,
-        cooldown: 0,
-        isFeeler: true,
-        realGenome: agent.genome,
-        parentAgent: agent,
-      });
-      agent.cooldown = 45;
-      engine.onLog(
-        `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
-      );
+        const spawnDir = agent.direction.clone();
+        newAgents.push({
+          position: agent.position.clone(),
+          lastPosition: agent.position.clone(),
+          direction: spawnDir,
+          genome: feelerGenome,
+          active: true,
+          age: 0,
+          thickness: feelerGenome.thicknessBase,
+          cooldown: 0,
+          isFeeler: true,
+          realGenome: agent.genome,
+          parentAgent: agent,
+        });
+        agent.cooldown = 45;
+        if (engine.feelerCount < 3) {
+          engine.feelerCount++;
+          engine.lastFeelerWorldPos = agent.position.clone();
+          if (engine.onFeelerEvent) {
+            engine.onFeelerEvent({
+              parent: agent.genome,
+              feeler: feelerGenome,
+              count: engine.feelerCount,
+            });
+          }
+        }
+        engine.onLog(
+          `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
+        );
+      }
     }
   }
 
   const isFertile =
-    !agent.tapering &&
+    (!agent.tapering || (!agent.isFeeler && agent.thickness > 0.1 && mCount === 0)) &&
     mCount < maxM &&
     agent.cooldown <= 0 &&
     (agent.isFeeler ||
-      agent.age > 150 ||
+      agent.age > 8 ||
       evalGenome.stability < 0.5 ||
-      strainAge > 2000);
+      strainAge > 40);
   const canBreed =
     isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
@@ -263,16 +292,16 @@ export function handleBreedingAndFeelers(
         partner.matingCount ||
         0;
 
-      // Feelers can mate with any living non-tapering partner species
+      // Feelers can mate with any living partner species
       const partnerFertile =
-        !partner.tapering &&
+        (!partner.tapering || (!partner.isFeeler && partner.thickness > 0.1 && partnerMCount === 0)) &&
         (agent.isFeeler ||
           (partnerMCount < maxM &&
             partner.cooldown <= 0 &&
             (partner.isFeeler ||
-              partner.age > 100 ||
+              partner.age > 8 ||
               partnerEvalGenome.stability < 0.5 ||
-              partnerStrainAge > 1000)));
+              partnerStrainAge > 40)));
 
       if (
         !partnerFertile ||
@@ -284,21 +313,21 @@ export function handleBreedingAndFeelers(
         let distSq = agent.position.distanceToSquared(partner.position);
         let closestPos = partner.position.clone();
 
-        if (agent.isFeeler || partner.isFeeler) {
-          for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 2) {
-            const seg = engine.segments[sIdx];
-            if (
-              seg &&
-              !seg.dyingStart &&
-              seg.strainName === partnerEvalGenome.name
-            ) {
-              const m = seg.matrix.elements;
-              const segPos = new THREE.Vector3(m[12], m[13], m[14]);
-              const d = agent.position.distanceToSquared(segPos);
-              if (d < distSq) {
-                distSq = d;
-                closestPos = segPos;
-              }
+        for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 2) {
+          const seg = engine.segments[sIdx];
+          if (
+            seg &&
+            !seg.dyingStart &&
+            (seg.strainName === partnerEvalGenome.name ||
+              (partner.isFeeler && seg.strainName === partner.genome.name) ||
+              (seg.strainName.startsWith("Feeler-") && seg.strainName !== agent.genome.name))
+          ) {
+            const m = seg.matrix.elements;
+            const segPos = new THREE.Vector3(m[12], m[13], m[14]);
+            const d = agent.position.distanceToSquared(segPos);
+            if (d < distSq) {
+              distSq = d;
+              closestPos = segPos;
             }
           }
         }
@@ -338,6 +367,7 @@ export function handleBreedingAndFeelers(
       }
 
       if (
+        isDesperate &&
         !agent.isFeeler &&
         !hasActiveFeeler &&
         distSq < reach &&
@@ -390,7 +420,7 @@ export function handleBreedingAndFeelers(
       }
 
       // Require physical touching based on agent thicknesses to breed
-      const touchDist = Math.max(8.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 2.5 + 4.0);
+      const touchDist = Math.max(14.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 2.8 + 4.0);
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
@@ -604,6 +634,9 @@ export function handleBreedingAndFeelers(
             `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${host1Strain} × ${host2Strain} (Mating: ${host1Strain}=${mCount1}/${maxM}, ${host2Strain}=${mCount2}/${maxM})`,
           );
 
+          const isFeelerMating = !!(agent.isFeeler || nearestPartner.isFeeler);
+          (childGenome as any)._isFeelerMating = isFeelerMating;
+
           if (engine.matingCount < 3) {
             engine.matingCount++;
             engine.lastMatingWorldPos = midPoint.clone();
@@ -618,6 +651,7 @@ export function handleBreedingAndFeelers(
                     ? nearestPartner.realGenome
                     : nearestPartner.genome,
                 child: childGenome,
+                isFeeler: isFeelerMating,
               });
             }
           }

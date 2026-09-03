@@ -227,22 +227,26 @@ export function processAgents(
       let avoidanceForce = new THREE.Vector3();
       let avoidanceCount = 0;
 
+      let nearestTargetPos: THREE.Vector3 | null = null;
+      const myStrain = agent.realGenome?.name || agent.genome.name;
+
       for (let j = 0; j < activeAgents.length; j++) {
         const other = activeAgents[j];
         if (other === agent || other.isFeeler) continue;
 
+        const otherStrain = other.realGenome?.name || other.genome.name;
+        const isDifferentSpecies = otherStrain !== myStrain;
         const dSq = agent.position.distanceToSquared(other.position);
-        const isSame = other.genome.name === agent.genome.name;
-        const isSimilar = isSame || (other.genome.archetype === agent.genome.archetype && other.genome.movementType === agent.genome.movementType);
 
-        if (!isSimilar) {
+        if (isDifferentSpecies) {
           // Global seeking without detection radius limit: find nearest agent of different species
           if (dSq < nearestDistSq) {
             nearestDistSq = dSq;
             nearestTarget = other;
+            nearestTargetPos = other.position.clone();
           }
         } else {
-          // Gentle local separation between same/similar species to prevent overlapping
+          // Gentle local separation between same species to prevent overlapping
           if (dSq < 2500) {
             avoidanceForce.add(
               new THREE.Vector3().subVectors(agent.position, other.position).normalize()
@@ -252,42 +256,18 @@ export function processAgents(
         }
       }
 
-      if (nearestTarget) {
-        const dist = Math.sqrt(nearestDistSq);
-        if (dist < 150) {
-           // Symbiosis: Mutual spiraling when close
-           const forward = new THREE.Vector3().addVectors(agent.direction, nearestTarget.direction).normalize();
-           if (forward.lengthSq() < 0.001) forward.copy(agent.direction);
-           
-           const toUs = new THREE.Vector3().subVectors(agent.position, nearestTarget.position).normalize();
-           const tangent = new THREE.Vector3().crossVectors(forward, toUs).normalize();
-           if (tangent.lengthSq() < 0.001) tangent.set(0,1,0);
-           
-           const spiralDir = new THREE.Vector3().addVectors(forward, tangent.multiplyScalar(1.5)).normalize();
-           
-           // Pull them slightly closer if they drift too far within the 150 radius, push apart if too close
-           const spacing = 20;
-           if (dist > spacing) {
-              spiralDir.add(toUs.clone().multiplyScalar(-0.2)).normalize();
-           } else {
-              spiralDir.add(toUs.clone().multiplyScalar(0.2)).normalize();
-           }
-
-           agent.direction.lerp(spiralDir, 0.3).normalize();
-           
-           // Symbiosis Buffs
-           agent.thickness = Math.min(agent.thickness * 1.01, genome.thicknessBase * 1.5);
-           agent.age = Math.max(0, agent.age - 0.5); // Extend lifespan
-        } else {
-           // Smooth, responsive global homing towards partner organism
-           const toTarget = new THREE.Vector3()
-             .subVectors(nearestTarget.position, agent.position)
-             .normalize();
-           const seekStrength = Math.min(
-             1.0,
-             Math.max(0.08, (engine.magnetism || 0.08) * 3.5) + (engine.seekAmount || 0.0) * 0.65
-           );
-           agent.direction.lerp(toTarget, seekStrength).normalize();
+      // Check segments of different species so creatures steer toward the organism body
+      if (engine.segments.length > 0) {
+        for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 4) {
+          const seg = engine.segments[sIdx];
+          if (!seg || seg.dyingStart || seg.strainName === myStrain || seg.strainName.startsWith("Feeler-")) continue;
+          const m = seg.matrix.elements;
+          const segPos = new THREE.Vector3(m[12], m[13], m[14]);
+          const dSq = agent.position.distanceToSquared(segPos);
+          if (dSq < nearestDistSq) {
+            nearestDistSq = dSq;
+            nearestTargetPos = segPos;
+          }
         }
       }
 
@@ -302,65 +282,91 @@ export function processAgents(
 
       if (agent.isFeeler) {
         updateFeelerSeeking(agent, engine);
-      } else if (genome.movementType === "spiral") {
-        if (!agent.spiralAxis) {
-          // Determine a spiral axis perpendicular to the current direction
-          const up = new THREE.Vector3(0, 1, 0);
-          agent.spiralAxis = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
-          if (agent.spiralAxis.lengthSq() < 0.001) {
-            agent.spiralAxis.set(1, 0, 0);
-          }
-          // Tilt the axis forward slightly to ensure forward momentum
-          agent.spiralAxis.add(agent.direction.clone().multiplyScalar(0.2)).normalize();
-        }
-
-        // Apply a strong, constant rotation around the spiral axis
-        agent.direction.applyAxisAngle(agent.spiralAxis, 0.4);
-        
-        // Add a slight pull towards the general forward direction to avoid tightening into a flat circle
-        const forwardBias = agent.spiralAxis.clone().cross(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)).normalize();
-        agent.direction.add(forwardBias.multiplyScalar(0.05)).normalize();
-      } else if (genome.movementType === "orthogonal") {
-        if (Math.random() < effectiveWanderIntensity * 0.2) {
-           const up = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
-           const axis = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
-           if (axis.lengthSq() > 0.001) {
-             const angle = (Math.PI / 2) + (Math.random() - 0.5) * 0.4;
-             agent.direction.applyAxisAngle(axis, Math.random() < 0.5 ? angle : -angle);
-           }
-        }
-        // Still add a tiny bit of wiggle
-        agent.direction
-          .add(
-            new THREE.Vector3(
-              (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
-              (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
-              (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
-            ),
-          )
-          .normalize();
       } else {
-        agent.direction
-          .add(
-            new THREE.Vector3(
-              (Math.random() - 0.5) * effectiveWanderIntensity,
-              (Math.random() - 0.5) * effectiveWanderIntensity,
-              (Math.random() - 0.5) * effectiveWanderIntensity,
-            ),
-          )
-          .normalize();
-      }
+        if (genome.movementType === "spiral") {
+          // Helical corkscrew movement: advances forward while revolving smoothly around forward travel axis
+          if (!agent.spiralAxis) {
+            agent.spiralAxis = agent.direction.clone().normalize();
+          } else {
+            agent.spiralAxis.lerp(agent.direction, 0.08).normalize();
+          }
+          agent.direction.applyAxisAngle(agent.spiralAxis, 0.18);
+          agent.direction.lerp(agent.spiralAxis, 0.25).normalize();
+        } else if (genome.movementType === "orthogonal") {
+          if (Math.random() < effectiveWanderIntensity * 0.2) {
+             const up = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
+             const axis = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
+             if (axis.lengthSq() > 0.001) {
+               const angle = (Math.PI / 2) + (Math.random() - 0.5) * 0.4;
+               agent.direction.applyAxisAngle(axis, Math.random() < 0.5 ? angle : -angle);
+             }
+          }
+          // Still add a tiny bit of wiggle
+          agent.direction
+            .add(
+              new THREE.Vector3(
+                (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
+                (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
+                (Math.random() - 0.5) * effectiveWanderIntensity * 0.2,
+              ),
+            )
+            .normalize();
+        } else {
+          const seekDampen = 1.0 - Math.min(0.8, (engine.seekAmount || 0.0) * 0.85);
+          agent.direction
+            .add(
+              new THREE.Vector3(
+                (Math.random() - 0.5) * effectiveWanderIntensity * seekDampen,
+                (Math.random() - 0.5) * effectiveWanderIntensity * seekDampen,
+                (Math.random() - 0.5) * effectiveWanderIntensity * seekDampen,
+              ),
+            )
+            .normalize();
+        }
 
-      if (!agent.isFeeler && genome.wavingAmplitude > 0) {
-        const wave =
-          Math.sin(engine.time * genome.wavingSpeed + agent.age * 0.1) *
-          genome.wavingAmplitude;
-        const up = new THREE.Vector3(0, 1, 0);
-        const waveAxis = new THREE.Vector3()
-          .crossVectors(agent.direction, up)
-          .normalize();
-        if (waveAxis.lengthSq() > 0.001)
-          agent.direction.applyAxisAngle(waveAxis, wave);
+        if (genome.wavingAmplitude > 0) {
+          const wave =
+            Math.sin(engine.time * genome.wavingSpeed + agent.age * 0.1) *
+            genome.wavingAmplitude;
+          const up = new THREE.Vector3(0, 1, 0);
+          const waveAxis = new THREE.Vector3()
+            .crossVectors(agent.direction, up)
+            .normalize();
+          if (waveAxis.lengthSq() > 0.001)
+            agent.direction.applyAxisAngle(waveAxis, wave);
+        }
+
+        // Steer towards partner / Symbiosis spiraling (applied after movement pattern)
+        if (nearestTargetPos) {
+          const dist = Math.sqrt(nearestDistSq);
+          if (dist < 40 && nearestTarget && !nearestTarget.isFeeler) {
+            // Symbiosis: Mutual intertwining when in close proximity
+            const forward = new THREE.Vector3().addVectors(agent.direction, nearestTarget.direction).normalize();
+            if (forward.lengthSq() < 0.001) forward.copy(agent.direction);
+
+            const toTarget = new THREE.Vector3().subVectors(nearestTargetPos, agent.position).normalize();
+            const tangent = new THREE.Vector3().crossVectors(forward, toTarget).normalize();
+            if (tangent.lengthSq() < 0.001) tangent.set(0, 1, 0);
+
+            const spiralDir = new THREE.Vector3()
+              .addVectors(forward.multiplyScalar(0.3), tangent.multiplyScalar(0.5))
+              .add(toTarget.multiplyScalar(0.9))
+              .normalize();
+
+            agent.direction.lerp(spiralDir, 0.45).normalize();
+            agent.thickness = Math.min(agent.thickness * 1.01, genome.thicknessBase * 1.5);
+          } else {
+            // Smooth, responsive global homing towards partner organism
+            const toTarget = new THREE.Vector3()
+              .subVectors(nearestTargetPos, agent.position)
+              .normalize();
+            const seekStrength = Math.min(
+              1.0,
+              Math.max(0.15, (engine.magnetism || 0.08) * 3.5) + (engine.seekAmount || 0.0) * 0.75
+            );
+            agent.direction.lerp(toTarget, seekStrength).normalize();
+          }
+        }
       }
 
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
@@ -732,7 +738,7 @@ export function processAgents(
           isCanopy: agent.isCanopy,
           thickness: childThickness,
           targetThickness: childThickness,
-          cooldown: 300,
+          cooldown: 0,
           id: engine.nextAgentId++,
           parentAgent: agent,
           parentId: agent.id,
@@ -783,10 +789,9 @@ export function processAgents(
         }
       }
 
-      // If the whole species is in dyingStrains, or if this is a feeler whose host parent died, taper out
+      // If the whole species is in dyingStrains, taper out
       const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
-      const isOrphanedFeeler = agent.isFeeler && agent.parentAgent && (agent.parentAgent.tapering || !agent.parentAgent.active);
-      if ((isStrainDying || isOrphanedFeeler) && !agent.tapering) {
+      if (isStrainDying && !agent.tapering) {
         agent.tapering = true;
         agent.forceTapering = true;
         agent.fadeAge = 0;

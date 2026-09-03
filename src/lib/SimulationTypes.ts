@@ -107,6 +107,7 @@ export interface Agent {
   id?: number;
   parentId?: number;
   branchDepth?: number;
+  hasFeelerAttempted?: boolean;
 }
 
 export interface Segment {
@@ -133,6 +134,7 @@ export interface SpeciesLifecycleState {
   createdAt: number;
   hasBred: boolean;
   matingCount: number;
+  feelerAttempted?: boolean;
   deathStartTick?: number;
   reason?: string;
 }
