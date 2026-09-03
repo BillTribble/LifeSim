@@ -169,8 +169,13 @@ export class SimulationEngine {
 
   hybridSize: number = 2.0;
 
-  maxDOMs: number = 341000;
-  lastMaxDOMs: number = 341000;
+  pruningStrength: number = 0.8;
+  maxBranchDepth: number = 4;
+  maxBranchesPerSpecies: number = 24;
+
+  maxDOMs: number = 32000;
+  lastMaxDOMs: number = 32000;
+  freeStemIndices: number[] = [];
   minAgents: number = 6;
   boundarySize: number = 120;
   boundarySquash: number = 1.0;
@@ -549,6 +554,15 @@ export class SimulationEngine {
   setBranchGrowthBoost(val: number) {
     this.branchGrowthBoost = val;
   }
+  setPruningStrength(val: number) {
+    this.pruningStrength = val;
+  }
+  setMaxBranchDepth(val: number) {
+    this.maxBranchDepth = val;
+  }
+  setMaxBranchesPerSpecies(val: number) {
+    this.maxBranchesPerSpecies = val;
+  }
   setColorMutationShift(val: number) {
     this.colorMutationShift = val;
   }
@@ -721,14 +735,15 @@ export class SimulationEngine {
   markAgentSegmentsDying(agentId?: number) {
     if (agentId === undefined) return;
     const now = this.unscaledTime;
-    for (let i = 0; i < this.maxDOMs; i++) {
+    const limit = Math.min(this.pointCount, this.maxDOMs);
+    for (let i = 0; i < limit; i++) {
       const seg = this.segments[i];
       if (seg && seg.agentId === agentId && !seg.dyingStart) {
         this.markDying(this.segments, this.dyingStems, i, now);
       }
     }
     for (const app of this.appendages.values()) {
-      const lim = Math.floor(this.maxDOMs / 4);
+      const lim = Math.min(app.count, Math.floor(this.maxDOMs / 4));
       for (let i = 0; i < lim; i++) {
         const seg = app.segments[i];
         if (seg && seg.agentId === agentId && !seg.dyingStart) {
@@ -746,14 +761,15 @@ export class SimulationEngine {
     const liveAgents = this.agents.filter(a => a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName).length;
     this.onLog(`🔻 markStrainSegmentsDying(${strainName}) — active living agents: ${liveAgents}`);
 
-    for (let i = 0; i < this.maxDOMs; i++) {
+    const limit = Math.min(this.pointCount, this.maxDOMs);
+    for (let i = 0; i < limit; i++) {
       const seg = this.segments[i];
       if (seg && seg.strainName === strainName && !seg.dyingStart) {
         this.markDying(this.segments, this.dyingStems, i, now);
       }
     }
     for (const app of this.appendages.values()) {
-      const lim = Math.floor(this.maxDOMs / 4);
+      const lim = Math.min(app.count, Math.floor(this.maxDOMs / 4));
       for (let i = 0; i < lim; i++) {
         const seg = app.segments[i];
         if (seg && seg.strainName === strainName && !seg.dyingStart) {

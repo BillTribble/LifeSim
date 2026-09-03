@@ -5,7 +5,8 @@ export function performBiomassSweep(engine: SimulationEngine): void {
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
     // All-at-once whole-organism decay: Mark all stem and appendage segments of dying strains with the exact same timestamp
     const now = engine.unscaledTime;
-    for (let i = 0; i < engine.maxDOMs; i++) {
+    const stemLimit = Math.min(engine.pointCount, engine.maxDOMs);
+    for (let i = 0; i < stemLimit; i++) {
       const seg = engine.segments[i];
       if (seg && !engine.dyingStems.has(i) && engine.dyingStrains.has(seg.strainName)) {
         engine.markDying(engine.segments, engine.dyingStems, i, now);
@@ -13,7 +14,7 @@ export function performBiomassSweep(engine: SimulationEngine): void {
     }
 
     for (const app of engine.appendages.values()) {
-      const appLim = Math.floor(engine.maxDOMs / 4);
+      const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
       for (let i = 0; i < appLim; i++) {
         const seg = app.segments[i];
         if (seg && !app.dyingSet.has(i) && engine.dyingStrains.has(seg.strainName)) {
@@ -37,7 +38,8 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
 
         if (isDying) {
           const now = engine.unscaledTime;
-          for (let i = 0; i < engine.maxDOMs; i++) {
+          const stemLimit = Math.min(engine.pointCount, engine.maxDOMs);
+          for (let i = 0; i < stemLimit; i++) {
             const seg = engine.segments[i];
             if (seg && seg.strainName === strainName) {
               if (!seg.dyingStart) engine.markDying(engine.segments, engine.dyingStems, i, now);
@@ -45,7 +47,7 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           }
           
           for (const app of engine.appendages.values()) {
-            const lim = Math.floor(engine.maxDOMs / 4);
+            const lim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
             for (let i = 0; i < lim; i++) {
               const seg = app.segments[i];
               if (seg && seg.strainName === strainName) {

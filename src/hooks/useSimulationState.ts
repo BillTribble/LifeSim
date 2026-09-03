@@ -82,6 +82,9 @@ export function useSimulationState() {
   const [branchingMultiplier, setBranchingMultiplier] = useState(() => getStoredFloat("branchingMultiplier"));
   const [branchBigger, setBranchBigger] = useState(() => getStoredFloat("branchBigger"));
   const [branchSplitSizeProb, setBranchSplitSizeProb] = useState(() => getStoredFloat("branchSplitSizeProb"));
+  const [pruningStrength, setPruningStrength] = useState(() => getStoredFloat("pruningStrength", DEFAULTS.pruningStrength));
+  const [maxBranchDepth, setMaxBranchDepth] = useState(() => getStoredFloat("maxBranchDepth", DEFAULTS.maxBranchDepth));
+  const [maxBranchesPerSpecies, setMaxBranchesPerSpecies] = useState(() => getStoredFloat("maxBranchesPerSpecies", DEFAULTS.maxBranchesPerSpecies));
   const [maxDOMs, setMaxDOMs] = useState(() => getStoredFloat("maxDOMs"));
   const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents"));
   const [maxSpecies, setMaxSpecies] = useState(() => getStoredFloat("maxSpecies"));
@@ -185,6 +188,9 @@ export function useSimulationState() {
     localStorage.setItem("branchingMultiplier", branchingMultiplier.toString());
     localStorage.setItem("branchBigger", branchBigger.toString());
     localStorage.setItem("branchSplitSizeProb", branchSplitSizeProb.toString());
+    localStorage.setItem("pruningStrength", pruningStrength.toString());
+    localStorage.setItem("maxBranchDepth", maxBranchDepth.toString());
+    localStorage.setItem("maxBranchesPerSpecies", maxBranchesPerSpecies.toString());
     localStorage.setItem("maxDOMs", maxDOMs.toString());
     localStorage.setItem("maxAgents", maxAgents.toString());
     localStorage.setItem("maxSpecies", maxSpecies.toString());
@@ -260,6 +266,9 @@ export function useSimulationState() {
     branchingMultiplier,
     branchBigger,
     branchSplitSizeProb,
+    pruningStrength,
+    maxBranchDepth,
+    maxBranchesPerSpecies,
     maxDOMs,
     maxAgents,
     maxSpecies,
@@ -367,6 +376,9 @@ export function useSimulationState() {
       branchingMultiplier,
       branchBigger,
       branchSplitSizeProb,
+      pruningStrength,
+      maxBranchDepth,
+      maxBranchesPerSpecies,
       maxDOMs,
       maxAgents,
       maxSpecies,
@@ -475,6 +487,9 @@ export function useSimulationState() {
       setBranchingMultiplier,
       setBranchBigger,
       setBranchSplitSizeProb,
+      setPruningStrength,
+      setMaxBranchDepth,
+      setMaxBranchesPerSpecies,
       setBushMinBranches,
       setRhizomeMinBranches,
       setTreeMinBranches,
@@ -607,6 +622,9 @@ export function useSimulationState() {
         setBranchingMultiplier(DEFAULTS.branchingMultiplier);
         setBranchBigger(DEFAULTS.branchBigger);
         setBranchSplitSizeProb(DEFAULTS.branchSplitSizeProb);
+        setPruningStrength(DEFAULTS.pruningStrength);
+        setMaxBranchDepth(DEFAULTS.maxBranchDepth);
+        setMaxBranchesPerSpecies(DEFAULTS.maxBranchesPerSpecies);
         setMaxDOMs(DEFAULTS.maxDOMs);
         setMaxAgents(DEFAULTS.maxAgents);
         setMaxSpecies(DEFAULTS.maxSpecies);

@@ -7,8 +7,9 @@ import {
   updateFeelerSeeking,
   handleBreedingAndFeelers,
 } from "./SimulationBreeding";
+import { getMaxBranchesForArchetype } from "./SimulationPruning";
 
-function extrudePointedTerminalCap(
+export function extrudePointedTerminalCap(
   engine: SimulationEngine,
   agent: Agent,
   genome: any,
@@ -467,12 +468,12 @@ export function processAgents(
 
         if (agent.tapering) {
           // TAPERING GRACE PERIOD:
-          // Smooth progressive reduction on each growth step until it reaches almost 0 (< 0.05)
+          // Smooth progressive reduction on each growth step down to 0 (< 0.05) or max 4 steps
           agent.taperBudget = (agent.taperBudget || 0) + 1;
-          const taperDecay = Math.max(0.80, 0.94 - agent.taperBudget * 0.004);
+          const taperDecay = Math.max(0.60, 0.82 - agent.taperBudget * 0.05);
           agent.thickness *= taperDecay;
 
-          if (agent.thickness <= 0.05) {
+          if (agent.thickness <= 0.05 || agent.taperBudget >= 4) {
             extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
             agent.active = false; // Branch tip has completed its full smooth taper down to 0!
             currentActiveCount--;
@@ -482,7 +483,8 @@ export function processAgents(
         } else {
           // Natural progressive decay during active healthy growth
           let archDecay = 0.995;
-          const archTaper = arch === 'bush' ? (engine.bushTaper ?? 1.0) : arch === 'tree' ? (engine.treeTaper ?? 1.0) : (engine.rhizomeTaper ?? 1.0);
+          const pruneTaperMult = 0.7 + (engine.pruningStrength !== undefined ? engine.pruningStrength : 0.8) * 0.4;
+          const archTaper = (arch === 'bush' ? (engine.bushTaper ?? 1.0) : arch === 'tree' ? (engine.treeTaper ?? 1.0) : (engine.rhizomeTaper ?? 1.0)) * pruneTaperMult;
 
           if (arch === 'snake') {
             archDecay = 0.9999;
@@ -508,10 +510,11 @@ export function processAgents(
             }
           } else if (arch !== 'snake') {
             // Natural tip termination check: ONLY allowed for surplus side branches above the minimum floor
-            const branchAgeLimit = (branchDepth === 0 ? 400 : Math.max(60, 200 - branchDepth * 40)) / Math.max(0.2, archTaper);
-            const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.5) * archTaper;
+            const maxDepth = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
+            const branchAgeLimit = (branchDepth === 0 ? 400 : Math.max(50, 180 - branchDepth * 35)) / Math.max(0.2, archTaper);
+            const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.6) * archTaper;
             const minTwigThreshold = 0.22 * Math.sqrt(Math.max(0.1, archTaper));
-            if (agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= minTwigThreshold)) {
+            if (branchDepth >= maxDepth || agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= minTwigThreshold)) {
               agent.tapering = true;
               agent.taperBudget = 0;
             }
@@ -664,9 +667,10 @@ export function processAgents(
       agent.lastPosition.copy(agent.position);
 
       const myStrainCount = strainCounts.get(agent.genome.name) || 1;
-      const maxForArchetype = genome.archetype === "bush" ? 250 : genome.archetype === "snake" ? (genome.singleton ? 1 : 2) : genome.archetype === "rhizome" ? 200 : genome.archetype === "tree" ? 250 : 50;
+      const maxForArchetype = getMaxBranchesForArchetype(engine, genome.archetype);
+      const maxDepthAllowed = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
 
-      const allowedToBranch = myStrainCount < maxForArchetype;
+      const allowedToBranch = myStrainCount < maxForArchetype && (agent.branchDepth || 0) < maxDepthAllowed;
 
       if (agent.branchCooldown && agent.branchCooldown > 0) {
         agent.branchCooldown--;
@@ -681,7 +685,8 @@ export function processAgents(
       const minInterval = Math.max(2, Math.floor(baseMinInterval / (1.0 + Math.log10(Math.max(1, brMult)))));
       const branchReady = (agent.branchCooldown || 0) <= 0 && agent.age >= minInterval;
 
-      const branchProb = effectiveBifurcationRate * liveBranchTendency * brMult * 0.01;
+      const pruneBifurcationMod = Math.max(0.2, 1.0 - ((engine.pruningStrength ?? 0.8) - 0.5) * 0.35);
+      const branchProb = effectiveBifurcationRate * liveBranchTendency * brMult * 0.01 * pruneBifurcationMod;
 
       if (
         allowedToBranch &&
@@ -799,23 +804,23 @@ export function processAgents(
       }
 
       if (agent.tapering) {
-        agent.fadeAge = (agent.fadeAge || 0) + 1;
-        if (agent.fadeAge < 180 && !agent.isFeeler) {
-          // Phase 1 (Ticks 0 to 180 / ~3s): Tapering to fine sculptural tips
-          agent.thickness = Math.max(0.1, agent.thickness * 0.96);
-        } else if (agent.fadeAge < 360 && !agent.isFeeler) {
-          // Phase 2 (Ticks 180 to 360 / ~3s): Pause in completed tapered form
-        } else {
-          const maxFade = agent.isFeeler ? 25 : 360;
-          if (agent.fadeAge >= maxFade) {
-            extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
-            agent.active = false;
-            currentActiveCount--;
-            const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
-            strainCounts.set(agent.genome.name, Math.max(0, newCount));
+        const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
+        if (isStrainDying) {
+          agent.fadeAge = (agent.fadeAge || 0) + 1;
+          if (agent.fadeAge < 180 && !agent.isFeeler) {
+            // Phase 1 (Ticks 0 to 180 / ~3s): Tapering to fine sculptural tips
+            agent.thickness = Math.max(0.1, agent.thickness * 0.96);
+          } else if (agent.fadeAge < 360 && !agent.isFeeler) {
+            // Phase 2 (Ticks 180 to 360 / ~3s): Pause in completed tapered form
+          } else {
+            const maxFade = agent.isFeeler ? 25 : 360;
+            if (agent.fadeAge >= maxFade) {
+              extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
+              agent.active = false;
+              currentActiveCount--;
+              const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+              strainCounts.set(agent.genome.name, Math.max(0, newCount));
 
-            const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(agent.genome.name);
-            if (isStrainDying) {
               if ((engine as any).markStrainSegmentsDying) {
                 (engine as any).markStrainSegmentsDying(agent.genome.name);
               }
@@ -838,23 +843,29 @@ export function processAgents(
               engine.onLog(
                 `💀 ${agent.genome.name} [${(agent.genome.archetype || 'bush').toUpperCase()}] completed lifecycle after ${lifespanSecs}s (bred: ${agent.hasBred ? 'YES' : 'NO'}, mated: ${agent.matingCount || 0}x)`
               );
-            } else {
-              // Individual branch or feeler finished its lifecycle while organism is still alive
-              if (agent.isFeeler) {
-                // Feelers dissolve cleanly
-                engine.markAgentSegmentsDying(agent.id);
-              }
-              // Deactivate only child sub-branches spawned by this specific branch tip
-              for (let j = 0; j < activeAgents.length; j++) {
-                const other = activeAgents[j];
-                const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
-                if (other.active && isDescendant) {
-                  extrudePointedTerminalCap(engine, other, other.genome, other.thickness);
-                  other.active = false;
-                  other.tapering = true;
-                  currentActiveCount--;
-                }
-              }
+            }
+          }
+        } else {
+          // Individual branch was marked tapering or pruned while organism remains healthy:
+          // Immediately cap with elegant sculpted micro-tip and deactivate
+          extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
+          agent.active = false;
+          currentActiveCount--;
+          const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
+          strainCounts.set(agent.genome.name, Math.max(0, newCount));
+
+          if (agent.isFeeler) {
+            engine.markAgentSegmentsDying(agent.id);
+          }
+          // Deactivate only child sub-branches spawned by this specific branch tip
+          for (let j = 0; j < activeAgents.length; j++) {
+            const other = activeAgents[j];
+            const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
+            if (other.active && isDescendant) {
+              extrudePointedTerminalCap(engine, other, other.genome, other.thickness);
+              other.active = false;
+              other.tapering = true;
+              currentActiveCount--;
             }
           }
         }

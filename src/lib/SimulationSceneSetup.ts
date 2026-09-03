@@ -378,6 +378,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.agents = [];
   engine.biomassMap.clear();
   engine.pointCount = 0;
+  engine.freeStemIndices = [];
   engine.segments = [];
   engine.hybridSegments = [];
   engine.hybridCount = 0;
@@ -885,11 +886,12 @@ export function emitStateUpdate(engine: SimulationEngine): void {
   }
 
   let totalActiveGeometries = 0;
-  for (let i = 0; i < engine.maxDOMs; i++) {
+  const stemLimit = Math.min(engine.pointCount, engine.maxDOMs);
+  for (let i = 0; i < stemLimit; i++) {
     if (engine.segments[i] && !engine.dyingStems.has(i)) totalActiveGeometries++;
   }
   for (const app of engine.appendages.values()) {
-    const lim = Math.floor(engine.maxDOMs / 4);
+    const lim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
     for (let i = 0; i < lim; i++) {
       if (app.segments[i] && !app.dyingSet.has(i)) totalActiveGeometries++;
     }

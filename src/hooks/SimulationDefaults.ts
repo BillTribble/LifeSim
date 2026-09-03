@@ -58,7 +58,10 @@ export const DEFAULTS: Record<string, any> = {
   "branchingMultiplier": 356.30927192860116,
   "branchBigger": 0.24980269411507472,
   "branchSplitSizeProb": 0.16170149119596655,
-  "maxDOMs": 341000,
+  "maxDOMs": 32000,
+  "pruningStrength": 0.8,
+  "maxBranchDepth": 4,
+  "maxBranchesPerSpecies": 24,
   "maxAgents": 41,
   "maxSpecies": 1,
   "ecoFade": 0.4045389184363477,
@@ -191,13 +194,16 @@ export const DEFAULT_PALETTE: string[] = [
   "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-08-07-v0.3.1";
+export const CURRENT_SCHEMA = "2026-09-03-v0.3.2";
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);
   if (stored !== null && stored !== "") {
     const val = parseFloat(stored);
-    if (!isNaN(val)) return val;
+    if (!isNaN(val)) {
+      if (key === "maxDOMs" && (val > 60000 || val === 341000)) return 32000;
+      return val;
+    }
   }
   return fallback !== undefined ? fallback : DEFAULTS[key];
 }

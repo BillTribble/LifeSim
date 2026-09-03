@@ -249,6 +249,9 @@ export default function App() {
         branchingMultiplier={state.branchingMultiplier}
         branchBigger={state.branchBigger}
         branchSplitSizeProb={state.branchSplitSizeProb}
+        pruningStrength={state.pruningStrength}
+        maxBranchDepth={state.maxBranchDepth}
+        maxBranchesPerSpecies={state.maxBranchesPerSpecies}
         maxDOMs={state.maxDOMs}
         maxAgents={state.maxAgents}
         maxSpecies={state.maxSpecies}

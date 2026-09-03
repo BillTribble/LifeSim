@@ -47,6 +47,9 @@ export interface SimulationViewProps {
   branchingMultiplier?: number;
   branchBigger?: number;
   branchSplitSizeProb?: number;
+  pruningStrength?: number;
+  maxBranchDepth?: number;
+  maxBranchesPerSpecies?: number;
   maxDOMs?: number;
   maxAgents?: number;
   maxSpecies?: number;
@@ -170,6 +173,9 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     hybridSpinSpeed: "setHybridSpinSpeed",
     branchTendencyVar: "setBranchTendencyVar",
     branchSplitSizeProb: "setBranchSplitSizeProb",
+    pruningStrength: "setPruningStrength",
+    maxBranchDepth: "setMaxBranchDepth",
+    maxBranchesPerSpecies: "setMaxBranchesPerSpecies",
     maxDOMs: "setMaxDOMs",
     maxAgents: "setMaxAgents",
     maxSpecies: "setMaxSpecies",

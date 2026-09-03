@@ -313,21 +313,32 @@ export function handleBreedingAndFeelers(
         let distSq = agent.position.distanceToSquared(partner.position);
         let closestPos = partner.position.clone();
 
-        for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 2) {
-          const seg = engine.segments[sIdx];
-          if (
-            seg &&
-            !seg.dyingStart &&
-            (seg.strainName === partnerEvalGenome.name ||
-              (partner.isFeeler && seg.strainName === partner.genome.name) ||
-              (seg.strainName.startsWith("Feeler-") && seg.strainName !== agent.genome.name))
-          ) {
-            const m = seg.matrix.elements;
-            const segPos = new THREE.Vector3(m[12], m[13], m[14]);
-            const d = agent.position.distanceToSquared(segPos);
-            if (d < distSq) {
-              distSq = d;
-              closestPos = segPos;
+        const totalSegs = engine.segments.length;
+        if (totalSegs > 0) {
+          const ax = agent.position.x;
+          const ay = agent.position.y;
+          const az = agent.position.z;
+          // Sample up to 250 segments adaptively to keep frame times under 1ms
+          const stride = Math.max(1, Math.floor(totalSegs / 250));
+
+          for (let sIdx = 0; sIdx < totalSegs; sIdx += stride) {
+            const seg = engine.segments[sIdx];
+            if (
+              seg &&
+              !seg.dyingStart &&
+              (seg.strainName === partnerEvalGenome.name ||
+                (partner.isFeeler && seg.strainName === partner.genome.name) ||
+                (seg.strainName.startsWith("Feeler-") && seg.strainName !== agent.genome.name))
+            ) {
+              const m = seg.matrix.elements;
+              const dx = ax - m[12];
+              const dy = ay - m[13];
+              const dz = az - m[14];
+              const d = dx * dx + dy * dy + dz * dz;
+              if (d < distSq) {
+                distSq = d;
+                closestPos.set(m[12], m[13], m[14]);
+              }
             }
           }
         }

@@ -2,12 +2,13 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome, Agent, MAX_POINTS } from "./SimulationTypes";
 import { mutateGenome, breedGenomes } from "./SimulationGenetics";
-import { processAgents } from "./SimulationUpdateAgents";
+import { processAgents, extrudePointedTerminalCap } from "./SimulationUpdateAgents";
 import {
   performBiomassSweep,
   performRatioCulling,
   performCapacityCulling,
 } from "./SimulationEcology";
+import { performBranchPruning } from "./SimulationPruning";
 
 export function updateSimulation(engine: SimulationEngine) {
   engine.time += engine.timeScale;
@@ -396,6 +397,7 @@ export function updateSimulation(engine: SimulationEngine) {
     )
   ) {
     const activeRange = Math.min(engine.pointCount, MAX_POINTS);
+    const scratchPulseColor = new THREE.Color();
     for (let i = Math.max(0, activeRange - 20000); i < activeRange; i++) {
       const seg = engine.segments[i];
       if (seg) {
@@ -411,8 +413,8 @@ export function updateSimulation(engine: SimulationEngine) {
               10.0,
           );
           const pulseEffect = 1.0 + Math.pow(Math.max(0, rawSin), 2.5) * 0.25;
-          const c = genome.color.clone().multiplyScalar(pulseEffect);
-          engine.cylinderMesh.setColorAt(i, c);
+          scratchPulseColor.copy(genome.color).multiplyScalar(pulseEffect);
+          engine.cylinderMesh.setColorAt(i, scratchPulseColor);
         }
       }
     }
@@ -714,8 +716,9 @@ export function updateSimulation(engine: SimulationEngine) {
               a1.genome.thicknessBase * 3.0,
             );
             a1.direction.add(a2.direction).normalize();
-            a2.tapering = true;
-            a2.forceTapering = true;
+            extrudePointedTerminalCap(engine, a2, a2.genome, a2.thickness);
+            a2.active = false;
+            a2.tapering = false;
             engine.onLog(`Branch Merge: ${a1.genome.name}`);
             break;
           }
@@ -723,6 +726,8 @@ export function updateSimulation(engine: SimulationEngine) {
       }
     }
   }
+
+  performBranchPruning(engine, activeAgents);
 
   processAgents(engine, activeAgents, newAgents, bredThisFrame);
   newAgents.forEach(a => {

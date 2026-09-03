@@ -11,7 +11,20 @@ export function updateMeshSegments(
   isAppendage = false,
   agentId?: number,
 ) {
-  const targetIndexStem = engine.pointCount % engine.maxDOMs;
+  // Protect the first 2,000 slots (base trunks & roots) from ever being overwritten
+  const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
+  let targetIndexStem: number;
+  if (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
+    // 1. First priority: Reuse slots freed by dissolved segments
+    targetIndexStem = engine.freeStemIndices.pop()!;
+  } else if (engine.pointCount < engine.maxDOMs) {
+    // 2. Normal sequential allocation while filling initial capacity
+    targetIndexStem = engine.pointCount;
+  } else {
+    // 3. Ring buffer wrap-around: wrap strictly within non-trunk slots (never overwrites base/trunk)
+    const recycleSpan = Math.max(1, engine.maxDOMs - trunkReserved);
+    targetIndexStem = trunkReserved + ((engine.pointCount - trunkReserved) % recycleSpan);
+  }
 
   if (isAppendage) {
     const appendageLimit = Math.floor(engine.maxDOMs / 4);
@@ -360,10 +373,13 @@ export function processDyingSegments(
       dyingSet.delete(idx);
       changed = true;
 
+      if (mesh === engine.cylinderMesh && engine.freeStemIndices) {
+        engine.freeStemIndices.push(idx);
+      }
+
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
         packAAttr.setZ(idx, 1.0);
-        packAAttr.needsUpdate = true;
       }
     } else {
       const dissolveProgress = Math.min(1.0, fadeAge / wipeDuration);
@@ -371,10 +387,13 @@ export function processDyingSegments(
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
         packAAttr.setZ(idx, dissolveProgress);
-        packAAttr.needsUpdate = true;
       }
       changed = true;
     }
   }
-  if (changed) mesh.instanceMatrix.needsUpdate = true;
+  if (changed) {
+    mesh.instanceMatrix.needsUpdate = true;
+    const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+    if (packAAttr) packAAttr.needsUpdate = true;
+  }
 }

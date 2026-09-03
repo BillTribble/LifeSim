@@ -7,6 +7,13 @@ export function BranchingSection({ searchQuery, state, setters }: HUDSectionProp
     !hasMatch(searchQuery, [
       "BRANCH_VAR",
       "BRANCHING",
+      "PRUNING",
+      "PRUNE",
+      "MAX_DEPTH",
+      "MAX_BRANCH",
+      "DEPTH",
+      "TRIM",
+      "SIMPLIFY",
       "BRANCH_SPD",
       "BUSH",
       "TREE",
@@ -73,6 +80,56 @@ Low: Linear, simple structures."
           step={0.1}
           value={state.branchingMultiplier}
           onChange={setters.setBranchingMultiplier}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["pruning", "branch pruning", "simplify patterns", "trim twigs", "abscission", "thinning"]}
+          tooltip="PRUNING STRENGTH
+Prunes crowded, excessive, or deep branches to simplify complex patterns and maintain 60 FPS on M1 Mac.
+High: Minimalist, clean structural limbs.
+Low: Dense, tangled thicket."
+          label="PRUNING"
+          min={0.0}
+          max={2.0}
+          step={0.05}
+          value={state.pruningStrength ?? 0.8}
+          onChange={setters.setPruningStrength}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["max branch depth", "branch hierarchy", "twig levels", "branch layers"]}
+          tooltip="MAX BRANCH DEPTH
+Hierarchy limit on recursive sub-branches (trunk -> limbs -> twigs).
+High: Deep fractal branching.
+Low: Clean, primary limbs."
+          label="MAX_DEPTH"
+          min={1}
+          max={8}
+          step={1}
+          value={state.maxBranchDepth ?? 4}
+          onChange={setters.setMaxBranchDepth}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["max branches per species", "branch cap", "limb limit", "branch quota"]}
+          tooltip="MAX BRANCHES
+Maximum active growing branches per organism before pruning takes over.
+Prevents performance drops on M1 Mac."
+          label="MAX_BRANCH"
+          min={3}
+          max={60}
+          step={1}
+          value={state.maxBranchesPerSpecies ?? 24}
+          onChange={setters.setMaxBranchesPerSpecies}
           color="#87CEEB"
         />
         <SmartDial
