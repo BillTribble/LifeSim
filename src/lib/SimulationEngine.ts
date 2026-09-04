@@ -101,6 +101,7 @@ export class SimulationEngine {
   totalHybridCount: number = 0;
   feelerCount: number = 0;
   feelerProb: number = 0.455;
+  feelerDelay: number = 6.0;
   nextAgentId: number = 1;
   strainFeelerCooldown: Map<string, number> = new Map();
   speciesLifecycleMap: Map<string, SpeciesLifecycleState> = new Map();
@@ -116,7 +117,7 @@ export class SimulationEngine {
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
   magnetism: number = 0.08708895046646814;
-  seekAmount: number = 0.38;
+  seekAmount: number = 0.65;
   proximity: number = 362.21842356693804;
   desperation: number = 6.900969569643401;
   despairAge: number = 1310.6350448360784;
@@ -480,6 +481,9 @@ export class SimulationEngine {
   }
   setFeelerProb(val: number) {
     this.feelerProb = val;
+  }
+  setFeelerDelay(val: number) {
+    this.feelerDelay = val;
   }
 
   setCullRate(val: number) {

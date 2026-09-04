@@ -283,6 +283,7 @@ export default function App() {
         cameraProjection={state.cameraProjection}
         showBoundaryBox={state.showBoundaryBox}
         feelerFade={state.feelerFade}
+        feelerDelay={state.feelerDelay}
         cullRate={state.cullRate}
         snakeSpeed={state.snakeSpeed}
         snakeStepSize={state.snakeStepSize}

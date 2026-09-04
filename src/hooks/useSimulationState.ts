@@ -124,6 +124,7 @@ export function useSimulationState() {
   const [maxSaturation, setMaxSaturation] = useState(() => getStoredFloat("maxSaturation"));
   const [colorClamp, setColorClamp] = useState(() => getStoredFloat("colorClamp", 0.75));
   const [feelerFade, setFeelerFade] = useState(() => getStoredFloat("feelerFade"));
+  const [feelerDelay, setFeelerDelay] = useState(() => getStoredFloat("feelerDelay", DEFAULTS.feelerDelay ?? 6.0));
   const [cullRate, setCullRate] = useState(() => getStoredFloat("cullRate"));
   const [glowTraitIntensity, setGlowTraitIntensity] = useState(() => getStoredFloat("glowTraitIntensity"));
   const [glowTraitDistance, setGlowTraitDistance] = useState(() => getStoredFloat("glowTraitDistance"));
@@ -231,6 +232,7 @@ export function useSimulationState() {
     localStorage.setItem("maxSaturation", maxSaturation.toString());
     localStorage.setItem("colorClamp", colorClamp.toString());
     localStorage.setItem("feelerFade", feelerFade.toString());
+    localStorage.setItem("feelerDelay", feelerDelay.toString());
     localStorage.setItem("cullRate", cullRate.toString());
     localStorage.setItem("glowTraitIntensity", glowTraitIntensity.toString());
     localStorage.setItem("glowTraitDistance", glowTraitDistance.toString());
@@ -308,6 +310,7 @@ export function useSimulationState() {
     sameColorAppProb,
     maxSaturation,
     feelerFade,
+    feelerDelay,
     cullRate,
     glowTraitIntensity,
     glowTraitDistance,
@@ -424,6 +427,7 @@ export function useSimulationState() {
       cameraProjection,
       showBoundaryBox,
       feelerFade,
+      feelerDelay,
       cullRate,
       glowTraitIntensity,
       glowTraitDistance,
@@ -547,6 +551,7 @@ export function useSimulationState() {
         localStorage.setItem("showBoundaryBox", val ? "true" : "false");
       },
       setFeelerFade,
+      setFeelerDelay,
       setCullRate,
       setGlowTraitIntensity,
       setGlowTraitDistance,
@@ -662,6 +667,7 @@ export function useSimulationState() {
         setMulticolorAppProb(DEFAULTS.multicolorAppProb);
         setSameColorAppProb(DEFAULTS.sameColorAppProb);
         setFeelerFade(DEFAULTS.feelerFade);
+        setFeelerDelay(DEFAULTS.feelerDelay);
         setCullRate(DEFAULTS.cullRate);
         setGlowTraitIntensity(DEFAULTS.glowTraitIntensity);
         setGlowTraitDistance(DEFAULTS.glowTraitDistance);

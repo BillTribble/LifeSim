@@ -78,6 +78,7 @@ export interface SimulationViewProps {
   cameraProjection?: number;
   showBoundaryBox?: boolean;
   feelerFade?: number;
+  feelerDelay?: number;
   cullRate?: number;
   snakeSpeed?: number;
   snakeStepSize?: number;
@@ -204,6 +205,7 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     cameraProjection: "setCameraProjection",
     showBoundaryBox: "setShowBoundaryBox",
     feelerFade: "setFeelerFade",
+    feelerDelay: "setFeelerDelay",
     cullRate: "setCullRate",
     snakeSpeed: "setSnakeSpeed",
     snakeStepSize: "setSnakeStepSize",

@@ -313,7 +313,7 @@ export function processAgents(
             )
             .normalize();
         } else {
-          const seekDampen = 1.0 - Math.min(0.8, (engine.seekAmount || 0.0) * 0.85);
+          const seekDampen = 1.0 - Math.min(0.85, (engine.seekAmount ?? 0.65) * 0.90);
           agent.direction
             .add(
               new THREE.Vector3(
@@ -361,9 +361,10 @@ export function processAgents(
             const toTarget = new THREE.Vector3()
               .subVectors(nearestTargetPos, agent.position)
               .normalize();
+            const baseSeek = Math.max(0.20, (engine.magnetism || 0.08) * 4.0);
             const seekStrength = Math.min(
               1.0,
-              Math.max(0.15, (engine.magnetism || 0.08) * 3.5) + (engine.seekAmount || 0.0) * 0.75
+              baseSeek + (engine.seekAmount ?? 0.65) * 0.85
             );
             agent.direction.lerp(toTarget, seekStrength).normalize();
           }

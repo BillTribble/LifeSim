@@ -76,7 +76,14 @@ Verified via 2,500-frame headless benchmark ([`scripts/test_framerate.ts`](file:
 | **Max Frame Spike** | 18.55 ms | **4.13 ms** | **4.5x Smoother** |
 | **Active Agents** | 123 (117 zombies) | **7 – 10 active** | **Stable & Controlled** |
 | **Frames > 25 ms** | 0 / 2500 | **0 / 2500** | **100% Steady** |
-| **Mating Rate** | 98% | **98.0% (avg 6.15s)** | **Fully Preserved** |
+| **Mating Rate** | 98% | **99.0% (avg 6.83s)** | **Fully Preserved** |
+
+### Mating Route & Sensory Feeler Suppression Test
+Verified via 100-run simulation trial ([`scripts/test_mating_rate.ts`](file:///Users/tribble/Sites/LifeSim/scripts/test_mating_rate.ts)):
+- **Overall Mating Success**: **99.0%** within 30 seconds (avg time to first mating: 6.83s).
+- **Direct Physical Body Contact**: **56.6%** of matings occur purely through physical body-to-body touch without any feelers.
+- **Sensory Feeler Timing**: **0 feelers deployed in the first 6.0 seconds**. Feelers only activate as a natural fallback mechanism for creatures that have not yet made contact after 6 seconds.
+- **Steering & Seeking**: Heightened `seekAmount` (`0.65`) dampens random wander noise when a mate is detected and steers branches together into an intimate spiral.
 
 ---
 
@@ -88,3 +95,5 @@ Available in the HUD and preset configuration:
 - **`MAX_DEPTH` (`maxBranchDepth`)**: Maximum allowed branch hierarchy depth before tips are capped. Ranges from `1` to `8`. Default: `4`.
 - **`MAX_BRANCH` (`maxBranchesPerSpecies`)**: Botanical branch budget per species. Ranges from `4` to `64`. Default: `24`.
 - **`MAX_DOMS` (`maxDOMs`)**: Maximum instanced mesh segment capacity. Default: `32,000` (optimized for M1 MacBook in Chrome).
+- **`FEELER_DELAY` (`feelerDelay`)**: Minimum delay in seconds before creatures can extend sensory feelers (Default: `6.0s` / 360 ticks). Allows creatures to grow toward each other and mate via direct physical body contact before feelers activate.
+- **`SEEK_AMT` (`seekAmount`)**: Precision and homing steering strength of creatures tracking other species (Default: `0.65`, increased from `0.38`). Dampens random wander noise and guides organism tips directly toward prospective mates.

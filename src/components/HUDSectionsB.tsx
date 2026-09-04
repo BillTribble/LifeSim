@@ -165,6 +165,8 @@ export function LifecycleSection({ searchQuery, state, setters }: HUDSectionProp
       "TERM_PROB",
       "FADE_SPEED",
       "FEELER_FADE",
+      "FEELER_DELAY",
+      "DELAY",
       "EXTRUSION",
       "SPEED",
       "WIDTH_SPD",
@@ -307,6 +309,22 @@ Low: Long, persistent feelers."
           step={1.0}
           value={state.feelerFade}
           onChange={setters.setFeelerFade}
+          color="#87CEEB"
+        />
+        <SmartDial
+          searchQuery={searchQuery}
+          state={state}
+          setters={setters}
+          keywords={["feeler delay", "sensory wait", "mating delay", "feeler timing"]}
+          tooltip="FEELER DELAY
+Minimum time in seconds before organisms can extend sensory feelers.
+Allows creatures to seek and mate naturally before deploying feelers."
+          label="FEELER_DELAY"
+          min={0.0}
+          max={20.0}
+          step={0.5}
+          value={state.feelerDelay}
+          onChange={setters.setFeelerDelay}
           color="#87CEEB"
         />
       </div>

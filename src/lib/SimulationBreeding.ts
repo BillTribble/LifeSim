@@ -54,8 +54,17 @@ export function trySpawnTaperingFeeler(
   newAgents: Agent[],
   engine: SimulationEngine,
 ): void {
-  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
   const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+  let strainAge = 0;
+  if (evalGenome.createdAt !== undefined) {
+    strainAge = engine.time - evalGenome.createdAt;
+  }
+  // Disabled during initial feeler delay period (6 seconds / 360 ticks)
+  if (agent.age < feelerDelayTicks || strainAge < feelerDelayTicks) {
+    return;
+  }
+  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
   const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
   if (mCount < maxM && !agent.isFeeler && !agent.tapering && agent.cooldown <= 0) {
     const hasActiveFeeler =
@@ -212,50 +221,48 @@ export function handleBreedingAndFeelers(
   const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
 
   const feelerProb = (engine as any).feelerProb ?? 0.45;
-  const lifecycle = (engine as any).speciesLifecycleMap?.get(evalGenome.name);
+  const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
+  const isPastDelay = strainAge >= feelerDelayTicks || agent.age >= feelerDelayTicks;
   if (
     !agent.isFeeler &&
     mCount < maxM &&
     !agent.tapering &&
     !hasActiveFeeler &&
-    (agent.age > 8 || strainAge > 40) &&
+    isPastDelay &&
     agent.cooldown <= 0
   ) {
-    if (lifecycle && !lifecycle.feelerAttempted) {
-      lifecycle.feelerAttempted = true;
-      if (Math.random() < feelerProb) {
-        const feelerGenome = createFeelerGenome(agent);
+    if (Math.random() < 0.04 * feelerProb * 2.0 * engine.timeScale) {
+      const feelerGenome = createFeelerGenome(agent);
 
-        const spawnDir = agent.direction.clone();
-        newAgents.push({
-          position: agent.position.clone(),
-          lastPosition: agent.position.clone(),
-          direction: spawnDir,
-          genome: feelerGenome,
-          active: true,
-          age: 0,
-          thickness: feelerGenome.thicknessBase,
-          cooldown: 0,
-          isFeeler: true,
-          realGenome: agent.genome,
-          parentAgent: agent,
-        });
-        agent.cooldown = 45;
-        if (engine.feelerCount < 3) {
-          engine.feelerCount++;
-          engine.lastFeelerWorldPos = agent.position.clone();
-          if (engine.onFeelerEvent) {
-            engine.onFeelerEvent({
-              parent: agent.genome,
-              feeler: feelerGenome,
-              count: engine.feelerCount,
-            });
-          }
+      const spawnDir = agent.direction.clone();
+      newAgents.push({
+        position: agent.position.clone(),
+        lastPosition: agent.position.clone(),
+        direction: spawnDir,
+        genome: feelerGenome,
+        active: true,
+        age: 0,
+        thickness: feelerGenome.thicknessBase,
+        cooldown: 0,
+        isFeeler: true,
+        realGenome: agent.genome,
+        parentAgent: agent,
+      });
+      agent.cooldown = 45;
+      if (engine.feelerCount < 3) {
+        engine.feelerCount++;
+        engine.lastFeelerWorldPos = agent.position.clone();
+        if (engine.onFeelerEvent) {
+          engine.onFeelerEvent({
+            parent: agent.genome,
+            feeler: feelerGenome,
+            count: engine.feelerCount,
+          });
         }
-        engine.onLog(
-          `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
-        );
       }
+      engine.onLog(
+        `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
+      );
     }
   }
 
@@ -369,18 +376,21 @@ export function handleBreedingAndFeelers(
         agent.direction.copy(towardsPartner);
       } else if (distSq < reach) {
         // Blend between standard creature steering and feeler-like direct copy based on engine.seekAmount
-        const feelerSimilarity = Math.max(0.0, Math.min(1.0, engine.seekAmount || 0.0));
-        const baseLerp = isDesperate ? 0.8 : 0.2;
-        const effectiveLerp = baseLerp + (1.0 - baseLerp) * feelerSimilarity;
+        const feelerSimilarity = Math.max(0.0, Math.min(1.0, engine.seekAmount ?? 0.65));
+        const baseLerp = isDesperate ? 0.85 : 0.40;
+        const effectiveLerp = Math.min(1.0, baseLerp + (1.0 - baseLerp) * feelerSimilarity);
         agent.direction
           .lerp(towardsPartner, effectiveLerp)
           .normalize();
       }
 
+      const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
       if (
         isDesperate &&
         !agent.isFeeler &&
         !hasActiveFeeler &&
+        agent.age >= feelerDelayTicks &&
+        strainAge >= feelerDelayTicks &&
         distSq < reach &&
         agent.cooldown <= 0 &&
         Math.random() < 0.2 * reachMultiplier * engine.timeScale
@@ -431,7 +441,7 @@ export function handleBreedingAndFeelers(
       }
 
       // Require physical touching based on agent thicknesses to breed
-      const touchDist = Math.max(14.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 2.8 + 4.0);
+      const touchDist = Math.max(16.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 3.2 + 5.0);
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
