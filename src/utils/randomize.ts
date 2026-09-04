@@ -37,12 +37,12 @@ export const triggerRandomize = (
   if (setters.setTermProbPostBranch) setters.setTermProbPostBranch(rRange(0.5, 10.0));
   if (setters.setPruningStrength) setters.setPruningStrength(rRange(0.3, 1.5));
   if (setters.setMaxBranchDepth) setters.setMaxBranchDepth(Math.floor(rRange(2, 6)));
-  if (setters.setMaxBranchesPerSpecies) setters.setMaxBranchesPerSpecies(Math.floor(rRange(8, 36)));
+  if (setters.setMaxBranchesPerSpecies) setters.setMaxBranchesPerSpecies(Math.floor(rRange(8, 64)));
 
   // Limits
-  if (setters.setMaxAgents) setters.setMaxAgents(Math.floor(rRange(1, 200)));
-  if (setters.setMaxSpecies) setters.setMaxSpecies(Math.floor(rRange(1, 20)));
-  if (setters.setMinAgents) setters.setMinAgents(Math.floor(rRange(2, 20)));
+  if (setters.setMaxAgents) setters.setMaxAgents(Math.floor(rRange(1, 667)));
+  if (setters.setMaxCreatures) setters.setMaxCreatures(Math.floor(rRange(1, 20)));
+  if (setters.setMinCreatures) setters.setMinCreatures(Math.floor(rRange(2, 20)));
   if (setters.setEcoFade) setters.setEcoFade(rRange(0.0, 1.0));
   if (setters.setTerminationProb) setters.setTerminationProb(rRange(0.0, 1.0));
   if (setters.setTaperDuration) setters.setTaperDuration(rRange(0.5, 3.0));

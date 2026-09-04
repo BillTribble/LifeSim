@@ -19,6 +19,7 @@ export function SystemSection({ searchQuery, state, setters }: HUDSectionProps) 
       "YAW",
       "PITCH",
       "MAX_DOMS",
+      "MIN_CREATURES",
       "MAX_AGENTS",
       "MIN_AGENTS",
       "MAX_SPECIES",
@@ -26,6 +27,7 @@ export function SystemSection({ searchQuery, state, setters }: HUDSectionProps) 
       "SQUASH",
       "ROTATION",
       "MEMORY",
+      "CREATURES",
       "ORGANISMS",
       "SPECIES",
       "BOUNDARY",
@@ -98,51 +100,34 @@ Low: Simpler visuals, faster performance."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
-          keywords={["branch limit", "active stems", "growth capacity"]}
-          tooltip="MAX ORGANISMS
-Upper limit for population.
-High: Crowded ecosystem.
-Low: Sparse ecosystem."
-          label="MAX_AGENTS"
-          min={1}
-          max={200}
-          step={1}
-          value={state.maxAgents}
-          onChange={setters.setMaxAgents}
-          color="#87CEEB"
-        />
-        <SmartDial
-          searchQuery={searchQuery}
-          state={state}
-          setters={setters}
-          keywords={["population floor", "minimum creatures", "extinction buffer"]}
-          tooltip="MIN ORGANISMS
+          keywords={["min creatures", "minimum creatures", "population floor", "extinction buffer", "min_creatures", "minimum_creatures", "min_agents", "minimum_agents"]}
+          tooltip="MIN CREATURES
 Lower limit for population.
 High: Ecosystem never dies out.
 Low: Ecosystem can become almost empty."
-          label="MIN_AGENTS"
+          label="MIN_CREATURES"
           min={2}
           max={20}
           step={1}
-          value={state.minAgents}
-          onChange={setters.setMinAgents}
+          value={state.minCreatures}
+          onChange={setters.setMinCreatures}
           color="#87CEEB"
         />
         <SmartDial
           searchQuery={searchQuery}
           state={state}
           setters={setters}
-          keywords={["species capacity", "biodiversity cap", "strain limit"]}
-          tooltip="MAX SPECIES
-Maximum active genetic strains.
-High: High biodiversity.
-Low: Monoculture."
-          label="MAX_SPECIES"
+          keywords={["max creatures", "max organisms", "population limit", "species capacity", "biodiversity cap", "strain limit", "max_species"]}
+          tooltip="MAX CREATURES
+Upper limit for distinct living organisms (genetic strains).
+High: Crowded, biodiverse ecosystem.
+Low: Sparse ecosystem, fewer strains."
+          label="MAX_CREATURES"
           min={1}
           max={20}
           step={1}
-          value={state.maxSpecies}
-          onChange={setters.setMaxSpecies}
+          value={state.maxCreatures}
+          onChange={setters.setMaxCreatures}
           color="#87CEEB"
         />
         <SmartDial

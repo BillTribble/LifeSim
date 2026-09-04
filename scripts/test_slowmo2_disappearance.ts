@@ -26,8 +26,8 @@ async function runDisappearanceTest(timeScale: number) {
   const engine = new SimulationEngine(canvas, 1920, 1080);
   engine.timeScale = timeScale;
   engine.growthSpeed = 1.0;
-  engine.maxSpecies = 16;
-  engine.minAgents = 10;
+  engine.maxCreatures = 16;
+  engine.minCreatures = 10;
   engine.maxAgents = 150;
 
   let invisibleBugTriggered = false;

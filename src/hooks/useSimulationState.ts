@@ -86,11 +86,11 @@ export function useSimulationState() {
   const [maxBranchDepth, setMaxBranchDepth] = useState(() => getStoredFloat("maxBranchDepth", DEFAULTS.maxBranchDepth));
   const [maxBranchesPerSpecies, setMaxBranchesPerSpecies] = useState(() => getStoredFloat("maxBranchesPerSpecies", DEFAULTS.maxBranchesPerSpecies));
   const [maxDOMs, setMaxDOMs] = useState(() => getStoredFloat("maxDOMs"));
-  const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents"));
-  const [maxSpecies, setMaxSpecies] = useState(() => getStoredFloat("maxSpecies"));
+  const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents", DEFAULTS.maxAgents));
+  const [maxCreatures, setMaxCreatures] = useState(() => getStoredFloat("maxCreatures", DEFAULTS.maxCreatures));
   const [ecoFade, setEcoFade] = useState(() => getStoredFloat("ecoFade"));
   const [desiccationSpeed, setDesiccationSpeed] = useState(() => getStoredFloat("desiccationSpeed"));
-  const [minAgents, setMinAgents] = useState(() => getStoredFloat("minAgents"));
+  const [minCreatures, setMinCreatures] = useState(() => getStoredFloat("minCreatures", DEFAULTS.minCreatures));
   const [boundarySize, setBoundarySize] = useState(() => getStoredFloat("boundarySize"));
   const [boundarySquash, setBoundarySquash] = useState(() => getStoredFloat("boundarySquash", 1.0));
   const [hybridSize, setHybridSize] = useState(() => getStoredFloat("hybridSize"));
@@ -194,9 +194,9 @@ export function useSimulationState() {
     localStorage.setItem("maxBranchesPerSpecies", maxBranchesPerSpecies.toString());
     localStorage.setItem("maxDOMs", maxDOMs.toString());
     localStorage.setItem("maxAgents", maxAgents.toString());
-    localStorage.setItem("maxSpecies", maxSpecies.toString());
+    localStorage.setItem("maxCreatures", maxCreatures.toString());
     localStorage.setItem("ecoFade", ecoFade.toString());
-    localStorage.setItem("minAgents", minAgents.toString());
+    localStorage.setItem("minCreatures", minCreatures.toString());
     localStorage.setItem("boundarySize", boundarySize.toString());
     localStorage.setItem("boundarySquash", boundarySquash.toString());
     localStorage.setItem("desiccationSpeed", desiccationSpeed.toString());
@@ -273,9 +273,9 @@ export function useSimulationState() {
     maxBranchesPerSpecies,
     maxDOMs,
     maxAgents,
-    maxSpecies,
+    maxCreatures,
     ecoFade,
-    minAgents,
+    minCreatures,
     boundarySize,
     boundarySquash,
     desiccationSpeed,
@@ -384,9 +384,9 @@ export function useSimulationState() {
       maxBranchesPerSpecies,
       maxDOMs,
       maxAgents,
-      maxSpecies,
+      maxCreatures,
       ecoFade,
-      minAgents,
+      minCreatures,
       boundarySize,
       boundarySquash,
       desiccationSpeed,
@@ -500,9 +500,9 @@ export function useSimulationState() {
       setSnakeMinBranches,
       setMaxDOMs,
       setMaxAgents,
-      setMaxSpecies,
+      setMaxCreatures,
       setEcoFade,
-      setMinAgents,
+      setMinCreatures,
       setBoundarySize,
       setBoundarySquash,
       setDesiccationSpeed,
@@ -632,9 +632,9 @@ export function useSimulationState() {
         setMaxBranchesPerSpecies(DEFAULTS.maxBranchesPerSpecies);
         setMaxDOMs(DEFAULTS.maxDOMs);
         setMaxAgents(DEFAULTS.maxAgents);
-        setMaxSpecies(DEFAULTS.maxSpecies);
+        setMaxCreatures(DEFAULTS.maxCreatures);
         setEcoFade(DEFAULTS.ecoFade);
-        setMinAgents(DEFAULTS.minAgents);
+        setMinCreatures(DEFAULTS.minCreatures);
         setBoundarySize(DEFAULTS.boundarySize);
         setBoundarySquash(DEFAULTS.boundarySquash);
         setDesiccationSpeed(DEFAULTS.desiccationSpeed);

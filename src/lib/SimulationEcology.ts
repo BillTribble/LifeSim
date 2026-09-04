@@ -75,11 +75,14 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
 
         if (!engine.speciesAbove3Percent) engine.speciesAbove3Percent = new Set();
         
-        const healthySpeciesCount = Array.from(engine.biomassMap.keys()).filter(s => !(engine.dyingStrains && engine.dyingStrains.has(s))).length;
-        const growingCount = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
         if (ratio > 0.03) {
           engine.speciesAbove3Percent.add(strainName);
-        } else if (ratio < 0.03 && engine.speciesAbove3Percent.has(strainName) && engine.hasAnyOrganismBred && healthySpeciesCount > Math.max(3, engine.minAgents) && growingCount > Math.max(3, engine.minAgents)) {
+        } else if (
+          ratio < 0.03 &&
+          engine.speciesAbove3Percent.has(strainName) &&
+          engine.hasAnyOrganismBred &&
+          engine.getLivingOrganismCount() - 1 >= engine.minCreatures
+        ) {
           engine.speciesAbove3Percent.delete(strainName);
           engine.killSpecies(strainName, 'dropped below 3% ratio');
           const genome3 = engine.genomeMap?.get(strainName);
@@ -124,8 +127,11 @@ export function performCapacityCulling(
       }
     }
     if (oldestName) {
-      engine.onLog(`⚠️ Capacity overflow (${activeNotTapering.length} agents > ${engine.maxAgents * 3.0} limit) — culling oldest: ${oldestName}`);
-      engine.killSpecies(oldestName, "capacity overflow");
+      const livingOrganisms = engine.getLivingOrganismCount();
+      if (livingOrganisms - 1 >= engine.minCreatures) {
+        engine.onLog(`⚠️ Capacity overflow (${activeNotTapering.length} agents > ${engine.maxAgents * 3.0} limit) — culling oldest: ${oldestName}`);
+        engine.killSpecies(oldestName, "capacity overflow");
+      }
     }
   }
 }

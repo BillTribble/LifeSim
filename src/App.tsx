@@ -176,7 +176,7 @@ export default function App() {
         fillSummary = ` | [SCREEN_FILL] total=${sf.totalFillPct.toFixed(1)}% (${sf.totalOccupiedPixels}/${sf.totalPixels}px) [${speciesFill}]`;
       }
 
-      const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+      const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
       const snapshot = `[SNAPSHOT] [${sessionCodeRef.current}] species=${strains.length} agents=${newState.totalAgents ?? "?"} geom=${newState.geometryCount ?? "?"}${fillSummary} | ${speciesSummary} | ${dials}`;
       fetch('/api/log', { method: 'POST', body: snapshot }).catch(() => {});
     }
@@ -188,13 +188,14 @@ export default function App() {
     sessionCodeRef.current = nextCode;
     setRestartKey((prev) => prev + 1);
     setUptime(0);
-    const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    setPopupQueue([]);
+    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
     fetch('/api/log', { method: 'POST', body: `=== SESSION RESTART [${nextCode}] === | ${dials}` }).catch(() => {});
   };
 
   // Log session start on mount
   React.useEffect(() => {
-    const dials = `DIALS: minAgents=${state.minAgents} maxAgents=${state.maxAgents} maxSpec=${state.maxSpecies} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
     fetch('/api/log', { method: 'POST', body: `=== SESSION START [${sessionCodeRef.current}] === | ${dials}` }).catch(() => {});
   }, []);
 
@@ -254,9 +255,9 @@ export default function App() {
         maxBranchesPerSpecies={state.maxBranchesPerSpecies}
         maxDOMs={state.maxDOMs}
         maxAgents={state.maxAgents}
-        maxSpecies={state.maxSpecies}
+        maxCreatures={state.maxCreatures}
         ecoFade={state.ecoFade}
-        minAgents={state.minAgents}
+        minCreatures={state.minCreatures}
         boundarySize={state.boundarySize}
         boundarySquash={state.boundarySquash}
         desiccationSpeed={state.desiccationSpeed}

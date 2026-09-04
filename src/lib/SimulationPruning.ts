@@ -18,8 +18,8 @@ export function getMaxBranchesForArchetype(engine: SimulationEngine, archetype: 
   const baseDial = engine.maxBranchesPerSpecies ?? 24;
   let archFactor = 1.0;
   if (archetype === "bush") archFactor = 1.0;
-  else if (archetype === "tree") archFactor = 0.75;
-  else if (archetype === "rhizome") archFactor = 0.55;
+  else if (archetype === "tree") archFactor = 1.0;
+  else if (archetype === "rhizome") archFactor = 0.90;
   else if (archetype === "snake") archFactor = 0.1;
 
   // Pruning strength modulates target branch density:
@@ -29,7 +29,7 @@ export function getMaxBranchesForArchetype(engine: SimulationEngine, archetype: 
   const pruneMod = 1.0 / Math.max(0.3, strength * 1.1);
 
   const minFloor = archetype === "bush" ? (engine.bushMinBranches ?? 2)
-                 : archetype === "rhizome" ? (engine.rhizomeMinBranches ?? 4)
+                 : archetype === "rhizome" ? (engine.rhizomeMinBranches ?? 6)
                  : archetype === "tree" ? (engine.treeMinBranches ?? 1)
                  : (engine.snakeMinBranches ?? 1);
 
@@ -82,6 +82,15 @@ export function performBranchPruning(
   const pruningStrength = engine.pruningStrength !== undefined ? engine.pruningStrength : 0.8;
   if (pruningStrength <= 0.001) return stats;
 
+  let totalHealthyAgents = 0;
+  for (let i = 0; i < activeAgents.length; i++) {
+    const a = activeAgents[i];
+    if (a.active && !a.tapering && !a.isFeeler) {
+      totalHealthyAgents++;
+    }
+  }
+  if (totalHealthyAgents <= engine.minCreatures) return stats;
+
   const maxBranchDepth = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
 
   // Group active non-feeler agents by strain
@@ -108,24 +117,25 @@ export function performBranchPruning(
 
     let minFloor = 1;
     if (arch === "bush") minFloor = engine.bushMinBranches ?? 2;
-    else if (arch === "rhizome") minFloor = engine.rhizomeMinBranches ?? 4;
+    else if (arch === "rhizome") minFloor = engine.rhizomeMinBranches ?? 6;
     else if (arch === "tree") minFloor = engine.treeMinBranches ?? 1;
     else if (arch === "snake") minFloor = engine.snakeMinBranches ?? 1;
 
     // 1. DEPTH SIMPLIFICATION:
     // Prune peripheral branches that exceed maxBranchDepth (eliminates tangled fractal fuzz)
+    let remaining = agents.filter(a => a.active && !a.tapering);
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
-      if (!a.active) continue;
+      if (!a.active || a.tapering) continue;
       const depth = a.branchDepth || 0;
-      if (depth > maxBranchDepth && !isStructuralStem(a)) {
+      if (depth > maxBranchDepth && !isStructuralStem(a) && remaining.length > minFloor) {
+        if (totalHealthyAgents - 1 < engine.minCreatures) break;
         pruneAgentTip(engine, a);
+        totalHealthyAgents--;
         stats.prunedDepth++;
+        remaining = agents.filter(x => x.active && !x.tapering);
       }
     }
-
-    // Refresh remaining active agents after depth pruning
-    let remaining = agents.filter(a => a.active);
 
     // 2. CAPACITY / QUOTA SIMPLIFICATION:
     // Keep active branch tips within a balanced botanical quota
@@ -149,7 +159,9 @@ export function performBranchPruning(
 
       const toPrune = Math.min(surplusCount, candidates.length);
       for (let k = 0; k < toPrune; k++) {
+        if (totalHealthyAgents - 1 < engine.minCreatures) break;
         pruneAgentTip(engine, candidates[k]);
+        totalHealthyAgents--;
         stats.prunedQuota++;
       }
     }
@@ -160,7 +172,7 @@ export function performBranchPruning(
     // 3. SPATIAL CROWDING SIMPLIFICATION (Canopy Self-Thinning):
     // Prune overlapping branches growing too close together to open clean negative space
     if (pruningStrength >= 0.1 && remaining.length > minFloor) {
-      const crowdingRadius = (arch === "rhizome" ? 7.0 : arch === "tree" ? 6.0 : 5.0) * (pruningStrength * 0.8);
+      const crowdingRadius = (arch === "rhizome" ? 3.5 : arch === "tree" ? 3.2 : 4.0) * (pruningStrength * 0.8);
       const crowdingRadiusSq = crowdingRadius * crowdingRadius;
 
       for (let i = 0; i < remaining.length; i++) {
@@ -171,6 +183,10 @@ export function performBranchPruning(
           const a2 = remaining[j];
           if (!a2.active) continue;
           if (remaining.filter(a => a.active).length <= minFloor) break;
+          if (totalHealthyAgents - 1 < engine.minCreatures) break;
+
+          // Do not prune newly sprouted child branches against their parent before they have grown away
+          if ((a1.parentId === a2.id && a1.age < 35) || (a2.parentId === a1.id && a2.age < 35)) continue;
 
           const dSq = a1.position.distanceToSquared(a2.position);
           if (dSq < crowdingRadiusSq) {
@@ -196,6 +212,7 @@ export function performBranchPruning(
             }
 
             pruneAgentTip(engine, victim);
+            totalHealthyAgents--;
             stats.prunedCrowding++;
           }
         }

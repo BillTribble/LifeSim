@@ -26,8 +26,8 @@ async function diagnose() {
   engine.diebackRate = 6.42;
   engine.terminationProb = 0.13;
   engine.maxAgents = 45;
-  engine.minAgents = 5;
-  engine.maxSpecies = 19;
+  engine.minCreatures = 5;
+  engine.maxCreatures = 19;
   engine.boundarySize = 120;
   engine.maxDOMs = 341000;
 

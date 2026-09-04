@@ -353,21 +353,21 @@ export function HUD({
         </header>
 
         <div className={`flex-1 flex flex-col items-start pointer-events-none transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-none" : "opacity-0 invisible pointer-events-none"}`}>
-          <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-32 sm:w-40 mt-1">
+          <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-36 sm:w-48 mt-1 max-h-[calc(100vh-140px)] flex flex-col">
               <h2 
-                className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center justify-between gap-1.5 tracking-widest cursor-pointer"
+                className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center justify-between gap-1.5 tracking-widest cursor-pointer select-none shrink-0"
                 onClick={() => setIsBiomassCollapsed(!isBiomassCollapsed)}
               >
                 <div className="flex items-center gap-1.5">
                   <Share2 className="w-3 h-3" />
-                  BIOMASS
+                  BIOMASS ({stats.strains.filter((s: any) => !s.name.startsWith("Feeler-")).length})
                 </div>
                 <div className="flex items-center gap-1.5">
                   <ChevronDown className={`w-3 h-3 transition-transform ${isBiomassCollapsed ? "rotate-180" : ""}`} />
                 </div>
               </h2>
               {!isBiomassCollapsed && (
-                <div className="space-y-3 text-[8px] sm:text-[9px] font-mono max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                <div className="space-y-3 text-[8px] sm:text-[9px] font-mono overflow-y-auto custom-scrollbar pr-1 flex-1">
                   {(() => {
                   const filteredStrains = stats.strains.filter((s: any) => !s.name.startsWith("Feeler-"));
                   const archetypeTotals: Record<string, number> = {};

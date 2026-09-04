@@ -80,13 +80,13 @@ export function selectMendelianAlleles<T>(
 
 export function clampArchetypeGenome(res: Genome): Genome {
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.2, 4.2);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.7, 1.4);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.9995);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.02, 0.06);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 2.5, 6.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.65);
-    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.5, 0.5, 1.5);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.2, 2.8);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.15, 0.6);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.992, 0.9998);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.04, 0.12);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 1.5, 4.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.8, 1.6);
+    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.2, 0.65);
   } else if (res.archetype === "bush") {
     res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.9, 2.0);
     res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.20 + Math.random() * 0.12);
@@ -95,10 +95,10 @@ export function clampArchetypeGenome(res: Genome): Genome {
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
     res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 3.2, 5.8);
-    res.minThickness = Math.max(res.minThickness, 0.4);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.1, 0.05, 0.4);
     res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.016, 0.040);
     res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 2.0, 5.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 1.0, 1.8);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.55, 1.2);
   } else if (res.archetype === "snake") {
     res.thicknessBase = Math.max(res.thicknessBase, 3.5 + Math.random() * 2.0);
     res.minThickness = Math.max(res.minThickness, 1.8);
@@ -130,6 +130,13 @@ export function breedGenomes(
     g2.archetype, g2.recessive?.archetype
   );
   let newArchetype = archInheritance.expressed;
+  if (!ARCHETYPES.includes(newArchetype)) {
+    newArchetype = ARCHETYPES.includes(g1.archetype)
+      ? g1.archetype
+      : ARCHETYPES.includes(g2.archetype)
+        ? g2.archetype
+        : "bush";
+  }
 
   const moveInheritance = selectMendelianAlleles(
     g1.movementType, g1.recessive?.movementType,
@@ -275,7 +282,9 @@ export function breedGenomes(
 
     // Carried Recessive Genes (passed to future generations)
     recessive: {
-      archetype: archInheritance.recessive,
+      archetype: ARCHETYPES.includes(archInheritance.recessive)
+        ? archInheritance.recessive
+        : newArchetype,
       movementType: moveInheritance.recessive,
       geometryType: geoInheritance.recessive,
       appendage: appInheritance.recessive || getWeightedAppendage(traitProbs),

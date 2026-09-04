@@ -26,7 +26,7 @@ export interface SimulationViewProps {
   startColorMode?: string;
   flowerSize?: number;
   tideSpeed?: number;
-  minAgents?: number;
+  minCreatures?: number;
   boundarySize?: number;
   boundarySquash?: number;
   tideColor?: string;
@@ -52,7 +52,7 @@ export interface SimulationViewProps {
   maxBranchesPerSpecies?: number;
   maxDOMs?: number;
   maxAgents?: number;
-  maxSpecies?: number;
+  maxCreatures?: number;
   ecoFade?: number;
   desiccationSpeed?: number;
   enableGlow?: boolean;
@@ -161,7 +161,7 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     startColorMode: "setStartColorMode",
     flowerSize: "setFlowerSize",
     widthGrowthEffect: "setWidthGrowthEffect",
-    minAgents: "setMinAgents",
+    minCreatures: "setMinCreatures",
     boundarySize: "setBoundarySize",
     boundarySquash: "setBoundarySquash",
     tideSpeed: "setTideSpeed",
@@ -179,7 +179,7 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     maxBranchesPerSpecies: "setMaxBranchesPerSpecies",
     maxDOMs: "setMaxDOMs",
     maxAgents: "setMaxAgents",
-    maxSpecies: "setMaxSpecies",
+    maxCreatures: "setMaxCreatures",
     ecoFade: "setEcoFade",
     desiccationSpeed: "setDesiccationSpeed",
     enableGlow: "setEnableGlow",

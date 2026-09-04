@@ -126,9 +126,9 @@ Maximum active growing branches per organism before pruning takes over.
 Prevents performance drops on M1 Mac."
           label="MAX_BRANCH"
           min={3}
-          max={60}
+          max={128}
           step={1}
-          value={state.maxBranchesPerSpecies ?? 24}
+          value={state.maxBranchesPerSpecies ?? 48}
           onChange={setters.setMaxBranchesPerSpecies}
           color="#87CEEB"
         />
@@ -274,12 +274,12 @@ Default: 2."
           keywords={["rhizome minimum branches", "ginger branch floor", "root survival"]}
           tooltip="RHIZOME MIN BRANCHES
 Minimum active branches kept alive for rhizome species before any branches can terminate.
-Default: 4."
+Default: 6."
           label="RHIZ_MIN"
           min={1}
           max={10}
           step={1}
-          value={state.rhizomeMinBranches ?? 4}
+          value={state.rhizomeMinBranches ?? 6}
           onChange={setters.setRhizomeMinBranches}
           color="#87CEEB"
         />

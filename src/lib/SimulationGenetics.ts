@@ -71,6 +71,16 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                vInstanceColor = diffuse;
              #endif
              ${leafUVInit}`
+    ).replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+             ${!isLeaf ? `
+             float terminalFlag = instancePackB.w;
+             if (terminalFlag > 1.5) {
+               float taperFactor = 1.0 - transformed.z;
+               transformed.x *= taperFactor;
+               transformed.y *= taperFactor;
+             }` : ''}`
     );
 
     // Inject Custom Discard & Glow Logic

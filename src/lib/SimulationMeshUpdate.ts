@@ -10,6 +10,7 @@ export function updateMeshSegments(
   thickness: number,
   isAppendage = false,
   agentId?: number,
+  isTerminal = false,
 ) {
   // Protect the first 2,000 slots (base trunks & roots) from ever being overwritten
   const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
@@ -276,7 +277,7 @@ export function updateMeshSegments(
     
     packBAttr.setY(targetIndex, vernVal);
     packBAttr.setZ(targetIndex, genome.succulence ?? 0.5);
-    packBAttr.setW(targetIndex, genome.leafDivision ?? 0.5);
+    packBAttr.setW(targetIndex, isTerminal ? 2.0 : (genome.leafDivision ?? 0.5));
     
     packAAttr.needsUpdate = true;
     packBAttr.needsUpdate = true;

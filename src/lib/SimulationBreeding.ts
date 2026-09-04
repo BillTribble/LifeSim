@@ -9,26 +9,43 @@ export function canEnterDeleting(
   countAsRemoved: number = 1,
 ): boolean {
   if (!engine.hasAnyOrganismBred) return false;
-  const livingSpecies = new Set<string>();
-  for (const a of activeAgents) {
-    if (
-      a.active &&
-      !a.tapering &&
-      !a.isFeeler &&
-      (engine.biomassMap.get(a.genome.name) || 0) > 0 &&
-      !(engine.dyingStrains && engine.dyingStrains.has(a.genome.name))
-    ) {
-      livingSpecies.add(a.genome.name);
-    }
-  }
-  return livingSpecies.size >= 4 && (livingSpecies.size - countAsRemoved) >= 3;
+  const livingOrganisms = engine.getLivingOrganismCount();
+  if (livingOrganisms < engine.minCreatures) return false;
+  if (livingOrganisms - countAsRemoved < engine.minCreatures) return false;
+  return true;
 }
 
-export function createFeelerGenome(agent: Agent): any {
+export function resolveRootOrganismGenome(
+  agent: Agent,
+  engine?: SimulationEngine,
+): any {
+  if (agent.isFeeler) {
+    if (agent.realGenome && !agent.realGenome.name.startsWith("Feeler-")) {
+      return agent.realGenome;
+    }
+    if (agent.parentAgent) {
+      return resolveRootOrganismGenome(agent.parentAgent, engine);
+    }
+    if (engine && engine.genomeMap) {
+      for (const [name, g] of engine.genomeMap.entries()) {
+        if (
+          !name.startsWith("Feeler-") &&
+          (name === agent.genome.name || name === agent.realGenome?.name)
+        ) {
+          return g;
+        }
+      }
+    }
+  }
+  return agent.genome;
+}
+
+export function createFeelerGenome(agent: Agent, engine?: SimulationEngine): any {
+  const rootGenome = resolveRootOrganismGenome(agent, engine);
   return {
-    ...agent.genome,
+    ...rootGenome,
     name: `Feeler-${Math.floor(Math.random() * 10000)}`,
-    archetype: "snake" as any,
+    archetype: rootGenome.archetype, // Preserve parent organism archetype (Bush, Tree, Rhizome). Never snake!
     thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
     minThickness: 0.5,
     stepSize: 1.3,
@@ -54,8 +71,10 @@ export function trySpawnTaperingFeeler(
   newAgents: Agent[],
   engine: SimulationEngine,
 ): void {
+  if (agent.isFeeler) return;
+  const rootGenome = resolveRootOrganismGenome(agent, engine);
   const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
-  const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+  const evalGenome = rootGenome;
   const strainAge = evalGenome.createdAt !== undefined ? engine.time - evalGenome.createdAt : engine.time;
   // Disabled during initial feeler delay period (6 seconds / 360 ticks)
   if (agent.age < feelerDelayTicks || strainAge < feelerDelayTicks) {
@@ -86,7 +105,7 @@ export function trySpawnTaperingFeeler(
             a.genome.name === evalGenome.name),
       );
     if (!hasActiveFeeler && Math.random() < 0.05 * engine.timeScale) {
-      const feelerGenome = createFeelerGenome(agent);
+      const feelerGenome = createFeelerGenome(agent, engine);
       newAgents.push({
         position: agent.position.clone(),
         lastPosition: agent.position.clone(),
@@ -97,7 +116,7 @@ export function trySpawnTaperingFeeler(
         thickness: feelerGenome.thicknessBase,
         cooldown: 0,
         isFeeler: true,
-        realGenome: agent.genome,
+        realGenome: rootGenome,
         parentAgent: agent,
       });
       agent.cooldown = 45;
@@ -109,6 +128,23 @@ export function updateFeelerSeeking(
   agent: Agent,
   engine: SimulationEngine,
 ): void {
+  const rootGenome = resolveRootOrganismGenome(agent, engine);
+  const myStrainName = rootGenome.name;
+
+  // Feeler lifecycle: dissolved if parent organism is dying, parent reached max matings, or feeler sought for > 10s (600 ticks)
+  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  const mCount = (engine as any).speciesLifecycleMap?.get(myStrainName)?.matingCount || 0;
+  const isParentDying = !!(engine.dyingStrains && engine.dyingStrains.has(myStrainName));
+  const isParentExhausted = mCount >= maxM;
+  const isOverFeelerLifetime = agent.age > 600;
+
+  if ((isParentDying || isParentExhausted || isOverFeelerLifetime) && !agent.tapering) {
+    agent.tapering = true;
+    agent.forceTapering = true;
+    agent.fadeAge = 0;
+    agent.taperBudget = undefined;
+  }
+
   // Feelers keep seeking until they mate; once they mate, they die 3 seconds (180 ticks) afterwards
   if (agent.dieAfterTicks !== undefined) {
     agent.dieAfterTicks--;
@@ -121,9 +157,6 @@ export function updateFeelerSeeking(
   }
   if (!agent.tapering) {
     // Omniscient seeking: find nearest segment or live agent of any other strain (including feelers)
-    const myStrainName = agent.realGenome
-      ? agent.realGenome.name
-      : agent.genome.name;
     let nearestPos: THREE.Vector3 | null = null;
     let minDSq = Infinity;
 
@@ -134,7 +167,8 @@ export function updateFeelerSeeking(
         !seg ||
         seg.dyingStart ||
         seg.strainName === myStrainName ||
-        (agent.realGenome && seg.strainName === agent.genome.name)
+        seg.strainName === agent.genome.name ||
+        (agent.realGenome && seg.strainName === agent.realGenome.name)
       )
         continue;
       const m = seg.matrix.elements;
@@ -155,8 +189,8 @@ export function updateFeelerSeeking(
     for (let aIdx = 0; aIdx < engine.agents.length; aIdx++) {
       const other = engine.agents[aIdx];
       if (!other.active || other === agent || other.tapering) continue;
-      const otherStrain = other.realGenome ? other.realGenome.name : other.genome.name;
-      if (otherStrain === myStrainName) continue;
+      const otherRoot = resolveRootOrganismGenome(other, engine);
+      if (otherRoot.name === myStrainName) continue;
       const dSq = agent.position.distanceToSquared(other.position);
       // Give bonus priority to active feelers so two feelers home directly towards each other!
       const effectiveDSq = other.isFeeler ? dSq * 0.5 : dSq;
@@ -170,7 +204,14 @@ export function updateFeelerSeeking(
       const homingVector = new THREE.Vector3()
         .subVectors(nearestPos, agent.position)
         .normalize();
+      const distToTarget = agent.position.distanceTo(nearestPos);
+      const maxDist = 80.0;
+      const distRatio = Math.min(1.0, distToTarget / maxDist);
+      const spiralAngle = 0.02 + (0.25 - 0.02) * distRatio;
+      agent.spiralAxis = homingVector.clone();
       agent.direction.lerp(homingVector, 0.7).normalize();
+      agent.direction.applyAxisAngle(agent.spiralAxis, spiralAngle);
+      agent.direction.lerp(agent.spiralAxis, 0.25).normalize();
     }
   }
 }
@@ -229,7 +270,8 @@ export function handleBreedingAndFeelers(
     agent.cooldown <= 0
   ) {
     if (Math.random() < 0.04 * feelerProb * 2.0 * engine.timeScale) {
-      const feelerGenome = createFeelerGenome(agent);
+      const rootGenome = resolveRootOrganismGenome(agent, engine);
+      const feelerGenome = createFeelerGenome(agent, engine);
 
       const spawnDir = agent.direction.clone();
       newAgents.push({
@@ -242,7 +284,7 @@ export function handleBreedingAndFeelers(
         thickness: feelerGenome.thicknessBase,
         cooldown: 0,
         isFeeler: true,
-        realGenome: agent.genome,
+        realGenome: rootGenome,
         parentAgent: agent,
       });
       agent.cooldown = 45;
@@ -251,14 +293,14 @@ export function handleBreedingAndFeelers(
         engine.lastFeelerWorldPos = agent.position.clone();
         if (engine.onFeelerEvent) {
           engine.onFeelerEvent({
-            parent: agent.genome,
+            parent: rootGenome,
             feeler: feelerGenome,
             count: engine.feelerCount,
           });
         }
       }
       engine.onLog(
-        `📡 ${agent.genome.name} extending sensory feelers to breed (Age ${agent.age}).`,
+        `📡 ${rootGenome.name} extending sensory feelers to breed (Age ${agent.age}).`,
       );
     }
   }
@@ -387,7 +429,8 @@ export function handleBreedingAndFeelers(
         agent.cooldown <= 0 &&
         Math.random() < 0.2 * reachMultiplier * engine.timeScale
       ) {
-        const feelerGenome = createFeelerGenome(agent);
+        const rootGenome = resolveRootOrganismGenome(agent, engine);
+        const feelerGenome = createFeelerGenome(agent, engine);
 
         newAgents.push({
           position: agent.position.clone(),
@@ -399,7 +442,7 @@ export function handleBreedingAndFeelers(
           thickness: feelerGenome.thicknessBase,
           cooldown: 0, // Stagger feeler breeding attempts
           isFeeler: true,
-          realGenome: agent.genome,
+          realGenome: rootGenome,
           parentAgent: agent,
         });
         agent.cooldown = 400;
@@ -408,10 +451,7 @@ export function handleBreedingAndFeelers(
           engine.lastFeelerWorldPos = agent.position.clone();
           if (engine.onFeelerEvent) {
             engine.onFeelerEvent({
-              parent:
-                agent.isFeeler && agent.realGenome
-                  ? agent.realGenome
-                  : agent.genome,
+              parent: rootGenome,
               feeler: feelerGenome,
               count: engine.feelerCount,
             });
@@ -419,26 +459,26 @@ export function handleBreedingAndFeelers(
         } // Prevent spamming feelers too fast
         const isSuppressed = !!(
           engine.suppressedStrains &&
-          engine.suppressedStrains.has(agent.genome.name)
+          engine.suppressedStrains.has(rootGenome.name)
         );
         if (isDesperate && !isSuppressed) {
           engine.onLog(
-            `Aging ${agent.genome.name} seeking hybridization partner.`,
+            `Aging ${rootGenome.name} seeking hybridization partner.`,
           );
         } else {
           engine.onLog(
-            `Suppressed ${agent.genome.name} extended sensory feeler.`,
+            `Suppressed ${rootGenome.name} extended sensory feeler.`,
           );
         }
       }
 
       // Require physical touching based on agent thicknesses to breed
-      const touchDist = Math.max(16.0, (agent.thickness + (bestPartner.thickness || 1.0)) * 3.2 + 5.0);
+      const touchDist = Math.max(2.0, agent.thickness + (bestPartner.thickness || 1.0));
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
         let allowBreeding = true;
-        if (nonTaperingStrains.size >= engine.maxSpecies) {
+        if (nonTaperingStrains.size >= engine.maxCreatures) {
           let victimSpeciesName = "";
 
           // 1. Try to find an unrelated feeler to sacrifice first
@@ -509,32 +549,34 @@ export function handleBreedingAndFeelers(
                   activeAgents[idx].forceTapering = true;
                 }
               }
-            } else {
-              engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
-            }
-            // Instantly reflect this in the projected count so we don't count the dying species anymore
-            if (!isFeelerSacrifice) {
-              nonTaperingStrains.delete(victimSpeciesName);
-            }
-
-            if (isFeelerSacrifice) {
               engine.onLog(`Feeler terminated for child creation.`);
             } else {
-              engine.onLog(
-                `Breeding recorded. Culling oldest species: ${victimSpeciesName}.`,
-              );
+              const livingOrganisms = engine.getLivingOrganismCount();
+              if (livingOrganisms - 1 >= engine.minCreatures) {
+                engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
+                nonTaperingStrains.delete(victimSpeciesName);
+                engine.onLog(
+                  `Breeding recorded. Culling oldest species: ${victimSpeciesName}.`,
+                );
+              } else {
+                engine.onLog(
+                  `🛡️ Sacrifice blocked for ${victimSpeciesName}: would drop organisms below minCreatures (${livingOrganisms} - 1 < ${engine.minCreatures}). Breeding blocked to honor maxCreatures.`,
+                );
+                allowBreeding = false;
+              }
             }
+          } else {
+            allowBreeding = false;
           }
         }
 
         if (allowBreeding) {
+          const parent1Genome = resolveRootOrganismGenome(agent, engine);
+          const parent2Genome = resolveRootOrganismGenome(nearestPartner, engine);
+
           const childGenome = breedGenomes(
-            agent.isFeeler && agent.realGenome
-              ? agent.realGenome
-              : agent.genome,
-            nearestPartner.isFeeler && nearestPartner.realGenome
-              ? nearestPartner.realGenome
-              : nearestPartner.genome,
+            parent1Genome,
+            parent2Genome,
             engine.traitProbs,
             engine.multicolorAppProb,
             engine.sameColorAppProb,
@@ -545,6 +587,7 @@ export function handleBreedingAndFeelers(
           if (typeof engine.initSpeciesLifecycle === 'function') {
             engine.initSpeciesLifecycle(childGenome.name);
           }
+          nonTaperingStrains.add(childGenome.name);
           const childDir = agent.direction
             .clone()
             .lerp(nearestPartner.direction, 0.5)
@@ -573,8 +616,8 @@ export function handleBreedingAndFeelers(
           // Post-Breeding Transition: Synchronize species-level mating counts and cooldowns
           engine.hasAnyOrganismBred = true;
           const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
-          const host1Strain = agent.isFeeler && agent.realGenome ? agent.realGenome.name : agent.genome.name;
-          const host2Strain = nearestPartner.isFeeler && nearestPartner.realGenome ? nearestPartner.realGenome.name : nearestPartner.genome.name;
+          const host1Strain = parent1Genome.name;
+          const host2Strain = parent2Genome.name;
 
           const s1 = (engine as any).speciesLifecycleMap?.get(host1Strain);
           const s2 = (engine as any).speciesLifecycleMap?.get(host2Strain);
@@ -655,14 +698,8 @@ export function handleBreedingAndFeelers(
             engine.lastMatingWorldPos = midPoint.clone();
             if (engine.onMatingEvent) {
               engine.onMatingEvent({
-                parent1:
-                  agent.isFeeler && agent.realGenome
-                    ? agent.realGenome
-                    : agent.genome,
-                parent2:
-                  nearestPartner.isFeeler && nearestPartner.realGenome
-                    ? nearestPartner.realGenome
-                    : nearestPartner.genome,
+                parent1: parent1Genome,
+                parent2: parent2Genome,
                 child: childGenome,
                 isFeeler: isFeelerMating,
               });

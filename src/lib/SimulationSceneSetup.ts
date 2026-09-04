@@ -33,10 +33,10 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 10.0 : 5.0);
   } else if (archetype === "tree") {
     thicknessBase = (5.2 + Math.random() * 2.0) * 0.7;
-    minThickness = (0.55 + Math.random() * 1.0) * 0.7;
+    minThickness = (0.15 + Math.random() * 0.25) * 0.7;
     thicknessDecay = 0.9996 + Math.random() * 0.0004;
     bifurcationRate = 0.024 + Math.random() * 0.016;
-    stepSize = (0.90 + Math.random() * 0.30) * 0.7;
+    stepSize = (0.80 + Math.random() * 0.25) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 4.0 : 2.2);
   } else if (archetype === "snake") {
     thicknessBase = (4.8 + Math.random() * 2.2) * 0.7;
@@ -46,13 +46,13 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     stepSize = (1.8 + Math.random() * 0.8) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
   } else {
-    // Rhizome (classic ginger root archetype: plump, organic meandering tubers)
-    thicknessBase = (4.5 + Math.random() * 1.5) * 0.7;
-    minThickness = (1.20 + Math.random() * 0.4) * 0.7;
-    thicknessDecay = 0.9992 + Math.random() * 0.0006;
-    bifurcationRate = 0.030 + Math.random() * 0.015;
-    stepSize = (0.55 + Math.random() * 0.15) * 0.7;
-    branchTendency = 3.5 + Math.random() * 1.5;
+    // Rhizome (creeping slime-mold / tendrilled network: sleek, organic meandering runners)
+    thicknessBase = (1.9 + Math.random() * 0.6) * 0.7;
+    minThickness = (0.35 + Math.random() * 0.15) * 0.7;
+    thicknessDecay = 0.9995 + Math.random() * 0.0004;
+    bifurcationRate = 0.06 + Math.random() * 0.03;
+    stepSize = (1.2 + Math.random() * 0.3) * 0.7;
+    branchTendency = 2.5 + Math.random() * 1.0;
   }
 
   return {
@@ -65,7 +65,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     thicknessDecay: thicknessDecay,
     stepSize: stepSize,
     bifurcationRate: bifurcationRate,
-    wanderIntensity: archetype === "rhizome" ? 1.0 + Math.random() * 0.8 : archetype === "bush" ? 0.8 + Math.random() * 0.5 : 0.01 + Math.random() * 0.05,
+    wanderIntensity: archetype === "rhizome" ? 0.35 + Math.random() * 0.25 : archetype === "bush" ? 0.8 + Math.random() * 0.5 : 0.01 + Math.random() * 0.05,
     branchTendency: branchTendency,
     wavingSpeed: Math.random() * 0.05,
     wavingAmplitude: Math.random() * 0.08,
@@ -387,6 +387,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   if (engine.suppressedStrains) engine.suppressedStrains.clear();
   if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.clear();
   if (engine.speciesLifecycleMap) engine.speciesLifecycleMap.clear();
+  engine.hasReachedMinCreatures = false;
   engine.time = 0;
   engine.frameCount = 0;
   const idm = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -439,8 +440,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       return (5.2 + Math.random() * 2.0 * variance) * 0.7;
     } else if (arch === "snake") {
       return (4.8 + Math.random() * 2.2 * variance) * 0.7;
+    } else if (arch === "rhizome") {
+      return (1.9 + Math.random() * 0.6 * variance) * 0.7;
     } else {
-      return (4.5 + Math.random() * 1.5 * variance) * 0.7;
+      return (2.2 + Math.random() * 1.0 * variance) * 0.7;
     }
   };
 
@@ -469,7 +472,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       active: true,
       age: 0,
       lastPosition: spawnPos.clone(),
-      thickness: designerGenome.thicknessBase * 2.0,
+      thickness: designerGenome.thicknessBase * (arch === "rhizome" ? 1.3 : 2.0),
       cooldown: 0,
     });
 
@@ -702,20 +705,15 @@ export function initSpeciesLifecycle(engine: SimulationEngine, strainName: strin
 }
 
 export function killSpecies(engine: SimulationEngine, strainName: string, reason: string): void {
-  const livingSpecies = new Set<string>();
-  for (const a of engine.agents) {
-    if (
-      a.active &&
-      !a.tapering &&
-      !a.isFeeler &&
-      (engine.biomassMap.get(a.genome.name) || 0) > 0 &&
-      !(engine.dyingStrains && engine.dyingStrains.has(a.genome.name))
-    ) {
-      livingSpecies.add(a.genome.name);
-    }
+  const livingOrganisms = engine.getLivingOrganisms();
+  const livingCount = livingOrganisms.size;
+  if (livingCount < engine.minCreatures) {
+    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): living organisms (${livingCount}) has not reached minCreatures (${engine.minCreatures}).`);
+    return;
   }
-  if (livingSpecies.size < 4) {
-    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): only ${livingSpecies.size} living species present (min 4).`);
+
+  if (livingCount - 1 < engine.minCreatures) {
+    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): deleting this creature would drop organisms below minCreatures (${livingCount} - 1 < ${engine.minCreatures}).`);
     return;
   }
 
@@ -727,8 +725,8 @@ export function killSpecies(engine: SimulationEngine, strainName: string, reason
   state.deathStartTick = engine.unscaledTime;
   state.reason = reason;
 
-  const remainingNames = Array.from(livingSpecies).filter(n => n !== strainName).join(", ");
-  engine.onLog(`⏳ Species ${strainName} entering end-of-life (${reason}) — ${livingSpecies.size} species present. Remaining: [${remainingNames}]`);
+  const remainingNames = Array.from(livingOrganisms).filter(n => n !== strainName).join(", ");
+  engine.onLog(`⏳ Species ${strainName} entering end-of-life (${reason}) — ${livingCount} species present. Remaining: [${remainingNames}]`);
 
   for (const agent of engine.agents) {
     const isDirect = agent.genome.name === strainName;
@@ -910,7 +908,7 @@ export function emitStateUpdate(engine: SimulationEngine): void {
     totalAgents: activeCount,
     hybridCount: engine.totalHybridCount || 0,
     kioskFadeProgress: engine.kioskFadeProgress,
-    strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, 8),
+    strains: strains.sort((a, b) => b.biomass - a.biomass).slice(0, Math.max(30, engine.maxCreatures)),
     screenFill: lastSilhouetteData,
     tideValue: engine.tideValue,
     cameraPosition: {

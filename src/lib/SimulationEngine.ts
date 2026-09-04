@@ -123,7 +123,7 @@ export class SimulationEngine {
   despairAge: number = 1310.6350448360784;
   maxMatings: number = 1;
   startColorMode: string = "analogous";
-  flowerSize: number = 1.0;
+  flowerSize: number = 1.5;
   globalPulseSpeed: number = 0.2;
   maxLineWidth: number = 15.969935502148255;
   widthVariance: number = 0.5;
@@ -156,7 +156,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.55;
+  leafScale: number = 0.65;
   leafDensity: number = 0.35;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
@@ -177,11 +177,13 @@ export class SimulationEngine {
   maxDOMs: number = 32000;
   lastMaxDOMs: number = 32000;
   freeStemIndices: number[] = [];
-  minAgents: number = 6;
+  minCreatures: number = 9;
+  hasReachedMinCreatures: boolean = false;
+  lastEmergenceTick: number = 0;
   boundarySize: number = 120;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxSpecies: number = 14;
+  maxCreatures: number = 14;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;
@@ -252,22 +254,22 @@ export class SimulationEngine {
   snakeWander: number = 1.0;
   bushSpeed: number = 1.50;
   treeSpeed: number = 1.20;
-  rhizomeSpeed: number = 0.75;
+  rhizomeSpeed: number = 1.0;
 
   bushStepSize: number = 0.55;
   treeStepSize: number = 0.90;
-  rhizomeStepSize: number = 0.30;
+  rhizomeStepSize: number = 1.0;
 
   bushBranching: number = 9.5;
   treeBranching: number = 1.8;
   treeBranchDelay: number = 60;
   bushTaper: number = 1.0;
   treeTaper: number = 1.0;
-  rhizomeTaper: number = 1.0;
+  rhizomeTaper: number = 0.6;
   snakeBranching: number = 1.0;
-  rhizomeBranching: number = 2.5;
+  rhizomeBranching: number = 1.0;
   bushMinBranches: number = 2;
-  rhizomeMinBranches: number = 4;
+  rhizomeMinBranches: number = 6;
   treeMinBranches: number = 1;
   snakeMinBranches: number = 1;
 
@@ -391,8 +393,14 @@ export class SimulationEngine {
     this.flowerSize = val;
     this.leafScale = val;
   }
-  setMinAgents(val: number) {
-    this.minAgents = val;
+  setMinCreatures(val: number) {
+    this.minCreatures = val;
+    if (this.maxCreatures <= val) {
+      this.maxCreatures = val + 1;
+    }
+    if (this.getLivingOrganismCount() < this.minCreatures) {
+      this.hasReachedMinCreatures = false;
+    }
   }
   creatureCenterY: number = 18.921075;
   setBoundarySize(val: number) {
@@ -467,8 +475,8 @@ export class SimulationEngine {
   setMaxAgents(val: number) {
     this.maxAgents = val;
   }
-  setMaxSpecies(val: number) {
-    this.maxSpecies = val;
+  setMaxCreatures(val: number) {
+    this.maxCreatures = Math.max(val, this.minCreatures + 1);
   }
   setEcoFade(val: number) {
     this.ecoFade = val;
@@ -718,8 +726,9 @@ export class SimulationEngine {
     thickness: number,
     isAppendage = false,
     agentId?: number,
+    isTerminal = false,
   ) {
-    updateMeshSegments(this, p1, p2, genome, thickness, isAppendage, agentId);
+    updateMeshSegments(this, p1, p2, genome, thickness, isAppendage, agentId, isTerminal);
   }
 
   markDying(segments: any[], dyingSet: Set<number>, idx: number, dyingStartOverride?: number) {
@@ -785,6 +794,48 @@ export class SimulationEngine {
 
   initSpeciesLifecycle(strainName: string) {
     return initSpeciesLifecycle(this, strainName);
+  }
+
+  getActiveAgentCount(): number {
+    let count = 0;
+    for (let i = 0; i < this.agents.length; i++) {
+      const a = this.agents[i];
+      if (a.active && !a.tapering && !a.isFeeler) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  getStrainActiveAgentCount(strainName: string): number {
+    let count = 0;
+    for (let i = 0; i < this.agents.length; i++) {
+      const a = this.agents[i];
+      if (a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  getLivingOrganisms(): Set<string> {
+    const living = new Set<string>();
+    for (let i = 0; i < this.agents.length; i++) {
+      const a = this.agents[i];
+      if (
+        a.active &&
+        !a.tapering &&
+        !a.isFeeler &&
+        !(this.dyingStrains && this.dyingStrains.has(a.genome.name))
+      ) {
+        living.add(a.genome.name);
+      }
+    }
+    return living;
+  }
+
+  getLivingOrganismCount(): number {
+    return this.getLivingOrganisms().size;
   }
 
   killSpecies(strainName: string, reason: string) {

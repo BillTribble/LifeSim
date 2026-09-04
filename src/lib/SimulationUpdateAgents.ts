@@ -20,24 +20,18 @@ export function extrudePointedTerminalCap(
   const dir = agent.direction.clone().normalize();
   if (dir.lengthSq() < 0.001) dir.set(0, 1, 0);
 
-  const stepDist = Math.max(0.12, THREE.MathUtils.clamp(currThickness * 0.35, 0.15, 0.8));
-  let currPos = agent.position.clone();
+  const tipLength = Math.max(0.3, currThickness * 1.5);
+  const tipPos = agent.position.clone().addScaledVector(dir, tipLength);
 
-  // Extrude 4 smooth conical tapering micro-caps down to needle point (0.01)
-  const taperFactors = [0.65, 0.35, 0.12, 0.01];
-  for (let k = 0; k < taperFactors.length; k++) {
-    const nextPos = currPos.clone().addScaledVector(dir, stepDist * (1.0 - k * 0.15));
-    const segThick = currThickness * taperFactors[k];
-    engine.addLineSegment(
-      currPos,
-      nextPos,
-      agent.realGenome || genome,
-      Math.max(0.001, segThick),
-      false,
-      agent.id,
-    );
-    currPos = nextPos;
-  }
+  engine.addLineSegment(
+    agent.position,
+    tipPos,
+    agent.realGenome || genome,
+    Math.max(0.001, currThickness),
+    false,
+    agent.id,
+    true,
+  );
 }
 
 export function processAgents(
@@ -61,18 +55,33 @@ export function processAgents(
     }
   }
 
+  const livingOrganisms = engine.getLivingOrganisms();
+  const livingOrganismCount = livingOrganisms.size;
+  if (livingOrganismCount >= engine.minCreatures) {
+    engine.hasReachedMinCreatures = true;
+  }
+
   // Emergency extinction recovery: If all organisms have died and no agents are active, re-seed founder species
   if (!engine.designerMode) {
-    const livingNonFeelerAgents = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
-    if (livingNonFeelerAgents === 0 && activeAgents.filter(a => a.active).length === 0 && engine.agents.length > 0) {
+    if (livingOrganismCount === 0 && activeAgents.filter(a => a.active).length === 0 && engine.agents.length > 0) {
       engine.onLog("🌱 Ecosystem extinct — spawning emergency founder species.");
       engine.spawnNewSpecies();
       engine.spawnNewSpecies();
     }
   }
 
+  // Colony growth to min organisms: If below minCreatures, ensure ecosystem populates steadily up to minCreatures
+  if (!engine.designerMode && livingOrganismCount < engine.minCreatures) {
+    if (engine.lastEmergenceTick === undefined) engine.lastEmergenceTick = 0;
+    if (engine.frameCount - engine.lastEmergenceTick >= 300) {
+      engine.lastEmergenceTick = engine.frameCount;
+      engine.onLog(`🌱 Under target organisms (${livingOrganismCount}/${engine.minCreatures}) — spontaneous emergence of new founder organism.`);
+      engine.spawnNewSpecies();
+    }
+  }
+
   // Cap maximum species by tapering the oldest variant when capacity exceeded
-  if (!engine.designerMode && canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxSpecies) {
+  if (!engine.designerMode && canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxCreatures) {
     let oldestGenomeName: string | null = null;
     let oldestAge = -Infinity;
     for (const a of activeAgents) {
@@ -85,7 +94,7 @@ export function processAgents(
       }
     }
     
-    if (oldestGenomeName) {
+    if (oldestGenomeName && livingOrganismCount - 1 >= engine.minCreatures) {
       engine.killSpecies(
         oldestGenomeName,
         "maximum species capacity reached",
@@ -191,25 +200,25 @@ export function processAgents(
           // Pull trunk gently upward toward +Y
           agent.direction.lerp(new THREE.Vector3(0, 1, 0), 0.08).normalize();
         } else {
-          // Phase 2: Canopy — prolific branching with straight, wooden limbs (no snake wobble!)
+          // Phase 2: Canopy — prolific branching with straight, wooden limbs and fine tapering twigs
           agent.isCanopy = true;
           const canopyAge = agent.age >= trunkDurationTicks ? agent.age - trunkDurationTicks : 50;
           const canopyProgress = Math.min(1.0, canopyAge / 300);
-          const branchRamp = 15.0 + canopyProgress * 25.0; // Ramps from 15x to 40x so it branches prolifically!
+          const branchRamp = 25.0 + canopyProgress * 35.0; // Ramps from 25x to 60x so it branches prolifically!
           effectiveBifurcationRate *= branchRamp * (engine.treeBranching ?? 1.0);
-          effectiveStepSize *= (engine.treeStepSize ?? 0.90) * (0.7 - canopyProgress * 0.25); // Twigs get shorter as branches multiply
-          effectiveWanderIntensity *= 0.3; // Low wander so tree branches remain straight and wooden, not wobbly!
+          effectiveStepSize *= (engine.treeStepSize ?? 0.90) * (0.75 - canopyProgress * 0.35); // Twigs get shorter as branches multiply
+          effectiveWanderIntensity *= 0.25; // Low wander so tree branches remain straight and wooden, not wobbly!
           // Give limbs a slight upward canopy lift
-          agent.direction.lerp(new THREE.Vector3(0, 0.4, 0), 0.03).normalize();
+          agent.direction.lerp(new THREE.Vector3(0, 0.45, 0), 0.025).normalize();
         }
       } else if (genome.archetype === "snake") {
         effectiveBifurcationRate *= 0.05 * (engine.snakeBranching ?? 1.0);
         effectiveWanderIntensity *= engine.snakeWander;
         effectiveStepSize *= engine.snakeStepSize;
       } else if (genome.archetype === "rhizome") {
-        effectiveBifurcationRate *= 12.0 * (engine.rhizomeBranching ?? 1.0);
-        effectiveStepSize *= (engine.rhizomeStepSize ?? 0.40);
-        effectiveWanderIntensity *= 12.0;
+        effectiveBifurcationRate *= 2.2 * (engine.rhizomeBranching ?? 1.0);
+        effectiveStepSize *= (engine.rhizomeStepSize ?? 1.0);
+        effectiveWanderIntensity *= 1.2;
       }
 
       // Width-driven branching & rotation: thicker agents branch more and wander more (rhododendron behavior)
@@ -220,7 +229,9 @@ export function processAgents(
 
       // Hierarchical branch scaling: Higher-order branches and twigs get progressively smaller and shorter
       const branchDepth = agent.branchDepth || 0;
-      const depthScale = Math.max(0.35, Math.pow(0.85, branchDepth));
+      const depthScale = genome.archetype === "tree"
+        ? Math.max(0.25, Math.pow(0.72, branchDepth))
+        : Math.max(0.35, Math.pow(0.85, branchDepth));
       effectiveStepSize *= depthScale;
 
       agent.age++;
@@ -501,8 +512,12 @@ export function processAgents(
           a => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name
         ).length;
 
-        // If the species is at or below its minimum branches floor, it CANNOT terminate naturally!
-        const canTerminateBranch = nonTaperingBranchesOfStrain > minBranchesForArch;
+        const livingNonFeelerCount = activeAgents.filter(
+          a => a.active && !a.tapering && !a.isFeeler
+        ).length;
+
+        // If the species is at or below its minimum branches floor, OR if total active agents <= engine.minCreatures, it CANNOT terminate naturally!
+        const canTerminateBranch = nonTaperingBranchesOfStrain > minBranchesForArch && (livingNonFeelerCount - 1 >= engine.minCreatures);
 
         if (agent.tapering) {
           // TAPERING GRACE PERIOD:
@@ -530,10 +545,16 @@ export function processAgents(
             const baseDecay = branchDepth === 0 ? 0.994 : (branchDepth === 1 ? 0.985 : 0.978);
             archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           } else if (arch === 'tree') {
-            const baseDecay = agent.age < (engine.treeBranchDelay ?? 60) && branchDepth === 0 ? 0.998 : (branchDepth === 0 ? 0.993 : (branchDepth === 1 ? 0.984 : 0.972));
+            const baseDecay = agent.age < (engine.treeBranchDelay ?? 60) && branchDepth === 0
+              ? 0.998
+              : (branchDepth === 0
+                  ? 0.993
+                  : (branchDepth === 1
+                      ? 0.982
+                      : (branchDepth === 2 ? 0.965 : 0.945)));
             archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           } else if (arch === 'rhizome') {
-            const baseDecay = branchDepth === 0 ? 0.995 : (branchDepth === 1 ? 0.980 : 0.970);
+            const baseDecay = branchDepth === 0 ? 0.997 : (branchDepth === 1 ? 0.988 : 0.980);
             archDecay = 1.0 - (1.0 - baseDecay) * archTaper;
           }
 
@@ -542,16 +563,24 @@ export function processAgents(
 
           if (!canTerminateBranch) {
             // Keep minimum branches alive, healthy, and substantial so they continue growing and branching indefinitely!
-            const floorThickness = Math.max(0.6, genome.thicknessBase * 0.35);
-            if (agent.thickness < floorThickness) {
-              agent.thickness = floorThickness;
+            // Only structural trunks (depth 0) need a heavy base floor; outer branches/twigs still taper naturally
+            if (branchDepth === 0) {
+              const floorThickness = Math.max(0.5, genome.thicknessBase * 0.30);
+              if (agent.thickness < floorThickness) {
+                agent.thickness = floorThickness;
+              }
+            } else {
+              const floorThickness = Math.max(0.08, genome.thicknessBase * 0.05);
+              if (agent.thickness < floorThickness) {
+                agent.thickness = floorThickness;
+              }
             }
           } else if (arch !== 'snake') {
             // Natural tip termination check: ONLY allowed for surplus side branches above the minimum floor
             const maxDepth = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
             const branchAgeLimit = (branchDepth === 0 ? 400 : Math.max(50, 180 - branchDepth * 35)) / Math.max(0.2, archTaper);
             const termChance = (engine.terminationProb || 0.05) * 0.03 * (1.0 + branchDepth * 0.6) * archTaper;
-            const minTwigThreshold = 0.22 * Math.sqrt(Math.max(0.1, archTaper));
+            const minTwigThreshold = (arch === 'tree' ? 0.12 : 0.22) * Math.sqrt(Math.max(0.1, archTaper));
             if (branchDepth >= maxDepth || agent.age > branchAgeLimit || Math.random() < termChance || (branchDepth > 0 && agent.thickness <= minTwigThreshold)) {
               agent.tapering = true;
               agent.taperBudget = 0;
@@ -708,7 +737,12 @@ export function processAgents(
       const maxForArchetype = getMaxBranchesForArchetype(engine, genome.archetype);
       const maxDepthAllowed = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
 
-      const allowedToBranch = myStrainCount < maxForArchetype && (agent.branchDepth || 0) < maxDepthAllowed;
+      const livingNonFeelerCount = activeAgents.filter(
+        a => a.active && !a.tapering && !a.isFeeler
+      ).length;
+      const isUnderMinCreatures = livingNonFeelerCount < engine.minCreatures;
+
+      const allowedToBranch = (myStrainCount < maxForArchetype || isUnderMinCreatures) && ((agent.branchDepth || 0) < maxDepthAllowed || isUnderMinCreatures);
 
       if (agent.branchCooldown && agent.branchCooldown > 0) {
         agent.branchCooldown--;
@@ -719,12 +753,15 @@ export function processAgents(
       const brMult = Math.max(0.1, engine.branchingMultiplier ?? 1.0);
       
       // Dynamic minimum interval before next branch: high branchingMultiplier reduces delay between branch nodes
-      const baseMinInterval = genome.archetype === "rhizome" ? 3 : (genome.archetype === "bush" ? 5 : 8);
+      const baseMinInterval = genome.archetype === "rhizome" ? 7 : (genome.archetype === "bush" ? 5 : (agent.isCanopy ? 4 : 8));
       const minInterval = Math.max(2, Math.floor(baseMinInterval / (1.0 + Math.log10(Math.max(1, brMult)))));
       const branchReady = (agent.branchCooldown || 0) <= 0 && agent.age >= minInterval;
 
       const pruneBifurcationMod = Math.max(0.2, 1.0 - ((engine.pruningStrength ?? 0.8) - 0.5) * 0.35);
-      const branchProb = effectiveBifurcationRate * liveBranchTendency * brMult * 0.01 * pruneBifurcationMod;
+      let branchProb = effectiveBifurcationRate * liveBranchTendency * brMult * 0.01 * pruneBifurcationMod;
+      if (isUnderMinCreatures) {
+        branchProb = Math.max(0.04, branchProb * 1.5);
+      }
 
       if (
         allowedToBranch &&
@@ -736,9 +773,14 @@ export function processAgents(
       ) {
         agent.branchCooldown = minInterval + Math.floor(Math.random() * 3);
 
+        const currentDepth = agent.branchDepth || 0;
         const forkAngle = genome.archetype === "rhizome"
-          ? (Math.PI / 3 + (Math.random() - 0.5) * 0.4) // Classic lateral root offshoot angle
-          : (Math.PI / 4 + (Math.random() - 0.5) * 0.5);
+          ? (Math.PI / 4.2 + (Math.random() - 0.5) * 0.3) // Smooth forward slime mold bifurcations (~40 deg)
+          : genome.archetype === "tree"
+            ? (currentDepth === 0
+                ? (Math.PI / 4.5 + (Math.random() - 0.5) * 0.3) // Trunk bifurcation: ~35-45 deg upward boughs
+                : (Math.PI / 3.2 + (Math.random() - 0.5) * 0.4)) // Lateral canopy twigs: ~50-65 deg spreading outward
+            : (Math.PI / 4 + (Math.random() - 0.5) * 0.5);
         const newDirection = agent.direction
           .clone()
           .applyAxisAngle(
@@ -755,17 +797,18 @@ export function processAgents(
 
         // When branching:
         // Bush: Children thin to delicate tendrils (0.70x), parent thins moderately
-        // Rhizome (Ginger): Little rootlets sprout as smaller side branches (0.72x) that taper nicely, parent retains tuber bulk (0.92x)
-        // Tree: Structural timber limbs (0.75x) thinner than trunk
+        // Rhizome (Slime Mold / Creeping): Tendrils divide into balanced creeping runners (0.82x), parent retains runner girth (0.88x)
+        // Tree: Hierarchical thinning — trunk -> bough (0.65x), bough -> limb (0.55x), limb -> fine twig (0.45x)
         if (genome.archetype === "bush") {
           thicknessMod *= 0.70;    // Children thin to delicate tendrils
           agent.thickness *= 0.82; // Parent thins moderately
         } else if (genome.archetype === "rhizome") {
-          thicknessMod *= 0.72; // Smaller rootlets popping out
-          agent.thickness *= 0.92; // Main root tuber retains bulk
+          thicknessMod = 0.82 * (isThickBranch ? 1.05 : 0.90); // Slime veins divide into balanced creeping tendrils
+          agent.thickness *= 0.88;
         } else if (genome.archetype === "tree") {
-          thicknessMod *= 0.75; // Limbs get progressively thinner than trunk
-          agent.thickness *= 0.85;
+          const childDepthScale = currentDepth === 0 ? 0.65 : (currentDepth === 1 ? 0.55 : 0.45);
+          thicknessMod = childDepthScale * (isThickBranch ? 1.05 : 0.90);
+          agent.thickness *= (currentDepth === 0 ? 0.85 : 0.80);
         }
 
         const branchGenome = agent.genome;
@@ -791,7 +834,14 @@ export function processAgents(
         // TERM_BRANCH: Post-branch termination penalty
         // When termProbPostBranch > 0.5, creating a branch carries a risk of parent stem ending
         const postBranchRisk = (Math.max(0.5, engine.termProbPostBranch || 0.5) - 0.5) * 0.05 * (engine.terminationProb || 0.02);
-        if (postBranchRisk > 0 && Math.random() < postBranchRisk) {
+        const myStrainBranches = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name).length;
+        const totalLivingNonFeeler = activeAgents.filter(a => a.active && !a.tapering && !a.isFeeler).length;
+        const agentArch = genome.archetype || 'bush';
+        let minBranches = 1;
+        if (agentArch === 'bush') minBranches = engine.bushMinBranches ?? 2;
+        else if (agentArch === 'rhizome') minBranches = engine.rhizomeMinBranches ?? 4;
+        const canTerminatePostBranch = myStrainBranches > minBranches && (totalLivingNonFeeler - 1 >= engine.minCreatures);
+        if (canTerminatePostBranch && postBranchRisk > 0 && Math.random() < postBranchRisk) {
           agent.tapering = true;
         }
       }
@@ -819,15 +869,12 @@ export function processAgents(
       const shouldDieFromMating = hasSpeciesBred && speciesMCount >= maxM;
       const shouldDieFromAge = agent.age > maxLifespan;
 
+      const canSafelyDeleteSpecies = (livingOrganismCount - 1 >= engine.minCreatures);
+
       if (!agent.tapering && (shouldDieFromMating || shouldDieFromAge)) {
-        if (canEnterDeleting(engine, activeAgents, 1)) {
+        if (canSafelyDeleteSpecies && canEnterDeleting(engine, activeAgents, 1)) {
           const reason = shouldDieFromMating ? `bred ${maxM} times` : "reached max lifespan";
           engine.killSpecies(agent.genome.name, reason);
-        } else if (shouldDieFromAge && agent.age > maxLifespan * 1.5) {
-          // If the species cannot be deleted yet due to minimum species threshold (3 species),
-          // individual ancient branches taper their tips so they don't grow infinitely
-          agent.tapering = true;
-          agent.fadeAge = 0;
         }
       }
 
@@ -893,17 +940,6 @@ export function processAgents(
 
           if (agent.isFeeler) {
             engine.markAgentSegmentsDying(agent.id);
-          }
-          // Deactivate only child sub-branches spawned by this specific branch tip
-          for (let j = 0; j < activeAgents.length; j++) {
-            const other = activeAgents[j];
-            const isDescendant = other.parentAgent === agent || (agent.id !== undefined && other.parentId === agent.id);
-            if (other.active && isDescendant) {
-              extrudePointedTerminalCap(engine, other, other.genome, other.thickness);
-              other.active = false;
-              other.tapering = true;
-              currentActiveCount--;
-            }
           }
         }
       } 
