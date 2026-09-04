@@ -103,41 +103,44 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
 export function randomizeColors(engine: SimulationEngine): void {
   const uniqueGenomes = new Set<Genome>();
   engine.agents.forEach((a) => uniqueGenomes.add(a.genome));
-  const alphaGenome = Array.from(uniqueGenomes).find((g) => g.name.startsWith("Alpha"));
-  const betaGenome = Array.from(uniqueGenomes).find((g) => g.name.startsWith("Beta"));
+  const genomesList = Array.from(uniqueGenomes);
+  const alphaGenome = genomesList[0];
+  const betaGenome = genomesList[1];
   const colorMap = new Map<string, THREE.Color>();
 
-  if (alphaGenome && betaGenome) {
+  if (alphaGenome) {
     const bgHue = Math.random();
     // Alpha is complementary to the background color (180° / 0.5 hue offset)
     const alphaHue = (bgHue + 0.5) % 1.0;
     if (engine.theme !== 1) {
       alphaGenome.color.setHSL(alphaHue, 0.9, 0.52);
-      let betaOffset = 0.5;
-      if (engine.startColorMode === "analogous") {
-        const sign = Math.random() < 0.5 ? 1 : -1;
-        const matingShift = engine.colorMutationShift || 0.06;
-        betaOffset = sign * matingShift * (0.8 + Math.random() * 0.4);
-      } else {
-        betaOffset = 0.5;
+      if (betaGenome) {
+        let betaOffset = 0.5;
+        if (engine.startColorMode === "analogous") {
+          const sign = Math.random() < 0.5 ? 1 : -1;
+          const matingShift = engine.colorMutationShift || 0.06;
+          betaOffset = sign * matingShift * (0.8 + Math.random() * 0.4);
+        } else {
+          betaOffset = 0.5;
+        }
+        const betaHue = ((alphaHue + betaOffset) % 1.0 + 1.0) % 1.0;
+        betaGenome.color.setHSL(betaHue, 0.9, 0.52);
       }
-      const betaHue = ((alphaHue + betaOffset) % 1.0 + 1.0) % 1.0;
-      betaGenome.color.setHSL(betaHue, 0.9, 0.52);
     }
     colorMap.set(alphaGenome.name, alphaGenome.color.clone());
-    colorMap.set(betaGenome.name, betaGenome.color.clone());
+    if (betaGenome) {
+      colorMap.set(betaGenome.name, betaGenome.color.clone());
+    }
     const bgColorObj = new THREE.Color().setHSL(bgHue, 0.4, 0.08);
     const bgHex = "#" + bgColorObj.getHexString();
     engine.setBgColor(bgHex);
     if (engine.onConfigChange) engine.onConfigChange({ bgColor: bgHex });
   }
 
-  uniqueGenomes.forEach((g) => {
-    if (!g.name.startsWith("Alpha") && !g.name.startsWith("Beta")) {
-      const newColor = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-      g.color.copy(newColor);
-      colorMap.set(g.name, newColor);
-    }
+  genomesList.slice(2).forEach((g) => {
+    const newColor = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
+    g.color.copy(newColor);
+    colorMap.set(g.name, newColor);
   });
 
   if (engine.cylinderMesh.instanceColor) {
@@ -561,18 +564,8 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     alphaGenome.color.setHSL(0.1, 0.02, 0.95);
     betaGenome.color.setHSL(0.55, 1.0, 0.55);
   } else {
-    // If background color is set, derive background hue from it; otherwise pick a new random background hue
-    let bgHue = Math.random();
-    if (engine.bgColor) {
-      try {
-        const currentBg = new THREE.Color(engine.bgColor);
-        const hsl = { h: 0, s: 0, l: 0 };
-        currentBg.getHSL(hsl);
-        bgHue = hsl.h;
-      } catch {
-        bgHue = Math.random();
-      }
-    }
+    // Pick a new random background hue for each new ecosystem
+    const bgHue = Math.random();
 
     // Starting color for Alpha is complementary to the background color (180° / 0.5 hue offset)
     alphaHue = (bgHue + 0.5) % 1.0;
