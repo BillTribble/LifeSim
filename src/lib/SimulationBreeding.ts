@@ -56,10 +56,7 @@ export function trySpawnTaperingFeeler(
 ): void {
   const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
   const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
-  let strainAge = 0;
-  if (evalGenome.createdAt !== undefined) {
-    strainAge = engine.time - evalGenome.createdAt;
-  }
+  const strainAge = evalGenome.createdAt !== undefined ? engine.time - evalGenome.createdAt : engine.time;
   // Disabled during initial feeler delay period (6 seconds / 360 ticks)
   if (agent.age < feelerDelayTicks || strainAge < feelerDelayTicks) {
     return;
@@ -190,10 +187,10 @@ export function handleBreedingAndFeelers(
   const genome = agent.genome;
   const evalGenome =
     agent.isFeeler && agent.realGenome ? agent.realGenome : genome;
-  let strainAge = 0;
-  if (evalGenome.createdAt !== undefined) {
-    strainAge = engine.time - evalGenome.createdAt;
-  }
+  const strainAge =
+    evalGenome.createdAt !== undefined
+      ? engine.time - evalGenome.createdAt
+      : engine.time;
 
   // Age-dependent feeler emission: Organism extends feelers as it grows until it has bred
   // Limit: only ONE active feeler per creature at a time
@@ -266,14 +263,12 @@ export function handleBreedingAndFeelers(
     }
   }
 
+  const minGrowthTicks = 180; // 3.0 seconds at 60 FPS
   const isFertile =
     (!agent.tapering || (!agent.isFeeler && agent.thickness > 0.1 && mCount === 0)) &&
     mCount < maxM &&
     agent.cooldown <= 0 &&
-    (agent.isFeeler ||
-      agent.age > 8 ||
-      evalGenome.stability < 0.5 ||
-      strainAge > 40);
+    (agent.isFeeler || strainAge >= minGrowthTicks);
   const canBreed =
     isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
@@ -293,7 +288,7 @@ export function handleBreedingAndFeelers(
       const partnerStrainAge =
         partnerEvalGenome.createdAt !== undefined
           ? engine.time - partnerEvalGenome.createdAt
-          : 0;
+          : engine.time;
       const partnerMCount =
         (engine as any).speciesLifecycleMap?.get(partnerEvalGenome.name)?.matingCount ||
         partner.matingCount ||
@@ -305,10 +300,7 @@ export function handleBreedingAndFeelers(
         (agent.isFeeler ||
           (partnerMCount < maxM &&
             partner.cooldown <= 0 &&
-            (partner.isFeeler ||
-              partner.age > 8 ||
-              partnerEvalGenome.stability < 0.5 ||
-              partnerStrainAge > 40)));
+            (partner.isFeeler || partnerStrainAge >= minGrowthTicks)));
 
       if (
         !partnerFertile ||
@@ -566,6 +558,7 @@ export function handleBreedingAndFeelers(
           // Offspring spawn exactly at the midPoint (center of mating artifact) and grow outward
           const spawnPoint = midPoint.clone();
 
+          const cd = Math.max(minGrowthTicks, engine.hybridCooldown || minGrowthTicks);
           newAgents.push({
             position: spawnPoint.clone(),
             lastPosition: spawnPoint.clone(),
@@ -574,7 +567,7 @@ export function handleBreedingAndFeelers(
             active: true,
             age: 0,
             thickness: childGenome.thicknessBase,
-            cooldown: engine.hybridCooldown,
+            cooldown: cd,
           });
 
           // Post-Breeding Transition: Synchronize species-level mating counts and cooldowns
@@ -605,7 +598,6 @@ export function handleBreedingAndFeelers(
           const mCount2 = s2?.matingCount || (nearestPartner.matingCount || 0) + 1;
 
           // Apply cooldown to ALL active agents and feelers of both parent strains to prevent duplicate rapid collisions
-          const cd = engine.hybridCooldown || 340;
           for (let j = 0; j < activeAgents.length; j++) {
             const a = activeAgents[j];
             const aStrain = a.isFeeler && a.realGenome ? a.realGenome.name : a.genome.name;

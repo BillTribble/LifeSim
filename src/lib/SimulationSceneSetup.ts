@@ -616,6 +616,8 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome.multicolorAppendage = false;
     betaGenome.sameColorAppendage = true;
   }
+  alphaGenome.createdAt = engine.time;
+  betaGenome.createdAt = engine.time;
 
   engine.agents.push({
     position: new THREE.Vector3(-40, 0, 0),
@@ -626,7 +628,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: new THREE.Vector3(-40, 0, 0),
     thickness: alphaGenome.thicknessBase * 2.0,
-    cooldown: 0,
+    cooldown: 180,
   });
 
   engine.agents.push({
@@ -638,7 +640,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: new THREE.Vector3(40, 0, 0),
     thickness: betaGenome.thicknessBase * 2.0,
-    cooldown: 0,
+    cooldown: 180,
   });
 
   initSpeciesLifecycle(engine, alphaGenome.name);

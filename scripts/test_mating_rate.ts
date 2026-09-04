@@ -160,6 +160,7 @@ export function runMatingBenchmark(numRuns = 100, maxSeconds = 30, customParams:
 }
 
 if (process.argv[1]?.includes('test_mating_rate')) {
-  console.log("Running baseline mating benchmark with current defaults...");
-  runMatingBenchmark(100, 30);
+  const runs = parseInt(process.argv[2] || '20', 10);
+  console.log(`Running baseline mating benchmark with current defaults (${runs} runs)...`);
+  runMatingBenchmark(runs, 30);
 }

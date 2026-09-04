@@ -124,6 +124,9 @@ export function processAgents(
     if (agent.growthBoost > 1.0) {
       agent.growthBoost = Math.max(1.0, agent.growthBoost - 0.03 * engine.timeScale);
     }
+    if (agent.cooldown > 0) {
+      agent.cooldown = Math.max(0, agent.cooldown - engine.timeScale);
+    }
     
     // Width-dependent growth speed modifier
     let widthSpeedMult = 1.0;
@@ -221,7 +224,6 @@ export function processAgents(
       effectiveStepSize *= depthScale;
 
       agent.age++;
-      if (agent.cooldown > 0) agent.cooldown--;
 
       let nearestDistSq = Infinity;
       let nearestTarget: Agent | null = null;
@@ -230,6 +232,18 @@ export function processAgents(
 
       let nearestTargetPos: THREE.Vector3 | null = null;
       const myStrain = agent.realGenome?.name || agent.genome.name;
+
+      const minGrowthTicks = 180; // Creatures spend at least 3 seconds (180 ticks at 60 FPS) growing before seeking
+      const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+      const myMCount = (engine as any).speciesLifecycleMap?.get(myStrain)?.matingCount || agent.matingCount || 0;
+      const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
+      const strainAge = evalGenome.createdAt !== undefined ? engine.time - evalGenome.createdAt : engine.time;
+      const canSeek =
+        !agent.isFeeler &&
+        !agent.tapering &&
+        agent.cooldown <= 0 &&
+        strainAge >= minGrowthTicks &&
+        myMCount < maxM;
 
       for (let j = 0; j < activeAgents.length; j++) {
         const other = activeAgents[j];
@@ -240,11 +254,29 @@ export function processAgents(
         const dSq = agent.position.distanceToSquared(other.position);
 
         if (isDifferentSpecies) {
-          // Global seeking without detection radius limit: find nearest agent of different species
-          if (dSq < nearestDistSq) {
-            nearestDistSq = dSq;
-            nearestTarget = other;
-            nearestTargetPos = other.position.clone();
+          if (canSeek) {
+            const otherEvalGenome = other.isFeeler && other.realGenome ? other.realGenome : other.genome;
+            const otherStrainAge = otherEvalGenome.createdAt !== undefined ? engine.time - otherEvalGenome.createdAt : engine.time;
+            const otherMCount = (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount || other.matingCount || 0;
+            const otherReceptive =
+              !other.tapering &&
+              other.cooldown <= 0 &&
+              otherStrainAge >= minGrowthTicks &&
+              otherMCount < maxM;
+
+            if (otherReceptive && dSq < nearestDistSq) {
+              nearestDistSq = dSq;
+              nearestTarget = other;
+              nearestTargetPos = other.position.clone();
+            }
+          } else {
+            // During growth / cooldown phase, gently separate so creatures branch outward from the mating point
+            if (dSq < 2500) {
+              avoidanceForce.add(
+                new THREE.Vector3().subVectors(agent.position, other.position).normalize()
+              );
+              avoidanceCount++;
+            }
           }
         } else {
           // Gentle local separation between same species to prevent overlapping
@@ -258,10 +290,12 @@ export function processAgents(
       }
 
       // Check segments of different species so creatures steer toward the organism body
-      if (engine.segments.length > 0) {
+      if (canSeek && engine.segments.length > 0) {
         for (let sIdx = 0; sIdx < engine.segments.length; sIdx += 4) {
           const seg = engine.segments[sIdx];
           if (!seg || seg.dyingStart || seg.strainName === myStrain || seg.strainName.startsWith("Feeler-")) continue;
+          const targetLifecycle = (engine as any).speciesLifecycleMap?.get(seg.strainName);
+          if (targetLifecycle && targetLifecycle.matingCount >= maxM) continue;
           const m = seg.matrix.elements;
           const segPos = new THREE.Vector3(m[12], m[13], m[14]);
           const dSq = agent.position.distanceToSquared(segPos);
@@ -313,7 +347,10 @@ export function processAgents(
             )
             .normalize();
         } else {
-          const seekDampen = 1.0 - Math.min(0.85, (engine.seekAmount ?? 0.65) * 0.90);
+          const isSeeking = canSeek && nearestTargetPos !== null;
+          const seekDampen = isSeeking
+            ? 1.0 - Math.min(0.85, (engine.seekAmount ?? 0.65) * 0.90)
+            : 1.0;
           agent.direction
             .add(
               new THREE.Vector3(
@@ -338,7 +375,7 @@ export function processAgents(
         }
 
         // Steer towards partner / Symbiosis spiraling (applied after movement pattern)
-        if (nearestTargetPos) {
+        if (canSeek && nearestTargetPos) {
           const dist = Math.sqrt(nearestDistSq);
           if (dist < 40 && nearestTarget && !nearestTarget.isFeeler) {
             // Symbiosis: Mutual intertwining when in close proximity
@@ -744,7 +781,7 @@ export function processAgents(
           isCanopy: agent.isCanopy,
           thickness: childThickness,
           targetThickness: childThickness,
-          cooldown: 0,
+          cooldown: Math.max(agent.cooldown || 0, 180),
           id: engine.nextAgentId++,
           parentAgent: agent,
           parentId: agent.id,
@@ -774,7 +811,6 @@ export function processAgents(
 
       // 4-STAGE LIFESPAN MODEL:
       // Stage 1 & 2: Growth & Breeding -> Once an organism has bred maxMatings times OR hits age timeout, growth stops & dying begins!
-      const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
       const minMatingLifespan = (maxM + 1) * (engine.hybridCooldown || 340) * 1.2;
       const maxLifespan = Math.max(minMatingLifespan, 1200 * Math.max(0.5, engine.timeScale));
       const lifecycle = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
