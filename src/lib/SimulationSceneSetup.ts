@@ -15,6 +15,7 @@ import {
   getRandomWeightedArchetype,
   formatGenomeName,
 } from "./SimulationGenetics";
+import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { NOTE_NAMES } from "./SimulationSound";
 import type { SimulationEngine } from "./SimulationEngine";
 
@@ -357,6 +358,10 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
     genome.thicknessBase = (1.2 + Math.random() * 2.0 * variance) * 0.7;
   }
   genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
+
+  // Claim a unique strain name: the organism census and culling are keyed by name, so a
+  // collision with an existing strain would make this organism invisible to the population dials.
+  genome.name = ensureUniqueStrainName(engine, genome.name);
 
   engine.genomeMap.set(genome.name, genome);
   initSpeciesLifecycle(engine, genome.name);

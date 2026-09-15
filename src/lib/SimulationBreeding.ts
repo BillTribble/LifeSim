@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { breedGenomes } from "./SimulationGenetics";
+import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 
 export function canEnterDeleting(
   engine: SimulationEngine,
@@ -528,93 +529,54 @@ export function handleBreedingAndFeelers(
         const nearestPartner = bestPartner;
         let allowBreeding = true;
         if (nonTaperingStrains.size >= engine.maxCreatures) {
-          let victimSpeciesName = "";
+          // A feeler is a temporary sensory extension of an organism, never an organism itself
+          // (see docs/SIMULATION_HIERARCHY.md). Terminating one frees ZERO slots in the organism
+          // census, so it can never "pay" for a new birth. Previously a feeler sacrifice was
+          // accepted here, which let the population grow without bound past maxCreatures.
+          // Cap enforcement must cull a real organism, or the birth must be blocked outright.
+          const parentAName = resolveRootOrganismGenome(agent, engine).name;
+          const parentBName = resolveRootOrganismGenome(nearestPartner, engine).name;
 
-          // 1. Try to find an unrelated feeler to sacrifice first
+          let victimSpeciesName = "";
+          let oldestCreatedAt = Infinity;
           for (let idx = 0; idx < activeAgents.length; idx++) {
             const ca = activeAgents[idx];
             if (
-              ca.active &&
-              !ca.tapering &&
-              ca.isFeeler &&
-              ca !== agent &&
-              ca !== nearestPartner
-            ) {
-              victimSpeciesName = ca.genome.name;
-              break;
-            }
-          }
+              !ca.active ||
+              ca.tapering ||
+              ca.isFeeler ||
+              ca.genome.createdAt === undefined
+            )
+              continue;
+            // Already dying strains do not occupy a slot we can free again.
+            if (engine.dyingStrains && engine.dyingStrains.has(ca.genome.name)) continue;
+            // Never cull either parent of the birth we are trying to permit.
+            if (ca.genome.name === parentAName || ca.genome.name === parentBName) continue;
 
-          // 2. If no feeler found, eradicate oldest species (whether breeder is a feeler or not)
-          if (!victimSpeciesName) {
-            let oldestCreatedAt = Infinity;
-            for (let idx = 0; idx < activeAgents.length; idx++) {
-              const ca = activeAgents[idx];
-              if (
-                ca.active &&
-                !ca.tapering &&
-                ca.genome.createdAt !== undefined &&
-                !ca.isFeeler
-              ) {
-                const evalGenomeAgent =
-                  agent.isFeeler && agent.realGenome
-                    ? agent.realGenome
-                    : agent.genome;
-                const evalGenomePartner =
-                  nearestPartner.isFeeler && nearestPartner.realGenome
-                    ? nearestPartner.realGenome
-                    : nearestPartner.genome;
-                if (
-                  ca.genome.name !== evalGenomeAgent.name &&
-                  ca.genome.name !== evalGenomePartner.name
-                ) {
-                  if (ca.genome.createdAt < oldestCreatedAt) {
-                    oldestCreatedAt = ca.genome.createdAt;
-                    victimSpeciesName = ca.genome.name;
-                  }
-                }
-              }
+            if (ca.genome.createdAt < oldestCreatedAt) {
+              oldestCreatedAt = ca.genome.createdAt;
+              victimSpeciesName = ca.genome.name;
             }
           }
 
           if (victimSpeciesName) {
-            let isFeelerSacrifice = false;
-            for (let idx = 0; idx < activeAgents.length; idx++) {
-              if (
-                activeAgents[idx].genome.name === victimSpeciesName &&
-                activeAgents[idx].isFeeler
-              ) {
-                isFeelerSacrifice = true;
-                break;
-              }
-            }
-            if (isFeelerSacrifice) {
-              for (let idx = 0; idx < activeAgents.length; idx++) {
-                if (
-                  activeAgents[idx].genome.name === victimSpeciesName &&
-                  activeAgents[idx].isFeeler
-                ) {
-                  activeAgents[idx].tapering = true;
-                  activeAgents[idx].forceTapering = true;
-                }
-              }
-              engine.onLog(`Feeler terminated for child creation.`);
+            const livingOrganisms = engine.getLivingOrganismCount();
+            if (livingOrganisms - 1 >= engine.minCreatures) {
+              engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
+              nonTaperingStrains.delete(victimSpeciesName);
+              engine.onLog(
+                `Breeding recorded. Culling oldest species: ${victimSpeciesName}.`,
+              );
             } else {
-              const livingOrganisms = engine.getLivingOrganismCount();
-              if (livingOrganisms - 1 >= engine.minCreatures) {
-                engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
-                nonTaperingStrains.delete(victimSpeciesName);
-                engine.onLog(
-                  `Breeding recorded. Culling oldest species: ${victimSpeciesName}.`,
-                );
-              } else {
-                engine.onLog(
-                  `🛡️ Sacrifice blocked for ${victimSpeciesName}: would drop organisms below minCreatures (${livingOrganisms} - 1 < ${engine.minCreatures}). Breeding blocked to honor maxCreatures.`,
-                );
-                allowBreeding = false;
-              }
+              engine.onLog(
+                `🛡️ Sacrifice blocked for ${victimSpeciesName}: would drop organisms below minCreatures (${livingOrganisms} - 1 < ${engine.minCreatures}). Breeding blocked to honor maxCreatures.`,
+              );
+              allowBreeding = false;
             }
           } else {
+            engine.onLog(
+              `🛡️ No cullable organism available (${nonTaperingStrains.size}/${engine.maxCreatures}). Breeding blocked to honor maxCreatures.`,
+            );
             allowBreeding = false;
           }
         }
@@ -633,6 +595,10 @@ export function handleBreedingAndFeelers(
             engine.glowProbability,
           );
           childGenome.createdAt = engine.time;
+          // The organism census, culling and segment ownership are all keyed by strain name,
+          // so a newborn that collides with an existing name would be invisible to the
+          // min/maxCreatures accounting. Claim a unique name before registering anywhere.
+          childGenome.name = ensureUniqueStrainName(engine, childGenome.name);
           if (typeof engine.initSpeciesLifecycle === 'function') {
             engine.initSpeciesLifecycle(childGenome.name);
           }

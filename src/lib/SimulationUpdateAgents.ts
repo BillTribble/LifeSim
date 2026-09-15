@@ -80,25 +80,44 @@ export function processAgents(
     }
   }
 
-  // Cap maximum species by tapering the oldest variant when capacity exceeded
-  if (!engine.designerMode && canEnterDeleting(engine, activeAgents, 1) && nonTaperingStrains.size > engine.maxCreatures) {
-    let oldestGenomeName: string | null = null;
-    let oldestAge = -Infinity;
-    for (const a of activeAgents) {
-      if (a.active && !a.tapering && !a.isFeeler && a.hasBred) {
-         const age = engine.time - (a.genome.createdAt || 0);
-         if (age > oldestAge) {
-             oldestAge = age;
-             oldestGenomeName = a.genome.name;
-         }
+  // Cap maximum species by tapering the oldest variant when capacity exceeded.
+  // Cull repeatedly until we are back at the cap: a single cull per frame cannot keep up when
+  // several births land in the same frame. Prefer organisms that have already bred, but fall
+  // back to the oldest organism overall — requiring `hasBred` meant that a population of
+  // never-bred organisms produced no eligible victim and grew unbounded.
+  if (!engine.designerMode && nonTaperingStrains.size > engine.maxCreatures) {
+    let guard = 0;
+    while (
+      nonTaperingStrains.size > engine.maxCreatures &&
+      canEnterDeleting(engine, activeAgents, 1) &&
+      guard++ < 16
+    ) {
+      let bredVictim: string | null = null;
+      let bredAge = -Infinity;
+      let anyVictim: string | null = null;
+      let anyAge = -Infinity;
+
+      for (const a of activeAgents) {
+        if (!a.active || a.tapering || a.isFeeler) continue;
+        if (engine.dyingStrains && engine.dyingStrains.has(a.genome.name)) continue;
+        if (!nonTaperingStrains.has(a.genome.name)) continue;
+        const age = engine.time - (a.genome.createdAt || 0);
+        if (a.hasBred && age > bredAge) {
+          bredAge = age;
+          bredVictim = a.genome.name;
+        }
+        if (age > anyAge) {
+          anyAge = age;
+          anyVictim = a.genome.name;
+        }
       }
-    }
-    
-    if (oldestGenomeName && livingOrganismCount - 1 >= engine.minCreatures) {
-      engine.killSpecies(
-        oldestGenomeName,
-        "maximum species capacity reached",
-      );
+
+      const victim = bredVictim ?? anyVictim;
+      if (!victim) break;
+      if (engine.getLivingOrganismCount() - 1 < engine.minCreatures) break;
+
+      engine.killSpecies(victim, "maximum species capacity reached");
+      nonTaperingStrains.delete(victim);
     }
   }
 

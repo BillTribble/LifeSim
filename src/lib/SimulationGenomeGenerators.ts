@@ -62,6 +62,54 @@ export function formatGenomeName(archetype: string): string {
   return `${capArch} ${generateSciencyName()}`;
 }
 
+const ROMAN_SUFFIXES = [
+  "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
+  "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
+];
+
+/**
+ * Guarantees a strain name is not already in use by any living, dying or historically
+ * registered strain.
+ *
+ * Names are drawn from a small fixed pool (28 epithets plus prefix/suffix combos), so
+ * collisions happen regularly. The engine keys its entire organism census, culling logic and
+ * segment ownership by strain NAME, so two distinct organisms sharing one name collapse into a
+ * single census entry — which silently breaks the minCreatures/maxCreatures accounting and lets
+ * the population drift past the cap. Appending a lineage numeral keeps names human-readable
+ * while restoring the uniqueness the rest of the engine assumes.
+ */
+export function ensureUniqueStrainName(engine: any, baseName: string): string {
+  const isTaken = (n: string): boolean => {
+    if (engine.genomeMap?.has(n)) return true;
+    if (engine.speciesLifecycleMap?.has(n)) return true;
+    if (engine.dyingStrains?.has(n)) return true;
+    if (engine.biomassMap?.has(n)) return true;
+    if (engine.agents) {
+      for (let i = 0; i < engine.agents.length; i++) {
+        const a = engine.agents[i];
+        if (a?.active && a.genome?.name === n) return true;
+      }
+    }
+    return false;
+  };
+
+  if (!isTaken(baseName)) return baseName;
+
+  for (let i = 0; i < ROMAN_SUFFIXES.length; i++) {
+    const candidate = `${baseName} ${ROMAN_SUFFIXES[i]}`;
+    if (!isTaken(candidate)) return candidate;
+  }
+
+  // Exhausted the readable numerals — fall back to a guaranteed-unique discriminator.
+  let n = 1;
+  let candidate = `${baseName} #${n}`;
+  while (isTaken(candidate) && n < 10000) {
+    n++;
+    candidate = `${baseName} #${n}`;
+  }
+  return candidate;
+}
+
 export function selectMendelianAlleles<T>(
   p1Expressed: T,
   p1Recessive: T | undefined,
