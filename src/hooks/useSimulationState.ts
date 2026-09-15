@@ -131,7 +131,24 @@ export function useSimulationState() {
   const [glowTraitReflect, setGlowTraitReflect] = useState(() => getStoredFloat("glowTraitReflect"));
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => getStoredTraitProbs());
 
+  const [soundEnabled, setSoundEnabled] = useState(() => getStoredBool("soundEnabled", DEFAULTS.soundEnabled));
+  const [soundVolume, setSoundVolume] = useState(() => getStoredFloat("soundVolume", DEFAULTS.soundVolume));
+  const [soundSpace, setSoundSpace] = useState(() => getStoredFloat("soundSpace", DEFAULTS.soundSpace));
+  const [soundEnvironment, setSoundEnvironment] = useState<string>(() => getStoredString("soundEnvironment") || DEFAULTS.soundEnvironment);
+  const [soundAutoCycle, setSoundAutoCycle] = useState(() => getStoredBool("soundAutoCycle", DEFAULTS.soundAutoCycle));
+  const [soundSyncThemes, setSoundSyncThemes] = useState(() => getStoredBool("soundSyncThemes", DEFAULTS.soundSyncThemes));
+  const [soundMovement, setSoundMovement] = useState(() => getStoredBool("soundMovement", DEFAULTS.soundMovement));
+  const [soundWeather, setSoundWeather] = useState(() => getStoredBool("soundWeather", DEFAULTS.soundWeather));
+
   useEffect(() => {
+    localStorage.setItem("soundEnabled", soundEnabled.toString());
+    localStorage.setItem("soundVolume", soundVolume.toString());
+    localStorage.setItem("soundSpace", soundSpace.toString());
+    localStorage.setItem("soundEnvironment", soundEnvironment);
+    localStorage.setItem("soundAutoCycle", soundAutoCycle.toString());
+    localStorage.setItem("soundSyncThemes", soundSyncThemes.toString());
+    localStorage.setItem("soundMovement", soundMovement.toString());
+    localStorage.setItem("soundWeather", soundWeather.toString());
     localStorage.setItem("snakeSpeed", snakeSpeed.toString());
     localStorage.setItem("snakeStepSize", snakeStepSize.toString());
     localStorage.setItem("snakeWander", snakeWander.toString());
@@ -320,6 +337,14 @@ export function useSimulationState() {
 
   return {
     state: {
+      soundEnabled,
+      soundVolume,
+      soundSpace,
+      soundEnvironment,
+      soundAutoCycle,
+      soundSyncThemes,
+      soundMovement,
+      soundWeather,
       kioskMode,
       themeMorphSpeed,
       themeMorphFreq,
@@ -436,6 +461,14 @@ export function useSimulationState() {
       version: DEFAULTS.version || "0.3.1",
     },
     setters: {
+      setSoundEnabled,
+      setSoundVolume,
+      setSoundSpace,
+      setSoundEnvironment,
+      setSoundAutoCycle,
+      setSoundSyncThemes,
+      setSoundMovement,
+      setSoundWeather,
       setThemeMorphSpeed,
       setThemeMorphFreq,
       setTheme,
@@ -565,6 +598,14 @@ export function useSimulationState() {
           console.warn("Could not clear localStorage", e);
         }
         setKioskMode(DEFAULTS.kioskMode);
+        setSoundEnabled(DEFAULTS.soundEnabled);
+        setSoundVolume(DEFAULTS.soundVolume);
+        setSoundSpace(DEFAULTS.soundSpace);
+        setSoundEnvironment(DEFAULTS.soundEnvironment);
+        setSoundAutoCycle(DEFAULTS.soundAutoCycle);
+        setSoundSyncThemes(DEFAULTS.soundSyncThemes);
+        setSoundMovement(DEFAULTS.soundMovement);
+        setSoundWeather(DEFAULTS.soundWeather);
         setThemeMorphSpeed(DEFAULTS.themeMorphSpeed);
         setThemeMorphFreq(DEFAULTS.themeMorphFreq);
         setTheme(DEFAULTS.theme);

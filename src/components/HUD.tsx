@@ -15,12 +15,15 @@ import {
   RotateCcw,
   Layers,
   Sparkles,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { SmartDial } from "./SmartDial";
 import { PresetPanel } from "./PresetPanel";
 import { CloudConfigPanel } from "./CloudConfigPanel";
 import { MutationPanel } from "./MutationPanel";
 import { LeafConfigPanel } from "./LeafConfigPanel";
+import { SoundConfigPanel } from "./SoundConfigPanel";
 import { triggerRandomize } from "../utils/randomize";
 import {
   SystemSection,
@@ -70,6 +73,7 @@ export function HUD({
   const [leafPanelOpen, setLeafPanelOpen] = useState(false);
   const [landscapePanelOpen, setLandscapePanelOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
+  const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(() => window.innerWidth < 640);
   const [isControlsExpanded, setIsControlsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -131,6 +135,7 @@ export function HUD({
       {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
       {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} onClose={() => setPresetPanelOpen(false)} />}
       {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
+      {soundPanelOpen && <SoundConfigPanel state={state} setters={setters} stats={stats} />}
 
       <div
         className={`absolute inset-0 z-40 pointer-events-none flex flex-col p-2 sm:p-4 m-1 sm:m-4 rounded transition-all duration-500 ${showHUD ? "border-2 border-[#D2B48C]/20" : "border-2 border-transparent"}`}
@@ -164,6 +169,7 @@ export function HUD({
                   className={`h-7 flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border border-[#D2B48C]/50 px-2.5 rounded bg-[#001220]/60 shadow-sm transition-opacity duration-500 ${showHUD ? "opacity-80 hover:opacity-100" : "opacity-100"}`}
                   onClick={() => {
                     setThemePanelOpen(!themePanelOpen);
+                    setSoundPanelOpen(false);
                     setCloudPanelOpen(false);
                     setMutationPanelOpen(false);
                     setPresetPanelOpen(false);
@@ -252,6 +258,36 @@ export function HUD({
                 )}
               </div>
 
+              <div className="relative shrink-0">
+                <div
+                  className={`h-7 flex items-center gap-2 cursor-pointer hover:text-white pointer-events-auto border px-2.5 rounded shadow-sm transition-all duration-300 ${
+                    state.soundEnabled
+                      ? "border-cyan-400/80 bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 shadow-cyan-950/40"
+                      : "border-[#D2B48C]/40 bg-[#001220]/60 text-[#D2B48C]/60 hover:text-[#D2B48C]"
+                  }`}
+                  onClick={() => {
+                    setSoundPanelOpen(!soundPanelOpen);
+                    setThemePanelOpen(false);
+                    setCloudPanelOpen(false);
+                    setMutationPanelOpen(false);
+                    setPresetPanelOpen(false);
+                    setLeafPanelOpen(false);
+                    setIsControlsExpanded(false);
+                  }}
+                  title="Sound Engine & Environment Settings"
+                >
+                  {state.soundEnabled ? (
+                    <Volume2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  ) : (
+                    <VolumeX className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
+                  )}
+                  <span className="font-bold tracking-wider">
+                    {state.soundEnabled ? (state.soundEnvironment || "SOUND").toUpperCase() : "MUTED"}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${soundPanelOpen ? "rotate-180" : ""}`} />
+                </div>
+              </div>
+
               <div
                 className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-80 hover:opacity-100 border border-[#D2B48C]/30 px-2.5 rounded bg-[#001220]/60 shadow-sm transition-all shrink-0 text-[#D2B48C]"
                 onClick={handleCopySettings}
@@ -296,6 +332,7 @@ export function HUD({
                 className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white border border-[#D2B48C]/30 px-2.5 rounded pointer-events-auto bg-[#001220]/60 shadow-sm transition-colors text-[#D2B48C] shrink-0"
                 onClick={() => {
                   setPresetPanelOpen(!presetPanelOpen);
+                  setSoundPanelOpen(false);
                   setMutationPanelOpen(false);
                   setCloudPanelOpen(false);
                   setLeafPanelOpen(false);
@@ -583,6 +620,7 @@ export function HUD({
                   onClick={() => {
                     setIsControlsExpanded(!isControlsExpanded);
                     setPresetPanelOpen(false);
+                    setSoundPanelOpen(false);
                     setMutationPanelOpen(false);
                     setCloudPanelOpen(false);
                     setLeafPanelOpen(false);

@@ -125,6 +125,14 @@ export interface SimulationViewProps {
   designerMode?: boolean;
   designerArchetype?: any;
   onDesignerStrainName?: (name: string) => void;
+  soundEnabled?: boolean;
+  soundVolume?: number;
+  soundSpace?: number;
+  soundEnvironment?: string;
+  soundAutoCycle?: boolean;
+  soundSyncThemes?: boolean;
+  soundMovement?: boolean;
+  soundWeather?: boolean;
   [key: string]: any;
 }
 
@@ -248,6 +256,14 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     stemCurviness: "setStemCurviness",
     veinStrength: "setVeinStrength",
     veinGlow: "setVeinGlow",
+    soundEnabled: "setSoundEnabled",
+    soundVolume: "setSoundVolume",
+    soundSpace: "setSoundSpace",
+    soundEnvironment: "setSoundEnvironment",
+    soundAutoCycle: "setSoundAutoCycle",
+    soundSyncThemes: "setSoundSyncThemes",
+    soundMovement: "setSoundMovement",
+    soundWeather: "setSoundWeather",
   };
 
   for (const key of directProps) {
@@ -369,6 +385,12 @@ export function SimulationView(props: SimulationViewProps) {
 
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerDownStart.current = { x: e.clientX, y: e.clientY };
+    if (engineRef.current?.sound) {
+      engineRef.current.sound.init();
+      if (engineRef.current.sound.ctx?.state === "suspended") {
+        engineRef.current.sound.ctx.resume().catch(() => {});
+      }
+    }
   };
 
   const handleClick = (e: React.MouseEvent) => {

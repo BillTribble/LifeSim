@@ -40,6 +40,50 @@ export function resolveRootOrganismGenome(
   return agent.genome;
 }
 
+/**
+ * Builds (and caches per simulation tick) a map of feeler strain names to the name of the
+ * root organism that owns them.
+ *
+ * Feeler segments are written into `engine.segments` using the feeler's own synthetic genome
+ * name (`Feeler-1234`), which makes them look like an independent strain. Proximity checks must
+ * resolve those back to the owning organism, otherwise an organism can "touch" its own feeler
+ * (or a completely unrelated third party's feeler) and register that as contact with a partner
+ * that is actually on the other side of the world.
+ */
+export function buildFeelerOwnerMap(
+  engine: SimulationEngine,
+  activeAgents?: Agent[],
+): Map<string, string> {
+  const agentCount = (engine.agents || []).length;
+  const cache = (engine as any)._feelerOwnerCache;
+  if (cache && cache.time === engine.time && cache.agentCount === agentCount) {
+    return cache.map as Map<string, string>;
+  }
+  const map = new Map<string, string>();
+  const pools: Agent[][] = [engine.agents || []];
+  if (activeAgents && activeAgents !== engine.agents) pools.push(activeAgents);
+  for (const pool of pools) {
+    for (let i = 0; i < pool.length; i++) {
+      const a = pool[i];
+      if (!a || !a.isFeeler) continue;
+      const root = resolveRootOrganismGenome(a, engine);
+      if (root?.name && root.name !== a.genome.name) {
+        map.set(a.genome.name, root.name);
+      }
+    }
+  }
+  (engine as any)._feelerOwnerCache = { time: engine.time, agentCount, map };
+  return map;
+}
+
+/** Resolves a segment strain name to the organism that owns it (feelers map to their parent). */
+export function ownerOfStrain(
+  strainName: string,
+  ownerMap: Map<string, string>,
+): string {
+  return ownerMap.get(strainName) ?? strainName;
+}
+
 export function createFeelerGenome(agent: Agent, engine?: SimulationEngine): any {
   const rootGenome = resolveRootOrganismGenome(agent, engine);
   return {
@@ -159,16 +203,19 @@ export function updateFeelerSeeking(
     // Omniscient seeking: find nearest segment or live agent of any other strain (including feelers)
     let nearestPos: THREE.Vector3 | null = null;
     let minDSq = Infinity;
+    const feelerOwnerMap = buildFeelerOwnerMap(engine);
 
     // 1. Search all live segments for the closest point on any other organism
     for (let sIdx = 0; sIdx < engine.segments.length; sIdx++) {
       const seg = engine.segments[sIdx];
+      if (!seg || seg.dyingStart) continue;
+      // Feeler segments belong to their parent organism, so resolve before self-exclusion.
+      // Otherwise a feeler would happily home in on a sibling feeler of its own organism.
+      const segOwner = ownerOfStrain(seg.strainName, feelerOwnerMap);
       if (
-        !seg ||
-        seg.dyingStart ||
-        seg.strainName === myStrainName ||
+        segOwner === myStrainName ||
         seg.strainName === agent.genome.name ||
-        (agent.realGenome && seg.strainName === agent.realGenome.name)
+        (agent.realGenome && segOwner === agent.realGenome.name)
       )
         continue;
       const m = seg.matrix.elements;
@@ -318,6 +365,7 @@ export function handleBreedingAndFeelers(
     let bestPartner: any = null;
     let nearestDistSq = Infinity;
     let targetContactPos: THREE.Vector3 | null = null;
+    const feelerOwnerMap = buildFeelerOwnerMap(engine, activeAgents);
 
     for (let j = 0; j < activeAgents.length; j++) {
       if (j === i) continue;
@@ -364,22 +412,23 @@ export function handleBreedingAndFeelers(
 
           for (let sIdx = 0; sIdx < totalSegs; sIdx += stride) {
             const seg = engine.segments[sIdx];
-            if (
-              seg &&
-              !seg.dyingStart &&
-              (seg.strainName === partnerEvalGenome.name ||
-                (partner.isFeeler && seg.strainName === partner.genome.name) ||
-                (seg.strainName.startsWith("Feeler-") && seg.strainName !== agent.genome.name))
-            ) {
-              const m = seg.matrix.elements;
-              const dx = ax - m[12];
-              const dy = ay - m[13];
-              const dz = az - m[14];
-              const d = dx * dx + dy * dy + dz * dz;
-              if (d < distSq) {
-                distSq = d;
-                closestPos.set(m[12], m[13], m[14]);
-              }
+            if (!seg || seg.dyingStart) continue;
+
+            // Resolve feeler segments back to the organism that owns them. Only tissue that
+            // genuinely belongs to THIS partner organism may count as physical contact.
+            const segOwner = ownerOfStrain(seg.strainName, feelerOwnerMap);
+            if (segOwner !== partnerEvalGenome.name) continue;
+            // Never let an organism register contact with its own body or its own feelers.
+            if (segOwner === evalGenome.name) continue;
+
+            const m = seg.matrix.elements;
+            const dx = ax - m[12];
+            const dy = ay - m[13];
+            const dz = az - m[14];
+            const d = dx * dx + dy * dy + dz * dz;
+            if (d < distSq) {
+              distSq = d;
+              closestPos.set(m[12], m[13], m[14]);
             }
           }
         }
@@ -592,11 +641,18 @@ export function handleBreedingAndFeelers(
             .clone()
             .lerp(nearestPartner.direction, 0.5)
             .normalize();
-          const midPoint = agent.isFeeler
-            ? agent.position.clone()
-            : nearestPartner.isFeeler
-              ? nearestPartner.position.clone()
-              : agent.position.clone().lerp(nearestPartner.position, 0.5);
+          // Offspring must be born exactly where the two organisms physically touch.
+          // `targetContactPos` is the closest verified point of the partner's living tissue,
+          // and the breed gate above guarantees it is within `touchDist` of this agent's tip.
+          // Using the two growth tips instead would place the child in empty space whenever
+          // the partner's tip had already grown far away from the point of contact.
+          const contactPoint = targetContactPos.clone();
+          const midPoint = agent.position.clone().lerp(contactPoint, 0.5);
+
+          // Hard safety clamp: a newborn may never be detached from its parents' tissue.
+          if (midPoint.distanceToSquared(agent.position) > breedReach) {
+            midPoint.copy(agent.position);
+          }
 
           // Offspring spawn exactly at the midPoint (center of mating artifact) and grow outward
           const spawnPoint = midPoint.clone();
@@ -612,6 +668,10 @@ export function handleBreedingAndFeelers(
             thickness: childGenome.thicknessBase,
             cooldown: cd,
           });
+
+          if (engine.sound) {
+            engine.sound.onSpeciesBorn(childGenome, spawnPoint, engine.camera);
+          }
 
           // Post-Breeding Transition: Synchronize species-level mating counts and cooldowns
           engine.hasAnyOrganismBred = true;
@@ -685,6 +745,9 @@ export function handleBreedingAndFeelers(
             agent.id,
             nearestPartner.id,
           );
+          if (engine.sound) {
+            engine.sound.onMatingSuccess(midPoint, childGenome, engine.camera);
+          }
           engine.totalHybridCount = (engine.totalHybridCount || 0) + 1;
           engine.onLog(
             `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${host1Strain} × ${host2Strain} (Mating: ${host1Strain}=${mCount1}/${maxM}, ${host2Strain}=${mCount2}/${maxM})`,

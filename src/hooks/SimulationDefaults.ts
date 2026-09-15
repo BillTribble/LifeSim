@@ -1,4 +1,12 @@
 export const DEFAULTS: Record<string, any> = {
+  "soundEnabled": true,
+  "soundVolume": 70,
+  "soundSpace": 55,
+  "soundEnvironment": "rain",
+  "soundAutoCycle": true,
+  "soundSyncThemes": false,
+  "soundMovement": true,
+  "soundWeather": true,
   "kioskMode": true,
   "themeMorphSpeed": 5,
   "themeMorphFreq": 1,

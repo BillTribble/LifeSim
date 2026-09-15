@@ -420,6 +420,9 @@ export function processAgents(
       }
 
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
+      if (engine.sound) {
+        engine.sound.onAgentStep(agent, engine.camera);
+      }
 
       const bX = engine.boundarySize;
       const bZ = engine.boundarySize;
@@ -493,6 +496,9 @@ export function processAgents(
 
       if (bounced) {
         agent.direction.normalize();
+        if (engine.sound) {
+          engine.sound.onAgentBounce(agent.position, engine.camera);
+        }
       }
 
       // Step-by-step progressive stem tapering decay along the length of the branch
@@ -830,6 +836,10 @@ export function processAgents(
           parentId: agent.id,
           branchDepth: (agent.branchDepth || 0) + 1,
         });
+
+        if (engine.sound) {
+          engine.sound.onBranchSpawn(agent, engine.camera);
+        }
 
         // TERM_BRANCH: Post-branch termination penalty
         // When termProbPostBranch > 0.5, creating a branch carries a risk of parent stem ending

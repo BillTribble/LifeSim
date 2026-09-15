@@ -338,6 +338,14 @@ export default function App() {
         designerMode={mode === "designer"}
         designerArchetype={designerArchetype}
         onDesignerStrainName={setDesignerStrainName}
+        soundEnabled={state.soundEnabled}
+        soundVolume={state.soundVolume}
+        soundSpace={state.soundSpace}
+        soundEnvironment={state.soundEnvironment}
+        soundAutoCycle={state.soundAutoCycle}
+        soundSyncThemes={state.soundSyncThemes}
+        soundMovement={state.soundMovement}
+        soundWeather={state.soundWeather}
       />
 
       {mode === "simulation" && (

@@ -15,6 +15,7 @@ import {
   getRandomWeightedArchetype,
   formatGenomeName,
 } from "./SimulationGenetics";
+import { NOTE_NAMES } from "./SimulationSound";
 import type { SimulationEngine } from "./SimulationEngine";
 
 export function generateRandomGenome(engine: SimulationEngine, baseName: string, forceArchetype?: any): Genome {
@@ -323,6 +324,7 @@ export function setupFogVisibility(engine: SimulationEngine, val: number): void 
 
 export function setupTheme(engine: SimulationEngine, val: number, manual: boolean = true): void {
   if (manual) engine.lastThemeMorphTime = engine.frameCount;
+  if (engine.sound) engine.sound.syncThemeEnvironment(val);
   if (engine.nextTheme !== val) {
     if (engine.themeProgress < 1.0) {
       engine.theme = engine.nextTheme;
@@ -373,6 +375,9 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   };
 
   engine.agents.push(agent);
+  if (engine.sound) {
+    engine.sound.onSpeciesBorn(genome, pos, engine.camera);
+  }
   engine.onLog(`🌱 Emergence of new species: ${genome.name} [${arch.toUpperCase()}] to maintain minimum 3 species.`);
   return genome;
 }
@@ -914,6 +919,21 @@ export function emitStateUpdate(engine: SimulationEngine): void {
     nextTheme: engine.nextTheme,
     themeProgress: engine.themeProgress,
     trackedPositions: engine.getTrackedPositions(),
+    soundInfo: engine.sound ? {
+      enabled: engine.sound.enabled,
+      environment: engine.sound.currentEnvironment,
+      key: NOTE_NAMES[engine.sound.key],
+      mode: engine.sound.mode,
+      colour: engine.sound.colour,
+      tension: engine.sound.tension,
+      degree: engine.sound.deg,
+      activeVoices: engine.sound.active,
+      lastBanner: engine.sound.lastModBanner,
+      masterVolume: engine.sound.masterVolume,
+      space: engine.sound.space,
+      autoCycle: engine.sound.autoCycleEnvironments,
+      syncWithThemes: engine.sound.syncWithThemes,
+    } : null,
   });
 }
 

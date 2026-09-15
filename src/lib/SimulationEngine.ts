@@ -37,12 +37,16 @@ import {
   emitStateUpdate,
   getTrackedPositions,
 } from "./SimulationSceneSetup";
+import { SimulationSound, SoundEnvironmentId } from "./SimulationSound";
 
 export class SimulationEngine {
   scene: THREE.Scene = new THREE.Scene();
   camera!: THREE.PerspectiveCamera;
   renderer!: THREE.WebGLRenderer;
   controls!: OrbitControls;
+
+  sound: SimulationSound = new SimulationSound();
+  lastSoundRealTime: number = performance.now();
 
   agents: Agent[] = [];
 
@@ -867,11 +871,47 @@ export class SimulationEngine {
     updateSimulation(this);
   }
 
+  setSoundEnabled(val: boolean) {
+    this.sound.setEnabled(val);
+  }
+  setSoundVolume(val: number) {
+    this.sound.setVolume(val);
+  }
+  setSoundSpace(val: number) {
+    this.sound.setSpace(val);
+  }
+  setSoundEnvironment(val: SoundEnvironmentId) {
+    this.sound.setEnvironment(val);
+  }
+  setSoundAutoCycle(val: boolean) {
+    this.sound.autoCycleEnvironments = val;
+  }
+  setSoundSyncThemes(val: boolean) {
+    this.sound.syncWithThemes = val;
+  }
+  setSoundMovement(val: boolean) {
+    this.sound.enableMovementSound = val;
+  }
+  setSoundWeather(val: boolean) {
+    this.sound.enableWeatherSound = val;
+  }
+
   animate = () => {
     this.reqId = requestAnimationFrame(this.animate);
     updateGridHelpers(this);
     handleScreenFade(this);
     this.update();
+
+    const now = performance.now();
+    const realDt = Math.min(0.1, (now - (this.lastSoundRealTime || now)) / 1000);
+    this.lastSoundRealTime = now;
+
+    const activeLivingAgents = this.agents.filter((a) => a.active && !a.isFeeler).length;
+    const density = Math.min(1.0, activeLivingAgents / Math.max(1, this.maxAgents || 50));
+    const activity = Math.min(1.0, (this.growthSpeed || 0.1) * 6.0);
+
+    this.sound.tick(realDt, { density, activity, activeAgents: activeLivingAgents }, this.camera);
+
     this.renderer.render(this.scene, this.camera);
 
     const activeFade = Math.max(this.fadeProgress, this.kioskFadeProgress || 0);
@@ -899,5 +939,6 @@ export class SimulationEngine {
   stop() {
     cancelAnimationFrame(this.reqId);
     this.controls.dispose();
+    this.sound.setEnabled(false);
   }
 }
