@@ -342,6 +342,61 @@ export function setupTheme(engine: SimulationEngine, val: number, manual: boolea
   }
 }
 
+/**
+ * Chooses a spawn position for a spontaneously emerging organism.
+ *
+ * New organisms must join the existing colony rather than materialising detached in empty
+ * space. Previously this was a flat `(Math.random() - 0.5) * 80` box sample, completely
+ * unrelated to where life actually was, so an emergent organism could appear on the far side
+ * of the world with nothing around it.
+ *
+ * We anchor to a randomly chosen piece of living tissue and step a short distance away from it,
+ * far enough that the newcomer does not grow straight through its neighbour. If the world is
+ * genuinely empty (first seeding, or full extinction recovery) we fall back to the origin region.
+ */
+export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
+  const anchors: THREE.Vector3[] = [];
+
+  for (let i = 0; i < engine.agents.length; i++) {
+    const a = engine.agents[i];
+    if (a.active && !a.tapering && !a.isFeeler) {
+      anchors.push(a.position);
+    }
+  }
+
+  // Fall back to standing tissue if every growth tip has already stopped.
+  if (anchors.length === 0) {
+    const limit = Math.min(engine.pointCount, engine.maxDOMs);
+    for (let i = 0; i < limit; i++) {
+      const seg = engine.segments[i];
+      if (seg && !seg.dyingStart) {
+        const m = seg.matrix.elements;
+        anchors.push(new THREE.Vector3(m[12], m[13], m[14]));
+      }
+    }
+  }
+
+  if (anchors.length === 0) {
+    // Genuinely empty world — nothing to anchor to.
+    return new THREE.Vector3(
+      (Math.random() - 0.5) * 80,
+      (Math.random() - 0.5) * 30,
+      (Math.random() - 0.5) * 80,
+    );
+  }
+
+  const anchor = anchors[Math.floor(Math.random() * anchors.length)];
+  const offset = new THREE.Vector3(
+    Math.random() - 0.5,
+    (Math.random() - 0.5) * 0.4,
+    Math.random() - 0.5,
+  );
+  if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
+  offset.normalize().multiplyScalar(6 + Math.random() * 6);
+
+  return anchor.clone().add(offset);
+}
+
 export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Archetype): Genome {
   const archetypes: Archetype[] = ARCHETYPES;
   const arch = forceArchetype || archetypes[Math.floor(Math.random() * archetypes.length)];
@@ -366,7 +421,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   engine.genomeMap.set(genome.name, genome);
   initSpeciesLifecycle(engine, genome.name);
 
-  const pos = new THREE.Vector3((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 80);
+  const pos = pickEmergencePosition(engine);
   const agent: Agent = {
     position: pos.clone(),
     lastPosition: pos.clone(),
@@ -383,7 +438,20 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   if (engine.sound) {
     engine.sound.onSpeciesBorn(genome, pos, engine.camera);
   }
-  engine.onLog(`🌱 Emergence of new species: ${genome.name} [${arch.toUpperCase()}] to maintain minimum 3 species.`);
+  // Record where it emerged and how far the nearest living neighbour is, so a detached
+  // spawn is immediately obvious in the logs rather than only visible on screen.
+  let nearestDist = Infinity;
+  for (let i = 0; i < engine.agents.length; i++) {
+    const a = engine.agents[i];
+    if (a === agent || !a.active || a.tapering || a.isFeeler) continue;
+    const d = a.position.distanceTo(pos);
+    if (d < nearestDist) nearestDist = d;
+  }
+  const nearestTxt = nearestDist === Infinity ? "none" : nearestDist.toFixed(1);
+  engine.onLog(
+    `🌱 Emergence of new species: ${genome.name} [${arch.toUpperCase()}] at ` +
+      `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) — nearest living neighbour ${nearestTxt}.`,
+  );
   return genome;
 }
 
