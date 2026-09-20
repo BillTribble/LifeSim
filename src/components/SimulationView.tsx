@@ -133,6 +133,11 @@ export interface SimulationViewProps {
   soundSyncThemes?: boolean;
   soundMovement?: boolean;
   soundWeather?: boolean;
+  soundMixer?: Record<string, { vol: number; rev: number }>;
+  soundReverbDecay?: number;
+  soundReverbDamping?: number;
+  soundReverbPreDelay?: number;
+  soundStepCadence?: number;
   [key: string]: any;
 }
 
@@ -264,6 +269,11 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     soundSyncThemes: "setSoundSyncThemes",
     soundMovement: "setSoundMovement",
     soundWeather: "setSoundWeather",
+    soundMixer: "setSoundMixer",
+    soundReverbDecay: "setSoundReverbDecay",
+    soundReverbDamping: "setSoundReverbDamping",
+    soundReverbPreDelay: "setSoundReverbPreDelay",
+    soundStepCadence: "setSoundStepCadence",
   };
 
   for (const key of directProps) {

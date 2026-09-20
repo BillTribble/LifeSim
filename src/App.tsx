@@ -346,6 +346,11 @@ export default function App() {
         soundSyncThemes={state.soundSyncThemes}
         soundMovement={state.soundMovement}
         soundWeather={state.soundWeather}
+        soundMixer={state.soundMixer}
+        soundReverbDecay={state.soundReverbDecay}
+        soundReverbDamping={state.soundReverbDamping}
+        soundReverbPreDelay={state.soundReverbPreDelay}
+        soundStepCadence={state.soundStepCadence}
       />
 
       {mode === "simulation" && (

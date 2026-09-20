@@ -31,10 +31,10 @@ export function useSimulationState() {
   const [branchGrowthBoost, setBranchGrowthBoost] = useState(() => getStoredFloat("branchGrowthBoost"));
   const [colorMutationShift, setColorMutationShift] = useState(() => getStoredFloat("colorMutationShift"));
   const [treeBranching, setTreeBranching] = useState(() => getStoredFloat("treeBranching"));
-  const [treeBranchDelay, setTreeBranchDelay] = useState(() => getStoredFloat("treeBranchDelay", 60));
-  const [bushTaper, setBushTaper] = useState(() => getStoredFloat("bushTaper", 1.0));
-  const [treeTaper, setTreeTaper] = useState(() => getStoredFloat("treeTaper", 1.0));
-  const [rhizomeTaper, setRhizomeTaper] = useState(() => getStoredFloat("rhizomeTaper", 1.0));
+  const [treeBranchDelay, setTreeBranchDelay] = useState(() => getStoredFloat("treeBranchDelay"));
+  const [bushTaper, setBushTaper] = useState(() => getStoredFloat("bushTaper"));
+  const [treeTaper, setTreeTaper] = useState(() => getStoredFloat("treeTaper"));
+  const [rhizomeTaper, setRhizomeTaper] = useState(() => getStoredFloat("rhizomeTaper"));
   const [snakeBranching, setSnakeBranching] = useState(() => getStoredFloat("snakeBranching"));
   const [rhizomeBranching, setRhizomeBranching] = useState(() => getStoredFloat("rhizomeBranching"));
   const [bushMinBranches, setBushMinBranches] = useState(() => getStoredFloat("bushMinBranches"));
@@ -42,26 +42,26 @@ export function useSimulationState() {
   const [treeMinBranches, setTreeMinBranches] = useState(() => getStoredFloat("treeMinBranches"));
   const [snakeMinBranches, setSnakeMinBranches] = useState(() => getStoredFloat("snakeMinBranches"));
   const [timeScale, setTimeScale] = useState(() => getStoredTimeScale());
-  const [postMatingDieoff, setPostMatingDieoff] = useState(() => getStoredBool("postMatingDieoff", true));
+  const [postMatingDieoff, setPostMatingDieoff] = useState(() => getStoredBool("postMatingDieoff"));
   const [theme, setTheme] = useState(0); // Always start in normal theme
   const [themeMorphFreq, setThemeMorphFreq] = useState(() => getStoredFloat("themeMorphFreq"));
   const [themeMorphSpeed, setThemeMorphSpeed] = useState(() => getStoredFloat("themeMorphSpeed"));
   const [dialLimits, setDialLimits] = useState<Record<string, { min: number; max: number }>>(() => getStoredDialLimits());
   const [rotationSpeed, setRotationSpeed] = useState(() => getStoredFloat("rotationSpeed"));
-  const [rotationSpeedY, setRotationSpeedY] = useState(() => getStoredFloat("rotationSpeedY", 0.0));
+  const [rotationSpeedY, setRotationSpeedY] = useState(() => getStoredFloat("rotationSpeedY"));
   const [gridHeight, setGridHeight] = useState(() => getStoredFloat("gridHeight"));
   const [layerGap, setLayerGap] = useState(() => getStoredFloat("layerGap"));
   const [floorHeight, setFloorHeight] = useState(() => getStoredFloat("floorHeight"));
   const [ceilingHeight, setCeilingHeight] = useState(() => getStoredFloat("ceilingHeight"));
   const [cameraProjection, setCameraProjection] = useState(() => getStoredFloat("cameraProjection"));
-  const [showBoundaryBox, setShowBoundaryBox] = useState(() => getStoredBool("showBoundaryBox", false));
+  const [showBoundaryBox, setShowBoundaryBox] = useState(() => getStoredBool("showBoundaryBox"));
   const [magnetism, setMagnetism] = useState(() => getStoredFloat("magnetism"));
   const [seekAmount, setSeekAmount] = useState(() => getStoredFloat("seekAmount"));
   const [proximity, setProximity] = useState(() => getStoredFloat("proximity"));
   const [desperation, setDesperation] = useState(() => getStoredFloat("desperation"));
   const [despairAge, setDespairAge] = useState(() => getStoredFloat("despairAge"));
   const [maxMatings, setMaxMatings] = useState(() => getStoredFloat("maxMatings"));
-  const [startColorMode, setStartColorMode] = useState<string>(() => getStoredString("startColorMode") || "complementary");
+  const [startColorMode, setStartColorMode] = useState<string>(() => getStoredString("startColorMode"));
   const [flowerSize, setFlowerSize] = useState(() => getStoredFloat("flowerSize"));
   const [tideSpeed, setTideSpeed] = useState(() => getStoredFloat("tideSpeed"));
   const [tideColor, setTideColor] = useState(() => getStoredString("tideColor"));
@@ -71,7 +71,7 @@ export function useSimulationState() {
   const [tideOpacity, setTideOpacity] = useState(() => getStoredFloat("tideOpacity"));
   const [tideSaturation, setTideSaturation] = useState(() => getStoredFloat("tideSaturation"));
   const [growthSpeed, setGrowthSpeed] = useState(() => getStoredFloat("growthSpeed"));
-  const [widthGrowthEffect, setWidthGrowthEffect] = useState(() => getStoredFloat("widthGrowthEffect", 0.0));
+  const [widthGrowthEffect, setWidthGrowthEffect] = useState(() => getStoredFloat("widthGrowthEffect"));
   const [diebackRate, setDiebackRate] = useState(() => getStoredFloat("diebackRate"));
   const [allowBreeding, setAllowBreeding] = useState(() => getStoredBool("allowBreeding"));
   const [hybridCooldown, setHybridCooldown] = useState(() => getStoredFloat("hybridCooldown"));
@@ -82,26 +82,26 @@ export function useSimulationState() {
   const [branchingMultiplier, setBranchingMultiplier] = useState(() => getStoredFloat("branchingMultiplier"));
   const [branchBigger, setBranchBigger] = useState(() => getStoredFloat("branchBigger"));
   const [branchSplitSizeProb, setBranchSplitSizeProb] = useState(() => getStoredFloat("branchSplitSizeProb"));
-  const [pruningStrength, setPruningStrength] = useState(() => getStoredFloat("pruningStrength", DEFAULTS.pruningStrength));
-  const [maxBranchDepth, setMaxBranchDepth] = useState(() => getStoredFloat("maxBranchDepth", DEFAULTS.maxBranchDepth));
-  const [maxBranchesPerSpecies, setMaxBranchesPerSpecies] = useState(() => getStoredFloat("maxBranchesPerSpecies", DEFAULTS.maxBranchesPerSpecies));
+  const [pruningStrength, setPruningStrength] = useState(() => getStoredFloat("pruningStrength"));
+  const [maxBranchDepth, setMaxBranchDepth] = useState(() => getStoredFloat("maxBranchDepth"));
+  const [maxBranchesPerSpecies, setMaxBranchesPerSpecies] = useState(() => getStoredFloat("maxBranchesPerSpecies"));
   const [maxDOMs, setMaxDOMs] = useState(() => getStoredFloat("maxDOMs"));
-  const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents", DEFAULTS.maxAgents));
-  const [maxCreatures, setMaxCreatures] = useState(() => getStoredFloat("maxCreatures", DEFAULTS.maxCreatures));
+  const [maxAgents, setMaxAgents] = useState(() => getStoredFloat("maxAgents"));
+  const [maxCreatures, setMaxCreatures] = useState(() => getStoredFloat("maxCreatures"));
   const [ecoFade, setEcoFade] = useState(() => getStoredFloat("ecoFade"));
   const [desiccationSpeed, setDesiccationSpeed] = useState(() => getStoredFloat("desiccationSpeed"));
-  const [minCreatures, setMinCreatures] = useState(() => getStoredFloat("minCreatures", DEFAULTS.minCreatures));
+  const [minCreatures, setMinCreatures] = useState(() => getStoredFloat("minCreatures"));
   const [boundarySize, setBoundarySize] = useState(() => getStoredFloat("boundarySize"));
-  const [boundarySquash, setBoundarySquash] = useState(() => getStoredFloat("boundarySquash", 1.0));
+  const [boundarySquash, setBoundarySquash] = useState(() => getStoredFloat("boundarySquash"));
   const [hybridSize, setHybridSize] = useState(() => getStoredFloat("hybridSize"));
   const [terminationProb, setTerminationProb] = useState(() => getStoredFloat("terminationProb"));
   const [termProbPostBranch, setTermProbPostBranch] = useState(() => getStoredFloat("termProbPostBranch"));
-  const [segmentGap, setSegmentGap] = useState(() => getStoredFloat("segmentGap", 0.12));
+  const [segmentGap, setSegmentGap] = useState(() => getStoredFloat("segmentGap"));
   const [taperDuration, setTaperDuration] = useState(() => getStoredFloat("taperDuration"));
   const [diebackAgeBias, setDiebackAgeBias] = useState(() => getStoredFloat("diebackAgeBias"));
   const [enableGlow, setEnableGlow] = useState(() => getStoredBool("enableGlow"));
   const [glowSize, setGlowSize] = useState(() => getStoredFloat("glowSize"));
-  const [fogVisibility, setFogVisibility] = useState(() => getStoredFloat("fogVisibility", 800));
+  const [fogVisibility, setFogVisibility] = useState(() => getStoredFloat("fogVisibility"));
   const [botanyRealism, setBotanyRealism] = useState(() => getStoredBool("botanyRealism"));
   const [windVelocity, setWindVelocity] = useState(() => getStoredFloat("windVelocity"));
   const [flutterIntensity, setFlutterIntensity] = useState(() => getStoredFloat("flutterIntensity"));
@@ -266,6 +266,12 @@ export function useSimulationState() {
     localStorage.setItem("colorClamp", colorClamp.toString());
     localStorage.setItem("feelerFade", feelerFade.toString());
     localStorage.setItem("feelerDelay", feelerDelay.toString());
+    localStorage.setItem("gridHeight", gridHeight.toString());
+    localStorage.setItem("layerGap", layerGap.toString());
+    localStorage.setItem("floorHeight", floorHeight.toString());
+    localStorage.setItem("ceilingHeight", ceilingHeight.toString());
+    localStorage.setItem("cameraProjection", cameraProjection.toString());
+    localStorage.setItem("showBoundaryBox", showBoundaryBox ? "true" : "false");
     localStorage.setItem("cullRate", cullRate.toString());
     localStorage.setItem("glowTraitIntensity", glowTraitIntensity.toString());
     localStorage.setItem("glowTraitDistance", glowTraitDistance.toString());
@@ -273,6 +279,47 @@ export function useSimulationState() {
     localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
     localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
   }, [
+    soundEnabled,
+    soundVolume,
+    soundSpace,
+    soundEnvironment,
+    soundAutoCycle,
+    soundSyncThemes,
+    soundMovement,
+    soundWeather,
+    soundMixer,
+    soundReverbDecay,
+    soundReverbDamping,
+    soundReverbPreDelay,
+    soundStepCadence,
+    snakeSpeed,
+    snakeStepSize,
+    snakeWander,
+    bushSpeed,
+    treeSpeed,
+    rhizomeSpeed,
+    bushStepSize,
+    treeStepSize,
+    rhizomeStepSize,
+    bushBranching,
+    treeBranching,
+    treeBranchDelay,
+    bushTaper,
+    treeTaper,
+    rhizomeTaper,
+    snakeBranching,
+    rhizomeBranching,
+    bushMinBranches,
+    rhizomeMinBranches,
+    treeMinBranches,
+    snakeMinBranches,
+    widthVariance,
+    branchGrowthBoost,
+    colorMutationShift,
+    timeScale,
+    postMatingDieoff,
+    themeMorphFreq,
+    themeMorphSpeed,
     rotationSpeed,
     rotationSpeedY,
     magnetism,
@@ -293,6 +340,7 @@ export function useSimulationState() {
     growthSpeed,
     widthGrowthEffect,
     diebackRate,
+    allowBreeding,
     hybridCooldown,
     hybridStickiness,
     hybridSpinSpeed,
@@ -342,13 +390,20 @@ export function useSimulationState() {
     multicolorAppProb,
     sameColorAppProb,
     maxSaturation,
+    colorClamp,
     feelerFade,
     feelerDelay,
     cullRate,
     glowTraitIntensity,
     glowTraitDistance,
     glowTraitReflect,
-    dialLimits,
+    gridHeight,
+    layerGap,
+    floorHeight,
+    ceilingHeight,
+    cameraProjection,
+    showBoundaryBox,
+    kioskMode,
   ]);
 
   return {
@@ -366,6 +421,7 @@ export function useSimulationState() {
       soundReverbDamping,
       soundReverbPreDelay,
       soundStepCadence,
+      kioskMode,
       themeMorphSpeed,
       themeMorphFreq,
       theme,
@@ -489,6 +545,11 @@ export function useSimulationState() {
       setSoundSyncThemes,
       setSoundMovement,
       setSoundWeather,
+      setSoundMixer,
+      setSoundReverbDecay,
+      setSoundReverbDamping,
+      setSoundReverbPreDelay,
+      setSoundStepCadence,
       setThemeMorphSpeed,
       setThemeMorphFreq,
       setTheme,
@@ -626,6 +687,11 @@ export function useSimulationState() {
         setSoundSyncThemes(DEFAULTS.soundSyncThemes);
         setSoundMovement(DEFAULTS.soundMovement);
         setSoundWeather(DEFAULTS.soundWeather);
+        setSoundMixer(DEFAULTS.soundMixer);
+        setSoundReverbDecay(DEFAULTS.soundReverbDecay);
+        setSoundReverbDamping(DEFAULTS.soundReverbDamping);
+        setSoundReverbPreDelay(DEFAULTS.soundReverbPreDelay);
+        setSoundStepCadence(DEFAULTS.soundStepCadence);
         setThemeMorphSpeed(DEFAULTS.themeMorphSpeed);
         setThemeMorphFreq(DEFAULTS.themeMorphFreq);
         setTheme(DEFAULTS.theme);
@@ -642,6 +708,10 @@ export function useSimulationState() {
         setBranchGrowthBoost(DEFAULTS.branchGrowthBoost);
         setColorMutationShift(DEFAULTS.colorMutationShift);
         setTreeBranching(DEFAULTS.treeBranching);
+        setTreeBranchDelay(DEFAULTS.treeBranchDelay);
+        setBushTaper(DEFAULTS.bushTaper);
+        setTreeTaper(DEFAULTS.treeTaper);
+        setRhizomeTaper(DEFAULTS.rhizomeTaper);
         setSnakeBranching(DEFAULTS.snakeBranching);
         setRhizomeBranching(DEFAULTS.rhizomeBranching);
         setBushMinBranches(DEFAULTS.bushMinBranches);

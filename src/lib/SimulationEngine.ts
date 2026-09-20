@@ -117,7 +117,7 @@ export class SimulationEngine {
   designerArchetype: Archetype = "bush";
   onDesignerStrainName?: (name: string) => void;
 
-  rotationSpeed: number = 0.13;
+  rotationSpeed: number = 0.2;
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
   magnetism: number = 0.08708895046646814;
@@ -245,36 +245,36 @@ export class SimulationEngine {
   blackColor = new THREE.Color(0, 0, 0);
   colorDummy = new THREE.Color();
 
-  terminationProb: number = 0.02;
-  termProbPostBranch: number = 0.5;
+  terminationProb: number = 0.6071318627934128;
+  termProbPostBranch: number = 2.5;
   segmentGap: number = 0.12;
-  taperDuration: number = 1.5;
+  taperDuration: number = 1.0466962184788358;
   feelerFade: number = 10.0;
-  diebackAgeBias: number = 2.0;
-  cullRate: number = 5.0;
+  diebackAgeBias: number = 4.314851637950758;
+  cullRate: number = 48.87;
 
   snakeSpeed: number = 1.4;
-  snakeStepSize: number = 1.2;
+  snakeStepSize: number = 1.7;
   snakeWander: number = 1.0;
-  bushSpeed: number = 1.50;
-  treeSpeed: number = 1.20;
+  bushSpeed: number = 1.1;
+  treeSpeed: number = 1.2;
   rhizomeSpeed: number = 1.0;
 
-  bushStepSize: number = 0.55;
-  treeStepSize: number = 0.90;
-  rhizomeStepSize: number = 1.0;
+  bushStepSize: number = 0.85;
+  treeStepSize: number = 0.6;
+  rhizomeStepSize: number = 1.2;
 
-  bushBranching: number = 9.5;
-  treeBranching: number = 1.8;
-  treeBranchDelay: number = 60;
-  bushTaper: number = 1.0;
-  treeTaper: number = 1.0;
-  rhizomeTaper: number = 0.6;
+  bushBranching: number = 50.0;
+  treeBranching: number = 17.5;
+  treeBranchDelay: number = 5;
+  bushTaper: number = 0.5;
+  treeTaper: number = 0.6;
+  rhizomeTaper: number = 0.1;
   snakeBranching: number = 1.0;
-  rhizomeBranching: number = 1.0;
-  bushMinBranches: number = 2;
+  rhizomeBranching: number = 7.5;
+  bushMinBranches: number = 10;
   rhizomeMinBranches: number = 6;
-  treeMinBranches: number = 1;
+  treeMinBranches: number = 2;
   snakeMinBranches: number = 1;
 
   private reqId: number = 0;
@@ -894,6 +894,21 @@ export class SimulationEngine {
   }
   setSoundWeather(val: boolean) {
     this.sound.enableWeatherSound = val;
+  }
+  setSoundMixer(val: Record<string, { vol: number; rev: number }>) {
+    if (this.sound) this.sound.setMixer(val);
+  }
+  setSoundReverbDecay(val: number) {
+    if (this.sound) this.sound.setReverbDecay(val);
+  }
+  setSoundReverbDamping(val: number) {
+    if (this.sound) this.sound.setReverbDamping(val);
+  }
+  setSoundReverbPreDelay(val: number) {
+    if (this.sound) this.sound.setReverbPreDelay(val);
+  }
+  setSoundStepCadence(val: number) {
+    if (this.sound) this.sound.setStepCadence(val);
   }
 
   animate = () => {
