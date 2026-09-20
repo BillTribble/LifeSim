@@ -174,9 +174,10 @@ check(
 );
 
 console.log("\n=== Test 3: genuine contact spawns child AT the contact point ===");
-// Move B's tissue and tip right next to A.
-engine.segments[2] = mkSegment(2, "Tree Beta", new THREE.Vector3(1.5, 0, 0));
-engine.segments[3] = mkSegment(3, "Tree Beta", new THREE.Vector3(1.9, 0, 0));
+// Move B's tissue into genuine touching distance of A (within the strict contact threshold).
+// A.thickness = B.thickness = 1.0, so touchDist = max(0.5, 0.5) = 0.5 — tissue must be ≤0.5 apart.
+engine.segments[2] = mkSegment(2, "Tree Beta", new THREE.Vector3(0.4, 0, 0));
+engine.segments[3] = mkSegment(3, "Tree Beta", new THREE.Vector3(0.45, 0, 0));
 agentB.position.set(400, 0, 0); // tip has grown far away from the contact point
 agentB.lastPosition.set(400, 0, 0);
 

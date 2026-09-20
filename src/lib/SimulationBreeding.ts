@@ -522,8 +522,12 @@ export function handleBreedingAndFeelers(
         }
       }
 
-      // Require physical touching based on agent thicknesses to breed
-      const touchDist = Math.max(2.0, agent.thickness + (bestPartner.thickness || 1.0));
+      // Require genuine physical contact to breed: parents must actually touch, not merely
+      // approach each other. Previously this used the SUM of both thicknesses, which let thick
+      // organisms (e.g. trees at thickness ~5) mate at a real distance of ~10 units. The
+      // thinner parent's half-thickness is the strictest contact threshold we can demand
+      // without forcing a thin feeler to pass through a thick trunk first.
+      const touchDist = Math.max(0.5, Math.min(agent.thickness, (bestPartner.thickness || 1.0)) * 0.5);
       const breedReach = touchDist * touchDist;
       if (engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;

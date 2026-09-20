@@ -70,16 +70,6 @@ export function processAgents(
     }
   }
 
-  // Colony growth to min organisms: If below minCreatures, ensure ecosystem populates steadily up to minCreatures
-  if (!engine.designerMode && livingOrganismCount < engine.minCreatures) {
-    if (engine.lastEmergenceTick === undefined) engine.lastEmergenceTick = 0;
-    if (engine.frameCount - engine.lastEmergenceTick >= 300) {
-      engine.lastEmergenceTick = engine.frameCount;
-      engine.onLog(`🌱 Under target organisms (${livingOrganismCount}/${engine.minCreatures}) — spontaneous emergence of new founder organism.`);
-      engine.spawnNewSpecies();
-    }
-  }
-
   // Cap maximum species by tapering the oldest variant when capacity exceeded.
   // Cull repeatedly until we are back at the cap: a single cull per frame cannot keep up when
   // several births land in the same frame. Prefer organisms that have already bred, but fall
