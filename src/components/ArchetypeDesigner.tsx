@@ -58,15 +58,19 @@ export function ArchetypeDesigner({
         }
       }
 
-      // 2. Propagate to backend code / SimulationDefaults.ts via dev server endpoint
-      const res = await fetch("/api/save-defaults", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
-      });
+      // 2. Propagate to backend code / SimulationDefaults.ts via dev server endpoint (local dev only)
+      if (import.meta.env.DEV) {
+        const res = await fetch("/api/save-defaults", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state),
+        });
 
-      if (res.ok) {
-        setToastMessage("✓ Saved to SimulationDefaults.ts & App state!");
+        if (res.ok) {
+          setToastMessage("✓ Saved to SimulationDefaults.ts & App state!");
+        } else {
+          setToastMessage("✓ Saved to App State & LocalStorage!");
+        }
       } else {
         setToastMessage("✓ Saved to App State & LocalStorage!");
       }

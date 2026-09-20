@@ -22,11 +22,17 @@ export default function App() {
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
+  const postDevLog = (body: string) => {
+    if (import.meta.env.DEV) {
+      fetch('/api/log', { method: 'POST', body }).catch(() => {});
+    }
+  };
+
   const handleLog = (msg: string) => {
     const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLogs((prev) => [{ id: Date.now() + Math.random(), text: msg, time }, ...prev.slice(0, 49)]);
-    // Persist to disk via Vite dev server middleware with session code
-    fetch('/api/log', { method: 'POST', body: `[${sessionCodeRef.current}] ${msg}` }).catch(() => {});
+    // Persist to disk via Vite dev server middleware with session code (local dev only)
+    postDevLog(`[${sessionCodeRef.current}] ${msg}`);
   };
 
   const getScaledDuration = () => Math.max(10000, Math.round(10000 * (0.4 / Math.max(0.1, state.timeScale))));
@@ -156,7 +162,7 @@ export default function App() {
         lastGeoAlert.current = now;
         const alert = `🚨 [INVISIBLE BUG] geometries=${newState.geometryCount} but agents=${newState.totalAgents} — stems vanished while creatures alive!`;
         console.error(alert);
-        fetch('/api/log', { method: 'POST', body: alert }).catch(() => {});
+        postDevLog(alert);
       }
     }
 
@@ -178,7 +184,7 @@ export default function App() {
 
       const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
       const snapshot = `[SNAPSHOT] [${sessionCodeRef.current}] species=${strains.length} agents=${newState.totalAgents ?? "?"} geom=${newState.geometryCount ?? "?"}${fillSummary} | ${speciesSummary} | ${dials}`;
-      fetch('/api/log', { method: 'POST', body: snapshot }).catch(() => {});
+      postDevLog(snapshot);
     }
   };
 
@@ -190,13 +196,13 @@ export default function App() {
     setUptime(0);
     setPopupQueue([]);
     const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
-    fetch('/api/log', { method: 'POST', body: `=== SESSION RESTART [${nextCode}] === | ${dials}` }).catch(() => {});
+    postDevLog(`=== SESSION RESTART [${nextCode}] === | ${dials}`);
   };
 
   // Log session start on mount
   React.useEffect(() => {
     const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
-    fetch('/api/log', { method: 'POST', body: `=== SESSION START [${sessionCodeRef.current}] === | ${dials}` }).catch(() => {});
+    postDevLog(`=== SESSION START [${sessionCodeRef.current}] === | ${dials}`);
   }, []);
 
   return (
