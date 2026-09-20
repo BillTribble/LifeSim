@@ -139,6 +139,17 @@ export function useSimulationState() {
   const [soundSyncThemes, setSoundSyncThemes] = useState(() => getStoredBool("soundSyncThemes", DEFAULTS.soundSyncThemes));
   const [soundMovement, setSoundMovement] = useState(() => getStoredBool("soundMovement", DEFAULTS.soundMovement));
   const [soundWeather, setSoundWeather] = useState(() => getStoredBool("soundWeather", DEFAULTS.soundWeather));
+  const [soundMixer, setSoundMixer] = useState<Record<string, { vol: number; rev: number }>>(() => {
+    try {
+      const stored = localStorage.getItem("soundMixer");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULTS.soundMixer;
+  });
+  const [soundReverbDecay, setSoundReverbDecay] = useState(() => getStoredFloat("soundReverbDecay", DEFAULTS.soundReverbDecay));
+  const [soundReverbDamping, setSoundReverbDamping] = useState(() => getStoredFloat("soundReverbDamping", DEFAULTS.soundReverbDamping));
+  const [soundReverbPreDelay, setSoundReverbPreDelay] = useState(() => getStoredFloat("soundReverbPreDelay", DEFAULTS.soundReverbPreDelay));
+  const [soundStepCadence, setSoundStepCadence] = useState(() => getStoredFloat("soundStepCadence", DEFAULTS.soundStepCadence));
 
   useEffect(() => {
     localStorage.setItem("soundEnabled", soundEnabled.toString());
@@ -149,6 +160,11 @@ export function useSimulationState() {
     localStorage.setItem("soundSyncThemes", soundSyncThemes.toString());
     localStorage.setItem("soundMovement", soundMovement.toString());
     localStorage.setItem("soundWeather", soundWeather.toString());
+    localStorage.setItem("soundMixer", JSON.stringify(soundMixer));
+    localStorage.setItem("soundReverbDecay", soundReverbDecay.toString());
+    localStorage.setItem("soundReverbDamping", soundReverbDamping.toString());
+    localStorage.setItem("soundReverbPreDelay", soundReverbPreDelay.toString());
+    localStorage.setItem("soundStepCadence", soundStepCadence.toString());
     localStorage.setItem("snakeSpeed", snakeSpeed.toString());
     localStorage.setItem("snakeStepSize", snakeStepSize.toString());
     localStorage.setItem("snakeWander", snakeWander.toString());
@@ -345,7 +361,11 @@ export function useSimulationState() {
       soundSyncThemes,
       soundMovement,
       soundWeather,
-      kioskMode,
+      soundMixer,
+      soundReverbDecay,
+      soundReverbDamping,
+      soundReverbPreDelay,
+      soundStepCadence,
       themeMorphSpeed,
       themeMorphFreq,
       theme,

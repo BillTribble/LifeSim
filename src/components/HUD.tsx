@@ -145,6 +145,25 @@ export function HUD({
             {/* Top-Left Persistent Buttons */}
             <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
               <div
+                className={`h-7 flex items-center gap-1.5 cursor-pointer pointer-events-auto shrink-0 transition-all select-none shadow-sm backdrop-blur-md ${
+                  state.soundEnabled
+                    ? "border border-cyan-500/50 px-2.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-white opacity-90 hover:opacity-100"
+                    : "border border-amber-500/50 px-2.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-white opacity-90 hover:opacity-100"
+                }`}
+                onClick={() => setters.setSoundEnabled(!state.soundEnabled)}
+                title={state.soundEnabled ? "Mute sound" : "Click to unmute sound"}
+              >
+                {state.soundEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                )}
+                <span className="text-[9px] sm:text-[10px] font-bold whitespace-nowrap">
+                  {state.soundEnabled ? "SOUND" : "Click to Unmute"}
+                </span>
+              </div>
+
+              <div
                 className="h-7 flex items-center gap-1.5 cursor-pointer hover:text-white pointer-events-auto opacity-90 hover:opacity-100 border border-cyan-500/50 px-2.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 transition-all select-none shrink-0 shadow-sm backdrop-blur-md"
                 onClick={handleRestart}
                 title="Restart ecosystem"

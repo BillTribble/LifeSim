@@ -106,6 +106,7 @@ export interface SoundVoiceOptions {
   cut?: number;
   detune?: number;
   dur?: number;
+  busName?: string;
 }
 
 export interface DroneInstance {
@@ -222,13 +223,36 @@ export class SimulationSound {
     perc: { last: 0, gap: 0.06 },
     droplet: { last: 0, gap: 0.05 },
     branch: { last: 0, gap: 0.06 },
-    step: { last: 0, gap: 0.04 },
+    step: { last: 0, gap: 0.02 + (25 / 100) * 0.28 },
   };
 
   // Sound Engine Global Settings
   enabled: boolean = true;
   masterVolume: number = 0.70;
   space: number = 55; // Reverb wet/dry amount (0 to 100)
+
+  // Mixer channel volume (0–100) and reverb send (0–100)
+  channelVolumes: Record<string, number> = {
+    pad: 80, step: 50, branch: 70, bell: 75, drone: 70, perc: 60, weather: 65,
+  };
+  channelReverbSends: Record<string, number> = {
+    pad: 45, step: 12, branch: 20, bell: 30, drone: 35, perc: 18, weather: 25,
+  };
+
+  // Per-channel mixer audio graph nodes
+  mixerGains: Record<string, GainNode> = {};
+  reverbSendGains: Record<string, GainNode> = {};
+  reverbInput: GainNode | null = null;
+  preDelay: DelayNode | null = null;
+  reverbDampFilter: BiquadFilterNode | null = null;
+
+  // Global reverb parameter controls (0-100)
+  reverbDecay: number = 50;   // maps to IR decay 1.5–6.0 s
+  reverbDamping: number = 40; // maps to lowpass cutoff 18000→1200 Hz
+  reverbPreDelay: number = 10;// maps to 0–80 ms
+
+  // Step cadence (0–100, higher = slower / fewer plucks)
+  stepCadence: number = 25;
 
   // Event sound enable toggles
   enableBirthSound: boolean = true;
@@ -350,8 +374,8 @@ export class SimulationSound {
       this.dry = this.ctx.createGain();
       this.setSpace(this.space);
 
-      // Sub-buses
-      const busNames = ["pad", "pluck", "drone", "bell", "perc", "weather"];
+      // Sub-buses (step + branch replace the former pluck bus)
+      const busNames: string[] = ["pad", "step", "branch", "drone", "bell", "perc", "weather"];
       busNames.forEach((n) => {
         if (!this.ctx || !this.master) return;
         const g = this.ctx.createGain();
@@ -360,12 +384,49 @@ export class SimulationSound {
         this.bus[n] = g;
       });
 
+      // Per-channel mixer gains & reverb sends
+      this.mixerGains = {};
+      this.reverbSendGains = {};
+      this.reverbInput = this.ctx.createGain();
+      this.reverbInput.gain.value = 1;
+
+      this.preDelay = this.ctx.createDelay(0.1);
+      this.preDelay.delayTime.value = (this.reverbPreDelay / 100) * 0.08;
+
+      this.reverbDampFilter = this.ctx.createBiquadFilter();
+      this.reverbDampFilter.type = "lowpass";
+      this.reverbDampFilter.frequency.value = this.dampingHz(this.reverbDamping);
+      this.reverbDampFilter.Q.value = 0.5;
+
+      busNames.forEach((n) => {
+        if (!this.ctx || !this.master || !this.reverbInput || !this.bus[n]) return;
+        // Disconnect temporary master connection
+        try { this.bus[n].disconnect(); } catch (_) {}
+        // Channel mixer gain
+        const cg = this.ctx.createGain();
+        cg.gain.value = (this.channelVolumes[n] ?? 80) / 100;
+        cg.connect(this.master);
+        this.mixerGains[n] = cg;
+        // Reverb send
+        const rs = this.ctx.createGain();
+        rs.gain.value = (this.channelReverbSends[n] ?? 25) / 100;
+        rs.connect(this.reverbInput);
+        this.reverbSendGains[n] = rs;
+        // Wire: bus → channelGain → master AND channelGain → reverbSend
+        this.bus[n].connect(cg);
+        cg.connect(rs);
+      });
+
       // Routing
       this.master.connect(this.dry);
-      this.master.connect(this.conv);
-      this.conv.connect(this.wet);
       this.dry.connect(this.comp);
+
+      this.reverbInput.connect(this.preDelay);
+      this.preDelay.connect(this.reverbDampFilter);
+      this.reverbDampFilter.connect(this.conv);
+      this.conv.connect(this.wet);
       this.wet.connect(this.comp);
+
       this.comp.connect(this.ctx.destination);
 
       // Procedural Noise Buffer (used for perc, bumps, and weather)
@@ -450,6 +511,80 @@ export class SimulationSound {
         this.droneOff(k);
       }
     }
+  }
+
+  private dampingHz(val: number): number {
+    return 18000 - (val / 100) * 17000;
+  }
+
+  private decaySec(val: number): number {
+    return 1.5 + (val / 100) * 4.5;
+  }
+
+  /** Set a single mixer channel volume (0-100) */
+  setChannelVolume(ch: string, val: number) {
+    this.channelVolumes[ch] = clamp(val, 0, 100);
+    if (this.mixerGains[ch]) {
+      this.mixerGains[ch].gain.setTargetAtTime(this.channelVolumes[ch] / 100, this.ctx?.currentTime || 0, 0.08);
+    }
+  }
+
+  /** Set a single mixer channel reverb send (0-100) */
+  setChannelReverb(ch: string, val: number) {
+    this.channelReverbSends[ch] = clamp(val, 0, 100);
+    if (this.reverbSendGains[ch]) {
+      this.reverbSendGains[ch].gain.setTargetAtTime(this.channelReverbSends[ch] / 100, this.ctx?.currentTime || 0, 0.08);
+    }
+  }
+
+  /** Apply full mixer snapshot: { channel: { vol, rev } } */
+  setMixer(mixer: Record<string, { vol: number; rev: number }>) {
+    for (const ch of Object.keys(mixer)) {
+      if (mixer[ch].vol !== undefined) this.setChannelVolume(ch, mixer[ch].vol);
+      if (mixer[ch].rev !== undefined) this.setChannelReverb(ch, mixer[ch].rev);
+    }
+  }
+
+  /** Global reverb decay (0-100) - regenerates convolver IR */
+  setReverbDecay(val: number) {
+    this.reverbDecay = clamp(val, 0, 100);
+    this.regenerateIR();
+  }
+
+  /** Global reverb damping / tone (0-100, higher = darker) */
+  setReverbDamping(val: number) {
+    this.reverbDamping = clamp(val, 0, 100);
+    if (this.reverbDampFilter) {
+      this.reverbDampFilter.frequency.setTargetAtTime(this.dampingHz(this.reverbDamping), this.ctx?.currentTime || 0, 0.08);
+    }
+  }
+
+  /** Global reverb pre-delay (0-100 → 0-80ms) */
+  setReverbPreDelay(val: number) {
+    this.reverbPreDelay = clamp(val, 0, 100);
+    if (this.preDelay) {
+      this.preDelay.delayTime.setTargetAtTime((this.reverbPreDelay / 100) * 0.08, this.ctx?.currentTime || 0, 0.08);
+    }
+  }
+
+  /** Regenerate convolver IR with current decay */
+  private regenerateIR() {
+    if (!this.ctx || !this.conv) return;
+    const len = Math.floor(this.ctx.sampleRate * this.decaySec(this.reverbDecay));
+    const ir = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+      }
+    }
+    this.conv.buffer = ir;
+  }
+
+  /** Step cadence (0-100, higher = slower / fewer plucks) */
+  setStepCadence(val: number) {
+    this.stepCadence = clamp(val, 0, 100);
+    this.rateLimits.step.gap = 0.02 + (this.stepCadence / 100) * 0.28;
   }
 
   allow(key: string, t: number): boolean {
@@ -550,7 +685,8 @@ export class SimulationSound {
 
     const t = this.ctx.currentTime;
     const dur = (o.dur || this.bDur) / 1000;
-    const nodes = this.chain(o.pan || 0, o.cut || this.bCut, this.bRes, "pluck");
+    const busName = o.busName || "step";
+    const nodes = this.chain(o.pan || 0, o.cut || this.bCut, this.bRes, busName);
 
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
@@ -939,6 +1075,7 @@ export class SimulationSound {
       vol: (0.45 + (1 / (depth + 1)) * 0.35) * presence,
       dur: 120,
       cut: 5000 + depth * 500,
+      busName: "branch",
     });
   }
 

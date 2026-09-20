@@ -1,5 +1,5 @@
 export const DEFAULTS: Record<string, any> = {
-  "soundEnabled": true,
+  "soundEnabled": false,
   "soundVolume": 70,
   "soundSpace": 55,
   "soundEnvironment": "rain",
@@ -7,6 +7,19 @@ export const DEFAULTS: Record<string, any> = {
   "soundSyncThemes": false,
   "soundMovement": true,
   "soundWeather": true,
+  "soundMixer": {
+    "pad": { "vol": 80, "rev": 45 },
+    "step": { "vol": 50, "rev": 12 },
+    "branch": { "vol": 70, "rev": 20 },
+    "bell": { "vol": 75, "rev": 30 },
+    "drone": { "vol": 70, "rev": 35 },
+    "perc": { "vol": 60, "rev": 18 },
+    "weather": { "vol": 65, "rev": 25 }
+  },
+  "soundReverbDecay": 50,
+  "soundReverbDamping": 40,
+  "soundReverbPreDelay": 10,
+  "soundStepCadence": 25,
   "kioskMode": true,
   "themeMorphSpeed": 5,
   "themeMorphFreq": 1,
