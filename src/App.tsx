@@ -116,6 +116,7 @@ export default function App() {
   const handleCopySettings = () => {
     const settings = {
       ...state,
+      soundEnabled: false,
       appendageSize: state.flowerSize,
       hybridDecay: state.hybridStickiness,
       deathRate: state.diebackRate,

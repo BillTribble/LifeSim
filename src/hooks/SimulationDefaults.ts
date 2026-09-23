@@ -1,5 +1,5 @@
 export const DEFAULTS: Record<string, any> = {
-  "soundEnabled": true,
+  "soundEnabled": false,
   "soundVolume": 70,
   "soundSpace": 55,
   "soundEnvironment": "rain",
@@ -8,13 +8,13 @@ export const DEFAULTS: Record<string, any> = {
   "soundMovement": true,
   "soundWeather": true,
   "soundMixer": {
-    "pad": { "vol": 80, "rev": 45 },
-    "step": { "vol": 50, "rev": 12 },
-    "branch": { "vol": 70, "rev": 20 },
-    "bell": { "vol": 75, "rev": 30 },
-    "drone": { "vol": 70, "rev": 35 },
-    "perc": { "vol": 60, "rev": 18 },
-    "weather": { "vol": 65, "rev": 25 }
+    "pad": { "vol": 80, "rev": 55, "oct": 4 },
+    "step": { "vol": 50, "rev": 35, "oct": 5 },
+    "branch": { "vol": 70, "rev": 45, "oct": 5 },
+    "bell": { "vol": 75, "rev": 50, "oct": 6 },
+    "drone": { "vol": 70, "rev": 45, "oct": 2 },
+    "perc": { "vol": 60, "rev": 30, "oct": 4 },
+    "weather": { "vol": 65, "rev": 30, "oct": 6 }
   },
   "soundReverbDecay": 50,
   "soundReverbDamping": 40,
@@ -216,7 +216,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-09-20-v0.6";
+export const CURRENT_SCHEMA = "2026-09-23-v0.8";
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);

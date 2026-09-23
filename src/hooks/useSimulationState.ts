@@ -131,7 +131,8 @@ export function useSimulationState() {
   const [glowTraitReflect, setGlowTraitReflect] = useState(() => getStoredFloat("glowTraitReflect"));
   const [traitProbs, setTraitProbs] = useState<Record<string, number>>(() => getStoredTraitProbs());
 
-  const [soundEnabled, setSoundEnabled] = useState(() => getStoredBool("soundEnabled", DEFAULTS.soundEnabled));
+  // Always start muted on every load/refresh; never persist soundEnabled across refreshes
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundVolume, setSoundVolume] = useState(() => getStoredFloat("soundVolume", DEFAULTS.soundVolume));
   const [soundSpace, setSoundSpace] = useState(() => getStoredFloat("soundSpace", DEFAULTS.soundSpace));
   const [soundEnvironment, setSoundEnvironment] = useState<string>(() => getStoredString("soundEnvironment") || DEFAULTS.soundEnvironment);
@@ -152,7 +153,7 @@ export function useSimulationState() {
   const [soundStepCadence, setSoundStepCadence] = useState(() => getStoredFloat("soundStepCadence", DEFAULTS.soundStepCadence));
 
   useEffect(() => {
-    localStorage.setItem("soundEnabled", soundEnabled.toString());
+    localStorage.removeItem("soundEnabled");
     localStorage.setItem("soundVolume", soundVolume.toString());
     localStorage.setItem("soundSpace", soundSpace.toString());
     localStorage.setItem("soundEnvironment", soundEnvironment);

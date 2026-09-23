@@ -215,28 +215,35 @@ export class SimulationSound {
   cap: number = 64;
   drones: Record<string, DroneInstance> = {};
 
+  // Global cadence filter state (throttles combined step + branch + perc + droplet triggers)
+  globalLastEventTime: number = 0;
+  globalMinGap: number = 0.03 * Math.pow(2.5 / 0.03, 25 / 100);
+
   // Rate limiters for each voice category
   rateLimits: Record<string, { last: number; gap: number }> = {
     pad: { last: 0, gap: 0.09 },
-    pluck: { last: 0, gap: 0.045 },
+    pluck: { last: 0, gap: 0.09 },
     bell: { last: 0, gap: 0.08 },
-    perc: { last: 0, gap: 0.06 },
-    droplet: { last: 0, gap: 0.05 },
-    branch: { last: 0, gap: 0.06 },
-    step: { last: 0, gap: 0.02 + (25 / 100) * 0.28 },
+    perc: { last: 0, gap: 0.11 },
+    droplet: { last: 0, gap: 0.11 },
+    branch: { last: 0, gap: 0.10 },
+    step: { last: 0, gap: 0.09 },
   };
 
   // Sound Engine Global Settings
-  enabled: boolean = true;
+  enabled: boolean = false;
   masterVolume: number = 0.70;
   space: number = 55; // Reverb wet/dry amount (0 to 100)
 
-  // Mixer channel volume (0–100) and reverb send (0–100)
+  // Mixer channel volume (0–100), reverb send (0–100), and active octave (1–7)
   channelVolumes: Record<string, number> = {
     pad: 80, step: 50, branch: 70, bell: 75, drone: 70, perc: 60, weather: 65,
   };
   channelReverbSends: Record<string, number> = {
-    pad: 45, step: 12, branch: 20, bell: 30, drone: 35, perc: 18, weather: 25,
+    pad: 55, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
+  };
+  channelOctaves: Record<string, number> = {
+    pad: 4, step: 5, branch: 5, bell: 6, drone: 2, perc: 4, weather: 6,
   };
 
   // Per-channel mixer audio graph nodes
@@ -357,17 +364,15 @@ export class SimulationSound {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.enabled ? this.masterVolume * 0.62 : 0;
 
-      // Convolver Reverb with procedural stereo decay
+      // Default reverb send levels per channel
+      this.channelReverbSends = {
+        pad: 55, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
+        ...this.channelReverbSends,
+      };
+
+      // Convolver Reverb with warm pinked stereo decay + early reflections
       this.conv = this.ctx.createConvolver();
-      const len = Math.floor(this.ctx.sampleRate * 3.6);
-      const ir = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
-      for (let ch = 0; ch < 2; ch++) {
-        const d = ir.getChannelData(ch);
-        for (let i = 0; i < len; i++) {
-          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
-        }
-      }
-      this.conv.buffer = ir;
+      this.regenerateIR();
 
       // Wet / Dry Reverb Balance
       this.wet = this.ctx.createGain();
@@ -380,7 +385,6 @@ export class SimulationSound {
         if (!this.ctx || !this.master) return;
         const g = this.ctx.createGain();
         g.gain.value = 1;
-        g.connect(this.master);
         this.bus[n] = g;
       });
 
@@ -388,7 +392,8 @@ export class SimulationSound {
       this.mixerGains = {};
       this.reverbSendGains = {};
       this.reverbInput = this.ctx.createGain();
-      this.reverbInput.gain.value = 1;
+      // Makeup gain compensates for ConvolverNode equal-power normalization on short tonal transients
+      this.reverbInput.gain.value = 3.6;
 
       this.preDelay = this.ctx.createDelay(0.1);
       this.preDelay.delayTime.value = (this.reverbPreDelay / 100) * 0.08;
@@ -399,34 +404,32 @@ export class SimulationSound {
       this.reverbDampFilter.Q.value = 0.5;
 
       busNames.forEach((n) => {
-        if (!this.ctx || !this.master || !this.reverbInput || !this.bus[n]) return;
-        // Disconnect temporary master connection
-        try { this.bus[n].disconnect(); } catch (_) {}
-        // Channel mixer gain
+        if (!this.ctx || !this.dry || !this.reverbInput || !this.bus[n]) return;
+        // Channel mixer gain -> dry bus
         const cg = this.ctx.createGain();
         cg.gain.value = (this.channelVolumes[n] ?? 80) / 100;
-        cg.connect(this.master);
+        cg.connect(this.dry);
         this.mixerGains[n] = cg;
-        // Reverb send
+        // Reverb send -> reverbInput bus
         const rs = this.ctx.createGain();
-        rs.gain.value = (this.channelReverbSends[n] ?? 25) / 100;
+        rs.gain.value = (this.channelReverbSends[n] ?? 35) / 100;
         rs.connect(this.reverbInput);
         this.reverbSendGains[n] = rs;
-        // Wire: bus → channelGain → master AND channelGain → reverbSend
+        // Wire: bus -> channelGain -> dry AND channelGain -> reverbSend
         this.bus[n].connect(cg);
         cg.connect(rs);
       });
 
-      // Routing
-      this.master.connect(this.dry);
-      this.dry.connect(this.comp);
+      // Routing: both dry and wet feed into master -> compressor -> destination
+      this.dry.connect(this.master);
 
       this.reverbInput.connect(this.preDelay);
       this.preDelay.connect(this.reverbDampFilter);
       this.reverbDampFilter.connect(this.conv);
       this.conv.connect(this.wet);
-      this.wet.connect(this.comp);
+      this.wet.connect(this.master);
 
+      this.master.connect(this.comp);
       this.comp.connect(this.ctx.destination);
 
       // Procedural Noise Buffer (used for perc, bumps, and weather)
@@ -490,8 +493,8 @@ export class SimulationSound {
   setSpace(v: number) {
     this.space = clamp(v, 0, 100);
     if (!this.wet || !this.dry) return;
-    this.wet.gain.value = (this.space / 100) * 0.7;
-    this.dry.gain.value = 0.5 + (1 - this.space / 100) * 0.45;
+    this.wet.gain.value = (this.space / 100) * 1.8;
+    this.dry.gain.value = 0.45 + (1 - this.space / 100) * 0.50;
   }
 
   setVolume(vol: number) {
@@ -503,6 +506,12 @@ export class SimulationSound {
 
   setEnabled(en: boolean) {
     this.enabled = en;
+    if (en) {
+      this.init();
+      if (this.ctx && this.ctx.state === "suspended") {
+        this.ctx.resume().catch(() => {});
+      }
+    }
     if (this.master && this.ctx) {
       this.master.gain.setTargetAtTime(this.enabled ? this.masterVolume * 0.62 : 0, this.ctx.currentTime, 0.08);
     }
@@ -537,11 +546,46 @@ export class SimulationSound {
     }
   }
 
-  /** Apply full mixer snapshot: { channel: { vol, rev } } */
-  setMixer(mixer: Record<string, { vol: number; rev: number }>) {
+  /** Set a single mixer channel active octave (1-7) */
+  setChannelOctave(ch: string, val: number) {
+    const oct = clamp(Math.round(val), 1, 7);
+    this.channelOctaves[ch] = oct;
+    if (ch === "pad") this.aOct = oct;
+    if (ch === "step") this.bOct = oct;
+    if (ch === "drone" && this.ctx) {
+      const semi = this.rootSemi(this.deg);
+      const newMidi = 12 * (oct + 1) + semi;
+      const t = this.ctx.currentTime;
+      for (const k of Object.keys(this.drones)) {
+        const d = this.drones[k];
+        if (d) {
+          d.osc.frequency.setTargetAtTime(midiToHz(newMidi), t, 0.25);
+          d.sub.frequency.setTargetAtTime(midiToHz(newMidi - 12), t, 0.25);
+          d.midi = newMidi;
+        }
+      }
+    }
+    if (ch === "weather" && this.ctx) {
+      const env = SOUND_ENVIRONMENTS[this.currentEnvironment];
+      if (env) {
+        const mult = Math.pow(2, (oct - 6) * 0.35);
+        const t = this.ctx.currentTime;
+        if (this.rainFilter) {
+          this.rainFilter.frequency.setTargetAtTime(clamp(env.rainFilterCutoff * mult, 200, 12000), t, 0.15);
+        }
+        if (this.breezeFilter) {
+          this.breezeFilter.frequency.setTargetAtTime(clamp(450 * mult, 120, 4000), t, 0.15);
+        }
+      }
+    }
+  }
+
+  /** Apply full mixer snapshot: { channel: { vol, rev, oct } } */
+  setMixer(mixer: Record<string, { vol: number; rev: number; oct?: number }>) {
     for (const ch of Object.keys(mixer)) {
       if (mixer[ch].vol !== undefined) this.setChannelVolume(ch, mixer[ch].vol);
       if (mixer[ch].rev !== undefined) this.setChannelReverb(ch, mixer[ch].rev);
+      if (mixer[ch].oct !== undefined) this.setChannelOctave(ch, mixer[ch].oct!);
     }
   }
 
@@ -567,31 +611,57 @@ export class SimulationSound {
     }
   }
 
-  /** Regenerate convolver IR with current decay */
+  /** Regenerate convolver IR with warm spectral shaping + early reflections */
   private regenerateIR() {
     if (!this.ctx || !this.conv) return;
-    const len = Math.floor(this.ctx.sampleRate * this.decaySec(this.reverbDecay));
-    const ir = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
+    const sr = this.ctx.sampleRate;
+    const len = Math.floor(sr * this.decaySec(this.reverbDecay));
+    const ir = this.ctx.createBuffer(2, len, sr);
+    const earlyTimes = [0.014, 0.029, 0.047, 0.068, 0.093];
+    const earlyGains = [0.85, 0.65, 0.50, 0.38, 0.28];
     for (let ch = 0; ch < 2; ch++) {
       const d = ir.getChannelData(ch);
+      let lp = 0;
       for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+        const env = Math.pow(1 - i / len, 2.0);
+        const white = (Math.random() * 2 - 1) * env;
+        // 1-pole warm lowpass so ConvolverNode normalization concentrates power in the 100Hz-3kHz musical band
+        lp = lp * 0.84 + white * 0.16;
+        d[i] = lp;
+      }
+      // Add stereo-decorrelated early reflections for immediate spatial depth
+      for (let e = 0; e < earlyTimes.length; e++) {
+        const offset = Math.floor((earlyTimes[e] + (ch === 1 ? 0.004 : 0)) * sr);
+        if (offset < len) {
+          d[offset] += (ch === 0 ? 1 : -1) * earlyGains[e] * 0.35;
+        }
       }
     }
     this.conv.buffer = ir;
   }
 
-  /** Step cadence (0-100, higher = slower / fewer plucks) */
+  /** Global cadence filter (0-100, higher = slower / fewer total notes across step, branch, perc, droplet) */
   setStepCadence(val: number) {
     this.stepCadence = clamp(val, 0, 100);
-    this.rateLimits.step.gap = 0.02 + (this.stepCadence / 100) * 0.28;
+    // Exponential curve: 0 -> 0.03s (33/s), 25 -> 0.09s (11/s), 50 -> 0.27s (3.7/s), 75 -> 0.82s (1.2/s), 100 -> 2.5s (0.4/s)
+    const gap = 0.03 * Math.pow(2.5 / 0.03, this.stepCadence / 100);
+    this.globalMinGap = gap;
+    this.rateLimits.step.gap = gap;
+    // Slight multiplier on branch/perc/droplet prevents heavy branching from starving step notes
+    this.rateLimits.branch.gap = gap * 1.15;
+    this.rateLimits.pluck.gap = gap;
+    this.rateLimits.perc.gap = gap * 1.25;
+    this.rateLimits.droplet.gap = gap * 1.2;
+    this.rateLimits.bell.gap = Math.max(0.08, gap * 0.8);
+    this.rateLimits.pad.gap = Math.max(0.09, gap * 0.8);
   }
 
   allow(key: string, t: number): boolean {
+    if (t - this.globalLastEventTime < this.globalMinGap) return false;
     const rl = this.rateLimits[key];
-    if (!rl) return true;
-    if (t - rl.last < rl.gap) return false;
-    rl.last = t;
+    if (rl && t - rl.last < rl.gap) return false;
+    if (rl) rl.last = t;
+    this.globalLastEventTime = t;
     return true;
   }
 
@@ -787,11 +857,13 @@ export class SimulationSound {
     if (this.active >= this.cap) return;
 
     const t = this.ctx.currentTime;
-    const nodes = this.chain(pan || 0, 1400 + force * 2600, 4, "perc");
+    const percOct = this.channelOctaves.perc ?? 4;
+    const pitchMult = Math.pow(2, (percOct - 4) * 0.65);
+    const nodes = this.chain(pan || 0, clamp((1400 + force * 2600) * pitchMult, 180, 14000), 4, "perc");
     const src = this.ctx.createBufferSource();
     const g = this.ctx.createGain();
     src.buffer = this.noiseBuf;
-    src.playbackRate.value = 0.7 + Math.random() * 0.6;
+    src.playbackRate.value = clamp((0.7 + Math.random() * 0.6) * pitchMult, 0.15, 4.0);
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(0.05 * force, t + 0.003);
     g.gain.exponentialRampToValueAtTime(0.0005, t + 0.10 + force * 0.10);
@@ -812,23 +884,25 @@ export class SimulationSound {
 
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
-    const nodes = this.chain(pan, 6000 + Math.random() * 4000, 3, "weather");
+    const wxOct = this.channelOctaves.weather ?? 6;
+    const filterMult = Math.pow(2, (wxOct - 6) * 0.35);
+    const nodes = this.chain(pan, clamp((6000 + Math.random() * 4000) * filterMult, 400, 16000), 3, "weather");
 
-    // Random droplet resonant pitch in chord tones
-    const tone = this.scaleTone((Math.random() * 7) | 0, 6);
+    // Random droplet resonant pitch in chord tones at the chosen weather octave
+    const tone = this.scaleTone((Math.random() * 7) | 0, wxOct);
     osc.type = "sine";
     osc.frequency.setValueAtTime(midiToHz(tone) * (1.2 + Math.random() * 0.4), t);
     osc.frequency.exponentialRampToValueAtTime(midiToHz(tone) * 0.6, t + 0.06);
 
     const v = 0.015 * intensity * (this.rainIntensity || 1.0);
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(v, t + 0.002);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    g.gain.linearRampToValueAtTime(v, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0002, t + 0.075);
 
     osc.connect(g);
     g.connect(nodes.head);
     osc.start(t);
-    osc.stop(t + 0.08);
+    osc.stop(t + 0.09);
     this.active++;
     osc.onended = () => this.free(nodes);
   }
@@ -983,12 +1057,12 @@ export class SimulationSound {
     const t = this.ctx.currentTime;
     if (!this.allow("pad", t)) return;
 
-    // Rich blossoming pad chord across harmonic degrees
-    const oct = 4;
+    // Rich blossoming pad chord across harmonic degrees in the chosen pad octave
+    const oct = this.channelOctaves.pad ?? 4;
     const chordNotes = [
       this.tone(0, oct),
       this.tone(2, oct),
-      this.tone(4, oct + 1),
+      this.tone(4, clamp(oct + 1, 1, 7)),
     ];
 
     this.pad(chordNotes, {
@@ -997,9 +1071,10 @@ export class SimulationSound {
       cut: this.aCut * 1.3,
     });
 
-    // High sparkling birth chime
+    // High sparkling birth chime in the chosen bell octave
+    const bellOct = this.channelOctaves.bell ?? 6;
     setTimeout(() => {
-      this.bell(this.tone(4, 6), {
+      this.bell(this.tone(4, bellOct), {
         pan,
         vol: 0.7 * presence,
         dur: 1.6,
@@ -1017,12 +1092,12 @@ export class SimulationSound {
     // Harmonic bloom trigger
     this.bloom();
 
-    // Cascading bloom chord sequence
-    const oct = 4;
+    // Cascading bloom chord sequence in the chosen pad octave
+    const oct = this.channelOctaves.pad ?? 4;
     [0, 2, 4, 6].forEach((degOffset, idx) => {
       setTimeout(() => {
         if (!this.ctx || !this.enabled) return;
-        this.pad([this.tone(degOffset, oct + (idx > 2 ? 1 : 0))], {
+        this.pad([this.tone(degOffset, clamp(oct + (idx > 2 ? 1 : 0), 1, 7))], {
           pan: pan + (idx % 2 === 0 ? -0.1 : 0.1),
           vol: 0.75 * presence,
           cut: this.aCut * 1.2,
@@ -1030,8 +1105,9 @@ export class SimulationSound {
       }, idx * 90);
     });
 
-    // Resonant celebration chime
-    this.bell(this.scaleTone(4, 6), {
+    // Resonant celebration chime in the chosen bell octave
+    const bellOct = this.channelOctaves.bell ?? 6;
+    this.bell(this.scaleTone(4, bellOct), {
       pan,
       vol: 0.8 * presence,
       dur: 2.2,
@@ -1049,7 +1125,8 @@ export class SimulationSound {
     const { pan, presence } = this.getPanAndPresence(camera, midPoint);
 
     const semi = this.rootSemi(this.deg);
-    const midi = 36 + semi;
+    const droneOct = this.channelOctaves.drone ?? 2;
+    const midi = 12 * (droneOct + 1) + semi;
     this.droneOn("mating_drone", midi, pan, 0.7 * presence);
 
     setTimeout(() => {
@@ -1067,7 +1144,8 @@ export class SimulationSound {
 
     const { pan, presence } = this.getPanAndPresence(camera, agent.position);
     const depth = agent.branchDepth || 0;
-    const oct = clamp(5 + Math.floor(depth / 2), 4, 7);
+    const branchOct = this.channelOctaves.branch ?? 5;
+    const oct = clamp(branchOct + Math.floor(depth / 3), 1, 7);
     const midi = this.scaleTone(depth + ((Math.random() * 3) | 0), oct);
 
     this.pluck(midi, {
@@ -1090,8 +1168,7 @@ export class SimulationSound {
     const { pan, presence } = this.getPanAndPresence(camera, agent.position);
     if (presence < 0.15) return;
 
-    const arch = agent.genome?.archetype || "bush";
-    const oct = arch === "snake" ? 4 : arch === "tree" ? 5 : 6;
+    const oct = this.channelOctaves.step ?? 5;
     const toneIdx = (agent.id || 0) % 7;
     const midi = this.bNoteMode === "scale"
       ? this.scaleTone(toneIdx, oct)

@@ -9,14 +9,14 @@ interface SoundConfigPanelProps {
   stats?: any;
 }
 
-const MIXER_CHANNELS: { id: string; label: string; color: string; tip: string }[] = [
-  { id: "pad", label: "PAD", color: "#22D3EE", tip: "Birth & mating harmonic pads" },
-  { id: "step", label: "STEP", color: "#4ADE80", tip: "Agent movement plucks (the fast ticks)" },
-  { id: "branch", label: "BRANCH", color: "#FBBF24", tip: "Branch bifurcation plucks" },
-  { id: "bell", label: "BELL", color: "#F472B6", tip: "Sparkle chimes & celebration tones" },
-  { id: "drone", label: "DRONE", color: "#A78BFA", tip: "Sustained bass & mating drones" },
-  { id: "perc", label: "PERC", color: "#FB923C", tip: "Bounce impacts & pulse thumps" },
-  { id: "weather", label: "WX", color: "#67E8F9", tip: "Rain, breeze & atmospheric bed" },
+const MIXER_CHANNELS: { id: string; label: string; color: string; defaultOct: number; tip: string }[] = [
+  { id: "pad", label: "PAD", color: "#22D3EE", defaultOct: 4, tip: "Birth & mating harmonic pads" },
+  { id: "step", label: "STEP", color: "#4ADE80", defaultOct: 5, tip: "Agent movement plucks (the fast ticks)" },
+  { id: "branch", label: "BRANCH", color: "#FBBF24", defaultOct: 5, tip: "Branch bifurcation plucks" },
+  { id: "bell", label: "BELL", color: "#F472B6", defaultOct: 6, tip: "Sparkle chimes & celebration tones" },
+  { id: "drone", label: "DRONE", color: "#A78BFA", defaultOct: 2, tip: "Sustained bass & mating drones" },
+  { id: "perc", label: "PERC", color: "#FB923C", defaultOct: 4, tip: "Bounce impacts & pulse thumps" },
+  { id: "weather", label: "WX", color: "#67E8F9", defaultOct: 6, tip: "Rain, breeze & atmospheric droplets" },
 ];
 
 export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProps) {
@@ -24,10 +24,17 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
   const currentEnv = (state.soundEnvironment || "rain") as SoundEnvironmentId;
   const mixer = state.soundMixer || {};
 
-  const updateMixer = (ch: string, key: "vol" | "rev", val: number) => {
+  const updateMixer = (ch: string, key: "vol" | "rev" | "oct", val: number) => {
+    const def = MIXER_CHANNELS.find((c) => c.id === ch);
     setters.setSoundMixer({
       ...mixer,
-      [ch]: { ...(mixer[ch] || { vol: 70, rev: 25 }), [key]: val },
+      [ch]: {
+        vol: 70,
+        rev: 35,
+        oct: def?.defaultOct ?? 4,
+        ...(mixer[ch] || {}),
+        [key]: val,
+      },
     });
   };
 
@@ -146,12 +153,16 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
 
         {/* Mixer Channels */}
         <div className="flex flex-col gap-1.5 border-b border-cyan-500/20 pb-2.5">
-          <span className="text-[#D2B48C] font-bold text-[8px] tracking-wider pb-1">MIXER — VOL / REV</span>
+          <div className="flex justify-between items-center pb-1">
+            <span className="text-[#D2B48C] font-bold text-[8px] tracking-wider">MIXER — VOL / REV / OCTAVE</span>
+            <span className="text-[7px] text-cyan-400/70">OCT 1–7</span>
+          </div>
           {MIXER_CHANNELS.map((ch) => {
-            const chData = mixer[ch.id] || { vol: 70, rev: 25 };
+            const chData = mixer[ch.id] || { vol: 70, rev: 35, oct: ch.defaultOct };
+            const oct = chData.oct ?? ch.defaultOct;
             return (
-              <div key={ch.id} className="flex items-center gap-1">
-                <span className="w-10 text-[7px] font-bold text-right shrink-0" style={{ color: ch.color }} title={ch.tip}>{ch.label}</span>
+              <div key={ch.id} className="flex items-center justify-between gap-1">
+                <span className="w-9 text-[7px] font-bold text-right shrink-0" style={{ color: ch.color }} title={ch.tip}>{ch.label}</span>
                 <SmartDial state={state} setters={setters}
                   tooltip={`${ch.label} VOLUME\nChannel level in the mix.`}
                   label={`${ch.id.toUpperCase()}_VOL`}
@@ -166,6 +177,36 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
                   onChange={(v: number) => updateMixer(ch.id, "rev", v)}
                   color={ch.color} formatValue={(v: number) => `${v.toFixed(0)}%`}
                 />
+                {/* Octave Switcher (O1 - O7) */}
+                <div
+                  className="flex items-center border border-cyan-500/30 rounded bg-black/50 overflow-hidden shrink-0 select-none h-5"
+                  title={`${ch.label} OCTAVE (Currently Octave ${oct})\nClick - / + to shift active register (O1–O7), or click O${oct} to reset to default (O${ch.defaultOct}).`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => updateMixer(ch.id, "oct", Math.max(1, oct - 1))}
+                    disabled={oct <= 1}
+                    className="px-1.5 h-full flex items-center justify-center text-[9px] font-bold text-[#D2B48C]/80 hover:text-white hover:bg-cyan-500/20 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateMixer(ch.id, "oct", ch.defaultOct)}
+                    className="px-1 h-full flex items-center justify-center text-[8px] font-bold tracking-tighter min-w-[20px] hover:bg-white/10 transition-colors"
+                    style={{ color: ch.color }}
+                  >
+                    O{oct}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateMixer(ch.id, "oct", Math.min(7, oct + 1))}
+                    disabled={oct >= 7}
+                    className="px-1.5 h-full flex items-center justify-center text-[9px] font-bold text-[#D2B48C]/80 hover:text-white hover:bg-cyan-500/20 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -193,16 +234,17 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
           />
         </div>
 
-        {/* Step Cadence + Toggles */}
+        {/* Global Cadence + Toggles */}
         <div className="flex justify-between gap-2 border-b border-cyan-500/20 pb-2.5">
           <SmartDial state={state} setters={setters}
-            tooltip="STEP CADENCE\nControls rate of agent step plucks. Higher = slower ticks."
+            tooltip="GLOBAL CADENCE\nGlobal rate limit across all step, branch, bounce, and droplet sounds. Higher = slower / sparser notes."
             label="CADENCE" min={0} max={100} step={1}
             value={state.soundStepCadence ?? 25} onChange={setters.setSoundStepCadence}
             color="#4ADE80"
             formatValue={(v: number) => {
-              const gap = 0.02 + (v / 100) * 0.28;
-              return `${(1 / Math.max(0.01, gap)).toFixed(0)}/s`;
+              const gap = 0.03 * Math.pow(2.5 / 0.03, Math.max(0, Math.min(100, v)) / 100);
+              const rate = 1 / Math.max(0.01, gap);
+              return rate < 5 ? `${rate.toFixed(1)}/s` : `${rate.toFixed(0)}/s`;
             }}
           />
           <div className="flex items-center gap-1.5 self-end pb-1">
