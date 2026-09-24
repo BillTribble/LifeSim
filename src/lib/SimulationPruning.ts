@@ -108,8 +108,14 @@ export function performBranchPruning(
     }
   }
 
-  // Line load factor: ratio of current segments to maxDOMs budget
-  const lineLoad = engine.pointCount / Math.max(1000, engine.maxDOMs);
+  // Line load factor: ratio of current active segments to maxDOMs budget
+  const activeStems = Math.max(
+    0,
+    Math.min(engine.pointCount, engine.maxDOMs) -
+      (engine.freeStemIndices ? engine.freeStemIndices.length : 0) -
+      engine.dyingStems.size
+  );
+  const lineLoad = activeStems / Math.max(1000, engine.maxDOMs);
 
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];

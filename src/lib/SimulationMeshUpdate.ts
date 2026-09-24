@@ -12,19 +12,19 @@ export function updateMeshSegments(
   agentId?: number,
   isTerminal = false,
 ) {
-  // Protect the first 2,000 slots (base trunks & roots) from ever being overwritten
   const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
-  let targetIndexStem: number;
-  if (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
-    // 1. First priority: Reuse slots freed by dissolved segments
-    targetIndexStem = engine.freeStemIndices.pop()!;
-  } else if (engine.pointCount < engine.maxDOMs) {
-    // 2. Normal sequential allocation while filling initial capacity
-    targetIndexStem = engine.pointCount;
-  } else {
-    // 3. Ring buffer wrap-around: wrap strictly within non-trunk slots (never overwrites base/trunk)
-    const recycleSpan = Math.max(1, engine.maxDOMs - trunkReserved);
-    targetIndexStem = trunkReserved + ((engine.pointCount - trunkReserved) % recycleSpan);
+  let targetIndexStem = 0;
+  let reusedFreeSlot = false;
+  if (!isAppendage) {
+    if (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
+      targetIndexStem = engine.freeStemIndices.pop()!;
+      reusedFreeSlot = true;
+    } else if (engine.pointCount < engine.maxDOMs) {
+      targetIndexStem = engine.pointCount;
+    } else {
+      const recycleSpan = Math.max(1, engine.maxDOMs - trunkReserved);
+      targetIndexStem = trunkReserved + ((engine.pointCount - trunkReserved) % recycleSpan);
+    }
   }
 
   if (isAppendage) {
@@ -286,7 +286,18 @@ export function updateMeshSegments(
   const shouldCountBiomass = !genome.name.startsWith("Feeler-") && !isAppendage && thickness >= 0.35;
 
   if (targetMesh === engine.cylinderMesh) {
+    const prevSeg = engine.segments[targetIndex];
+    if (prevSeg && prevSeg.countsForBiomass) {
+      const prevCount = engine.biomassMap.get(prevSeg.strainName) || 0;
+      if (prevCount > 1) engine.biomassMap.set(prevSeg.strainName, prevCount - 1);
+      else engine.biomassMap.delete(prevSeg.strainName);
+    }
     engine.dyingStems.delete(targetIndex);
+    if (engine.growingStems) engine.growingStems.add(targetIndex);
+    engine.lastStemIndex = targetIndex;
+    if (agentId !== undefined && engine.lastAgentStemIndex) {
+      engine.lastAgentStemIndex.set(agentId, targetIndex);
+    }
     engine.segments[targetIndex] = {
       index: targetIndex,
       timestamp: engine.time,
@@ -296,7 +307,9 @@ export function updateMeshSegments(
       agentId: agentId,
       countsForBiomass: shouldCountBiomass,
     };
-    engine.pointCount++;
+    if (!reusedFreeSlot) {
+      engine.pointCount++;
+    }
     engine.cylinderMesh.count = Math.min(engine.pointCount, engine.maxDOMs);
   } else {
     const config = engine.appendages.get(genome.appendage);
@@ -305,7 +318,10 @@ export function updateMeshSegments(
       config.dyingSet.delete(targetIndex);
       config.count++;
       config.mesh.count = Math.min(config.count, appLimit);
-      const lastStemIdx = (engine.pointCount > 0 ? engine.pointCount - 1 : 0) % engine.maxDOMs;
+      const lastStemIdx =
+        agentId !== undefined && engine.lastAgentStemIndex && engine.lastAgentStemIndex.has(agentId)
+          ? engine.lastAgentStemIndex.get(agentId)!
+          : (engine.lastStemIndex ?? ((engine.pointCount > 0 ? engine.pointCount - 1 : 0) % engine.maxDOMs));
       config.segments[targetIndex] = {
         index: targetIndex,
         timestamp: engine.time,
@@ -374,8 +390,11 @@ export function processDyingSegments(
       dyingSet.delete(idx);
       changed = true;
 
-      if (mesh === engine.cylinderMesh && engine.freeStemIndices) {
-        engine.freeStemIndices.push(idx);
+      if (mesh === engine.cylinderMesh) {
+        if (engine.growingStems) engine.growingStems.delete(idx);
+        if (engine.freeStemIndices) {
+          engine.freeStemIndices.push(idx);
+        }
       }
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;

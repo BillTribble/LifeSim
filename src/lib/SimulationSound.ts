@@ -589,6 +589,34 @@ export class SimulationSound {
     }
   }
 
+  /** Play a subtle preview tone when changing a channel's active octave */
+  previewChannelOctave(ch: string, val: number) {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const oct = clamp(Math.round(val), 1, 7);
+    this.setChannelOctave(ch, oct);
+
+    if (ch === "pad") {
+      this.pad([this.tone(0, oct), this.tone(2, oct)], { vol: 0.65, cut: this.aCut });
+    } else if (ch === "step") {
+      this.pluck(this.tone(0, oct), { vol: 0.7, dur: 110, cut: 4500, busName: "step" });
+    } else if (ch === "branch") {
+      this.pluck(this.scaleTone(2, oct), { vol: 0.7, dur: 130, cut: 5500, busName: "branch" });
+    } else if (ch === "bell") {
+      this.bell(this.tone(4, oct), { vol: 0.75, dur: 1.4 });
+    } else if (ch === "drone") {
+      const semi = this.rootSemi(this.deg);
+      const midi = 12 * (oct + 1) + semi;
+      this.droneOn("preview_drone", midi, 0, 0.75);
+      setTimeout(() => this.droneOff("preview_drone"), 1400);
+    } else if (ch === "perc") {
+      this.bump(0, 0.8);
+    } else if (ch === "weather") {
+      this.raindrop(0, 1.0);
+    }
+  }
+
   /** Global reverb decay (0-100) - regenerates convolver IR */
   setReverbDecay(val: number) {
     this.reverbDecay = clamp(val, 0, 100);
@@ -929,17 +957,21 @@ export class SimulationSound {
       const t = this.ctx.currentTime;
       const ramp = instant ? 0.05 : 3.0;
 
+      const wxOct = this.channelOctaves.weather ?? 6;
+      const wxMult = Math.pow(2, (wxOct - 6) * 0.35);
+
       // Update Rain layer
       if (this.rainGain && this.rainFilter) {
         const targetRain = env.rainVolume * this.rainIntensity * (this.masterVolume > 0 ? 1 : 0);
         this.rainGain.gain.setTargetAtTime(targetRain * 0.12, t, ramp);
-        this.rainFilter.frequency.setTargetAtTime(env.rainFilterCutoff, t, ramp);
+        this.rainFilter.frequency.setTargetAtTime(clamp(env.rainFilterCutoff * wxMult, 200, 12000), t, ramp);
       }
 
       // Update Breeze layer
       if (this.breezeGain && this.breezeFilter) {
         const targetBreeze = env.breezeVolume * (this.masterVolume > 0 ? 1 : 0);
         this.breezeGain.gain.setTargetAtTime(targetBreeze * 0.08, t, ramp);
+        this.breezeFilter.frequency.setTargetAtTime(clamp(450 * wxMult, 120, 4000), t, ramp);
       }
     }
   }

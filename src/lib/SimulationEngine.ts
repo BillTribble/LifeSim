@@ -181,6 +181,9 @@ export class SimulationEngine {
   maxDOMs: number = 32000;
   lastMaxDOMs: number = 32000;
   freeStemIndices: number[] = [];
+  growingStems: Set<number> = new Set();
+  lastStemIndex: number = 0;
+  lastAgentStemIndex: Map<number, number> = new Map();
   minCreatures: number = 9;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
@@ -872,42 +875,55 @@ export class SimulationEngine {
   }
 
   setSoundEnabled(val: boolean) {
+    (this as any).soundEnabled = val;
     this.sound.setEnabled(val);
   }
   setSoundVolume(val: number) {
+    (this as any).soundVolume = val;
     this.sound.setVolume(val);
   }
   setSoundSpace(val: number) {
+    (this as any).soundSpace = val;
     this.sound.setSpace(val);
   }
   setSoundEnvironment(val: SoundEnvironmentId) {
+    (this as any).soundEnvironment = val;
     this.sound.setEnvironment(val);
   }
   setSoundAutoCycle(val: boolean) {
+    (this as any).soundAutoCycle = val;
     this.sound.autoCycleEnvironments = val;
   }
   setSoundSyncThemes(val: boolean) {
+    (this as any).soundSyncThemes = val;
     this.sound.syncWithThemes = val;
   }
   setSoundMovement(val: boolean) {
+    (this as any).soundMovement = val;
     this.sound.enableMovementSound = val;
   }
   setSoundWeather(val: boolean) {
+    (this as any).soundWeather = val;
     this.sound.enableWeatherSound = val;
   }
-  setSoundMixer(val: Record<string, { vol: number; rev: number }>) {
+  setSoundMixer(val: Record<string, { vol: number; rev: number; oct?: number }>) {
+    (this as any).soundMixer = val;
     if (this.sound) this.sound.setMixer(val);
   }
   setSoundReverbDecay(val: number) {
+    (this as any).soundReverbDecay = val;
     if (this.sound) this.sound.setReverbDecay(val);
   }
   setSoundReverbDamping(val: number) {
+    (this as any).soundReverbDamping = val;
     if (this.sound) this.sound.setReverbDamping(val);
   }
   setSoundReverbPreDelay(val: number) {
+    (this as any).soundReverbPreDelay = val;
     if (this.sound) this.sound.setReverbPreDelay(val);
   }
   setSoundStepCadence(val: number) {
+    (this as any).soundStepCadence = val;
     if (this.sound) this.sound.setStepCadence(val);
   }
 

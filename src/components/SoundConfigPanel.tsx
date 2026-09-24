@@ -24,6 +24,13 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
   const currentEnv = (state.soundEnvironment || "rain") as SoundEnvironmentId;
   const mixer = state.soundMixer || {};
 
+  const previewOctave = (ch: string, oct: number) => {
+    const engine = (window as any).simEngine;
+    if (engine && engine.sound) {
+      engine.sound.previewChannelOctave?.(ch, oct);
+    }
+  };
+
   const updateMixer = (ch: string, key: "vol" | "rev" | "oct", val: number) => {
     const def = MIXER_CHANNELS.find((c) => c.id === ch);
     setters.setSoundMixer({
@@ -36,6 +43,24 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
         [key]: val,
       },
     });
+    if (key === "oct") {
+      previewOctave(ch, val);
+    }
+  };
+
+  const shiftAllOctaves = (delta: number | "reset") => {
+    const nextMixer: Record<string, { vol: number; rev: number; oct: number }> = { ...mixer };
+    for (const ch of MIXER_CHANNELS) {
+      const cur = nextMixer[ch.id] || { vol: 70, rev: 35, oct: ch.defaultOct };
+      const curOct = cur.oct ?? ch.defaultOct;
+      const newOct = delta === "reset" ? ch.defaultOct : Math.max(1, Math.min(7, curOct + delta));
+      nextMixer[ch.id] = {
+        vol: cur.vol ?? 70,
+        rev: cur.rev ?? 35,
+        oct: newOct,
+      };
+    }
+    setters.setSoundMixer(nextMixer);
   };
 
   const envButtons: { id: SoundEnvironmentId; label: string; icon: any; desc: string }[] = [
@@ -155,7 +180,35 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
         <div className="flex flex-col gap-1.5 border-b border-cyan-500/20 pb-2.5">
           <div className="flex justify-between items-center pb-1">
             <span className="text-[#D2B48C] font-bold text-[8px] tracking-wider">MIXER — VOL / REV / OCTAVE</span>
-            <span className="text-[7px] text-cyan-400/70">OCT 1–7</span>
+            <div className="flex items-center gap-1" title="Shift or reset active octaves across all sound channels at once">
+              <span className="text-[7px] text-cyan-400/70">ALL OCT:</span>
+              <div className="flex items-center border border-cyan-500/30 rounded bg-black/50 overflow-hidden h-4">
+                <button
+                  type="button"
+                  onClick={() => shiftAllOctaves(-1)}
+                  className="px-1 h-full flex items-center justify-center text-[8px] font-bold text-[#D2B48C]/80 hover:text-white hover:bg-cyan-500/20 transition-colors"
+                  title="Shift all sounds down 1 octave"
+                >
+                  -1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => shiftAllOctaves("reset")}
+                  className="px-1 h-full flex items-center justify-center text-[7px] font-bold text-cyan-300 hover:bg-white/10 transition-colors"
+                  title="Reset all sounds to their default octaves"
+                >
+                  RST
+                </button>
+                <button
+                  type="button"
+                  onClick={() => shiftAllOctaves(1)}
+                  className="px-1 h-full flex items-center justify-center text-[8px] font-bold text-[#D2B48C]/80 hover:text-white hover:bg-cyan-500/20 transition-colors"
+                  title="Shift all sounds up 1 octave"
+                >
+                  +1
+                </button>
+              </div>
+            </div>
           </div>
           {MIXER_CHANNELS.map((ch) => {
             const chData = mixer[ch.id] || { vol: 70, rev: 35, oct: ch.defaultOct };

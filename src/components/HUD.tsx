@@ -296,7 +296,7 @@ export function HUD({
                     <VolumeX className="w-3.5 h-3.5 text-red-400/70 shrink-0" />
                   )}
                   <span className="font-bold tracking-wider">
-                    {state.soundEnabled ? (state.soundEnvironment || "SOUND").toUpperCase() : "MUTED"}
+                    SOUND
                   </span>
                   <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${soundPanelOpen ? "rotate-180" : ""}`} />
                 </div>

@@ -140,10 +140,17 @@ export function useSimulationState() {
   const [soundSyncThemes, setSoundSyncThemes] = useState(() => getStoredBool("soundSyncThemes", DEFAULTS.soundSyncThemes));
   const [soundMovement, setSoundMovement] = useState(() => getStoredBool("soundMovement", DEFAULTS.soundMovement));
   const [soundWeather, setSoundWeather] = useState(() => getStoredBool("soundWeather", DEFAULTS.soundWeather));
-  const [soundMixer, setSoundMixer] = useState<Record<string, { vol: number; rev: number }>>(() => {
+  const [soundMixer, setSoundMixer] = useState<Record<string, { vol: number; rev: number; oct?: number }>>(() => {
     try {
       const stored = localStorage.getItem("soundMixer");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const merged: Record<string, { vol: number; rev: number; oct?: number }> = { ...DEFAULTS.soundMixer };
+        for (const k of Object.keys(parsed)) {
+          merged[k] = { ...(DEFAULTS.soundMixer[k] || { vol: 70, rev: 35, oct: 4 }), ...parsed[k] };
+        }
+        return merged;
+      }
     } catch {}
     return DEFAULTS.soundMixer;
   });

@@ -460,6 +460,9 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.biomassMap.clear();
   engine.pointCount = 0;
   engine.freeStemIndices = [];
+  if (engine.growingStems) engine.growingStems.clear();
+  engine.lastStemIndex = 0;
+  if (engine.lastAgentStemIndex) engine.lastAgentStemIndex.clear();
   engine.segments = [];
   engine.hybridSegments = [];
   engine.hybridCount = 0;
