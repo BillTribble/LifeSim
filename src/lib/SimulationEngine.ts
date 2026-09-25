@@ -1,3 +1,4 @@
+import { markDyingHelper, markAgentSegmentsDyingHelper, markStrainSegmentsDyingHelper } from "./SimulationEngineHelpers";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
@@ -38,20 +39,15 @@ import {
   getTrackedPositions,
 } from "./SimulationSceneSetup";
 import { SimulationSound, SoundEnvironmentId } from "./SimulationSound";
-
 export class SimulationEngine {
   scene: THREE.Scene = new THREE.Scene();
   camera!: THREE.PerspectiveCamera;
   renderer!: THREE.WebGLRenderer;
   controls!: OrbitControls;
-
   sound: SimulationSound = new SimulationSound();
   lastSoundRealTime: number = performance.now();
-
   agents: Agent[] = [];
-
   maxAgents: number = 200;
-
   cylinderMesh!: THREE.InstancedMesh;
   tideMesh!: THREE.Mesh;
   hybridMeshes: THREE.InstancedMesh[] = [];
@@ -64,12 +60,10 @@ export class SimulationEngine {
   ceilingGridMesh?: THREE.GridHelper;
   silhouetteTarget?: THREE.WebGLRenderTarget;
   silhouettePixelBuffer?: Uint8Array;
-
   pointCount: number = 0;
   segments: Segment[] = [];
   hybridSegments: Segment[] = [];
   hybridCount: number = 0;
-
   appendages: Map<
     string,
     {
@@ -79,7 +73,6 @@ export class SimulationEngine {
       count: number;
     }
   > = new Map();
-
   biomassMap: Map<string, number> = new Map();
   genomeMap: Map<string, Genome> = new Map();
   suppressedStrains: Set<string> = new Set();
@@ -88,13 +81,12 @@ export class SimulationEngine {
   lastBiomassCheckTime: number = 0;
   unscaledTime: number = 0;
   frameCount: number = 0;
-  timeScale: number = 0.4;
+  timeScale: number = 1.0;
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
   glowTraitDistance: number = 50.0;
   glowTraitReflect: number = 1.0;
-
   onLog: (msg: string) => void = () => {};
   onStateUpdate: (state: any) => void = () => {};
   onConfigChange?: (config: any) => void;
@@ -112,11 +104,11 @@ export class SimulationEngine {
   hasAnyOrganismBred: boolean = false;
   lastMatingWorldPos?: THREE.Vector3;
   lastFeelerWorldPos?: THREE.Vector3;
-
   designerMode: boolean = false;
   designerArchetype: Archetype = "bush";
+  botanicalConcept: string = "auto";
+  evolutionStep: number = 20;
   onDesignerStrainName?: (name: string) => void;
-
   rotationSpeed: number = 0.2;
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
@@ -156,7 +148,6 @@ export class SimulationEngine {
   branchingMultiplier: number = 500;
   branchTendencyVar: number = 20.13801242680057;
   desiccationSpeed: number = 9.174839585959253;
-
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
@@ -171,13 +162,10 @@ export class SimulationEngine {
   stemCurviness: number = 3;
   veinStrength: number = 15;
   veinGlow: number = 0.5;
-
   hybridSize: number = 2.0;
-
   pruningStrength: number = 0.8;
   maxBranchDepth: number = 4;
   maxBranchesPerSpecies: number = 24;
-
   maxDOMs: number = 32000;
   lastMaxDOMs: number = 32000;
   freeStemIndices: number[] = [];
@@ -199,17 +187,14 @@ export class SimulationEngine {
   glowSize: number = 0.5;
   fogVisibility: number = 760.9755555176774;
   tideCullIndex: number = 0;
-
   kioskMode: boolean = false;
   lastKioskTime: number = 0;
   lastKioskRealTime: number = 0;
   kioskFadeProgress: number = 0;
   kioskFadingOut: boolean = false;
   onKioskTrigger?: () => void;
-
   bgColor: string = "#001220";
   tideColor: string = "#FF4500";
-  
   theme: number = 0;
   nextTheme: number = 0;
   themeProgress: number = 1.0;
@@ -217,12 +202,10 @@ export class SimulationEngine {
   themeMorphSpeed: number = 5.0;
   manualThemeTransition: boolean = false;
   lastThemeMorphTime: number = 0;
-
   themeColor1: string = "#ffffff";
   themeColor2: string = "#ffffff";
   nextThemeColor1: string = "#ffffff";
   nextThemeColor2: string = "#ffffff";
-
   traitProbs: Record<string, number> = {
     flowers: 0.5,
     lillyPads: 0.5,
@@ -240,14 +223,11 @@ export class SimulationEngine {
     sparkles: 0.3,
     buds: 0.4
   };
-
   dyingStems = new Set<number>();
   dyingHybrids = new Set<number>();
   dyingStrains = new Set<string>();
-
   blackColor = new THREE.Color(0, 0, 0);
   colorDummy = new THREE.Color();
-
   terminationProb: number = 0.6071318627934128;
   termProbPostBranch: number = 2.5;
   segmentGap: number = 0.12;
@@ -255,18 +235,15 @@ export class SimulationEngine {
   feelerFade: number = 10.0;
   diebackAgeBias: number = 4.314851637950758;
   cullRate: number = 48.87;
-
   snakeSpeed: number = 1.4;
   snakeStepSize: number = 1.7;
   snakeWander: number = 1.0;
   bushSpeed: number = 1.1;
   treeSpeed: number = 1.2;
   rhizomeSpeed: number = 1.0;
-
   bushStepSize: number = 0.85;
   treeStepSize: number = 0.6;
   rhizomeStepSize: number = 1.2;
-
   bushBranching: number = 50.0;
   treeBranching: number = 17.5;
   treeBranchDelay: number = 5;
@@ -279,17 +256,14 @@ export class SimulationEngine {
   rhizomeMinBranches: number = 6;
   treeMinBranches: number = 2;
   snakeMinBranches: number = 1;
-
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
   lastHybridSize: number = 2.0;
   lastLeafScale: number = 0.55;
   lastRelativeLeafSizeDiff: number = 0.2;
   lastStemCurviness: number = 1.0;
-
   width: number = 0;
   height: number = 0;
-
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.canvas = canvas;
     this.width = width;
@@ -298,15 +272,12 @@ export class SimulationEngine {
     // initAgents() is NOT called here — it is called explicitly in SimulationView
     // after all user settings have been applied to the engine.
   }
-
   private generateRandomGenome(baseName: string, forceArchetype?: any): Genome {
     return generateRandomGenome(this, baseName, forceArchetype);
   }
-
   randomizeColors() {
     randomizeColors(this);
   }
-
   cameraZoom: number = 1.15;
   cameraHeight: number = 75;
   gridHeight: number = 80;
@@ -323,41 +294,17 @@ export class SimulationEngine {
   fadeCamera?: THREE.OrthographicCamera;
   fadeQuadMat?: THREE.MeshBasicMaterial;
   fadeQuadMesh?: THREE.Mesh;
-
-  setShowBoundaryBox(show: boolean) {
-    this.showBoundaryBox = show;
-    this.updateBoundaryMesh();
-  }
-
+  setShowBoundaryBox(show: boolean) { this.showBoundaryBox = show; this.updateBoundaryMesh(); }
   updateBoundaryMesh() {
     updateBoundaryMesh(this);
   }
-
-  setGridHeight(height: number) {
-    this.gridHeight = height;
-    this.layerGap = height;
-  }
-  setLayerGap(gap: number) {
-    this.layerGap = gap;
-    this.gridHeight = gap;
-  }
-  setFloorHeight(h: number) {
-    this.floorHeight = h;
-  }
-  setCeilingHeight(h: number) {
-    this.ceilingHeight = h;
-  }
-  setCameraProjection(val: number) {
-    setupCameraProjection(this, val);
-  }
-
-  setRotationSpeed(speed: number) {
-    this.rotationSpeed = speed;
-    if (this.controls) this.controls.autoRotateSpeed = speed;
-  }
-  setRotationSpeedY(speed: number) {
-    this.rotationSpeedY = speed;
-  }
+  setGridHeight(height: number) { this.gridHeight = height; this.layerGap = height; }
+  setLayerGap(gap: number) { this.layerGap = gap; this.gridHeight = gap; }
+  setFloorHeight(h: number) { this.floorHeight = h; }
+  setCeilingHeight(h: number) { this.ceilingHeight = h; }
+  setCameraProjection(val: number) { setupCameraProjection(this, val); }
+  setRotationSpeed(speed: number) { this.rotationSpeed = speed; if (this.controls) this.controls.autoRotateSpeed = speed; }
+  setRotationSpeedY(speed: number) { this.rotationSpeedY = speed; }
   setCameraZoom(zoom: number) {
     this.cameraZoom = zoom;
     if (this.camera) {
@@ -373,33 +320,14 @@ export class SimulationEngine {
       this.controls.update();
     }
   }
-  setMagnetism(val: number) {
-    this.magnetism = val;
-  }
-  setSeekAmount(val: number) {
-    this.seekAmount = val;
-  }
-  setProximity(val: number) {
-    this.proximity = val;
-  }
-
-  setDesperation(val: number) {
-    this.desperation = val;
-  }
-
-  setDespairAge(val: number) {
-    this.despairAge = val;
-  }
-  setMaxMatings(val: number) {
-    this.maxMatings = Math.max(1, Math.round(val));
-  }
-  setStartColorMode(val: string) {
-    this.startColorMode = val;
-  }
-  setFlowerSize(val: number) {
-    this.flowerSize = val;
-    this.leafScale = val;
-  }
+  setMagnetism(val: number) { this.magnetism = val; }
+  setSeekAmount(val: number) { this.seekAmount = val; }
+  setProximity(val: number) { this.proximity = val; }
+  setDesperation(val: number) { this.desperation = val; }
+  setDespairAge(val: number) { this.despairAge = val; }
+  setMaxMatings(val: number) { this.maxMatings = Math.max(1, Math.round(val)); }
+  setStartColorMode(val: string) { this.startColorMode = val; }
+  setFlowerSize(val: number) { this.flowerSize = val; this.leafScale = val; }
   setMinCreatures(val: number) {
     this.minCreatures = val;
     if (this.maxCreatures <= val) {
@@ -410,189 +338,70 @@ export class SimulationEngine {
     }
   }
   creatureCenterY: number = 18.921075;
-  setBoundarySize(val: number) {
-    setupBoundarySize(this, val);
-  }
-  setBoundarySquash(val: number) {
-    setupBoundarySquash(this, val);
-  }
-  setTideSpeed(val: number) {
-    this.tideSpeed = val;
-  }
-  setMaxDOMs(val: number) {
-    this.maxDOMs = Math.min(val, MAX_POINTS);
-  }
-  setProbGlow(val: number) {
-    this.probGlow = val;
-  }
-  setDesiccationSpeed(val: number) {
-    this.desiccationSpeed = val;
-  }
-  setTimeScale(val: number) {
-    this.timeScale = val;
-  }
-  setEnableGlow(val: boolean) {
-    this.enableGlow = val;
-  }
-  setGlowSize(val: number) {
-    this.glowSize = val;
-  }
-  setFogVisibility(val: number) {
-    setupFogVisibility(this, val);
-  }
-  setTheme(val: number, manual: boolean = true) {
-    setupTheme(this, val, manual);
-  }
-  setBgColor(c: string) {
-    setupSceneBackground(this, c);
-  }
-  setFogColor(c: string) {
-    setupFogColor(this, c);
-  }
-  setPostMatingDieoff(val: boolean) {
-    this.postMatingDieoff = val;
-  }
-  setGlobalPulseSpeed(val: number) {
-    this.globalPulseSpeed = val;
-  }
-  setMaxLineWidth(val: number) {
-    this.maxLineWidth = val;
-  }
-  setMulticolorAppProb(val: number) {
-    this.multicolorAppProb = val;
-  }
-  setSameColorAppProb(val: number) {
-    this.sameColorAppProb = val;
-  }
-  setTideColor(c: string) {
-    this.tideColor = c;
-  }
-  setTraitProbs(probs: Record<string, number>) {
-    this.traitProbs = probs;
-  }
-  setTerminationProb(val: number) {
-    this.terminationProb = val;
-  }
-  setTermProbPostBranch(val: number) {
-    this.termProbPostBranch = val;
-  }
-  setSegmentGap(val: number) {
-    this.segmentGap = val;
-  }
-  setMaxAgents(val: number) {
-    this.maxAgents = val;
-  }
-  setMaxCreatures(val: number) {
-    this.maxCreatures = Math.max(val, this.minCreatures + 1);
-  }
-  setEcoFade(val: number) {
-    this.ecoFade = val;
-  }
-  setTaperDuration(val: number) {
-    this.taperDuration = val;
-  }
-  setFeelerFade(val: number) {
-    this.feelerFade = val;
-  }
-  setFeelerProb(val: number) {
-    this.feelerProb = val;
-  }
-  setFeelerDelay(val: number) {
-    this.feelerDelay = val;
-  }
-
-  setCullRate(val: number) {
-    this.cullRate = val;
-  }
-  setSnakeSpeed(val: number) {
-    this.snakeSpeed = val;
-  }
-  setSnakeStepSize(val: number) {
-    this.snakeStepSize = val;
-  }
-  setBushStepSize(val: number) {
-    this.bushStepSize = val;
-  }
-  setTreeStepSize(val: number) {
-    this.treeStepSize = val;
-  }
-  setRhizomeStepSize(val: number) {
-    this.rhizomeStepSize = val;
-  }
-  setSnakeWander(val: number) {
-    this.snakeWander = val;
-  }
-  setBushSpeed(val: number) {
-    this.bushSpeed = val;
-  }
-  setTreeSpeed(val: number) {
-    this.treeSpeed = val;
-  }
-  setRhizomeSpeed(val: number) {
-    this.rhizomeSpeed = val;
-  }
-  setBushBranching(val: number) {
-    this.bushBranching = val;
-  }
-  setTreeBranching(val: number) {
-    this.treeBranching = val;
-  }
-  setTreeBranchDelay(val: number) {
-    this.treeBranchDelay = val;
-  }
-  setBushTaper(val: number) {
-    this.bushTaper = val;
-  }
-  setTreeTaper(val: number) {
-    this.treeTaper = val;
-  }
-  setRhizomeTaper(val: number) {
-    this.rhizomeTaper = val;
-  }
-  setSnakeBranching(val: number) {
-    this.snakeBranching = val;
-  }
-  setRhizomeBranching(val: number) {
-    this.rhizomeBranching = val;
-  }
-  setBushMinBranches(val: number) {
-    this.bushMinBranches = val;
-  }
-  setRhizomeMinBranches(val: number) {
-    this.rhizomeMinBranches = val;
-  }
-  setTreeMinBranches(val: number) {
-    this.treeMinBranches = val;
-  }
-  setSnakeMinBranches(val: number) {
-    this.snakeMinBranches = val;
-  }
-  setWidthVariance(val: number) {
-    this.widthVariance = val;
-  }
-  setBranchGrowthBoost(val: number) {
-    this.branchGrowthBoost = val;
-  }
-  setPruningStrength(val: number) {
-    this.pruningStrength = val;
-  }
-  setMaxBranchDepth(val: number) {
-    this.maxBranchDepth = val;
-  }
-  setMaxBranchesPerSpecies(val: number) {
-    this.maxBranchesPerSpecies = val;
-  }
-  setColorMutationShift(val: number) {
-    this.colorMutationShift = val;
-  }
-
+  setBoundarySize(val: number) { setupBoundarySize(this, val); }
+  setBoundarySquash(val: number) { setupBoundarySquash(this, val); }
+  setTideSpeed(val: number) { this.tideSpeed = val; }
+  setMaxDOMs(val: number) { this.maxDOMs = Math.min(val, MAX_POINTS); }
+  setProbGlow(val: number) { this.probGlow = val; }
+  setDesiccationSpeed(val: number) { this.desiccationSpeed = val; }
+  setTimeScale(val: number) { this.timeScale = val; }
+  setEnableGlow(val: boolean) { this.enableGlow = val; }
+  setGlowSize(val: number) { this.glowSize = val; }
+  setFogVisibility(val: number) { setupFogVisibility(this, val); }
+  setTheme(val: number, manual: boolean = true) { setupTheme(this, val, manual); }
+  setBgColor(c: string) { setupSceneBackground(this, c); }
+  setFogColor(c: string) { setupFogColor(this, c); }
+  setPostMatingDieoff(val: boolean) { this.postMatingDieoff = val; }
+  setGlobalPulseSpeed(val: number) { this.globalPulseSpeed = val; }
+  setMaxLineWidth(val: number) { this.maxLineWidth = val; }
+  setMulticolorAppProb(val: number) { this.multicolorAppProb = val; }
+  setSameColorAppProb(val: number) { this.sameColorAppProb = val; }
+  setTideColor(c: string) { this.tideColor = c; }
+  setTraitProbs(probs: Record<string, number>) { this.traitProbs = probs; }
+  setTerminationProb(val: number) { this.terminationProb = val; }
+  setTermProbPostBranch(val: number) { this.termProbPostBranch = val; }
+  setSegmentGap(val: number) { this.segmentGap = val; }
+  setMaxAgents(val: number) { this.maxAgents = val; }
+  setMaxCreatures(val: number) { this.maxCreatures = Math.max(val, this.minCreatures + 1); }
+  setEcoFade(val: number) { this.ecoFade = val; }
+  setTaperDuration(val: number) { this.taperDuration = val; }
+  setFeelerFade(val: number) { this.feelerFade = val; }
+  setFeelerProb(val: number) { this.feelerProb = val; }
+  setFeelerDelay(val: number) { this.feelerDelay = val; }
+  setCullRate(val: number) { this.cullRate = val; }
+  setSnakeSpeed(val: number) { this.snakeSpeed = val; }
+  setSnakeStepSize(val: number) { this.snakeStepSize = val; }
+  setBushStepSize(val: number) { this.bushStepSize = val; }
+  setTreeStepSize(val: number) { this.treeStepSize = val; }
+  setRhizomeStepSize(val: number) { this.rhizomeStepSize = val; }
+  setSnakeWander(val: number) { this.snakeWander = val; }
+  setBushSpeed(val: number) { this.bushSpeed = val; }
+  setTreeSpeed(val: number) { this.treeSpeed = val; }
+  setRhizomeSpeed(val: number) { this.rhizomeSpeed = val; }
+  setBushBranching(val: number) { this.bushBranching = val; }
+  setTreeBranching(val: number) { this.treeBranching = val; }
+  setTreeBranchDelay(val: number) { this.treeBranchDelay = val; }
+  setBushTaper(val: number) { this.bushTaper = val; }
+  setTreeTaper(val: number) { this.treeTaper = val; }
+  setRhizomeTaper(val: number) { this.rhizomeTaper = val; }
+  setSnakeBranching(val: number) { this.snakeBranching = val; }
+  setRhizomeBranching(val: number) { this.rhizomeBranching = val; }
+  setBushMinBranches(val: number) { this.bushMinBranches = val; }
+  setRhizomeMinBranches(val: number) { this.rhizomeMinBranches = val; }
+  setTreeMinBranches(val: number) { this.treeMinBranches = val; }
+  setSnakeMinBranches(val: number) { this.snakeMinBranches = val; }
+  setWidthVariance(val: number) { this.widthVariance = val; }
+  setBranchGrowthBoost(val: number) { this.branchGrowthBoost = val; }
+  setPruningStrength(val: number) { this.pruningStrength = val; }
+  setMaxBranchDepth(val: number) { this.maxBranchDepth = val; }
+  setMaxBranchesPerSpecies(val: number) { this.maxBranchesPerSpecies = val; }
+  setColorMutationShift(val: number) { this.colorMutationShift = val; }
   setDesignerMode(val: boolean) {
     if (this.designerMode !== val) {
       this.designerMode = val;
       this.restart();
     }
   }
-
   setDesignerArchetype(val: Archetype) {
     if (this.designerArchetype !== val) {
       this.designerArchetype = val;
@@ -601,123 +410,54 @@ export class SimulationEngine {
       }
     }
   }
-
   spawnNewSpecies(forceArchetype?: Archetype): Genome {
     return spawnNewSpecies(this, forceArchetype);
   }
-
-  setDiebackAgeBias(val: number) {
-    this.diebackAgeBias = val;
-  }
-  setBranchSplitSizeProb(val: number) {
-    this.branchSplitSizeProb = val;
-  }
-  setGrowthSpeed(g: number) {
-    this.growthSpeed = g;
-  }
-  setWidthGrowthEffect(val: number) {
-    this.widthGrowthEffect = val;
-  }
-  setBotanyRealism(val: boolean) {
-    this.botanyRealism = val;
-  }
-  setWindVelocity(val: number) {
-    this.windVelocity = val;
-  }
-  setFlutterIntensity(val: number) {
-    this.flutterIntensity = val;
-  }
-  setLeafScale(val: number) {
-    this.leafScale = val;
-  }
-  setLeafDensity(val: number) {
-    this.leafDensity = val;
-  }
-  setRelativeLeafSizeDiff(val: number) {
-    this.relativeLeafSizeDiff = val;
-  }
-  setLeafGrowthSpeed(val: number) {
-    this.leafGrowthSpeed = val;
-  }
-  setPhyllotaxisAngle(val: number) {
-    this.phyllotaxisAngle = val;
-  }
-  setLeafProbability(val: number) {
-    this.leafProbability = val;
-  }
-  setAppendageSpawnRate(val: number) {
-    this.appendageSpawnRate = val;
-  }
-  setGlowProbability(val: number) {
-    this.glowProbability = val;
-  }
-  setStemCurviness(val: number) {
-    this.stemCurviness = val;
-  }
-  setVeinStrength(val: number) {
-    this.veinStrength = val;
-  }
-  setVeinGlow(val: number) {
-    this.veinGlow = val;
-  }
-  setDiebackRate(d: number) {
-    this.diebackRate = d;
-  }
-  setMaxSaturation(val: number) {
-    this.maxSaturation = val;
-  }
-  setColorClamp(val: number) {
-    this.colorClamp = val;
-    this.maxSaturation = val;
-  }
-  setAllowBreeding(v: boolean) {
-    this.allowBreeding = v;
-  }
-  setHybridCooldown(c: number) {
-    this.hybridCooldown = c;
-  }
-  setHybridStickiness(v: number) {
-    this.hybridStickiness = v;
-  }
-  setHybridSpinSpeed(s: number) {
-    this.hybridSpinSpeed = s;
-  }
-  setOrnamentFrequency(o: number) {
-    this.ornamentFrequency = o;
-  }
-  setBranchingMultiplier(b: number) {
-    this.branchingMultiplier = b;
-  }
-  setBranchTendencyVar(v: number) {
-    this.branchTendencyVar = v;
-  }
-  setHybridSize(val: number) {
-    this.hybridSize = val;
-  }
-
-  setupInitialCreatures() {
-    setupInitialCreatures(this);
-  }
-
+  setDiebackAgeBias(val: number) { this.diebackAgeBias = val; }
+  setBranchSplitSizeProb(val: number) { this.branchSplitSizeProb = val; }
+  setGrowthSpeed(g: number) { this.growthSpeed = g; }
+  setWidthGrowthEffect(val: number) { this.widthGrowthEffect = val; }
+  setBotanyRealism(val: boolean) { this.botanyRealism = val; }
+  setWindVelocity(val: number) { this.windVelocity = val; }
+  setFlutterIntensity(val: number) { this.flutterIntensity = val; }
+  setLeafScale(val: number) { this.leafScale = val; }
+  setLeafDensity(val: number) { this.leafDensity = val; }
+  setRelativeLeafSizeDiff(val: number) { this.relativeLeafSizeDiff = val; }
+  setLeafGrowthSpeed(val: number) { this.leafGrowthSpeed = val; }
+  setPhyllotaxisAngle(val: number) { this.phyllotaxisAngle = val; }
+  setLeafProbability(val: number) { this.leafProbability = val; }
+  setAppendageSpawnRate(val: number) { this.appendageSpawnRate = val; }
+  setGlowProbability(val: number) { this.glowProbability = val; }
+  setStemCurviness(val: number) { this.stemCurviness = val; }
+  setVeinStrength(val: number) { this.veinStrength = val; }
+  setVeinGlow(val: number) { this.veinGlow = val; }
+  setDiebackRate(d: number) { this.diebackRate = d; }
+  setMaxSaturation(val: number) { this.maxSaturation = val; }
+  setColorClamp(val: number) { this.colorClamp = val; this.maxSaturation = val; }
+  setAllowBreeding(v: boolean) { this.allowBreeding = v; }
+  setHybridCooldown(c: number) { this.hybridCooldown = c; }
+  setHybridStickiness(v: number) { this.hybridStickiness = v; }
+  setHybridSpinSpeed(s: number) { this.hybridSpinSpeed = s; }
+  setOrnamentFrequency(o: number) { this.ornamentFrequency = o; }
+  setBranchingMultiplier(b: number) { this.branchingMultiplier = b; }
+  setBranchTendencyVar(v: number) { this.branchTendencyVar = v; }
+  setHybridSize(val: number) { this.hybridSize = val; }
+  setupInitialCreatures() { setupInitialCreatures(this); }
   initAgents() {
     setupInitialCreatures(this);
   }
-
   resetCamera() {
     resetCamera(this);
   }
-
   executeReset() {
     executeReset(this);
   }
-
   restart() {
     this.fadeState = "out";
     if (this.fadeProgress <= 0) {
       this.fadeProgress = 0.01;
     }
   }
-
   resize(width: number, height: number) {
     this.width = width;
     this.height = height;
@@ -725,7 +465,6 @@ export class SimulationEngine {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
   }
-
   addLineSegment(
     p1: THREE.Vector3,
     p2: THREE.Vector3,
@@ -737,72 +476,18 @@ export class SimulationEngine {
   ) {
     updateMeshSegments(this, p1, p2, genome, thickness, isAppendage, agentId, isTerminal);
   }
-
   markDying(segments: any[], dyingSet: Set<number>, idx: number, dyingStartOverride?: number) {
-    const seg = segments[idx];
-    if (seg && !seg.dyingStart) {
-      seg.dyingStart = dyingStartOverride !== undefined ? dyingStartOverride : this.unscaledTime;
-      dyingSet.add(idx);
-      if (seg.countsForBiomass !== false) {
-        const prevBiomass = this.biomassMap.get(seg.strainName) || 0;
-        if (prevBiomass > 0) {
-          this.biomassMap.set(seg.strainName, prevBiomass - 1);
-        }
-      }
-    }
+    markDyingHelper(this, segments, dyingSet, idx, dyingStartOverride);
   }
-
   markAgentSegmentsDying(agentId?: number) {
-    if (agentId === undefined) return;
-    const now = this.unscaledTime;
-    const limit = Math.min(this.pointCount, this.maxDOMs);
-    for (let i = 0; i < limit; i++) {
-      const seg = this.segments[i];
-      if (seg && seg.agentId === agentId && !seg.dyingStart) {
-        this.markDying(this.segments, this.dyingStems, i, now);
-      }
-    }
-    for (const app of this.appendages.values()) {
-      const lim = Math.min(app.count, Math.floor(this.maxDOMs / 4));
-      for (let i = 0; i < lim; i++) {
-        const seg = app.segments[i];
-        if (seg && seg.agentId === agentId && !seg.dyingStart) {
-          this.markDying(app.segments, app.dyingSet, i, now);
-        }
-      }
-    }
+    markAgentSegmentsDyingHelper(this, agentId);
   }
-
   markStrainSegmentsDying(strainName?: string) {
-    if (!strainName) return;
-    const now = this.unscaledTime;
-    if (!this.dyingStrains) this.dyingStrains = new Set();
-    this.dyingStrains.add(strainName);
-    const liveAgents = this.agents.filter(a => a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName).length;
-    this.onLog(`🔻 markStrainSegmentsDying(${strainName}) — active living agents: ${liveAgents}`);
-
-    const limit = Math.min(this.pointCount, this.maxDOMs);
-    for (let i = 0; i < limit; i++) {
-      const seg = this.segments[i];
-      if (seg && seg.strainName === strainName && !seg.dyingStart) {
-        this.markDying(this.segments, this.dyingStems, i, now);
-      }
-    }
-    for (const app of this.appendages.values()) {
-      const lim = Math.min(app.count, Math.floor(this.maxDOMs / 4));
-      for (let i = 0; i < lim; i++) {
-        const seg = app.segments[i];
-        if (seg && seg.strainName === strainName && !seg.dyingStart) {
-          this.markDying(app.segments, app.dyingSet, i, now);
-        }
-      }
-    }
+    markStrainSegmentsDyingHelper(this, strainName);
   }
-
   initSpeciesLifecycle(strainName: string) {
     return initSpeciesLifecycle(this, strainName);
   }
-
   getActiveAgentCount(): number {
     let count = 0;
     for (let i = 0; i < this.agents.length; i++) {
@@ -813,7 +498,6 @@ export class SimulationEngine {
     }
     return count;
   }
-
   getStrainActiveAgentCount(strainName: string): number {
     let count = 0;
     for (let i = 0; i < this.agents.length; i++) {
@@ -824,7 +508,6 @@ export class SimulationEngine {
     }
     return count;
   }
-
   getLivingOrganisms(): Set<string> {
     const living = new Set<string>();
     for (let i = 0; i < this.agents.length; i++) {
@@ -840,15 +523,12 @@ export class SimulationEngine {
     }
     return living;
   }
-
   getLivingOrganismCount(): number {
     return this.getLivingOrganisms().size;
   }
-
   killSpecies(strainName: string, reason: string) {
     killSpecies(this, strainName, reason);
   }
-
   processDying(
     segments: any[],
     dyingSet: Set<number>,
@@ -857,7 +537,6 @@ export class SimulationEngine {
   ) {
     processDyingSegments(this, segments, dyingSet, mesh, isFlower);
   }
-
   spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color, strainName?: string, strainBName?: string, agentAId?: number, agentBId?: number) {
     spawnHybridArtifact(
       this,
@@ -869,82 +548,35 @@ export class SimulationEngine {
       agentBId,
     );
   }
-
   update() {
     updateSimulation(this);
   }
-
-  setSoundEnabled(val: boolean) {
-    (this as any).soundEnabled = val;
-    this.sound.setEnabled(val);
-  }
-  setSoundVolume(val: number) {
-    (this as any).soundVolume = val;
-    this.sound.setVolume(val);
-  }
-  setSoundSpace(val: number) {
-    (this as any).soundSpace = val;
-    this.sound.setSpace(val);
-  }
-  setSoundEnvironment(val: SoundEnvironmentId) {
-    (this as any).soundEnvironment = val;
-    this.sound.setEnvironment(val);
-  }
-  setSoundAutoCycle(val: boolean) {
-    (this as any).soundAutoCycle = val;
-    this.sound.autoCycleEnvironments = val;
-  }
-  setSoundSyncThemes(val: boolean) {
-    (this as any).soundSyncThemes = val;
-    this.sound.syncWithThemes = val;
-  }
-  setSoundMovement(val: boolean) {
-    (this as any).soundMovement = val;
-    this.sound.enableMovementSound = val;
-  }
-  setSoundWeather(val: boolean) {
-    (this as any).soundWeather = val;
-    this.sound.enableWeatherSound = val;
-  }
-  setSoundMixer(val: Record<string, { vol: number; rev: number; oct?: number }>) {
-    (this as any).soundMixer = val;
-    if (this.sound) this.sound.setMixer(val);
-  }
-  setSoundReverbDecay(val: number) {
-    (this as any).soundReverbDecay = val;
-    if (this.sound) this.sound.setReverbDecay(val);
-  }
-  setSoundReverbDamping(val: number) {
-    (this as any).soundReverbDamping = val;
-    if (this.sound) this.sound.setReverbDamping(val);
-  }
-  setSoundReverbPreDelay(val: number) {
-    (this as any).soundReverbPreDelay = val;
-    if (this.sound) this.sound.setReverbPreDelay(val);
-  }
-  setSoundStepCadence(val: number) {
-    (this as any).soundStepCadence = val;
-    if (this.sound) this.sound.setStepCadence(val);
-  }
-
+  setSoundEnabled(val: boolean) { (this as any).soundEnabled = val; this.sound.setEnabled(val); }
+  setSoundVolume(val: number) { (this as any).soundVolume = val; this.sound.setVolume(val); }
+  setSoundSpace(val: number) { (this as any).soundSpace = val; this.sound.setSpace(val); }
+  setSoundEnvironment(val: SoundEnvironmentId) { (this as any).soundEnvironment = val; this.sound.setEnvironment(val); }
+  setSoundAutoCycle(val: boolean) { (this as any).soundAutoCycle = val; this.sound.autoCycleEnvironments = val; }
+  setSoundSyncThemes(val: boolean) { (this as any).soundSyncThemes = val; this.sound.syncWithThemes = val; }
+  setSoundMovement(val: boolean) { (this as any).soundMovement = val; this.sound.enableMovementSound = val; }
+  setSoundWeather(val: boolean) { (this as any).soundWeather = val; this.sound.enableWeatherSound = val; }
+  setSoundMixer(val: Record<string, { vol: number; rev: number; oct?: number }>) { (this as any).soundMixer = val; if (this.sound) this.sound.setMixer(val); }
+  setSoundReverbDecay(val: number) { (this as any).soundReverbDecay = val; if (this.sound) this.sound.setReverbDecay(val); }
+  setSoundReverbDamping(val: number) { (this as any).soundReverbDamping = val; if (this.sound) this.sound.setReverbDamping(val); }
+  setSoundReverbPreDelay(val: number) { (this as any).soundReverbPreDelay = val; if (this.sound) this.sound.setReverbPreDelay(val); }
+  setSoundStepCadence(val: number) { (this as any).soundStepCadence = val; if (this.sound) this.sound.setStepCadence(val); }
   animate = () => {
     this.reqId = requestAnimationFrame(this.animate);
     updateGridHelpers(this);
     handleScreenFade(this);
     this.update();
-
     const now = performance.now();
     const realDt = Math.min(0.1, (now - (this.lastSoundRealTime || now)) / 1000);
     this.lastSoundRealTime = now;
-
     const activeLivingAgents = this.agents.filter((a) => a.active && !a.isFeeler).length;
     const density = Math.min(1.0, activeLivingAgents / Math.max(1, this.maxAgents || 50));
     const activity = Math.min(1.0, (this.growthSpeed || 0.1) * 6.0);
-
     this.sound.tick(realDt, { density, activity, activeAgents: activeLivingAgents }, this.camera);
-
     this.renderer.render(this.scene, this.camera);
-
     const activeFade = Math.max(this.fadeProgress, this.kioskFadeProgress || 0);
     if (activeFade > 0 && this.fadeScene && this.fadeQuadMat) {
       this.fadeQuadMat.opacity = activeFade;
@@ -953,20 +585,16 @@ export class SimulationEngine {
       this.renderer.render(this.fadeScene, this.fadeCamera);
       this.renderer.autoClear = true;
     }
-
     if (this.reqId % 15 === 0) {
       emitStateUpdate(this);
     }
   };
-
   getTrackedPositions() {
     return getTrackedPositions(this);
   }
-
   start() {
     this.animate();
   }
-
   stop() {
     cancelAnimationFrame(this.reqId);
     this.controls.dispose();

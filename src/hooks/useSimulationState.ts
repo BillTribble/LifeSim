@@ -197,6 +197,7 @@ export function useSimulationState() {
     localStorage.setItem("widthVariance", widthVariance.toString());
     localStorage.setItem("branchGrowthBoost", branchGrowthBoost.toString());
     localStorage.setItem("colorMutationShift", colorMutationShift.toString());
+    localStorage.setItem("speed", timeScale.toString());
     localStorage.setItem("timeScale", timeScale.toString());
     localStorage.setItem("slowMotion", timeScale.toString());
     localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());

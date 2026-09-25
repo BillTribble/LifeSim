@@ -1,10 +1,18 @@
 import React from "react";
+import { ChevronDown } from "lucide-react";
 import { SmartDial } from "./SmartDial";
+import {
+  BOTANICAL_CONCEPTS,
+  BotanicalConcept,
+  BotanicalConceptMeta,
+} from "../lib/SimulationBotany";
 
 export interface HUDSectionProps {
   searchQuery: string;
   state: any;
   setters: any;
+  botanicalConcept?: BotanicalConcept;
+  onSelectConcept?: (concept: BotanicalConcept, meta: BotanicalConceptMeta) => void;
 }
 
 export const hasMatch = (searchQuery: string, labels: string[]) =>
@@ -268,7 +276,7 @@ Slide between flat orthographic (0 = no perspective) and full 3D perspective (1.
   );
 }
 
-export function BotanySection({ searchQuery, state, setters }: HUDSectionProps) {
+export function BotanySection({ searchQuery, state, setters, botanicalConcept, onSelectConcept }: HUDSectionProps) {
   if (
     !hasMatch(searchQuery, [
       "LEAF_SCALE",
@@ -282,6 +290,10 @@ export function BotanySection({ searchQuery, state, setters }: HUDSectionProps) 
       "LEAF",
       "LEAVES",
       "BOTANY",
+      "BOTANICAL",
+      "HABIT",
+      "CONCEPT",
+      "ARCHETYPE",
       "foliage",
       "frond",
       "petal",
@@ -296,7 +308,33 @@ export function BotanySection({ searchQuery, state, setters }: HUDSectionProps) 
       <span className="text-[8px] text-green-400 tracking-widest text-center border-b border-green-500/20 pb-1 font-bold">
         LEAVES & BOTANY
       </span>
-      <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+      <div className="flex gap-1 flex-wrap justify-center items-center max-w-[280px] sm:max-w-none">
+        {onSelectConcept && (
+          <div className="flex flex-col gap-1 items-start justify-center p-1.5 rounded bg-black/40 border border-green-500/30 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]" />
+              <span className="text-[7px] text-green-300 font-bold uppercase tracking-wider">HABIT</span>
+            </div>
+            <div className="relative flex items-center">
+              <select
+                value={botanicalConcept || "auto"}
+                onChange={(e) => {
+                  const val = e.target.value as BotanicalConcept;
+                  const meta = BOTANICAL_CONCEPTS.find((c) => c.id === val);
+                  if (meta) onSelectConcept(val, meta);
+                }}
+                className="appearance-none bg-[#001220] hover:bg-[#001828] border border-green-500/50 hover:border-green-400 text-emerald-200 text-[9px] font-mono rounded px-2 py-0.5 pr-5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              >
+                {BOTANICAL_CONCEPTS.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-[#001220] text-emerald-200">
+                    {c.label} {c.id !== "auto" ? `(${c.shortLabel})` : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 text-emerald-400 absolute right-1 pointer-events-none" />
+            </div>
+          </div>
+        )}
         <SmartDial
           searchQuery={searchQuery}
           state={state}

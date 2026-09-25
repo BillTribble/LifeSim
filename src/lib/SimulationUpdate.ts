@@ -8,6 +8,7 @@ import {
   performCapacityCulling,
 } from "./SimulationEcology";
 import { performBranchPruning } from "./SimulationPruning";
+import { isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { emitStateUpdate } from "./SimulationSceneSetup";
 import {
   updateCameraAndThemeUniforms,
@@ -137,7 +138,7 @@ export function updateSimulation(engine: SimulationEngine) {
       const a2 = activeAgents[j];
       if (!a2.active || a2.tapering) continue;
 
-      if (a1.genome.name === a2.genome.name) {
+      if (a1.genome.name === a2.genome.name && !isTreeModelAgent(a1)) {
         const dSq = a1.position.distanceToSquared(a2.position);
         if (dSq < 25) {
           const activeStrainsCount = strainCounts.size || 1;

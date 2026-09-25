@@ -24,10 +24,10 @@ export const DEFAULTS: Record<string, any> = {
   "themeMorphSpeed": 5,
   "themeMorphFreq": 1,
   "theme": 0,
-  "timeScale": 6.5,
+  "timeScale": 1,
   "postMatingDieoff": true,
   "rhizomeSpeed": 1,
-  "treeSpeed": 1.2,
+  "treeSpeed": 0.65,
   "bushSpeed": 1.1,
   "bushStepSize": 0.8500000000000001,
   "treeStepSize": 0.6000000000000001,
@@ -40,7 +40,7 @@ export const DEFAULTS: Record<string, any> = {
   "treeBranchDelay": 5,
   "bushTaper": 0.5,
   "treeTaper": 0.6000000000000001,
-  "rhizomeTaper": 0.1,
+  "rhizomeTaper": 0.55,
   "snakeBranching": 1,
   "rhizomeBranching": 7.5,
   "bushMinBranches": 10,
@@ -92,7 +92,7 @@ export const DEFAULTS: Record<string, any> = {
   "desiccationSpeed": 4.289796350823339,
   "hybridSize": 2,
   "terminationProb": 0.6071318627934128,
-  "termProbPostBranch": 2.5,
+  "termProbPostBranch": 0.35,
   "segmentGap": 0.12,
   "taperDuration": 1.0466962184788358,
   "diebackAgeBias": 4.314851637950758,
@@ -165,6 +165,10 @@ export const DEFAULTS: Record<string, any> = {
       "min": 0,
       "max": 1
     },
+    "SPEED": {
+      "min": 0.1,
+      "max": 50
+    },
     "SLOW_MO": {
       "min": 0.1,
       "max": 50
@@ -186,7 +190,8 @@ export const DEFAULTS: Record<string, any> = {
   "appendageSize": 1,
   "hybridDecay": 27.901245938451485,
   "deathRate": 1.3182568226156233,
-  "slowMotion": 6.5,
+  "speed": 1,
+  "slowMotion": 1,
   "rotationVelocity": 0.2,
   "rotationVelocityY": 0,
   "swarmCohesion": 0.03424424546519402,
@@ -216,7 +221,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-09-23-v0.8";
+export const CURRENT_SCHEMA = "2026-09-24-v1.0";
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);
@@ -248,7 +253,9 @@ export function getStoredString(key: string, fallback?: string): string {
 
 export function getStoredTimeScale(): number {
   const savedTs =
-    localStorage.getItem("timeScale") || localStorage.getItem("slowMotion");
+    localStorage.getItem("speed") ||
+    localStorage.getItem("timeScale") ||
+    localStorage.getItem("slowMotion");
   if (savedTs !== null) {
     const val = parseFloat(savedTs);
     if (!isNaN(val)) return val;

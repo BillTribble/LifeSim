@@ -8,10 +8,29 @@ import { triggerRandomize } from "./utils/randomize";
 import { ActivityLog, LogEntry } from "./components/ActivityLog";
 import { generateSessionCode } from "./utils/sessionCode";
 import { Archetype } from "./lib/SimulationTypes";
+import { BotanicalConcept, BotanicalConceptMeta } from "./lib/SimulationBotany";
+import { BotanicalConceptSwitcher } from "./components/BotanicalConceptSwitcher";
+import { EvolutionStepperModal } from "./components/EvolutionStepperModal";
 
 export default function App() {
   const [mode, setMode] = useState<"simulation" | "designer">("simulation");
   const [designerArchetype, setDesignerArchetype] = useState<Archetype>("bush");
+  const [botanicalConcept, setBotanicalConcept] = useState<BotanicalConcept>("auto");
+  const [evolutionStep, setEvolutionStep] = useState<number>(20);
+  const [evolutionModalOpen, setEvolutionModalOpen] = useState<boolean>(false);
+
+  const handleSelectEvolutionStep = (step: number) => {
+    setEvolutionStep(step);
+    handleRestart();
+  };
+
+  const handleSelectConcept = (concept: BotanicalConcept, meta: BotanicalConceptMeta) => {
+    setBotanicalConcept(concept);
+    if (concept !== "auto") {
+      setDesignerArchetype(meta.archetype);
+    }
+    handleRestart();
+  };
   const [designerStrainName, setDesignerStrainName] = useState<string>("");
   const [showHUD, setShowHUD] = useState(false);
   const [restartKey, setRestartKey] = useState(0);
@@ -120,6 +139,7 @@ export default function App() {
       appendageSize: state.flowerSize,
       hybridDecay: state.hybridStickiness,
       deathRate: state.diebackRate,
+      speed: state.timeScale,
       slowMotion: state.timeScale,
       rotationVelocity: state.rotationSpeed,
       rotationVelocityY: state.rotationSpeedY,
@@ -183,7 +203,7 @@ export default function App() {
         fillSummary = ` | [SCREEN_FILL] total=${sf.totalFillPct.toFixed(1)}% (${sf.totalOccupiedPixels}/${sf.totalPixels}px) [${speciesFill}]`;
       }
 
-      const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+      const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} speed=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
       const snapshot = `[SNAPSHOT] [${sessionCodeRef.current}] species=${strains.length} agents=${newState.totalAgents ?? "?"} geom=${newState.geometryCount ?? "?"}${fillSummary} | ${speciesSummary} | ${dials}`;
       postDevLog(snapshot);
     }
@@ -196,13 +216,13 @@ export default function App() {
     setRestartKey((prev) => prev + 1);
     setUptime(0);
     setPopupQueue([]);
-    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} speed=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
     postDevLog(`=== SESSION RESTART [${nextCode}] === | ${dials}`);
   };
 
   // Log session start on mount
   React.useEffect(() => {
-    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} slowMo=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
+    const dials = `DIALS: minCreatures=${state.minCreatures} maxCreatures=${state.maxCreatures} maxAgents=${state.maxAgents} rad=${state.boundarySize} squash=${state.boundarySquash} spd=${state.growthSpeed} speed=${state.timeScale} magnet=${state.magnetism?.toFixed(3)} seek=${state.seekAmount?.toFixed(2)} prox=${state.proximity?.toFixed(0)} desp=${state.desperation?.toFixed(1)} despAge=${state.despairAge?.toFixed(0)} breedLim=${state.maxMatings} ecoFade=${state.ecoFade?.toFixed(2)} dieback=${state.diebackRate?.toFixed(2)} termProb=${state.terminationProb?.toFixed(2)} termPost=${state.termProbPostBranch} gap=${state.segmentGap} brMult=${state.branchingMultiplier} brBoost=${state.branchGrowthBoost}`;
     postDevLog(`=== SESSION START [${sessionCodeRef.current}] === | ${dials}`);
   }, []);
 
@@ -344,6 +364,8 @@ export default function App() {
         onFeelerEvent={handleFeelerEvent}
         designerMode={mode === "designer"}
         designerArchetype={designerArchetype}
+        botanicalConcept={botanicalConcept}
+        evolutionStep={evolutionStep}
         onDesignerStrainName={setDesignerStrainName}
         soundEnabled={state.soundEnabled}
         soundVolume={state.soundVolume}
@@ -378,6 +400,11 @@ export default function App() {
           uptime={uptime}
           sessionCode={sessionCode}
           onOpenDesigner={() => setMode("designer")}
+          botanicalConcept={botanicalConcept}
+          onSelectConcept={handleSelectConcept}
+          evolutionStep={evolutionStep}
+          onSelectEvolutionStep={handleSelectEvolutionStep}
+          onOpenEvolutionModal={() => setEvolutionModalOpen(true)}
         />
       ) : (
         <ArchetypeDesigner
@@ -386,6 +413,9 @@ export default function App() {
             setDesignerArchetype(arch);
             handleRestart();
           }}
+          botanicalConcept={botanicalConcept}
+        evolutionStep={evolutionStep}
+          onSelectConcept={handleSelectConcept}
           strainName={designerStrainName}
           state={state}
           setters={setters}
@@ -393,6 +423,15 @@ export default function App() {
           onCloseDesigner={() => setMode("simulation")}
         />
       )}
+
+      <EvolutionStepperModal
+        isOpen={evolutionModalOpen}
+        onClose={() => setEvolutionModalOpen(false)}
+        activeStep={evolutionStep}
+        onSelectStep={(step) => {
+          handleSelectEvolutionStep(step);
+        }}
+      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

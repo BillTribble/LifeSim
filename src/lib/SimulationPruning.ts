@@ -120,6 +120,8 @@ export function performBranchPruning(
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];
     const arch = firstAgent.genome.archetype || "bush";
+    // Trees self-limit through the length-budgeted architecture model (SimulationTreeArchitecture)
+    if (firstAgent.genome.archetype === "tree") continue;
 
     let minFloor = 1;
     if (arch === "bush") minFloor = engine.bushMinBranches ?? 2;
@@ -192,7 +194,12 @@ export function performBranchPruning(
           if (totalHealthyAgents - 1 < engine.minCreatures) break;
 
           // Do not prune newly sprouted child branches against their parent before they have grown away
-          if ((a1.parentId === a2.id && a1.age < 35) || (a2.parentId === a1.id && a2.age < 35)) continue;
+          if (
+            (a1.parentId === a2.id && a1.age < 55) ||
+            (a2.parentId === a1.id && a2.age < 55) ||
+            (a1.parentId !== undefined && a1.parentId === a2.parentId && (a1.age < 55 || a2.age < 55)) ||
+            (a1.age < 35 || a2.age < 35)
+          ) continue;
 
           const dSq = a1.position.distanceToSquared(a2.position);
           if (dSq < crowdingRadiusSq) {

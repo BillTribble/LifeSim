@@ -7,6 +7,32 @@ import fs from 'fs';
 const logPlugin = () => ({
   name: 'log-plugin',
   configureServer(server) {
+    const saveRoundHandler = (req, res) => {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const outDir = path.resolve(__dirname, 'public/evolution_rounds');
+          fs.mkdirSync(outDir, { recursive: true });
+          if (payload.pngBase64 && (payload.fileName || payload.round)) {
+            const b64 = payload.pngBase64.replace(/^data:image\/png;base64,/, '');
+            const fileName = payload.fileName || `round_${String(payload.round).padStart(2, '0')}.png`;
+            fs.writeFileSync(path.join(outDir, fileName), Buffer.from(b64, 'base64'));
+          }
+          if (payload.manifest) {
+            fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(payload.manifest, null, 2));
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: String(e) }));
+        }
+      });
+    };
+    server.middlewares.use('/api/save-evolution-round', saveRoundHandler);
+    server.middlewares.use('/LifeSim/api/save-evolution-round', saveRoundHandler);
     server.middlewares.use('/api/log', (req, res) => {
       let body = '';
       req.on('data', chunk => { body += chunk.toString(); });

@@ -1,0 +1,888 @@
+{
+  "generatedAt": "2026-09-24T17:54:00Z",
+  "totalRounds": 20,
+  "milestones": [
+    1,
+    10,
+    20
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "concept": "oak",
+      "title": "Baseline Spindly Seeker & Club Rhizome",
+      "tweakSummary": "Gnarled Oak morphology at Step 1/20 (Baseline Spindly Seeker & Club Rhizome).",
+      "params": {
+        "daVinciGamma": 1.38,
+        "splitAlpha": 0.78,
+        "sympodialFactor": 0.06,
+        "forkAngleDeg": 16.0,
+        "depthStepDecay": 0.96,
+        "twigRamificationBoost": 0.65,
+        "taperRate": 0.22,
+        "crownShynessStrength": 0.0,
+        "curviness": 0.58,
+        "appendageDepthMin": 1,
+        "canSeekLean": 0.72
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 7,
+        "segmentCount": 212,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "15.7%",
+        "meanThickness": 0.83,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "round": 2,
+      "concept": "rhizome_web",
+      "title": "Disable Seeker Hijack on Structural Boughs",
+      "tweakSummary": "Vascular Rhizome Web morphology at Step 2/20 (Disable Seeker Hijack on Structural Boughs).",
+      "params": {
+        "daVinciGamma": 1.42,
+        "splitAlpha": 0.77,
+        "sympodialFactor": 0.11,
+        "forkAngleDeg": 17.5,
+        "depthStepDecay": 0.95,
+        "twigRamificationBoost": 0.79,
+        "taperRate": 0.25,
+        "crownShynessStrength": 0.03,
+        "curviness": 0.85,
+        "appendageDepthMin": 1,
+        "canSeekLean": 0.65
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_02.png",
+      "metrics": {
+        "round": 2,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 12,
+        "segmentCount": 421,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "4.5%",
+        "meanThickness": 1.29,
+        "botanicalScore": "28 / 100"
+      }
+    },
+    {
+      "round": 3,
+      "concept": "elm",
+      "title": "Fix Same-Tick Tapering Assassination",
+      "tweakSummary": "Spreading Elm morphology at Step 3/20 (Fix Same-Tick Tapering Assassination).",
+      "params": {
+        "daVinciGamma": 1.46,
+        "splitAlpha": 0.75,
+        "sympodialFactor": 0.14,
+        "forkAngleDeg": 17.2,
+        "depthStepDecay": 0.94,
+        "twigRamificationBoost": 0.86,
+        "taperRate": 0.28,
+        "crownShynessStrength": 0.07,
+        "curviness": 0.71,
+        "appendageDepthMin": 1,
+        "canSeekLean": 0.59
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_03.png",
+      "metrics": {
+        "round": 3,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 8,
+        "segmentCount": 258,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "19.5%",
+        "meanThickness": 0.75,
+        "botanicalScore": "32 / 100"
+      }
+    },
+    {
+      "round": 4,
+      "concept": "pine",
+      "title": "Introduce Da Vinci Pipe Rule (gamma = 1.65)",
+      "tweakSummary": "Whorled Pine morphology at Step 4/20 (Introduce Da Vinci Pipe Rule (gamma = 1.65)).",
+      "params": {
+        "daVinciGamma": 1.53,
+        "splitAlpha": 0.78,
+        "sympodialFactor": 0.09,
+        "forkAngleDeg": 24.2,
+        "depthStepDecay": 0.92,
+        "twigRamificationBoost": 0.94,
+        "taperRate": 0.31,
+        "crownShynessStrength": 0.1,
+        "curviness": 0.6,
+        "appendageDepthMin": 1,
+        "canSeekLean": 0.52
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_04.png",
+      "metrics": {
+        "round": 4,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 54,
+        "segmentCount": 1027,
+        "maxObservedDepth": 3,
+        "fineTwigRatioPct": "34.4%",
+        "meanThickness": 0.42,
+        "botanicalScore": "36 / 100"
+      }
+    },
+    {
+      "round": 5,
+      "concept": "willow",
+      "title": "Tighten Pipe Conservation (gamma = 1.82)",
+      "tweakSummary": "Weeping Willow morphology at Step 5/20 (Tighten Pipe Conservation (gamma = 1.82)).",
+      "params": {
+        "daVinciGamma": 1.54,
+        "splitAlpha": 0.74,
+        "sympodialFactor": 0.2,
+        "forkAngleDeg": 20.0,
+        "depthStepDecay": 0.93,
+        "twigRamificationBoost": 1.17,
+        "taperRate": 0.34,
+        "crownShynessStrength": 0.13,
+        "curviness": 1.19,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.46
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_05.png",
+      "metrics": {
+        "round": 5,
+        "concept": "willow",
+        "conceptLabel": "Weeping Willow",
+        "activeAgents": 6,
+        "segmentCount": 413,
+        "maxObservedDepth": 3,
+        "fineTwigRatioPct": "31.2%",
+        "meanThickness": 0.54,
+        "botanicalScore": "39 / 100"
+      }
+    },
+    {
+      "round": 6,
+      "concept": "oak",
+      "title": "True Area-Preserving Vascular Split (gamma = 2.00)",
+      "tweakSummary": "Gnarled Oak morphology at Step 6/20 (True Area-Preserving Vascular Split (gamma = 2.00)).",
+      "params": {
+        "daVinciGamma": 1.58,
+        "splitAlpha": 0.74,
+        "sympodialFactor": 0.29,
+        "forkAngleDeg": 22.1,
+        "depthStepDecay": 0.91,
+        "twigRamificationBoost": 1.24,
+        "taperRate": 0.37,
+        "crownShynessStrength": 0.16,
+        "curviness": 1.49,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.41
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_06.png",
+      "metrics": {
+        "round": 6,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 16,
+        "segmentCount": 543,
+        "maxObservedDepth": 3,
+        "fineTwigRatioPct": "37.7%",
+        "meanThickness": 0.44,
+        "botanicalScore": "43 / 100"
+      }
+    },
+    {
+      "round": 7,
+      "concept": "rhizome_web",
+      "title": "Botanical Self-Supporting Taper (gamma = 2.12)",
+      "tweakSummary": "Vascular Rhizome Web morphology at Step 7/20 (Botanical Self-Supporting Taper (gamma = 2.12)).",
+      "params": {
+        "daVinciGamma": 1.6,
+        "splitAlpha": 0.7,
+        "sympodialFactor": 0.34,
+        "forkAngleDeg": 24.8,
+        "depthStepDecay": 0.89,
+        "twigRamificationBoost": 1.49,
+        "taperRate": 0.4,
+        "crownShynessStrength": 0.2,
+        "curviness": 1.87,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.36
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_07.png",
+      "metrics": {
+        "round": 7,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 62,
+        "segmentCount": 1366,
+        "maxObservedDepth": 3,
+        "fineTwigRatioPct": "44.5%",
+        "meanThickness": 0.35,
+        "botanicalScore": "47 / 100"
+      }
+    },
+    {
+      "round": 8,
+      "concept": "elm",
+      "title": "Sympodial Parent Deflection (Zig-Zag Nodes)",
+      "tweakSummary": "Spreading Elm morphology at Step 8/20 (Sympodial Parent Deflection (Zig-Zag Nodes)).",
+      "params": {
+        "daVinciGamma": 1.67,
+        "splitAlpha": 0.68,
+        "sympodialFactor": 0.35,
+        "forkAngleDeg": 20.1,
+        "depthStepDecay": 0.9,
+        "twigRamificationBoost": 1.37,
+        "taperRate": 0.43,
+        "crownShynessStrength": 0.23,
+        "curviness": 1.4,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.31
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_08.png",
+      "metrics": {
+        "round": 8,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 28,
+        "segmentCount": 800,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "48.9%",
+        "meanThickness": 0.34,
+        "botanicalScore": "51 / 100"
+      }
+    },
+    {
+      "round": 9,
+      "concept": "pine",
+      "title": "Asymmetric Fork Allocation (alpha = 0.58 / 0.42)",
+      "tweakSummary": "Whorled Pine morphology at Step 9/20 (Asymmetric Fork Allocation (alpha = 0.58 / 0.42)).",
+      "params": {
+        "daVinciGamma": 1.79,
+        "splitAlpha": 0.78,
+        "sympodialFactor": 0.13,
+        "forkAngleDeg": 37.9,
+        "depthStepDecay": 0.86,
+        "twigRamificationBoost": 1.43,
+        "taperRate": 0.46,
+        "crownShynessStrength": 0.26,
+        "curviness": 1.09,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.26
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_09.png",
+      "metrics": {
+        "round": 9,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 104,
+        "segmentCount": 2266,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "55.9%",
+        "meanThickness": 0.28,
+        "botanicalScore": "55 / 100"
+      }
+    },
+    {
+      "round": 10,
+      "concept": "oak",
+      "title": "Mid-Evolution Milestone: Balanced Sympodial Canopy",
+      "tweakSummary": "Gnarled Oak morphology at Step 10/20 (Mid-Evolution Milestone: Balanced Sympodial Canopy).",
+      "params": {
+        "daVinciGamma": 1.74,
+        "splitAlpha": 0.7,
+        "sympodialFactor": 0.47,
+        "forkAngleDeg": 26.9,
+        "depthStepDecay": 0.87,
+        "twigRamificationBoost": 1.72,
+        "taperRate": 0.49,
+        "crownShynessStrength": 0.29,
+        "curviness": 2.22,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.22
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 58,
+        "segmentCount": 1171,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "58.9%",
+        "meanThickness": 0.27,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "round": 11,
+      "concept": "oak",
+      "title": "Depth-Indexed Internode Decay (0.76^d)",
+      "tweakSummary": "Gnarled Oak morphology at Step 11/20 (Depth-Indexed Internode Decay (0.76^d)).",
+      "params": {
+        "daVinciGamma": 1.79,
+        "splitAlpha": 0.7,
+        "sympodialFactor": 0.51,
+        "forkAngleDeg": 28.1,
+        "depthStepDecay": 0.86,
+        "twigRamificationBoost": 1.83,
+        "taperRate": 0.51,
+        "crownShynessStrength": 0.33,
+        "curviness": 2.4,
+        "appendageDepthMin": 2,
+        "canSeekLean": 0.18
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_11.png",
+      "metrics": {
+        "round": 11,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 67,
+        "segmentCount": 1274,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "63.7%",
+        "meanThickness": 0.25,
+        "botanicalScore": "62 / 100"
+      }
+    },
+    {
+      "round": 12,
+      "concept": "rhizome_web",
+      "title": "Higher-Order Twig Ramification Surge (Depth 3-4)",
+      "tweakSummary": "Vascular Rhizome Web morphology at Step 12/20 (Higher-Order Twig Ramification Surge (Depth 3-4)).",
+      "params": {
+        "daVinciGamma": 1.79,
+        "splitAlpha": 0.64,
+        "sympodialFactor": 0.58,
+        "forkAngleDeg": 32.2,
+        "depthStepDecay": 0.84,
+        "twigRamificationBoost": 2.18,
+        "taperRate": 0.54,
+        "crownShynessStrength": 0.36,
+        "curviness": 2.9,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.15
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_12.png",
+      "metrics": {
+        "round": 12,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 50,
+        "segmentCount": 2142,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "67.3%",
+        "meanThickness": 0.25,
+        "botanicalScore": "66 / 100"
+      }
+    },
+    {
+      "round": 13,
+      "concept": "elm",
+      "title": "3D Crown Shyness Repulsion Field",
+      "tweakSummary": "Spreading Elm morphology at Step 13/20 (3D Crown Shyness Repulsion Field).",
+      "params": {
+        "daVinciGamma": 1.89,
+        "splitAlpha": 0.62,
+        "sympodialFactor": 0.56,
+        "forkAngleDeg": 22.9,
+        "depthStepDecay": 0.86,
+        "twigRamificationBoost": 1.88,
+        "taperRate": 0.57,
+        "crownShynessStrength": 0.39,
+        "curviness": 2.1,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.11
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_13.png",
+      "metrics": {
+        "round": 13,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 52,
+        "segmentCount": 1590,
+        "maxObservedDepth": 5,
+        "fineTwigRatioPct": "72.3%",
+        "meanThickness": 0.22,
+        "botanicalScore": "70 / 100"
+      }
+    },
+    {
+      "round": 14,
+      "concept": "pine",
+      "title": "Gnarled Oak Sinusoidal Torque & Twist",
+      "tweakSummary": "Whorled Pine morphology at Step 14/20 (Gnarled Oak Sinusoidal Torque & Twist).",
+      "params": {
+        "daVinciGamma": 2.04,
+        "splitAlpha": 0.78,
+        "sympodialFactor": 0.17,
+        "forkAngleDeg": 51.6,
+        "depthStepDecay": 0.8,
+        "twigRamificationBoost": 1.92,
+        "taperRate": 0.6,
+        "crownShynessStrength": 0.42,
+        "curviness": 1.57,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.09
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_14.png",
+      "metrics": {
+        "round": 14,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 57,
+        "segmentCount": 4308,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "77.5%",
+        "meanThickness": 0.22,
+        "botanicalScore": "74 / 100"
+      }
+    },
+    {
+      "round": 15,
+      "concept": "willow",
+      "title": "Spreading Elm High-Arch Deliquescent Vase",
+      "tweakSummary": "Weeping Willow morphology at Step 15/20 (Spreading Elm High-Arch Deliquescent Vase).",
+      "params": {
+        "daVinciGamma": 1.93,
+        "splitAlpha": 0.63,
+        "sympodialFactor": 0.56,
+        "forkAngleDeg": 30.0,
+        "depthStepDecay": 0.86,
+        "twigRamificationBoost": 2.46,
+        "taperRate": 0.63,
+        "crownShynessStrength": 0.46,
+        "curviness": 2.85,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.06
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_15.png",
+      "metrics": {
+        "round": 15,
+        "concept": "willow",
+        "conceptLabel": "Weeping Willow",
+        "activeAgents": 63,
+        "segmentCount": 1578,
+        "maxObservedDepth": 5,
+        "fineTwigRatioPct": "80.7%",
+        "meanThickness": 0.21,
+        "botanicalScore": "78 / 100"
+      }
+    },
+    {
+      "round": 16,
+      "concept": "oak",
+      "title": "Whorled Pine Tiered Horizontal Boughs",
+      "tweakSummary": "Gnarled Oak morphology at Step 16/20 (Whorled Pine Tiered Horizontal Boughs).",
+      "params": {
+        "daVinciGamma": 1.99,
+        "splitAlpha": 0.65,
+        "sympodialFactor": 0.74,
+        "forkAngleDeg": 34.2,
+        "depthStepDecay": 0.81,
+        "twigRamificationBoost": 2.43,
+        "taperRate": 0.66,
+        "crownShynessStrength": 0.49,
+        "curviness": 3.31,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.04
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_16.png",
+      "metrics": {
+        "round": 16,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 234,
+        "segmentCount": 2190,
+        "maxObservedDepth": 5,
+        "fineTwigRatioPct": "87.7%",
+        "meanThickness": 0.2,
+        "botanicalScore": "82 / 100"
+      }
+    },
+    {
+      "round": 17,
+      "concept": "rhizome_web",
+      "title": "Weeping Willow Elastic Gravity Droop",
+      "tweakSummary": "Vascular Rhizome Web morphology at Step 17/20 (Weeping Willow Elastic Gravity Droop).",
+      "params": {
+        "daVinciGamma": 1.97,
+        "splitAlpha": 0.58,
+        "sympodialFactor": 0.82,
+        "forkAngleDeg": 39.6,
+        "depthStepDecay": 0.78,
+        "twigRamificationBoost": 2.88,
+        "taperRate": 0.69,
+        "crownShynessStrength": 0.52,
+        "curviness": 3.92,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.03
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_17.png",
+      "metrics": {
+        "round": 17,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 408,
+        "segmentCount": 3730,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.0%",
+        "meanThickness": 0.18,
+        "botanicalScore": "85 / 100"
+      }
+    },
+    {
+      "round": 18,
+      "concept": "elm",
+      "title": "Vascular Rhizome Fine Root Hair Network",
+      "tweakSummary": "Spreading Elm morphology at Step 18/20 (Vascular Rhizome Fine Root Hair Network).",
+      "params": {
+        "daVinciGamma": 2.1,
+        "splitAlpha": 0.55,
+        "sympodialFactor": 0.77,
+        "forkAngleDeg": 25.8,
+        "depthStepDecay": 0.82,
+        "twigRamificationBoost": 2.39,
+        "taperRate": 0.72,
+        "crownShynessStrength": 0.55,
+        "curviness": 2.79,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.03
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_18.png",
+      "metrics": {
+        "round": 18,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 286,
+        "segmentCount": 2445,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.17,
+        "botanicalScore": "89 / 100"
+      }
+    },
+    {
+      "round": 19,
+      "concept": "pine",
+      "title": "Terminal Appendage Gating (Depth >= 3 Only)",
+      "tweakSummary": "Whorled Pine morphology at Step 19/20 (Terminal Appendage Gating (Depth >= 3 Only)).",
+      "params": {
+        "daVinciGamma": 2.3,
+        "splitAlpha": 0.78,
+        "sympodialFactor": 0.21,
+        "forkAngleDeg": 65.3,
+        "depthStepDecay": 0.74,
+        "twigRamificationBoost": 2.4,
+        "taperRate": 0.75,
+        "crownShynessStrength": 0.59,
+        "curviness": 2.06,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.03
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_19.png",
+      "metrics": {
+        "round": 19,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 183,
+        "segmentCount": 5790,
+        "maxObservedDepth": 5,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.18,
+        "botanicalScore": "93 / 100"
+      }
+    },
+    {
+      "round": 20,
+      "concept": "oak",
+      "title": "Final Botanical Synthesis (Step 20 Natural Forms)",
+      "tweakSummary": "Gnarled Oak morphology at Step 20/20 (Final Botanical Synthesis (Step 20 Natural Forms)).",
+      "params": {
+        "daVinciGamma": 2.15,
+        "splitAlpha": 0.62,
+        "sympodialFactor": 0.92,
+        "forkAngleDeg": 39.0,
+        "depthStepDecay": 0.77,
+        "twigRamificationBoost": 2.9,
+        "taperRate": 0.78,
+        "crownShynessStrength": 0.62,
+        "curviness": 4.04,
+        "appendageDepthMin": 3,
+        "canSeekLean": 0.03
+      },
+      "screenshotUrl": "/LifeSim/evolution_rounds/round_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 317,
+        "segmentCount": 2537,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.17,
+        "botanicalScore": "97 / 100"
+      }
+    }
+  ],
+  "conceptMatrix": [
+    {
+      "concept": "oak",
+      "step": 1,
+      "title": "Gnarled Oak \u2014 Step 1",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_oak_step_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 7,
+        "segmentCount": 212,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "15.7%",
+        "meanThickness": 0.83,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "concept": "oak",
+      "step": 10,
+      "title": "Gnarled Oak \u2014 Step 10",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_oak_step_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 58,
+        "segmentCount": 1171,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "58.9%",
+        "meanThickness": 0.27,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "concept": "oak",
+      "step": 20,
+      "title": "Gnarled Oak \u2014 Step 20",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_oak_step_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "oak",
+        "conceptLabel": "Gnarled Oak",
+        "activeAgents": 317,
+        "segmentCount": 2537,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.17,
+        "botanicalScore": "97 / 100"
+      }
+    },
+    {
+      "concept": "rhizome_web",
+      "step": 1,
+      "title": "Vascular Rhizome Web \u2014 Step 1",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_rhizome_web_step_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 8,
+        "segmentCount": 307,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "4.5%",
+        "meanThickness": 1.44,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "concept": "rhizome_web",
+      "step": 10,
+      "title": "Vascular Rhizome Web \u2014 Step 10",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_rhizome_web_step_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 93,
+        "segmentCount": 2005,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "58.9%",
+        "meanThickness": 0.26,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "concept": "rhizome_web",
+      "step": 20,
+      "title": "Vascular Rhizome Web \u2014 Step 20",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_rhizome_web_step_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "rhizome_web",
+        "conceptLabel": "Vascular Rhizome Web",
+        "activeAgents": 539,
+        "segmentCount": 4264,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.18,
+        "botanicalScore": "97 / 100"
+      }
+    },
+    {
+      "concept": "elm",
+      "step": 1,
+      "title": "Spreading Elm \u2014 Step 1",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_elm_step_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 4,
+        "segmentCount": 147,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "12.0%",
+        "meanThickness": 1.1,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "concept": "elm",
+      "step": 10,
+      "title": "Spreading Elm \u2014 Step 10",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_elm_step_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 72,
+        "segmentCount": 1240,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "59.9%",
+        "meanThickness": 0.26,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "concept": "elm",
+      "step": 20,
+      "title": "Spreading Elm \u2014 Step 20",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_elm_step_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "elm",
+        "conceptLabel": "Spreading Elm",
+        "activeAgents": 378,
+        "segmentCount": 3049,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.17,
+        "botanicalScore": "97 / 100"
+      }
+    },
+    {
+      "concept": "pine",
+      "step": 1,
+      "title": "Whorled Pine \u2014 Step 1",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_pine_step_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 21,
+        "segmentCount": 548,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "21.5%",
+        "meanThickness": 0.59,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "concept": "pine",
+      "step": 10,
+      "title": "Whorled Pine \u2014 Step 10",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_pine_step_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 105,
+        "segmentCount": 2388,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "60.2%",
+        "meanThickness": 0.26,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "concept": "pine",
+      "step": 20,
+      "title": "Whorled Pine \u2014 Step 20",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_pine_step_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "pine",
+        "conceptLabel": "Whorled Pine",
+        "activeAgents": 195,
+        "segmentCount": 6205,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.18,
+        "botanicalScore": "97 / 100"
+      }
+    },
+    {
+      "concept": "willow",
+      "step": 1,
+      "title": "Weeping Willow \u2014 Step 1",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_willow_step_01.png",
+      "metrics": {
+        "round": 1,
+        "concept": "willow",
+        "conceptLabel": "Weeping Willow",
+        "activeAgents": 4,
+        "segmentCount": 189,
+        "maxObservedDepth": 2,
+        "fineTwigRatioPct": "12.9%",
+        "meanThickness": 0.93,
+        "botanicalScore": "24 / 100"
+      }
+    },
+    {
+      "concept": "willow",
+      "step": 10,
+      "title": "Weeping Willow \u2014 Step 10",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_willow_step_10.png",
+      "metrics": {
+        "round": 10,
+        "concept": "willow",
+        "conceptLabel": "Weeping Willow",
+        "activeAgents": 65,
+        "segmentCount": 1188,
+        "maxObservedDepth": 4,
+        "fineTwigRatioPct": "60.0%",
+        "meanThickness": 0.26,
+        "botanicalScore": "59 / 100"
+      }
+    },
+    {
+      "concept": "willow",
+      "step": 20,
+      "title": "Weeping Willow \u2014 Step 20",
+      "screenshotUrl": "/LifeSim/evolution_rounds/concept_willow_step_20.png",
+      "metrics": {
+        "round": 20,
+        "concept": "willow",
+        "conceptLabel": "Weeping Willow",
+        "activeAgents": 265,
+        "segmentCount": 2307,
+        "maxObservedDepth": 6,
+        "fineTwigRatioPct": "91.2%",
+        "meanThickness": 0.18,
+        "botanicalScore": "97 / 100"
+      }
+    }
+  ]
+}

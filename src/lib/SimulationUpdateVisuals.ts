@@ -129,12 +129,18 @@ export function updateMeshesAndStemsGrowth(
   if (engine.lastLeafScale !== engine.leafScale) { appChanged = true; engine.lastLeafScale = engine.leafScale; }
   if (engine.lastRelativeLeafSizeDiff !== engine.relativeLeafSizeDiff) { appChanged = true; engine.lastRelativeLeafSizeDiff = engine.relativeLeafSizeDiff; }
   if (engine.lastStemCurviness !== engine.stemCurviness) { appChanged = true; engine.lastStemCurviness = engine.stemCurviness; }
+  if ((engine as any).lastWindVelocity !== engine.windVelocity) { appChanged = true; (engine as any).lastWindVelocity = engine.windVelocity; }
 
   const growthDuration = 40;
   const updateMeshGrowth = (mesh: THREE.InstancedMesh, segments: any[]) => {
     let changed = false;
     const isHybrid = engine.hybridMeshes.includes(mesh);
     const hybridVarId = isHybrid ? engine.hybridMeshes.indexOf(mesh) : -1;
+    // Per-mesh invariants (hoisted out of the per-segment loop)
+    const isLeaf = mesh === engine.appendages.get("leaves")?.mesh;
+    const pB = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
+    if (isLeaf && !pB) throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
+    const leafWind = isLeaf && engine.windVelocity > 0;
 
     for (let i = 0; i < (mesh.count || 0); i++) {
       const seg = segments[i];
@@ -149,10 +155,6 @@ export function updateMeshesAndStemsGrowth(
       const genome = uniqueGenomes.get(seg.strainName);
       let sizePulse = 1.0;
       let colPulse = 1.0;
-      const isLeaf = mesh === engine.appendages.get("leaves")?.mesh;
-
-      const pB = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
-      if (isLeaf && !pB) throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
       if (pB) {
         const val = pB.getX(i);
         if (val < 1.0) {
@@ -172,7 +174,8 @@ export function updateMeshesAndStemsGrowth(
         }
       }
 
-      if (age <= growthDuration || appChanged || sizePulse !== 1.0 || colPulse !== 1.0 || isHybrid || isLeaf) {
+      // Settled leaves only need per-frame matrices while wind flutter is active
+      if (age <= growthDuration || appChanged || sizePulse !== 1.0 || colPulse !== 1.0 || isHybrid || leafWind) {
         const growth = isLeaf ? 1.0 : isHybrid ? 1.0 - Math.pow(1.0 - Math.min(1.0, age / 120), 3) : (age <= growthDuration ? age / growthDuration : 1.0);
         engine.dummy.matrix.copy(seg.matrix);
         engine.dummy.matrix.decompose(engine.dummy.position, engine.dummy.quaternion, engine.dummy.scale);

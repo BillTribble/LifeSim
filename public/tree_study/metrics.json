@@ -1,0 +1,2777 @@
+{
+  "baseline": {
+    "generatedAt": "2026-09-25T12:43:29.869Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "baseline",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_oak_s1.png",
+        "metrics": {
+          "stemSegments": 4784,
+          "totalStemLength": 1468.9,
+          "branchAgentsSpawned": 706,
+          "peakActiveTips": 14,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 7,
+          "thicknessP10": 0.261,
+          "thicknessP50": 0.704,
+          "thicknessP90": 4.621,
+          "thicknessMax": 5.983,
+          "thinSegmentFraction": 0.583,
+          "trunkBaseThick": 4.917,
+          "trunkTopThick": 3.257,
+          "bbox": {
+            "w": 62.7,
+            "h": 80.1,
+            "d": 68.3
+          },
+          "simSeconds": 1.4,
+          "byDepth": {
+            "0": {
+              "segs": 415,
+              "length": 158.6,
+              "meanThick": 4.195
+            },
+            "1": {
+              "segs": 461,
+              "length": 301,
+              "meanThick": 5.005
+            },
+            "2": {
+              "segs": 315,
+              "length": 249.8,
+              "meanThick": 2.772
+            },
+            "3": {
+              "segs": 397,
+              "length": 178.6,
+              "meanThick": 1.677
+            },
+            "4": {
+              "segs": 551,
+              "length": 150.5,
+              "meanThick": 0.984
+            },
+            "5": {
+              "segs": 893,
+              "length": 161.1,
+              "meanThick": 0.578
+            },
+            "6": {
+              "segs": 1746,
+              "length": 268.7,
+              "meanThick": 0.401
+            },
+            "7": {
+              "segs": 6,
+              "length": 0.6,
+              "meanThick": 0.232
+            }
+          }
+        }
+      },
+      {
+        "label": "baseline",
+        "concept": "oak",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_oak_s2.png",
+        "metrics": {
+          "stemSegments": 4731,
+          "totalStemLength": 1708.3,
+          "branchAgentsSpawned": 698,
+          "peakActiveTips": 15,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 8,
+          "thicknessP10": 0.439,
+          "thicknessP50": 1.121,
+          "thicknessP90": 5.594,
+          "thicknessMax": 7.502,
+          "thinSegmentFraction": 0.502,
+          "trunkBaseThick": 4.235,
+          "trunkTopThick": 5.484,
+          "bbox": {
+            "w": 67.6,
+            "h": 45,
+            "d": 58.6
+          },
+          "simSeconds": 3.9,
+          "byDepth": {
+            "0": {
+              "segs": 414,
+              "length": 173.7,
+              "meanThick": 5.401
+            },
+            "1": {
+              "segs": 60,
+              "length": 253.5,
+              "meanThick": 3.594
+            },
+            "2": {
+              "segs": 405,
+              "length": 80.6,
+              "meanThick": 6.22
+            },
+            "3": {
+              "segs": 406,
+              "length": 280.3,
+              "meanThick": 3.055
+            },
+            "4": {
+              "segs": 587,
+              "length": 231.7,
+              "meanThick": 1.788
+            },
+            "5": {
+              "segs": 1050,
+              "length": 265.7,
+              "meanThick": 1.005
+            },
+            "6": {
+              "segs": 1803,
+              "length": 420.9,
+              "meanThick": 0.732
+            },
+            "7": {
+              "segs": 3,
+              "length": 0.6,
+              "meanThick": 0.321
+            },
+            "8": {
+              "segs": 3,
+              "length": 1.3,
+              "meanThick": 0.64
+            }
+          }
+        }
+      },
+      {
+        "label": "baseline",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_elm_s1.png",
+        "metrics": {
+          "stemSegments": 4845,
+          "totalStemLength": 1621.3,
+          "branchAgentsSpawned": 780,
+          "peakActiveTips": 15,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 7,
+          "thicknessP10": 0.416,
+          "thicknessP50": 0.961,
+          "thicknessP90": 3.521,
+          "thicknessMax": 5.983,
+          "thinSegmentFraction": 0.462,
+          "trunkBaseThick": 3.528,
+          "trunkTopThick": 4.358,
+          "bbox": {
+            "w": 55.4,
+            "h": 46.4,
+            "d": 70.7
+          },
+          "simSeconds": 1.5,
+          "byDepth": {
+            "0": {
+              "segs": 21,
+              "length": 8.9,
+              "meanThick": 3.396
+            },
+            "1": {
+              "segs": 415,
+              "length": 129.7,
+              "meanThick": 1.729
+            },
+            "2": {
+              "segs": 471,
+              "length": 184.9,
+              "meanThick": 4.662
+            },
+            "3": {
+              "segs": 464,
+              "length": 308,
+              "meanThick": 2.557
+            },
+            "4": {
+              "segs": 690,
+              "length": 280.7,
+              "meanThick": 1.533
+            },
+            "5": {
+              "segs": 1083,
+              "length": 290.5,
+              "meanThick": 0.879
+            },
+            "6": {
+              "segs": 1697,
+              "length": 418,
+              "meanThick": 0.66
+            },
+            "7": {
+              "segs": 4,
+              "length": 0.6,
+              "meanThick": 0.265
+            }
+          }
+        }
+      },
+      {
+        "label": "baseline",
+        "concept": "elm",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_elm_s2.png",
+        "metrics": {
+          "stemSegments": 4737,
+          "totalStemLength": 1697.7,
+          "branchAgentsSpawned": 699,
+          "peakActiveTips": 15,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 6,
+          "thicknessP10": 0.431,
+          "thicknessP50": 1.251,
+          "thicknessP90": 3.65,
+          "thicknessMax": 7.502,
+          "thinSegmentFraction": 0.441,
+          "trunkBaseThick": 4.424,
+          "trunkTopThick": 4.448,
+          "bbox": {
+            "w": 60.9,
+            "h": 59.4,
+            "d": 32.9
+          },
+          "simSeconds": 4.1,
+          "byDepth": {
+            "0": {
+              "segs": 20,
+              "length": 9.4,
+              "meanThick": 4.629
+            },
+            "1": {
+              "segs": 413,
+              "length": 137,
+              "meanThick": 2.59
+            },
+            "2": {
+              "segs": 83,
+              "length": 167.9,
+              "meanThick": 1.811
+            },
+            "3": {
+              "segs": 408,
+              "length": 73.3,
+              "meanThick": 4.736
+            },
+            "4": {
+              "segs": 642,
+              "length": 325.1,
+              "meanThick": 2.349
+            },
+            "5": {
+              "segs": 1151,
+              "length": 377.1,
+              "meanThick": 1.302
+            },
+            "6": {
+              "segs": 2020,
+              "length": 607.8,
+              "meanThick": 0.968
+            }
+          }
+        }
+      },
+      {
+        "label": "baseline",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_pine_s1.png",
+        "metrics": {
+          "stemSegments": 5180,
+          "totalStemLength": 1082.5,
+          "branchAgentsSpawned": 1103,
+          "peakActiveTips": 16,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 6,
+          "thicknessP10": 0.12,
+          "thicknessP50": 0.239,
+          "thicknessP90": 1.46,
+          "thicknessMax": 5.983,
+          "thinSegmentFraction": 0.85,
+          "trunkBaseThick": 5.514,
+          "trunkTopThick": 5.883,
+          "bbox": {
+            "w": 18.5,
+            "h": 79.9,
+            "d": 16.1
+          },
+          "simSeconds": 1.7,
+          "byDepth": {
+            "0": {
+              "segs": 415,
+              "length": 179.5,
+              "meanThick": 5.805
+            },
+            "1": {
+              "segs": 454,
+              "length": 270.9,
+              "meanThick": 0.893
+            },
+            "2": {
+              "segs": 447,
+              "length": 179.7,
+              "meanThick": 0.724
+            },
+            "3": {
+              "segs": 464,
+              "length": 113.6,
+              "meanThick": 0.455
+            },
+            "4": {
+              "segs": 833,
+              "length": 106,
+              "meanThick": 0.29
+            },
+            "5": {
+              "segs": 885,
+              "length": 103.3,
+              "meanThick": 0.188
+            },
+            "6": {
+              "segs": 1682,
+              "length": 129.5,
+              "meanThick": 0.196
+            }
+          }
+        }
+      },
+      {
+        "label": "baseline",
+        "concept": "pine",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "baseline_pine_s2.png",
+        "metrics": {
+          "stemSegments": 5096,
+          "totalStemLength": 1185.4,
+          "branchAgentsSpawned": 992,
+          "peakActiveTips": 15,
+          "stillGrowingAtEnd": true,
+          "maxDepthObserved": 6,
+          "thicknessP10": 0.15,
+          "thicknessP50": 0.266,
+          "thicknessP90": 1.879,
+          "thicknessMax": 7.502,
+          "thinSegmentFraction": 0.844,
+          "trunkBaseThick": 6.901,
+          "trunkTopThick": 7.415,
+          "bbox": {
+            "w": 21.4,
+            "h": 79.8,
+            "d": 34.3
+          },
+          "simSeconds": 4.1,
+          "byDepth": {
+            "0": {
+              "segs": 415,
+              "length": 197.5,
+              "meanThick": 7.314
+            },
+            "1": {
+              "segs": 349,
+              "length": 305.6,
+              "meanThick": 1.228
+            },
+            "2": {
+              "segs": 350,
+              "length": 189.2,
+              "meanThick": 0.968
+            },
+            "3": {
+              "segs": 360,
+              "length": 124.4,
+              "meanThick": 0.617
+            },
+            "4": {
+              "segs": 678,
+              "length": 102.9,
+              "meanThick": 0.373
+            },
+            "5": {
+              "segs": 845,
+              "length": 100.7,
+              "meanThick": 0.254
+            },
+            "6": {
+              "segs": 2099,
+              "length": 165.2,
+              "meanThick": 0.257
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter01": {
+    "generatedAt": "2026-09-25T12:43:50.904Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter01",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter01_oak_s1.png",
+        "metrics": {
+          "stemSegments": 2780,
+          "totalStemLength": 1050.4,
+          "branchAgentsSpawned": 185,
+          "peakActiveTips": 70,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.038,
+          "thicknessP50": 0.056,
+          "thicknessP90": 0.158,
+          "thicknessMax": 3.399,
+          "thinSegmentFraction": 0.989,
+          "trunkBaseThick": 1.814,
+          "trunkTopThick": 0.744,
+          "bbox": {
+            "w": 32.4,
+            "h": 33.9,
+            "d": 44.3
+          },
+          "simSeconds": 0.7,
+          "byDepth": {
+            "0": {
+              "segs": 18,
+              "length": 10.8,
+              "meanThick": 1.057
+            },
+            "1": {
+              "segs": 179,
+              "length": 90.2,
+              "meanThick": 0.348
+            },
+            "2": {
+              "segs": 820,
+              "length": 342.1,
+              "meanThick": 0.1
+            },
+            "3": {
+              "segs": 1693,
+              "length": 587,
+              "meanThick": 0.05
+            },
+            "4": {
+              "segs": 70,
+              "length": 20.3,
+              "meanThick": 0.043
+            }
+          }
+        }
+      },
+      {
+        "label": "iter01",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter01_elm_s1.png",
+        "metrics": {
+          "stemSegments": 2590,
+          "totalStemLength": 980.6,
+          "branchAgentsSpawned": 163,
+          "peakActiveTips": 59,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.037,
+          "thicknessP50": 0.055,
+          "thicknessP90": 0.159,
+          "thicknessMax": 3.399,
+          "thinSegmentFraction": 0.986,
+          "trunkBaseThick": 1.809,
+          "trunkTopThick": 0.905,
+          "bbox": {
+            "w": 52.9,
+            "h": 30.4,
+            "d": 46.3
+          },
+          "simSeconds": 0.7,
+          "byDepth": {
+            "0": {
+              "segs": 16,
+              "length": 9.6,
+              "meanThick": 1.115
+            },
+            "1": {
+              "segs": 163,
+              "length": 82.2,
+              "meanThick": 0.373
+            },
+            "2": {
+              "segs": 775,
+              "length": 323.8,
+              "meanThick": 0.099
+            },
+            "3": {
+              "segs": 1589,
+              "length": 551.5,
+              "meanThick": 0.049
+            },
+            "4": {
+              "segs": 47,
+              "length": 13.6,
+              "meanThick": 0.042
+            }
+          }
+        }
+      },
+      {
+        "label": "iter01",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter01_pine_s1.png",
+        "metrics": {
+          "stemSegments": 5035,
+          "totalStemLength": 1906.1,
+          "branchAgentsSpawned": 438,
+          "peakActiveTips": 148,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 3,
+          "thicknessP10": 0.032,
+          "thicknessP50": 0.053,
+          "thicknessP90": 0.183,
+          "thicknessMax": 3.399,
+          "thinSegmentFraction": 0.986,
+          "trunkBaseThick": 1.243,
+          "trunkTopThick": 0.239,
+          "bbox": {
+            "w": 41.1,
+            "h": 46.4,
+            "d": 39.5
+          },
+          "simSeconds": 1,
+          "byDepth": {
+            "0": {
+              "segs": 78,
+              "length": 46.5,
+              "meanThick": 0.751
+            },
+            "1": {
+              "segs": 588,
+              "length": 288.6,
+              "meanThick": 0.258
+            },
+            "2": {
+              "segs": 2396,
+              "length": 938.7,
+              "meanThick": 0.069
+            },
+            "3": {
+              "segs": 1973,
+              "length": 632.3,
+              "meanThick": 0.042
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter02": {
+    "generatedAt": "2026-09-25T12:46:15.680Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter02",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter02_oak_s1.png",
+        "metrics": {
+          "stemSegments": 2858,
+          "totalStemLength": 1076.6,
+          "branchAgentsSpawned": 193,
+          "peakActiveTips": 69,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.037,
+          "thicknessP50": 0.055,
+          "thicknessP90": 0.155,
+          "thicknessMax": 1.029,
+          "thinSegmentFraction": 0.9,
+          "trunkBaseThick": 1.023,
+          "trunkTopThick": 0.811,
+          "bbox": {
+            "w": 41.5,
+            "h": 34.9,
+            "d": 35.5
+          },
+          "simSeconds": 0.8,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 0.956
+            },
+            "1": {
+              "segs": 175,
+              "length": 88.2,
+              "meanThick": 0.339
+            },
+            "2": {
+              "segs": 810,
+              "length": 338.2,
+              "meanThick": 0.1
+            },
+            "3": {
+              "segs": 1789,
+              "length": 619.9,
+              "meanThick": 0.049
+            },
+            "4": {
+              "segs": 65,
+              "length": 18.8,
+              "meanThick": 0.044
+            }
+          }
+        }
+      },
+      {
+        "label": "iter02",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter02_elm_s1.png",
+        "metrics": {
+          "stemSegments": 4578,
+          "totalStemLength": 1758.6,
+          "branchAgentsSpawned": 227,
+          "peakActiveTips": 76,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.037,
+          "thicknessP50": 0.055,
+          "thicknessP90": 0.138,
+          "thicknessMax": 1.033,
+          "thinSegmentFraction": 0.912,
+          "trunkBaseThick": 1.025,
+          "trunkTopThick": 0.983,
+          "bbox": {
+            "w": 77.5,
+            "h": 50.5,
+            "d": 73.2
+          },
+          "simSeconds": 0.9,
+          "byDepth": {
+            "0": {
+              "segs": 21,
+              "length": 12.6,
+              "meanThick": 1.015
+            },
+            "1": {
+              "segs": 301,
+              "length": 151.7,
+              "meanThick": 0.323
+            },
+            "2": {
+              "segs": 1618,
+              "length": 677,
+              "meanThick": 0.086
+            },
+            "3": {
+              "segs": 2601,
+              "length": 906.5,
+              "meanThick": 0.047
+            },
+            "4": {
+              "segs": 37,
+              "length": 10.8,
+              "meanThick": 0.043
+            }
+          }
+        }
+      },
+      {
+        "label": "iter02",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter02_pine_s1.png",
+        "metrics": {
+          "stemSegments": 5783,
+          "totalStemLength": 2250.2,
+          "branchAgentsSpawned": 489,
+          "peakActiveTips": 131,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 3,
+          "thicknessP10": 0.032,
+          "thicknessP50": 0.053,
+          "thicknessP90": 0.181,
+          "thicknessMax": 1.229,
+          "thinSegmentFraction": 0.903,
+          "trunkBaseThick": 1.145,
+          "trunkTopThick": 0.229,
+          "bbox": {
+            "w": 37.8,
+            "h": 60.2,
+            "d": 37.3
+          },
+          "simSeconds": 1,
+          "byDepth": {
+            "0": {
+              "segs": 101,
+              "length": 60.3,
+              "meanThick": 0.717
+            },
+            "1": {
+              "segs": 873,
+              "length": 426.9,
+              "meanThick": 0.211
+            },
+            "2": {
+              "segs": 3163,
+              "length": 1236,
+              "meanThick": 0.062
+            },
+            "3": {
+              "segs": 1646,
+              "length": 527.1,
+              "meanThick": 0.042
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter03": {
+    "generatedAt": "2026-09-25T12:47:31.202Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter03",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter03_oak_s1.png",
+        "metrics": {
+          "stemSegments": 10955,
+          "totalStemLength": 3472.2,
+          "branchAgentsSpawned": 1117,
+          "peakActiveTips": 217,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.032,
+          "thicknessP50": 0.044,
+          "thicknessP90": 0.106,
+          "thicknessMax": 1.125,
+          "thinSegmentFraction": 0.948,
+          "trunkBaseThick": 1.033,
+          "trunkTopThick": 0.98,
+          "bbox": {
+            "w": 36.5,
+            "h": 38.9,
+            "d": 57
+          },
+          "simSeconds": 1.8,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.048
+            },
+            "1": {
+              "segs": 145,
+              "length": 73.1,
+              "meanThick": 0.52
+            },
+            "2": {
+              "segs": 609,
+              "length": 257.8,
+              "meanThick": 0.199
+            },
+            "3": {
+              "segs": 2980,
+              "length": 1043.1,
+              "meanThick": 0.071
+            },
+            "4": {
+              "segs": 6719,
+              "length": 1965.8,
+              "meanThick": 0.041
+            },
+            "5": {
+              "segs": 483,
+              "length": 121.1,
+              "meanThick": 0.036
+            }
+          }
+        }
+      },
+      {
+        "label": "iter03",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter03_elm_s1.png",
+        "metrics": {
+          "stemSegments": 18178,
+          "totalStemLength": 6029.5,
+          "branchAgentsSpawned": 1522,
+          "peakActiveTips": 275,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.032,
+          "thicknessP50": 0.043,
+          "thicknessP90": 0.097,
+          "thicknessMax": 1.171,
+          "thinSegmentFraction": 0.958,
+          "trunkBaseThick": 1.04,
+          "trunkTopThick": 1.167,
+          "bbox": {
+            "w": 88.2,
+            "h": 53.9,
+            "d": 83.1
+          },
+          "simSeconds": 2.5,
+          "byDepth": {
+            "0": {
+              "segs": 21,
+              "length": 12.6,
+              "meanThick": 1.115
+            },
+            "1": {
+              "segs": 301,
+              "length": 151.7,
+              "meanThick": 0.47
+            },
+            "2": {
+              "segs": 1390,
+              "length": 588.5,
+              "meanThick": 0.156
+            },
+            "3": {
+              "segs": 8066,
+              "length": 2822.1,
+              "meanThick": 0.055
+            },
+            "4": {
+              "segs": 8348,
+              "length": 2441.6,
+              "meanThick": 0.038
+            },
+            "5": {
+              "segs": 52,
+              "length": 13,
+              "meanThick": 0.036
+            }
+          }
+        }
+      },
+      {
+        "label": "iter03",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter03_pine_s1.png",
+        "metrics": {
+          "stemSegments": 13965,
+          "totalStemLength": 4776.3,
+          "branchAgentsSpawned": 1648,
+          "peakActiveTips": 316,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.029,
+          "thicknessP50": 0.043,
+          "thicknessP90": 0.131,
+          "thicknessMax": 1.229,
+          "thinSegmentFraction": 0.94,
+          "trunkBaseThick": 1.145,
+          "trunkTopThick": 0.242,
+          "bbox": {
+            "w": 44.8,
+            "h": 60.2,
+            "d": 45.8
+          },
+          "simSeconds": 1.8,
+          "byDepth": {
+            "0": {
+              "segs": 101,
+              "length": 60.2,
+              "meanThick": 0.728
+            },
+            "1": {
+              "segs": 800,
+              "length": 393.6,
+              "meanThick": 0.287
+            },
+            "2": {
+              "segs": 3119,
+              "length": 1230.9,
+              "meanThick": 0.088
+            },
+            "3": {
+              "segs": 8294,
+              "length": 2650.4,
+              "meanThick": 0.042
+            },
+            "4": {
+              "segs": 1651,
+              "length": 441.2,
+              "meanThick": 0.035
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter04": {
+    "generatedAt": "2026-09-25T12:49:25.750Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter04",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter04_oak_s1.png",
+        "metrics": {
+          "stemSegments": 6635,
+          "totalStemLength": 2201.4,
+          "branchAgentsSpawned": 628,
+          "peakActiveTips": 135,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.033,
+          "thicknessP50": 0.045,
+          "thicknessP90": 0.113,
+          "thicknessMax": 1.967,
+          "thinSegmentFraction": 0.978,
+          "trunkBaseThick": 1.599,
+          "trunkTopThick": 0.847,
+          "bbox": {
+            "w": 44.9,
+            "h": 41.4,
+            "d": 36
+          },
+          "simSeconds": 1.6,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.15
+            },
+            "1": {
+              "segs": 142,
+              "length": 71.6,
+              "meanThick": 0.406
+            },
+            "2": {
+              "segs": 551,
+              "length": 233.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 2768,
+              "length": 964.4,
+              "meanThick": 0.058
+            },
+            "4": {
+              "segs": 3147,
+              "length": 918.8,
+              "meanThick": 0.039
+            },
+            "5": {
+              "segs": 8,
+              "length": 2,
+              "meanThick": 0.037
+            }
+          }
+        }
+      },
+      {
+        "label": "iter04",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter04_elm_s1.png",
+        "metrics": {
+          "stemSegments": 11228,
+          "totalStemLength": 3884.3,
+          "branchAgentsSpawned": 807,
+          "peakActiveTips": 155,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.033,
+          "thicknessP50": 0.044,
+          "thicknessP90": 0.098,
+          "thicknessMax": 1.967,
+          "thinSegmentFraction": 0.981,
+          "trunkBaseThick": 1.554,
+          "trunkTopThick": 0.98,
+          "bbox": {
+            "w": 83.6,
+            "h": 57.1,
+            "d": 66.6
+          },
+          "simSeconds": 1.7,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.184
+            },
+            "1": {
+              "segs": 235,
+              "length": 118.4,
+              "meanThick": 0.391
+            },
+            "2": {
+              "segs": 1249,
+              "length": 528.1,
+              "meanThick": 0.122
+            },
+            "3": {
+              "segs": 6693,
+              "length": 2339.5,
+              "meanThick": 0.048
+            },
+            "4": {
+              "segs": 3027,
+              "length": 883.9,
+              "meanThick": 0.037
+            }
+          }
+        }
+      },
+      {
+        "label": "iter04",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter04_pine_s1.png",
+        "metrics": {
+          "stemSegments": 6477,
+          "totalStemLength": 2341.7,
+          "branchAgentsSpawned": 714,
+          "peakActiveTips": 158,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.029,
+          "thicknessP50": 0.041,
+          "thicknessP90": 0.123,
+          "thicknessMax": 1.967,
+          "thinSegmentFraction": 0.975,
+          "trunkBaseThick": 1.252,
+          "trunkTopThick": 0.195,
+          "bbox": {
+            "w": 38.8,
+            "h": 59.6,
+            "d": 38.1
+          },
+          "simSeconds": 1.3,
+          "byDepth": {
+            "0": {
+              "segs": 100,
+              "length": 59.6,
+              "meanThick": 0.626
+            },
+            "1": {
+              "segs": 549,
+              "length": 270.1,
+              "meanThick": 0.196
+            },
+            "2": {
+              "segs": 2202,
+              "length": 862.4,
+              "meanThick": 0.064
+            },
+            "3": {
+              "segs": 3501,
+              "length": 1116.1,
+              "meanThick": 0.038
+            },
+            "4": {
+              "segs": 125,
+              "length": 33.4,
+              "meanThick": 0.035
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter05": {
+    "generatedAt": "2026-09-25T12:50:58.436Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter05",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_oak_s1.png",
+        "metrics": {
+          "stemSegments": 8414,
+          "totalStemLength": 2711.1,
+          "branchAgentsSpawned": 890,
+          "peakActiveTips": 189,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.089,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.98,
+          "trunkBaseThick": 1.528,
+          "trunkTopThick": 0.847,
+          "bbox": {
+            "w": 38.7,
+            "h": 39.6,
+            "d": 43.7
+          },
+          "simSeconds": 1.5,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.139
+            },
+            "1": {
+              "segs": 132,
+              "length": 66.5,
+              "meanThick": 0.403
+            },
+            "2": {
+              "segs": 518,
+              "length": 219.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 2592,
+              "length": 904.1,
+              "meanThick": 0.057
+            },
+            "4": {
+              "segs": 5025,
+              "length": 1473,
+              "meanThick": 0.035
+            },
+            "5": {
+              "segs": 128,
+              "length": 36.8,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter05",
+        "concept": "oak",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_oak_s2.png",
+        "metrics": {
+          "stemSegments": 13526,
+          "totalStemLength": 4262.9,
+          "branchAgentsSpawned": 1366,
+          "peakActiveTips": 243,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.092,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.986,
+          "trunkBaseThick": 1.918,
+          "trunkTopThick": 1.04,
+          "bbox": {
+            "w": 41.4,
+            "h": 48,
+            "d": 64.5
+          },
+          "simSeconds": 4.6,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.43
+            },
+            "1": {
+              "segs": 154,
+              "length": 77.6,
+              "meanThick": 0.503
+            },
+            "2": {
+              "segs": 655,
+              "length": 277.3,
+              "meanThick": 0.187
+            },
+            "3": {
+              "segs": 2904,
+              "length": 1021.3,
+              "meanThick": 0.069
+            },
+            "4": {
+              "segs": 8820,
+              "length": 2594.3,
+              "meanThick": 0.037
+            },
+            "5": {
+              "segs": 974,
+              "length": 281.1,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter05",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_elm_s1.png",
+        "metrics": {
+          "stemSegments": 13996,
+          "totalStemLength": 4664.9,
+          "branchAgentsSpawned": 1164,
+          "peakActiveTips": 221,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.083,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.981,
+          "trunkBaseThick": 1.501,
+          "trunkTopThick": 0.98,
+          "bbox": {
+            "w": 82.5,
+            "h": 54.5,
+            "d": 65.2
+          },
+          "simSeconds": 1.9,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.176
+            },
+            "1": {
+              "segs": 235,
+              "length": 118.4,
+              "meanThick": 0.389
+            },
+            "2": {
+              "segs": 1106,
+              "length": 468.2,
+              "meanThick": 0.132
+            },
+            "3": {
+              "segs": 6335,
+              "length": 2215.6,
+              "meanThick": 0.047
+            },
+            "4": {
+              "segs": 6288,
+              "length": 1845.9,
+              "meanThick": 0.033
+            },
+            "5": {
+              "segs": 8,
+              "length": 2.3,
+              "meanThick": 0.03
+            }
+          }
+        }
+      },
+      {
+        "label": "iter05",
+        "concept": "elm",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_elm_s2.png",
+        "metrics": {
+          "stemSegments": 21558,
+          "totalStemLength": 6941.8,
+          "branchAgentsSpawned": 1883,
+          "peakActiveTips": 308,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.082,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.987,
+          "trunkBaseThick": 1.884,
+          "trunkTopThick": 1.235,
+          "bbox": {
+            "w": 88.1,
+            "h": 58.4,
+            "d": 83.1
+          },
+          "simSeconds": 8.4,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.478
+            },
+            "1": {
+              "segs": 254,
+              "length": 128,
+              "meanThick": 0.484
+            },
+            "2": {
+              "segs": 1231,
+              "length": 521.2,
+              "meanThick": 0.163
+            },
+            "3": {
+              "segs": 6746,
+              "length": 2365.8,
+              "meanThick": 0.055
+            },
+            "4": {
+              "segs": 12845,
+              "length": 3780.9,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 458,
+              "length": 131.6,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter05",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_pine_s1.png",
+        "metrics": {
+          "stemSegments": 8395,
+          "totalStemLength": 2960.7,
+          "branchAgentsSpawned": 1039,
+          "peakActiveTips": 194,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.024,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.107,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.974,
+          "trunkBaseThick": 1.241,
+          "trunkTopThick": 0.195,
+          "bbox": {
+            "w": 35.6,
+            "h": 59.6,
+            "d": 39.9
+          },
+          "simSeconds": 1.3,
+          "byDepth": {
+            "0": {
+              "segs": 100,
+              "length": 59.6,
+              "meanThick": 0.627
+            },
+            "1": {
+              "segs": 578,
+              "length": 284.4,
+              "meanThick": 0.201
+            },
+            "2": {
+              "segs": 2362,
+              "length": 924.2,
+              "meanThick": 0.063
+            },
+            "3": {
+              "segs": 4937,
+              "length": 1571.3,
+              "meanThick": 0.034
+            },
+            "4": {
+              "segs": 418,
+              "length": 121.2,
+              "meanThick": 0.031
+            }
+          }
+        }
+      },
+      {
+        "label": "iter05",
+        "concept": "pine",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter05_pine_s2.png",
+        "metrics": {
+          "stemSegments": 16602,
+          "totalStemLength": 5595.6,
+          "branchAgentsSpawned": 2142,
+          "peakActiveTips": 369,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.024,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.113,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.977,
+          "trunkBaseThick": 1.559,
+          "trunkTopThick": 0.232,
+          "bbox": {
+            "w": 45.5,
+            "h": 60.8,
+            "d": 46.1
+          },
+          "simSeconds": 5.1,
+          "byDepth": {
+            "0": {
+              "segs": 102,
+              "length": 60.9,
+              "meanThick": 0.793
+            },
+            "1": {
+              "segs": 799,
+              "length": 393.1,
+              "meanThick": 0.283
+            },
+            "2": {
+              "segs": 2961,
+              "length": 1173.4,
+              "meanThick": 0.089
+            },
+            "3": {
+              "segs": 9300,
+              "length": 2971.2,
+              "meanThick": 0.039
+            },
+            "4": {
+              "segs": 3440,
+              "length": 997.1,
+              "meanThick": 0.031
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter06": {
+    "generatedAt": "2026-09-25T12:53:15.730Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter06",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_oak_s1.png",
+        "metrics": {
+          "stemSegments": 8414,
+          "totalStemLength": 2711.1,
+          "branchAgentsSpawned": 890,
+          "peakActiveTips": 189,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.089,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.98,
+          "trunkBaseThick": 1.528,
+          "trunkTopThick": 0.847,
+          "bbox": {
+            "w": 44.1,
+            "h": 38.2,
+            "d": 45.1
+          },
+          "simSeconds": 1.7,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.139
+            },
+            "1": {
+              "segs": 132,
+              "length": 66.5,
+              "meanThick": 0.403
+            },
+            "2": {
+              "segs": 518,
+              "length": 219.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 2592,
+              "length": 904.1,
+              "meanThick": 0.057
+            },
+            "4": {
+              "segs": 5025,
+              "length": 1473,
+              "meanThick": 0.035
+            },
+            "5": {
+              "segs": 128,
+              "length": 36.8,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter06",
+        "concept": "oak",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_oak_s2.png",
+        "metrics": {
+          "stemSegments": 13526,
+          "totalStemLength": 4262.9,
+          "branchAgentsSpawned": 1366,
+          "peakActiveTips": 243,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.092,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.986,
+          "trunkBaseThick": 1.918,
+          "trunkTopThick": 1.04,
+          "bbox": {
+            "w": 49.7,
+            "h": 46.5,
+            "d": 64.2
+          },
+          "simSeconds": 4.6,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.43
+            },
+            "1": {
+              "segs": 154,
+              "length": 77.6,
+              "meanThick": 0.503
+            },
+            "2": {
+              "segs": 655,
+              "length": 277.3,
+              "meanThick": 0.187
+            },
+            "3": {
+              "segs": 2904,
+              "length": 1021.3,
+              "meanThick": 0.069
+            },
+            "4": {
+              "segs": 8820,
+              "length": 2594.3,
+              "meanThick": 0.037
+            },
+            "5": {
+              "segs": 974,
+              "length": 281.1,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter06",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_elm_s1.png",
+        "metrics": {
+          "stemSegments": 13996,
+          "totalStemLength": 4664.9,
+          "branchAgentsSpawned": 1164,
+          "peakActiveTips": 221,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.083,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.981,
+          "trunkBaseThick": 1.501,
+          "trunkTopThick": 0.98,
+          "bbox": {
+            "w": 70.7,
+            "h": 59.3,
+            "d": 64.2
+          },
+          "simSeconds": 2,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.176
+            },
+            "1": {
+              "segs": 235,
+              "length": 118.4,
+              "meanThick": 0.389
+            },
+            "2": {
+              "segs": 1106,
+              "length": 468.2,
+              "meanThick": 0.132
+            },
+            "3": {
+              "segs": 6335,
+              "length": 2215.6,
+              "meanThick": 0.047
+            },
+            "4": {
+              "segs": 6288,
+              "length": 1845.9,
+              "meanThick": 0.033
+            },
+            "5": {
+              "segs": 8,
+              "length": 2.3,
+              "meanThick": 0.03
+            }
+          }
+        }
+      },
+      {
+        "label": "iter06",
+        "concept": "elm",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_elm_s2.png",
+        "metrics": {
+          "stemSegments": 21558,
+          "totalStemLength": 6941.8,
+          "branchAgentsSpawned": 1883,
+          "peakActiveTips": 308,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.082,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.987,
+          "trunkBaseThick": 1.884,
+          "trunkTopThick": 1.235,
+          "bbox": {
+            "w": 65.8,
+            "h": 64.4,
+            "d": 73.8
+          },
+          "simSeconds": 8.1,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.478
+            },
+            "1": {
+              "segs": 254,
+              "length": 128,
+              "meanThick": 0.484
+            },
+            "2": {
+              "segs": 1231,
+              "length": 521.2,
+              "meanThick": 0.163
+            },
+            "3": {
+              "segs": 6746,
+              "length": 2365.8,
+              "meanThick": 0.055
+            },
+            "4": {
+              "segs": 12845,
+              "length": 3780.9,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 458,
+              "length": 131.6,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter06",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_pine_s1.png",
+        "metrics": {
+          "stemSegments": 8395,
+          "totalStemLength": 2960.7,
+          "branchAgentsSpawned": 1039,
+          "peakActiveTips": 194,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.024,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.107,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.974,
+          "trunkBaseThick": 1.241,
+          "trunkTopThick": 0.195,
+          "bbox": {
+            "w": 36.4,
+            "h": 59.6,
+            "d": 39.9
+          },
+          "simSeconds": 1.4,
+          "byDepth": {
+            "0": {
+              "segs": 100,
+              "length": 59.6,
+              "meanThick": 0.627
+            },
+            "1": {
+              "segs": 578,
+              "length": 284.4,
+              "meanThick": 0.201
+            },
+            "2": {
+              "segs": 2362,
+              "length": 924.2,
+              "meanThick": 0.063
+            },
+            "3": {
+              "segs": 4937,
+              "length": 1571.3,
+              "meanThick": 0.034
+            },
+            "4": {
+              "segs": 418,
+              "length": 121.2,
+              "meanThick": 0.031
+            }
+          }
+        }
+      },
+      {
+        "label": "iter06",
+        "concept": "pine",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter06_pine_s2.png",
+        "metrics": {
+          "stemSegments": 16602,
+          "totalStemLength": 5595.6,
+          "branchAgentsSpawned": 2142,
+          "peakActiveTips": 369,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.024,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.113,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.977,
+          "trunkBaseThick": 1.559,
+          "trunkTopThick": 0.232,
+          "bbox": {
+            "w": 46.1,
+            "h": 60.8,
+            "d": 46.7
+          },
+          "simSeconds": 5.4,
+          "byDepth": {
+            "0": {
+              "segs": 102,
+              "length": 60.8,
+              "meanThick": 0.793
+            },
+            "1": {
+              "segs": 799,
+              "length": 393.1,
+              "meanThick": 0.283
+            },
+            "2": {
+              "segs": 2961,
+              "length": 1173.4,
+              "meanThick": 0.089
+            },
+            "3": {
+              "segs": 9300,
+              "length": 2971.2,
+              "meanThick": 0.039
+            },
+            "4": {
+              "segs": 3440,
+              "length": 997.1,
+              "meanThick": 0.031
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter07": {
+    "generatedAt": "2026-09-25T13:00:57.820Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter07",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter07_oak_s1.png",
+        "metrics": {
+          "stemSegments": 8412,
+          "totalStemLength": 2710.6,
+          "branchAgentsSpawned": 890,
+          "peakActiveTips": 189,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.089,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.98,
+          "trunkBaseThick": 1.528,
+          "trunkTopThick": 0.847,
+          "bbox": {
+            "w": 44.1,
+            "h": 38.2,
+            "d": 45.1
+          },
+          "simSeconds": 1.4,
+          "byDepth": {
+            "0": {
+              "segs": 19,
+              "length": 11.4,
+              "meanThick": 1.139
+            },
+            "1": {
+              "segs": 132,
+              "length": 66.5,
+              "meanThick": 0.403
+            },
+            "2": {
+              "segs": 518,
+              "length": 219.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 2592,
+              "length": 904.1,
+              "meanThick": 0.057
+            },
+            "4": {
+              "segs": 5023,
+              "length": 1472.4,
+              "meanThick": 0.035
+            },
+            "5": {
+              "segs": 128,
+              "length": 36.8,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter07",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter07_elm_s1.png",
+        "metrics": {
+          "stemSegments": 13994,
+          "totalStemLength": 4664.3,
+          "branchAgentsSpawned": 1164,
+          "peakActiveTips": 221,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.083,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.981,
+          "trunkBaseThick": 1.501,
+          "trunkTopThick": 0.98,
+          "bbox": {
+            "w": 70.7,
+            "h": 59.3,
+            "d": 64.2
+          },
+          "simSeconds": 1.8,
+          "byDepth": {
+            "0": {
+              "segs": 24,
+              "length": 14.4,
+              "meanThick": 1.176
+            },
+            "1": {
+              "segs": 235,
+              "length": 118.4,
+              "meanThick": 0.389
+            },
+            "2": {
+              "segs": 1106,
+              "length": 468.2,
+              "meanThick": 0.132
+            },
+            "3": {
+              "segs": 6333,
+              "length": 2215,
+              "meanThick": 0.047
+            },
+            "4": {
+              "segs": 6288,
+              "length": 1845.9,
+              "meanThick": 0.033
+            },
+            "5": {
+              "segs": 8,
+              "length": 2.3,
+              "meanThick": 0.03
+            }
+          }
+        }
+      },
+      {
+        "label": "iter07",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter07_pine_s1.png",
+        "metrics": {
+          "stemSegments": 8393,
+          "totalStemLength": 2960.1,
+          "branchAgentsSpawned": 1039,
+          "peakActiveTips": 194,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.024,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.107,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.974,
+          "trunkBaseThick": 1.241,
+          "trunkTopThick": 0.195,
+          "bbox": {
+            "w": 36.4,
+            "h": 59.6,
+            "d": 39.9
+          },
+          "simSeconds": 1.3,
+          "byDepth": {
+            "0": {
+              "segs": 100,
+              "length": 59.6,
+              "meanThick": 0.627
+            },
+            "1": {
+              "segs": 578,
+              "length": 284.4,
+              "meanThick": 0.201
+            },
+            "2": {
+              "segs": 2360,
+              "length": 923.6,
+              "meanThick": 0.063
+            },
+            "3": {
+              "segs": 4937,
+              "length": 1571.3,
+              "meanThick": 0.034
+            },
+            "4": {
+              "segs": 418,
+              "length": 121.2,
+              "meanThick": 0.031
+            }
+          }
+        }
+      }
+    ]
+  },
+  "iter08": {
+    "generatedAt": "2026-09-25T13:09:35.947Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "iter08",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_oak_s1.png",
+        "metrics": {
+          "stemSegments": 6207,
+          "totalStemLength": 2984.7,
+          "branchAgentsSpawned": 835,
+          "peakActiveTips": 348,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.077,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.987,
+          "trunkBaseThick": 1.695,
+          "trunkTopThick": 0.839,
+          "bbox": {
+            "w": 38.2,
+            "h": 44.7,
+            "d": 52
+          },
+          "simSeconds": 1.2,
+          "byDepth": {
+            "0": {
+              "segs": 9,
+              "length": 11.7,
+              "meanThick": 1.157
+            },
+            "1": {
+              "segs": 61,
+              "length": 79.3,
+              "meanThick": 0.397
+            },
+            "2": {
+              "segs": 268,
+              "length": 255.4,
+              "meanThick": 0.159
+            },
+            "3": {
+              "segs": 2046,
+              "length": 1049.4,
+              "meanThick": 0.056
+            },
+            "4": {
+              "segs": 3780,
+              "length": 1572,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 43,
+              "length": 17,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter08",
+        "concept": "oak",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_oak_s2.png",
+        "metrics": {
+          "stemSegments": 9147,
+          "totalStemLength": 4252.8,
+          "branchAgentsSpawned": 1260,
+          "peakActiveTips": 422,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.08,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.991,
+          "trunkBaseThick": 2.126,
+          "trunkTopThick": 1.054,
+          "bbox": {
+            "w": 53.1,
+            "h": 44.3,
+            "d": 52.7
+          },
+          "simSeconds": 8.2,
+          "byDepth": {
+            "0": {
+              "segs": 9,
+              "length": 11.7,
+              "meanThick": 1.449
+            },
+            "1": {
+              "segs": 58,
+              "length": 75.1,
+              "meanThick": 0.512
+            },
+            "2": {
+              "segs": 262,
+              "length": 253.3,
+              "meanThick": 0.2
+            },
+            "3": {
+              "segs": 1894,
+              "length": 1019.1,
+              "meanThick": 0.069
+            },
+            "4": {
+              "segs": 6269,
+              "length": 2634.4,
+              "meanThick": 0.037
+            },
+            "5": {
+              "segs": 655,
+              "length": 259.1,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter08",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_elm_s1.png",
+        "metrics": {
+          "stemSegments": 9372,
+          "totalStemLength": 5403.2,
+          "branchAgentsSpawned": 1157,
+          "peakActiveTips": 438,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.065,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.989,
+          "trunkBaseThick": 1.552,
+          "trunkTopThick": 0.994,
+          "bbox": {
+            "w": 58.7,
+            "h": 70,
+            "d": 51.5
+          },
+          "simSeconds": 1.4,
+          "byDepth": {
+            "0": {
+              "segs": 11,
+              "length": 14.3,
+              "meanThick": 1.197
+            },
+            "1": {
+              "segs": 114,
+              "length": 148.2,
+              "meanThick": 0.355
+            },
+            "2": {
+              "segs": 480,
+              "length": 618.6,
+              "meanThick": 0.12
+            },
+            "3": {
+              "segs": 4557,
+              "length": 2869.6,
+              "meanThick": 0.045
+            },
+            "4": {
+              "segs": 4204,
+              "length": 1750.2,
+              "meanThick": 0.033
+            },
+            "5": {
+              "segs": 6,
+              "length": 2.3,
+              "meanThick": 0.033
+            }
+          }
+        }
+      },
+      {
+        "label": "iter08",
+        "concept": "elm",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_elm_s2.png",
+        "metrics": {
+          "stemSegments": 13073,
+          "totalStemLength": 6984.6,
+          "branchAgentsSpawned": 1679,
+          "peakActiveTips": 486,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.066,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.992,
+          "trunkBaseThick": 1.948,
+          "trunkTopThick": 1.213,
+          "bbox": {
+            "w": 73.6,
+            "h": 69.1,
+            "d": 69.6
+          },
+          "simSeconds": 12.6,
+          "byDepth": {
+            "0": {
+              "segs": 12,
+              "length": 15.6,
+              "meanThick": 1.479
+            },
+            "1": {
+              "segs": 100,
+              "length": 130,
+              "meanThick": 0.48
+            },
+            "2": {
+              "segs": 422,
+              "length": 544.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 3739,
+              "length": 2600.8,
+              "meanThick": 0.054
+            },
+            "4": {
+              "segs": 8616,
+              "length": 3621.7,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 184,
+              "length": 72.2,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "iter08",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_pine_s1.png",
+        "metrics": {
+          "stemSegments": 7506,
+          "totalStemLength": 3556.8,
+          "branchAgentsSpawned": 1047,
+          "peakActiveTips": 390,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.023,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.086,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.983,
+          "trunkBaseThick": 1.241,
+          "trunkTopThick": 0.124,
+          "bbox": {
+            "w": 48.6,
+            "h": 65.2,
+            "d": 47.7
+          },
+          "simSeconds": 1.2,
+          "byDepth": {
+            "0": {
+              "segs": 51,
+              "length": 65.3,
+              "meanThick": 0.587
+            },
+            "1": {
+              "segs": 281,
+              "length": 332.3,
+              "meanThick": 0.215
+            },
+            "2": {
+              "segs": 1927,
+              "length": 977.5,
+              "meanThick": 0.065
+            },
+            "3": {
+              "segs": 4709,
+              "length": 1963.9,
+              "meanThick": 0.035
+            },
+            "4": {
+              "segs": 538,
+              "length": 217.9,
+              "meanThick": 0.031
+            }
+          }
+        }
+      },
+      {
+        "label": "iter08",
+        "concept": "pine",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "iter08_pine_s2.png",
+        "metrics": {
+          "stemSegments": 14251,
+          "totalStemLength": 6575.5,
+          "branchAgentsSpawned": 2160,
+          "peakActiveTips": 589,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.023,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.087,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.989,
+          "trunkBaseThick": 1.559,
+          "trunkTopThick": 0.121,
+          "bbox": {
+            "w": 50.1,
+            "h": 66.5,
+            "d": 52
+          },
+          "simSeconds": 12.9,
+          "byDepth": {
+            "0": {
+              "segs": 52,
+              "length": 66.5,
+              "meanThick": 0.722
+            },
+            "1": {
+              "segs": 431,
+              "length": 512.5,
+              "meanThick": 0.256
+            },
+            "2": {
+              "segs": 2841,
+              "length": 1474.9,
+              "meanThick": 0.077
+            },
+            "3": {
+              "segs": 8654,
+              "length": 3608.1,
+              "meanThick": 0.038
+            },
+            "4": {
+              "segs": 2273,
+              "length": 913.5,
+              "meanThick": 0.031
+            }
+          }
+        }
+      }
+    ]
+  },
+  "final": {
+    "generatedAt": "2026-09-25T13:18:15.808Z",
+    "ticks": 3000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "final",
+        "concept": "oak",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_oak_s1.png",
+        "metrics": {
+          "stemSegments": 6207,
+          "totalStemLength": 2984.7,
+          "branchAgentsSpawned": 835,
+          "peakActiveTips": 348,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.077,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.987,
+          "trunkBaseThick": 1.695,
+          "trunkTopThick": 0.839,
+          "bbox": {
+            "w": 38.2,
+            "h": 44.7,
+            "d": 52
+          },
+          "simSeconds": 1.1,
+          "byDepth": {
+            "0": {
+              "segs": 9,
+              "length": 11.7,
+              "meanThick": 1.157
+            },
+            "1": {
+              "segs": 61,
+              "length": 79.3,
+              "meanThick": 0.397
+            },
+            "2": {
+              "segs": 268,
+              "length": 255.4,
+              "meanThick": 0.159
+            },
+            "3": {
+              "segs": 2046,
+              "length": 1049.4,
+              "meanThick": 0.056
+            },
+            "4": {
+              "segs": 3780,
+              "length": 1572,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 43,
+              "length": 17,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "final",
+        "concept": "oak",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_oak_s2.png",
+        "metrics": {
+          "stemSegments": 9147,
+          "totalStemLength": 4252.8,
+          "branchAgentsSpawned": 1260,
+          "peakActiveTips": 422,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.028,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.08,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.991,
+          "trunkBaseThick": 2.126,
+          "trunkTopThick": 1.054,
+          "bbox": {
+            "w": 53.1,
+            "h": 44.3,
+            "d": 52.7
+          },
+          "simSeconds": 8,
+          "byDepth": {
+            "0": {
+              "segs": 9,
+              "length": 11.7,
+              "meanThick": 1.449
+            },
+            "1": {
+              "segs": 58,
+              "length": 75.1,
+              "meanThick": 0.512
+            },
+            "2": {
+              "segs": 262,
+              "length": 253.3,
+              "meanThick": 0.2
+            },
+            "3": {
+              "segs": 1894,
+              "length": 1019.1,
+              "meanThick": 0.069
+            },
+            "4": {
+              "segs": 6269,
+              "length": 2634.4,
+              "meanThick": 0.037
+            },
+            "5": {
+              "segs": 655,
+              "length": 259.1,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "final",
+        "concept": "elm",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_elm_s1.png",
+        "metrics": {
+          "stemSegments": 9372,
+          "totalStemLength": 5403.2,
+          "branchAgentsSpawned": 1157,
+          "peakActiveTips": 438,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.065,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.989,
+          "trunkBaseThick": 1.552,
+          "trunkTopThick": 0.994,
+          "bbox": {
+            "w": 58.7,
+            "h": 70,
+            "d": 51.5
+          },
+          "simSeconds": 1.4,
+          "byDepth": {
+            "0": {
+              "segs": 11,
+              "length": 14.3,
+              "meanThick": 1.197
+            },
+            "1": {
+              "segs": 114,
+              "length": 148.2,
+              "meanThick": 0.355
+            },
+            "2": {
+              "segs": 480,
+              "length": 618.6,
+              "meanThick": 0.12
+            },
+            "3": {
+              "segs": 4557,
+              "length": 2869.6,
+              "meanThick": 0.045
+            },
+            "4": {
+              "segs": 4204,
+              "length": 1750.2,
+              "meanThick": 0.033
+            },
+            "5": {
+              "segs": 6,
+              "length": 2.3,
+              "meanThick": 0.033
+            }
+          }
+        }
+      },
+      {
+        "label": "final",
+        "concept": "elm",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_elm_s2.png",
+        "metrics": {
+          "stemSegments": 13073,
+          "totalStemLength": 6984.6,
+          "branchAgentsSpawned": 1679,
+          "peakActiveTips": 486,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 5,
+          "thicknessP10": 0.027,
+          "thicknessP50": 0.038,
+          "thicknessP90": 0.066,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.992,
+          "trunkBaseThick": 1.948,
+          "trunkTopThick": 1.213,
+          "bbox": {
+            "w": 73.6,
+            "h": 69.1,
+            "d": 69.6
+          },
+          "simSeconds": 13.2,
+          "byDepth": {
+            "0": {
+              "segs": 12,
+              "length": 15.6,
+              "meanThick": 1.479
+            },
+            "1": {
+              "segs": 100,
+              "length": 130,
+              "meanThick": 0.48
+            },
+            "2": {
+              "segs": 422,
+              "length": 544.3,
+              "meanThick": 0.157
+            },
+            "3": {
+              "segs": 3739,
+              "length": 2600.8,
+              "meanThick": 0.054
+            },
+            "4": {
+              "segs": 8616,
+              "length": 3621.7,
+              "meanThick": 0.034
+            },
+            "5": {
+              "segs": 184,
+              "length": 72.2,
+              "meanThick": 0.032
+            }
+          }
+        }
+      },
+      {
+        "label": "final",
+        "concept": "pine",
+        "seed": 1,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_pine_s1.png",
+        "metrics": {
+          "stemSegments": 7506,
+          "totalStemLength": 3556.8,
+          "branchAgentsSpawned": 1047,
+          "peakActiveTips": 390,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.023,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.086,
+          "thicknessMax": 1.695,
+          "thinSegmentFraction": 0.983,
+          "trunkBaseThick": 1.241,
+          "trunkTopThick": 0.124,
+          "bbox": {
+            "w": 48.6,
+            "h": 65.2,
+            "d": 47.7
+          },
+          "simSeconds": 1.1,
+          "byDepth": {
+            "0": {
+              "segs": 51,
+              "length": 65.3,
+              "meanThick": 0.587
+            },
+            "1": {
+              "segs": 281,
+              "length": 332.3,
+              "meanThick": 0.215
+            },
+            "2": {
+              "segs": 1927,
+              "length": 977.5,
+              "meanThick": 0.065
+            },
+            "3": {
+              "segs": 4709,
+              "length": 1963.9,
+              "meanThick": 0.035
+            },
+            "4": {
+              "segs": 538,
+              "length": 217.9,
+              "meanThick": 0.031
+            }
+          }
+        }
+      },
+      {
+        "label": "final",
+        "concept": "pine",
+        "seed": 2,
+        "ticks": 3000,
+        "overrides": {},
+        "file": "final_pine_s2.png",
+        "metrics": {
+          "stemSegments": 14251,
+          "totalStemLength": 6575.5,
+          "branchAgentsSpawned": 2160,
+          "peakActiveTips": 589,
+          "stillGrowingAtEnd": false,
+          "maxDepthObserved": 4,
+          "thicknessP10": 0.023,
+          "thicknessP50": 0.04,
+          "thicknessP90": 0.087,
+          "thicknessMax": 2.126,
+          "thinSegmentFraction": 0.989,
+          "trunkBaseThick": 1.559,
+          "trunkTopThick": 0.121,
+          "bbox": {
+            "w": 50.1,
+            "h": 66.5,
+            "d": 52
+          },
+          "simSeconds": 12.5,
+          "byDepth": {
+            "0": {
+              "segs": 52,
+              "length": 66.5,
+              "meanThick": 0.722
+            },
+            "1": {
+              "segs": 431,
+              "length": 512.5,
+              "meanThick": 0.256
+            },
+            "2": {
+              "segs": 2841,
+              "length": 1474.9,
+              "meanThick": 0.077
+            },
+            "3": {
+              "segs": 8654,
+              "length": 3608.1,
+              "meanThick": 0.038
+            },
+            "4": {
+              "segs": 2273,
+              "length": 913.5,
+              "meanThick": 0.031
+            }
+          }
+        }
+      }
+    ]
+  }
+}

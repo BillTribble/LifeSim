@@ -24,7 +24,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
   const archetype = forceArchetype || getRandomWeightedArchetype();
   const movementType = MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)];
 
-  let thicknessBase: number, minThickness: number, thicknessDecay: number, bifurcationRate: number, stepSize: number, branchTendency: number;
+  let thicknessBase: number, minThickness: number, thicknessDecay: number, bifurcationRate: number, stepSize: number, branchTendency: number, wanderIntensity: number;
 
   if (archetype === "bush") {
     thicknessBase = (2.20 + Math.random() * 0.6) * 0.7;
@@ -33,6 +33,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     bifurcationRate = 0.32 + Math.random() * 0.10;
     stepSize = (0.45 + Math.random() * 0.15) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 10.0 : 5.0);
+    wanderIntensity = 0.8 + Math.random() * 0.5;
   } else if (archetype === "tree") {
     thicknessBase = (5.2 + Math.random() * 2.0) * 0.7;
     minThickness = (0.15 + Math.random() * 0.25) * 0.7;
@@ -40,6 +41,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     bifurcationRate = 0.024 + Math.random() * 0.016;
     stepSize = (0.80 + Math.random() * 0.25) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 4.0 : 2.2);
+    wanderIntensity = 0.15 + Math.random() * 0.20; // [0.15, 0.35]
   } else if (archetype === "snake") {
     thicknessBase = (4.8 + Math.random() * 2.2) * 0.7;
     minThickness = (2.4 + Math.random() * 1.2) * 0.7;
@@ -47,6 +49,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     bifurcationRate = 0.003 + Math.random() * 0.006;
     stepSize = (1.8 + Math.random() * 0.8) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
+    wanderIntensity = 0.01 + Math.random() * 0.05;
   } else {
     // Rhizome (creeping slime-mold / tendrilled network: sleek, organic meandering runners)
     thicknessBase = (1.9 + Math.random() * 0.6) * 0.7;
@@ -55,6 +58,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     bifurcationRate = 0.06 + Math.random() * 0.03;
     stepSize = (1.2 + Math.random() * 0.3) * 0.7;
     branchTendency = 2.5 + Math.random() * 1.0;
+    wanderIntensity = 0.35 + Math.random() * 0.25;
   }
 
   return {
@@ -67,7 +71,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     thicknessDecay: thicknessDecay,
     stepSize: stepSize,
     bifurcationRate: bifurcationRate,
-    wanderIntensity: archetype === "rhizome" ? 0.35 + Math.random() * 0.25 : archetype === "bush" ? 0.8 + Math.random() * 0.5 : 0.01 + Math.random() * 0.05,
+    wanderIntensity: wanderIntensity,
     branchTendency: branchTendency,
     wavingSpeed: Math.random() * 0.05,
     wavingAmplitude: Math.random() * 0.08,
@@ -413,6 +417,9 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
     genome.thicknessBase = (1.2 + Math.random() * 2.0 * variance) * 0.7;
   }
   genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
+  const conceptMode = (engine as any).botanicalConcept || "auto";
+  const allHabits = ["oak", "elm", "pine", "willow", "rhizome_web"];
+  genome.growthHabit = conceptMode !== "auto" ? conceptMode : (arch === "rhizome" ? "rhizome_web" : allHabits[Math.floor(Math.random() * allHabits.length)]);
 
   // Claim a unique strain name: the organism census and culling are keyed by name, so a
   // collision with an existing strain would make this organism invisible to the population dials.
@@ -540,6 +547,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     designerGenome.color = new THREE.Color().setHSL(0.55, 0.9, 0.52);
     designerGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
     designerGenome.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
+    const activeConcept = (engine as any).botanicalConcept || "auto";
+    designerGenome.growthHabit = activeConcept !== "auto"
+      ? activeConcept
+      : (arch === "rhizome" ? "rhizome_web" : arch === "bush" ? "willow" : "oak");
 
     engine.genomeMap.set(designerGenome.name, designerGenome);
     initSpeciesLifecycle(engine, designerGenome.name);

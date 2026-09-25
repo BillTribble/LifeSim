@@ -1,3 +1,4 @@
+import { runHeadless20RoundsIfRequested } from "../lib/EvolutionAutoRunner";
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { SimulationEngine } from "../lib/SimulationEngine";
@@ -163,6 +164,8 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
   const methodMap: Record<string, string> = {
     designerMode: "setDesignerMode",
     designerArchetype: "setDesignerArchetype",
+    botanicalConcept: "setBotanicalConcept",
+    evolutionStep: "setEvolutionStep",
     rotationSpeed: "setRotationSpeed",
     rotationSpeedY: "setRotationSpeedY",
     magnetism: "setMagnetism",
@@ -367,11 +370,15 @@ export function SimulationView(props: SimulationViewProps) {
       onConfigChange({ bgColor: engine.bgColor });
     }
     engineRef.current = engine;
-
+    (window as any).__LIFESIM_ENGINE__ = engine;
     applyEngineProps(engine, props);
-
     engine.initAgents();
-    engine.start();
+    if (window.location.search.includes("autorun20=1")) {
+      runHeadless20RoundsIfRequested(engine);
+    } else {
+      runHeadless20RoundsIfRequested(engine);
+      engine.start();
+    }
 
     const handleResize = () => {
       if (containerRef.current && engineRef.current) {

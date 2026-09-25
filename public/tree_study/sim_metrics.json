@@ -1,0 +1,514 @@
+{
+  "baseline": {
+    "generatedAt": "2026-09-25T13:14:42.356Z",
+    "ticks": 6000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "baseline",
+        "seed": 1,
+        "ticks": 6000,
+        "overrides": {},
+        "files": [
+          "sim_baseline_s1_all.png",
+          "sim_baseline_s1_trees.png"
+        ],
+        "metrics": {
+          "ticks": 6000,
+          "simSeconds": 11.9,
+          "peakTreeTips": 15,
+          "peakAgents": 42,
+          "treeStrainsSeen": 14,
+          "breedLogs": 34,
+          "keepers": 0,
+          "liveSegments": 6087,
+          "segsByArch": {
+            "tree": 2917,
+            "bush": 3170
+          },
+          "segsByTreeStrain": {
+            "Tree Phytolacca": 412,
+            "Tree Xyloion": 149,
+            "Tree Spiroonix": 118,
+            "Tree Xylos": 610,
+            "Tree Rhizoonix": 243,
+            "Tree Stellrix": 61,
+            "Tree Thallonaut": 220,
+            "Tree Lumintis": 95,
+            "Tree Rhizothos": 183,
+            "Tree Astrarix": 438,
+            "Tree Cyandium": 179,
+            "Tree Phytollis": 197,
+            "Tree Thallollis": 4,
+            "Tree Dendrobium": 8
+          },
+          "maxDOMs": 100000,
+          "samples": [
+            {
+              "tick": 1000,
+              "agents": 13,
+              "treeTips": 3,
+              "strainsGrowing": {
+                "tree": 1,
+                "bush": 2
+              },
+              "pointCount": 1608
+            },
+            {
+              "tick": 2000,
+              "agents": 16,
+              "treeTips": 3,
+              "strainsGrowing": {
+                "tree": 1,
+                "bush": 3
+              },
+              "pointCount": 3660
+            },
+            {
+              "tick": 3000,
+              "agents": 18,
+              "treeTips": 5,
+              "strainsGrowing": {
+                "tree": 4,
+                "bush": 5
+              },
+              "pointCount": 5938
+            },
+            {
+              "tick": 4000,
+              "agents": 27,
+              "treeTips": 6,
+              "strainsGrowing": {
+                "bush": 7,
+                "tree": 6
+              },
+              "pointCount": 8646
+            },
+            {
+              "tick": 5000,
+              "agents": 31,
+              "treeTips": 6,
+              "strainsGrowing": {
+                "bush": 7,
+                "tree": 6
+              },
+              "pointCount": 8646
+            },
+            {
+              "tick": 6000,
+              "agents": 38,
+              "treeTips": 5,
+              "strainsGrowing": {
+                "tree": 6,
+                "bush": 7
+              },
+              "pointCount": 8646
+            }
+          ],
+          "deathLogs": [
+            "Breeding recorded. Culling oldest species: Bush Vesperonix.",
+            "⏳ Species Tree Phytolacca entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Phytollis, Tree Cyandium, Bush Vesperlos",
+            "Breeding recorded. Culling oldest species: Tree Phytolacca.",
+            "⏳ Species Tree Phytollis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Cyandium, Bush Vesperlos, Bush Cyanis, Tr",
+            "Breeding recorded. Culling oldest species: Tree Phytollis.",
+            "⏳ Species Tree Cyandium entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Vesperlos, Bush Cyanis, Tree Dendrobium, T",
+            "Breeding recorded. Culling oldest species: Tree Cyandium.",
+            "⏳ Species Bush Cyanis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Vesperlos, Tree Dendrobium, Tree Lumintis, T",
+            "Breeding recorded. Culling oldest species: Bush Cyanis.",
+            "⏳ Species Tree Dendrobium entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Vesperlos, Tree Lumintis, Tree Spiroonix",
+            "Breeding recorded. Culling oldest species: Tree Dendrobium.",
+            "⏳ Species Bush Vesperlos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Lumintis, Tree Spiroonix, Bush Phytoria, ",
+            "Breeding recorded. Culling oldest species: Bush Vesperlos.",
+            "⏳ Species Tree Spiroonix entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Lumintis, Bush Phytoria, Tree Thallollis,",
+            "Breeding recorded. Culling oldest species: Tree Spiroonix.",
+            "⏳ Species Tree Lumintis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Phytoria, Tree Thallollis, Bush Chlorostem",
+            "Breeding recorded. Culling oldest species: Tree Lumintis.",
+            "⏳ Species Bush Phytoria entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Thallollis, Bush Chlorostema, Tree Astrari",
+            "Breeding recorded. Culling oldest species: Bush Phytoria.",
+            "⏳ Species Tree Thallollis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Chlorostema, Tree Astrarix, Bush Aetheri",
+            "Breeding recorded. Culling oldest species: Tree Thallollis.",
+            "⏳ Species Bush Chlorostema entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Astrarix, Bush Aetheris, Tree Thallonau",
+            "Breeding recorded. Culling oldest species: Bush Chlorostema.",
+            "⏳ Species Tree Astrarix entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Aetheris, Tree Thallonaut, Bush Dendrophis",
+            "Breeding recorded. Culling oldest species: Tree Astrarix."
+          ]
+        }
+      },
+      {
+        "label": "baseline",
+        "seed": 2,
+        "ticks": 6000,
+        "overrides": {},
+        "files": [
+          "sim_baseline_s2_all.png",
+          "sim_baseline_s2_trees.png"
+        ],
+        "metrics": {
+          "ticks": 6000,
+          "simSeconds": 10.3,
+          "peakTreeTips": 11,
+          "peakAgents": 51,
+          "treeStrainsSeen": 7,
+          "breedLogs": 42,
+          "keepers": 0,
+          "liveSegments": 8300,
+          "segsByArch": {
+            "rhizome": 1268,
+            "bush": 5180,
+            "tree": 1852
+          },
+          "segsByTreeStrain": {
+            "Tree Aethlia": 247,
+            "Tree Florpteryx": 671,
+            "Tree Xylos": 229,
+            "Tree Sylvatica": 253,
+            "Tree Stellaris": 384,
+            "Tree Zephyrthos": 68
+          },
+          "maxDOMs": 100000,
+          "samples": [
+            {
+              "tick": 1000,
+              "agents": 13,
+              "treeTips": 5,
+              "strainsGrowing": {
+                "rhizome": 1,
+                "bush": 1,
+                "tree": 1
+              },
+              "pointCount": 1466
+            },
+            {
+              "tick": 2000,
+              "agents": 18,
+              "treeTips": 3,
+              "strainsGrowing": {
+                "rhizome": 1,
+                "bush": 4,
+                "tree": 3
+              },
+              "pointCount": 3586
+            },
+            {
+              "tick": 3000,
+              "agents": 27,
+              "treeTips": 5,
+              "strainsGrowing": {
+                "rhizome": 1,
+                "tree": 5,
+                "bush": 6
+              },
+              "pointCount": 6114
+            },
+            {
+              "tick": 4000,
+              "agents": 33,
+              "treeTips": 4,
+              "strainsGrowing": {
+                "tree": 4,
+                "bush": 8
+              },
+              "pointCount": 6114
+            },
+            {
+              "tick": 5000,
+              "agents": 38,
+              "treeTips": 1,
+              "strainsGrowing": {
+                "bush": 12,
+                "tree": 1
+              },
+              "pointCount": 6114
+            },
+            {
+              "tick": 6000,
+              "agents": 47,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "bush": 12
+              },
+              "pointCount": 8601
+            }
+          ],
+          "deathLogs": [
+            "Breeding recorded. Culling oldest species: Tree Aethlia.",
+            "⏳ Species Bush Spirolos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Cyanvire, Tree Xylos, Bush Phytoonix, Bush",
+            "Breeding recorded. Culling oldest species: Bush Spirolos.",
+            "⏳ Species Tree Xylos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Cyanvire, Bush Phytoonix, Bush Kryon II, Bush",
+            "Breeding recorded. Culling oldest species: Tree Xylos.",
+            "⏳ Species Bush Cyanvire entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Phytoonix, Bush Kryon II, Bush Dendronaut,",
+            "Breeding recorded. Culling oldest species: Bush Cyanvire.",
+            "⏳ Species Bush Phytoonix entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Kryon II, Bush Dendronaut, Bush Zennis, B",
+            "Breeding recorded. Culling oldest species: Bush Phytoonix.",
+            "⏳ Species Bush Kryon II entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Dendronaut, Bush Zennis, Bush Zylos, Bush ",
+            "Breeding recorded. Culling oldest species: Bush Kryon II.",
+            "⏳ Species Bush Zennis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Dendronaut, Bush Zylos, Bush Thallothos, Tre",
+            "Breeding recorded. Culling oldest species: Bush Zennis.",
+            "⏳ Species Bush Dendronaut entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Zylos, Bush Thallothos, Tree Zephyrthos,",
+            "Breeding recorded. Culling oldest species: Bush Dendronaut.",
+            "⏳ Species Bush Zylos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Thallothos, Tree Zephyrthos, Bush Cyanlos, Bu",
+            "Breeding recorded. Culling oldest species: Bush Zylos.",
+            "⏳ Species Tree Zephyrthos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Thallothos, Bush Cyanlos, Bush Stellllis",
+            "Breeding recorded. Culling oldest species: Tree Zephyrthos.",
+            "⏳ Species Bush Thallothos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Cyanlos, Bush Stellllis, Bush Zenrix, Bu",
+            "Breeding recorded. Culling oldest species: Bush Thallothos.",
+            "⏳ Species Bush Cyanlos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Stellllis, Bush Zenrix, Bush Nyctomorph II,",
+            "Breeding recorded. Culling oldest species: Bush Cyanlos.",
+            "⏳ Species Bush Zenrix entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Stellllis, Bush Nyctomorph II, Bush Helioria",
+            "Breeding recorded. Culling oldest species: Bush Zenrix."
+          ]
+        }
+      }
+    ]
+  },
+  "final": {
+    "generatedAt": "2026-09-25T16:01:17.721Z",
+    "ticks": 6000,
+    "overrides": {},
+    "renderNote": "2D orthographic projection of real engine segments (WebGL unavailable in headless on this host)",
+    "results": [
+      {
+        "label": "final",
+        "seed": 1,
+        "ticks": 6000,
+        "overrides": {},
+        "files": [
+          "sim_final_s1_all.png",
+          "sim_final_s1_trees.png"
+        ],
+        "metrics": {
+          "ticks": 6000,
+          "simSeconds": 27,
+          "peakTreeTips": 190,
+          "peakAgents": 241,
+          "treeStrainsSeen": 7,
+          "breedLogs": 20,
+          "keepers": 3,
+          "liveSegments": 8029,
+          "segsByArch": {
+            "bush": 2732,
+            "tree": 5297
+          },
+          "segsByTreeStrain": {
+            "Tree Xylos II": 1265,
+            "Tree Phaenrix": 1305,
+            "Tree Astraphis": 2,
+            "Tree Rhizoion": 2725
+          },
+          "maxDOMs": 100000,
+          "samples": [
+            {
+              "tick": 1000,
+              "agents": 13,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "bush": 1,
+                "tree": 1
+              },
+              "pointCount": 3468
+            },
+            {
+              "tick": 2000,
+              "agents": 14,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "bush": 1,
+                "tree": 2
+              },
+              "pointCount": 6377
+            },
+            {
+              "tick": 3000,
+              "agents": 15,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "bush": 3,
+                "tree": 3
+              },
+              "pointCount": 9042
+            },
+            {
+              "tick": 4000,
+              "agents": 20,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "bush": 6,
+                "tree": 3
+              },
+              "pointCount": 10477
+            },
+            {
+              "tick": 5000,
+              "agents": 27,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "tree": 3,
+                "bush": 9
+              },
+              "pointCount": 14946
+            },
+            {
+              "tick": 6000,
+              "agents": 35,
+              "treeTips": 1,
+              "strainsGrowing": {
+                "bush": 10,
+                "tree": 4
+              },
+              "pointCount": 14946
+            }
+          ],
+          "deathLogs": [
+            "⏳ Species Bush Kryoria entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Xylos, Tree Thallothos, Tree Zephyria, Bush",
+            "Breeding recorded. Culling oldest species: Bush Kryoria.",
+            "⏳ Species Tree Xylos entering end-of-life (bred 6 times) — 12 species present. Remaining: [Tree Thallothos, Tree Zephyria, Bush Vesperrix, Bush Cyanria, Bush Sy",
+            "⏳ Species Tree Thallothos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Zephyria, Bush Vesperrix, Bush Cyanria, ",
+            "Breeding recorded. Culling oldest species: Tree Thallothos.",
+            "⏳ Species Tree Zephyria entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Vesperrix, Bush Cyanria, Bush Sylvatica, B",
+            "Breeding recorded. Culling oldest species: Tree Zephyria.",
+            "⏳ Species Bush Cyanria entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Vesperrix, Bush Sylvatica, Bush Astraea, Bu",
+            "Breeding recorded. Culling oldest species: Bush Cyanria.",
+            "⏳ Species Bush Vesperrix entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Sylvatica, Bush Astraea, Bush Phaenon, Tr",
+            "Breeding recorded. Culling oldest species: Bush Vesperrix.",
+            "⏳ Species Bush Sylvatica entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Astraea, Bush Phaenon, Tree Rhizoion, Bus",
+            "Breeding recorded. Culling oldest species: Bush Sylvatica.",
+            "⏳ Species Bush Phaenon entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Astraea, Tree Rhizoion, Bush Solria, Bush A",
+            "Breeding recorded. Culling oldest species: Bush Phaenon.",
+            "⏳ Species Bush Astraea entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Rhizoion, Bush Solria, Bush Aethnis, Bush P",
+            "Breeding recorded. Culling oldest species: Bush Astraea.",
+            "⏳ Species Bush Solria entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Rhizoion, Bush Aethnis, Bush Phytolacca, Bus",
+            "Breeding recorded. Culling oldest species: Bush Solria."
+          ]
+        }
+      },
+      {
+        "label": "final",
+        "seed": 2,
+        "ticks": 6000,
+        "overrides": {},
+        "files": [
+          "sim_final_s2_all.png",
+          "sim_final_s2_trees.png"
+        ],
+        "metrics": {
+          "ticks": 6000,
+          "simSeconds": 10.3,
+          "peakTreeTips": 128,
+          "peakAgents": 173,
+          "treeStrainsSeen": 10,
+          "breedLogs": 26,
+          "keepers": 4,
+          "liveSegments": 8773,
+          "segsByArch": {
+            "tree": 5033,
+            "rhizome": 1846,
+            "bush": 1894
+          },
+          "segsByTreeStrain": {
+            "Tree Mycelion": 1480,
+            "Tree Kryoion": 1446,
+            "Tree Vesperlos": 606,
+            "Tree Viridpteryx": 1501
+          },
+          "maxDOMs": 100000,
+          "samples": [
+            {
+              "tick": 1000,
+              "agents": 13,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "rhizome": 1,
+                "bush": 1,
+                "tree": 1
+              },
+              "pointCount": 3196
+            },
+            {
+              "tick": 2000,
+              "agents": 16,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "rhizome": 1,
+                "bush": 2,
+                "tree": 2
+              },
+              "pointCount": 6308
+            },
+            {
+              "tick": 3000,
+              "agents": 19,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "rhizome": 2,
+                "bush": 3,
+                "tree": 4
+              },
+              "pointCount": 10994
+            },
+            {
+              "tick": 4000,
+              "agents": 39,
+              "treeTips": 13,
+              "strainsGrowing": {
+                "bush": 4,
+                "tree": 6,
+                "rhizome": 2
+              },
+              "pointCount": 14229
+            },
+            {
+              "tick": 5000,
+              "agents": 32,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "rhizome": 4,
+                "bush": 4,
+                "tree": 4
+              },
+              "pointCount": 15767
+            },
+            {
+              "tick": 6000,
+              "agents": 36,
+              "treeTips": 0,
+              "strainsGrowing": {
+                "rhizome": 4,
+                "tree": 4,
+                "bush": 4
+              },
+              "pointCount": 15767
+            }
+          ],
+          "deathLogs": [
+            "⏳ Species Rhizome Xylolia entering end-of-life (bred 6 times) — 12 species present. Remaining: [Bush Mycelphis, Tree Stellaris, Bush Astradium, Tree Viridnis, T",
+            "⏳ Species Bush Mycelphis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Stellaris, Bush Astradium, Tree Viridnis,",
+            "Breeding recorded. Culling oldest species: Bush Mycelphis.",
+            "⏳ Species Tree Stellaris entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Bush Astradium, Tree Viridnis, Tree Zephyrthos",
+            "Breeding recorded. Culling oldest species: Tree Stellaris.",
+            "⏳ Species Bush Astradium entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Viridnis, Tree Zephyrthos, Rhizome Helian",
+            "Breeding recorded. Culling oldest species: Bush Astradium.",
+            "⏳ Species Tree Viridnis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Zephyrthos, Rhizome Helianthus, Tree Thall",
+            "Breeding recorded. Culling oldest species: Tree Viridnis.",
+            "⏳ Species Tree Zephyrthos entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Helianthus, Tree Thallolia, Bush Chlo",
+            "Breeding recorded. Culling oldest species: Tree Zephyrthos.",
+            "⏳ Species Tree Thallolia entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Helianthus, Bush Chlorostema, Tree Ste",
+            "Breeding recorded. Culling oldest species: Tree Thallolia.",
+            "⏳ Species Bush Chlorostema entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Helianthus, Tree Stellmorph, Rhizome",
+            "Breeding recorded. Culling oldest species: Bush Chlorostema.",
+            "⏳ Species Rhizome Helianthus entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Stellmorph, Rhizome Chlortis, Bush Vi",
+            "Breeding recorded. Culling oldest species: Rhizome Helianthus.",
+            "⏳ Species Bush Virella entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Tree Stellmorph, Rhizome Chlortis, Tree Phaenon,",
+            "Breeding recorded. Culling oldest species: Bush Virella.",
+            "⏳ Species Tree Stellmorph entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Chlortis, Tree Phaenon, Rhizome Phaen",
+            "Breeding recorded. Culling oldest species: Tree Stellmorph.",
+            "⏳ Species Tree Phaenon entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Chlortis, Rhizome Phaendium, Tree Myceli",
+            "Breeding recorded. Culling oldest species: Tree Phaenon.",
+            "⏳ Species Rhizome Chlortis entering end-of-life (sacrificed for new hybrid birth) — 12 species present. Remaining: [Rhizome Phaendium, Tree Mycelion, Bush Eryth",
+            "Breeding recorded. Culling oldest species: Rhizome Chlortis."
+          ]
+        }
+      }
+    ]
+  }
+}

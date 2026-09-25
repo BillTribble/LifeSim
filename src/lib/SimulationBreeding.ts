@@ -181,26 +181,21 @@ export function updateFeelerSeeking(
   const mCount = (engine as any).speciesLifecycleMap?.get(myStrainName)?.matingCount || 0;
   const isParentDying = !!(engine.dyingStrains && engine.dyingStrains.has(myStrainName));
   const isParentExhausted = mCount >= maxM;
-  const isOverFeelerLifetime = agent.age > 600;
+  const isOverFeelerLifetime = agent.age > 180;
 
   if ((isParentDying || isParentExhausted || isOverFeelerLifetime) && !agent.tapering) {
-    agent.tapering = true;
-    agent.forceTapering = true;
-    agent.fadeAge = 0;
-    agent.taperBudget = undefined;
+    // Feelers freeze in place when expired — stop moving, trail stays visible
+    agent.active = false;
   }
 
   // Feelers keep seeking until they mate; once they mate, they die 3 seconds (180 ticks) afterwards
   if (agent.dieAfterTicks !== undefined) {
     agent.dieAfterTicks--;
     if (agent.dieAfterTicks <= 0 && !agent.tapering) {
-      agent.tapering = true;
-      agent.forceTapering = true;
-      agent.fadeAge = 0;
-      agent.taperBudget = undefined;
+      agent.active = false;
     }
   }
-  if (!agent.tapering) {
+  if (!agent.tapering && agent.active) {
     // Omniscient seeking: find nearest segment or live agent of any other strain (including feelers)
     let nearestPos: THREE.Vector3 | null = null;
     let minDSq = Infinity;
@@ -762,15 +757,12 @@ export function handleBreedingAndFeelers(
             }
           }
 
+          // Feelers freeze in place after mating — stop moving, trail stays visible
           if (agent.isFeeler) {
-            agent.tapering = true;
-            agent.forceTapering = true;
-            agent.fadeAge = agent.fadeAge || 0;
+            agent.active = false;
           }
           if (nearestPartner.isFeeler) {
-            nearestPartner.tapering = true;
-            nearestPartner.forceTapering = true;
-            nearestPartner.fadeAge = nearestPartner.fadeAge || 0;
+            nearestPartner.active = false;
           }
         }
       }

@@ -36,6 +36,7 @@ export interface RecessiveGenes {
   vernationType: "circinate" | "convolute" | "conduplicate";
   canopyZone: "wholeBody" | "terminal" | "basal";
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
+  growthHabit?: string;
 }
 
 export interface Genome {
@@ -72,6 +73,7 @@ export interface Genome {
   canopyZone: "wholeBody" | "terminal" | "basal";
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
   succulence: number;
+  growthHabit?: string;
 
   recessive?: RecessiveGenes;
   genomeHash?: number;
@@ -108,6 +110,17 @@ export interface Agent {
   parentId?: number;
   branchDepth?: number;
   hasFeelerAttempted?: boolean;
+  // Tree architecture model state (see SimulationTreeArchitecture.ts)
+  treeLen?: number;
+  treeBudget?: number;
+  treeNextBud?: number;
+  treeBudIdx?: number;
+  treeRoot?: THREE.Vector3;
+  treeAxis?: THREE.Vector3; // zero-gravity mode: the tree's own "up" (shared by all its branches)
+  treeBaseThick?: number;
+  treeDormant?: boolean; // resting tree keeper: no growth, still breeds + ages
+  treeRestTicks?: number; // ticks left before a resting keeper wakes for a new growth flush
+  treeFlushes?: number; // how many growth flushes this tip has had (vigor slowly declines)
 }
 
 export interface Segment {

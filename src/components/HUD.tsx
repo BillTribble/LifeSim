@@ -37,6 +37,8 @@ import {
   SpeedsSection,
   MorphologySection,
 } from "./HUDSections";
+import { BotanicalConcept, BotanicalConceptMeta } from "../lib/SimulationBotany";
+import { BotanicalConceptSwitcher } from "./BotanicalConceptSwitcher";
 
 interface HUDProps {
   showHUD: boolean;
@@ -51,6 +53,11 @@ interface HUDProps {
   uptime: number;
   sessionCode?: string;
   onOpenDesigner?: () => void;
+  botanicalConcept?: BotanicalConcept;
+  onSelectConcept?: (concept: BotanicalConcept, meta: BotanicalConceptMeta) => void;
+  evolutionStep?: number;
+  onSelectEvolutionStep?: (step: number) => void;
+  onOpenEvolutionModal?: () => void;
 }
 
 export function HUD({
@@ -66,6 +73,11 @@ export function HUD({
   uptime,
   sessionCode,
   onOpenDesigner,
+  botanicalConcept,
+  onSelectConcept,
+  evolutionStep,
+  onSelectEvolutionStep,
+  onOpenEvolutionModal,
 }: HUDProps) {
   const [cloudPanelOpen, setCloudPanelOpen] = useState(false);
   const [mutationPanelOpen, setMutationPanelOpen] = useState(false);
@@ -329,11 +341,11 @@ export function HUD({
 
             <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
               <div className="h-7 pointer-events-auto flex items-center gap-1.5 border border-[#D2B48C]/50 px-2.5 rounded bg-[#001220]/70 backdrop-blur-md shadow-sm opacity-90 hover:opacity-100 transition-opacity shrink-0"
-                title="TIME SCALE — Controls simulation speed. Drag knob vertically to adjust."
+                title="SPEED — Controls simulation speed. Drag knob vertically to adjust."
               >
-                <span className="text-[9px] sm:text-[10px] font-mono text-[#D2B48C]">SLOW_MO</span>
+                <span className="text-[9px] sm:text-[10px] font-mono text-[#D2B48C]">SPEED</span>
                 <div className="scale-[0.6] origin-center -my-3 -mx-1 shrink-0 flex items-center justify-center">
-                  <SmartDial state={state} setters={setters} tooltip={"TIME SCALE\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
+                  <SmartDial state={state} setters={setters} tooltip={"SPEED\nControls the simulation speed.\nHigh: Fast motion.\nLow: Slow motion."} label="" min={0.1} max={100.0} step={0.1} value={state.timeScale} onChange={setters.setTimeScale} color="#87CEEB" hideValue={true} />
                 </div>
                 <span className="text-[9px] font-mono shrink-0" style={{ color: '#87CEEB' }}>{state.timeScale.toFixed(1)}</span>
               </div>
@@ -685,7 +697,13 @@ export function HUD({
                 <LandscapeSection searchQuery={searchQuery} state={state} setters={setters} />
 
                 {/* LEAVES & BOTANY */}
-                <BotanySection searchQuery={searchQuery} state={state} setters={setters} />
+                <BotanySection
+                  searchQuery={searchQuery}
+                  state={state}
+                  setters={setters}
+                  botanicalConcept={botanicalConcept}
+                  onSelectConcept={onSelectConcept}
+                />
 
                 {/* CONFIG & TIDE */}
                 <ConfigTideSection searchQuery={searchQuery} state={state} setters={setters} />
@@ -709,28 +727,41 @@ export function HUD({
                 <MorphologySection searchQuery={searchQuery} state={state} setters={setters} />
 
               </div>
-              <div className="flex justify-between items-center gap-4 px-6 pb-3 pointer-events-auto">
-                <div className="flex items-center gap-2 bg-black/40 border border-[#D2B48C]/30 px-3 py-1 rounded w-48 sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-[#87CEEB]" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search controls..."
-                    className="bg-transparent text-[10px] text-white focus:outline-none w-full placeholder:text-[#D2B48C]/50"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        searchInputRef.current?.focus();
-                      }}
-                      className="text-[#D2B48C]/60 hover:text-white text-[10px] cursor-pointer"
-                      title="Clear search"
-                    >
-                      ✕
-                    </button>
+              <div className="flex flex-wrap justify-between items-center gap-3 px-4 sm:px-6 pb-3 pointer-events-auto">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-black/40 border border-[#D2B48C]/30 px-3 py-1 rounded w-48 sm:w-64">
+                    <Search className="w-3.5 h-3.5 text-[#87CEEB]" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search controls..."
+                      className="bg-transparent text-[10px] text-white focus:outline-none w-full placeholder:text-[#D2B48C]/50"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          searchInputRef.current?.focus();
+                        }}
+                        className="text-[#D2B48C]/60 hover:text-white text-[10px] cursor-pointer"
+                        title="Clear search"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {onSelectConcept && (
+                    <BotanicalConceptSwitcher
+                      activeConcept={botanicalConcept || "auto"}
+                      onSelectConcept={onSelectConcept}
+                      evolutionStep={evolutionStep}
+                      onSelectEvolutionStep={onSelectEvolutionStep}
+                      onOpenEvolutionModal={onOpenEvolutionModal}
+                      compact={true}
+                    />
                   )}
                 </div>
                 <div className="flex items-center gap-2">

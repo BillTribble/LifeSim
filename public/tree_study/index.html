@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Tree form study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600&family=Google+Sans:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet" />
+  <link rel="stylesheet" href="./gm3-color-tokens.css" />
+  <script>
+    // Theme: follow the OS (no Helix shell here)
+    (function () {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const apply = () => { if (mq.matches) document.documentElement.setAttribute("data-theme", "dark"); else document.documentElement.removeAttribute("data-theme"); };
+      apply(); mq.addEventListener("change", apply);
+    })();
+  </script>
+  <style>
+    /* Canonical --md-sys-color-* aliases onto the bundled GM3 --color-* tokens */
+    :root, [data-theme="dark"] {
+      --md-sys-color-primary: var(--color-primary);
+      --md-sys-color-on-primary: var(--color-on-primary);
+      --md-sys-color-secondary-container: var(--color-secondary-container);
+      --md-sys-color-on-secondary-container: var(--color-on-secondary-container);
+      --md-sys-color-on-surface: var(--color-on-surface);
+      --md-sys-color-on-surface-variant: var(--color-on-surface-variant);
+      --md-sys-color-surface-container-lowest: var(--color-surface-container-lowest);
+      --md-sys-color-surface-container-low: var(--color-surface-container-low);
+      --md-sys-color-surface-container: var(--color-surface-container);
+      --md-sys-color-surface-container-high: var(--color-surface-container-high);
+      --md-sys-color-surface-container-highest: var(--color-surface-container-highest);
+      --md-sys-color-inverse-surface: var(--color-inverse-surface);
+      --md-sys-color-inverse-on-surface: var(--color-inverse-on-surface);
+      --font-display: 'Google Sans Flex', 'Google Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    button, input, select, textarea { font-family: inherit; }
+    button { border: none; background: transparent; color: inherit; cursor: pointer; }
+    html, body { margin: 0; background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+    .material-symbols-outlined { font-family: 'Material Symbols Outlined' !important; font-feature-settings: 'liga'; white-space: nowrap; font-size: 20px; line-height: 1; }
+
+    .top-bar { display: flex; align-items: center; gap: 16px; padding: 16px 24px; background: var(--md-sys-color-surface-container-low); }
+    .top-bar .material-symbols-outlined { font-size: 24px; color: var(--md-sys-color-on-surface-variant); }
+    h1 { font-family: var(--font-display); font-weight: 500; font-size: 22px; margin: 0; }
+    .info { position: relative; display: inline-flex; color: var(--md-sys-color-on-surface-variant); cursor: help; }
+    .info .material-symbols-outlined { font-size: 18px; }
+    .tooltip { position: absolute; top: 28px; left: 0; width: 360px; padding: 12px 16px; border-radius: 8px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface); font-size: 12px; line-height: 1.5; opacity: 0; visibility: hidden; transition: opacity 150ms ease; z-index: 1200; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+    [data-theme="dark"] .tooltip { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7); }
+    .info:hover .tooltip, .info:focus-within .tooltip { opacity: 1; visibility: visible; }
+
+    main { max-width: 1440px; padding: 0 24px 40px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px; }
+
+    .m3-pill-tabs { display: flex; flex-wrap: nowrap; gap: 4px; padding: 4px; border-radius: 999px; background: var(--md-sys-color-surface-container); overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+    .m3-pill-tabs::-webkit-scrollbar { display: none; }
+    .m3-pill-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; color: var(--md-sys-color-on-surface-variant); transition: background-color 150ms ease, color 150ms ease; }
+    .m3-pill-tab:hover { background: var(--md-sys-color-surface-container-high); }
+    .m3-pill-tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+    .m3-pill-tab.active::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, var(--md-sys-color-on-secondary-container) 60%, transparent 61%); }
+    .m3-pill-tab.has-icon::before { display: none; }
+
+    .stepper { display: flex; align-items: center; gap: 8px; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); }
+    .icon-btn:hover { background: var(--md-sys-color-surface-container-high); }
+    .icon-btn:disabled { opacity: 0.38; cursor: default; background: transparent; }
+
+    .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pane { background: var(--md-sys-color-surface-container-lowest); border-radius: 16px; padding: 16px; min-width: 0; }
+    .pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    h2 { font-family: var(--font-display); font-weight: 500; font-size: 16px; margin: 0; }
+    .pane-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; }
+    .shot { width: 100%; border-radius: 8px; display: block; background: var(--md-sys-color-surface-container); aspect-ratio: 1000 / 1100; object-fit: contain; }
+    .shot.wide { aspect-ratio: 1400 / 1000; }
+    .missing { display: flex; align-items: center; justify-content: center; aspect-ratio: 1000 / 1100; border-radius: 8px; background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface-variant); }
+
+    .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+    .metric { background: var(--md-sys-color-surface-container); border-radius: 8px; padding: 8px 12px; min-width: 0; }
+    .metric-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 840px) {
+      .panes { grid-template-columns: 1fr; }
+      main { padding: 0 16px 32px; }
+      .top-bar { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <span class="material-symbols-outlined">park</span>
+    <h1>Tree form study</h1>
+    <span class="info" tabindex="0">
+      <span class="material-symbols-outlined">info</span>
+      <span class="tooltip">Every image is a 2D front projection of the real engine's stem segments (radius = segment thickness), captured headless. WebGL can't start in headless Chrome on this cloudtop, so the shaded 3D view isn't shown. Designer runs: one tree, fixed seed, 3000 ticks, no overrides. Each image is scaled to fit, so compare sizes with the bbox metric. Sim mode: whole default ecosystem after 6000 ticks (tree = dark, bush = green).</span>
+    </span>
+  </header>
+  <main>
+    <div class="controls">
+      <div class="m3-pill-tabs" id="conceptTabs" role="tablist"></div>
+      <div class="m3-pill-tabs" id="seedTabs" role="tablist"></div>
+    </div>
+    <div class="controls">
+      <div class="stepper">
+        <button class="icon-btn" id="prevBtn" title="Previous stage" aria-label="Previous stage"><span class="material-symbols-outlined">chevron_left</span></button>
+        <div class="m3-pill-tabs" id="stageTabs" role="tablist"></div>
+        <button class="icon-btn" id="nextBtn" title="Next stage" aria-label="Next stage"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+    </div>
+    <div class="panes">
+      <section class="pane">
+        <div class="pane-head"><h2 id="leftTitle">Baseline</h2><span class="pane-meta" id="leftMeta"></span></div>
+        <div id="leftShot"></div>
+        <div class="metrics" id="leftMetrics"></div>
+      </section>
+      <section class="pane">
+        <div class="pane-head"><h2 id="rightTitle">Selected</h2><span class="pane-meta" id="rightMeta"></span></div>
+        <div id="rightShot"></div>
+        <div class="metrics" id="rightMetrics"></div>
+      </section>
+    </div>
+  </main>
+  <script src="./viewer.js"></script>
+</body>
+</html>
