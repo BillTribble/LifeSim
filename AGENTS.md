@@ -1,6 +1,7 @@
 # Agent Instructions
 
 - **Version Control**: This repository uses `git`, NOT `hg` / Mercurial. Use standard `git` commands (`git status`, `git diff`, `git commit`, etc.) for all version control operations.
+- **Land the Plane / Land Plane**: When the user says "land plane" or "land the plane" in this repository, it means: stage all changes, commit with a descriptive message, and push everything to GitHub (`git push origin <branch>`).
 - When starting local web servers, ALWAYS use a port other than 3000 (e.g., 3001, 8080, 8081). Port 3000 is reserved for another app.
 - When handling slow motion controls (`timeScale`), NEVER include visual atmospheric parameters such as OrbitControls auto-rotation, automatic theme progress intervals, or bioluminescent pulsing effects. These must remain independent of simulation motion speeds.
 - NEVER invoke browser testing tools or the browser subagent unless the user explicitly asks you to do so.
