@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { resolveAgentHabit } from "./SimulationBotany";
+import { isContinuousTreeGrowth, offerTreeBud, recordTreeNode } from "./SimulationTreeGrowth";
 
 /**
  * Tree architecture model (tree archetype only).
@@ -229,9 +230,24 @@ function spawnChild(
   depth: number,
   spacing: number,
 ) {
-  newAgents.push({
-    position: parent.position.clone(),
-    lastPosition: parent.position.clone(),
+  const bud = makeTreeAgent(engine, parent, parent.position, dir, thickness, budget, depth, spacing);
+  // Ecosystem trees open buds a few at a time (steady growth) instead of all at once
+  if (!offerTreeBud(engine, bud)) newAgents.push(bud);
+}
+
+function makeTreeAgent(
+  engine: SimulationEngine,
+  parent: Agent,
+  pos: THREE.Vector3,
+  dir: THREE.Vector3,
+  thickness: number,
+  budget: number,
+  depth: number,
+  spacing: number,
+): Agent {
+  return {
+    position: pos.clone(),
+    lastPosition: pos.clone(),
     direction: dir.clone().normalize(),
     genome: parent.genome,
     active: true,
@@ -251,7 +267,37 @@ function spawnChild(
     treeRoot: parent.treeRoot ? parent.treeRoot.clone() : parent.position.clone(),
     treeAxis: parent.treeAxis,
     treeBaseThick: thickness,
-  });
+  };
+}
+
+/**
+ * Reiteration shoot sprouting from existing wood (continuous growth): leans outward from the
+ * tree's axis and starts two orders above the depth limit so it can fork and fill out.
+ */
+export function createTreeShoot(
+  engine: SimulationEngine,
+  template: Agent,
+  pos: THREE.Vector3,
+  woodDir: THREE.Vector3,
+  woodDepth: number,
+  woodThickness: number,
+  vigor: number,
+): Agent {
+  const p = profileFor(engine, template);
+  const maxDepth = maxDepthFor(engine, p);
+  const depth = Math.max(1, Math.min(woodDepth + 1, maxDepth - 2));
+  const budget = p.limbLength * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.8 + Math.random() * 0.4);
+  const thickness = THREE.MathUtils.clamp(woodThickness * 0.7, MIN_TWIG * (2 + 2 * vigor), MIN_TWIG * 8);
+  const A = axisOf(template);
+  const root = template.treeRoot || pos;
+  const radial = new THREE.Vector3().subVectors(pos, root);
+  radial.addScaledVector(A, -radial.dot(A));
+  const angle = THREE.MathUtils.degToRad(p.lateralAngleDeg + (Math.random() - 0.5) * 20);
+  const dir = deflect(woodDir, angle, Math.random() * Math.PI * 2);
+  if (radial.lengthSq() > 0.01) dir.addScaledVector(radial.normalize(), 0.5);
+  dir.addScaledVector(A, 0.15).normalize();
+  const spacing = p.lateralSpacing * spacingScale(engine);
+  return makeTreeAgent(engine, template, pos, dir, thickness, budget, depth, spacing);
 }
 
 /** True when no other non-tapering agent of this strain exists (growing tip or existing keeper). */
@@ -331,6 +377,8 @@ function enterTreeRest(agent: Agent) {
  */
 export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   if (!agent.treeDormant || agent.tapering || agent.isFeeler) return false;
+  // Continuous growth: the scheduler sprouts new shoots; the keeper only anchors the organism
+  if (isContinuousTreeGrowth(engine)) return false;
   if (agent.treeRestTicks === undefined) enterTreeRest(agent); // legacy keepers
   agent.treeRestTicks = (agent.treeRestTicks || 0) - 1;
   if (agent.treeRestTicks > 0) return false;
@@ -398,6 +446,7 @@ export function stepTreeArchitecture(
   const roomForTips = strainCount + newAgents.length < tipCap(engine);
 
   agent.treeLen = (agent.treeLen || 0) + stepLen;
+  recordTreeNode(engine, agent);
 
   // Continuous taper along the branch (pine leader tapers harder to a spire)
   const endTaper = depth === 0 && habit === "pine" ? 0.3 : endTaperFor(engine, p);

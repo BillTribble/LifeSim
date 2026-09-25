@@ -2,6 +2,7 @@ import { getEvolutionStepConfig } from "./EvolutionPresets";
 import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
+import { sustainTreeGrowth } from "./SimulationTreeGrowth";
 import {
   canEnterDeleting,
   trySpawnTaperingFeeler,
@@ -725,5 +726,6 @@ export function processAgents(
     }
   }
 
+  sustainTreeGrowth(engine, activeAgents, newAgents);
   engine.agents = activeAgents.filter((a) => a.active);
 }
