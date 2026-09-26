@@ -394,16 +394,15 @@ Low: Subtle analogous color shifts."
           searchQuery={searchQuery}
           state={state}
           setters={setters}
-          keywords={["mating delay", "fertility interval", "breeding pause", "growth cooldown"]}
-          tooltip="HYBRID BREED COOL
-Growth cooldown interval after mating or birth (min 180 ticks / 3.0s).
-During cooldown, organisms pause seeking to grow outward and expand their canopy.
-High: Long vegetative growth phase, infrequent mating.
-Low: Faster return to seeking after 3s growth."
+          keywords={["mating delay", "fertility interval", "breeding pause", "growth cooldown", "seek ramp"]}
+          tooltip="HYBRID BREED COOL (s)
+Growth & seeking ramp interval in seconds at speed=1 (default 3.0s).
+First 1/3 (1.0s at default): 0% seeking so creatures express their natural shape.
+Next 2.0s: Seeking gradually ramps from 0% to 100%, then mating unlocks."
           label="HYBRID_COOL"
-          min={180}
-          max={2000}
-          step={10}
+          min={0.5}
+          max={30}
+          step={0.5}
           value={state.hybridCooldown}
           onChange={setters.setHybridCooldown}
           color="#87CEEB"

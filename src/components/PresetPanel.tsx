@@ -41,7 +41,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         terminationProb: 0.02,
         desiccationSpeed: 9.9,
         feelerFade: 10,
-        hybridCooldown: 650,
+        hybridCooldown: 3,
         hybridSize: 3.5,
         hybridStickiness: 47,
         hybridSpinSpeed: 0.2,

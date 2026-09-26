@@ -140,7 +140,7 @@ export class SimulationEngine {
   widthGrowthEffect: number = 0.0;
   diebackRate: number = 8.111775230578985;
   allowBreeding: boolean = true;
-  hybridCooldown: number = 339.6557860499387;
+  hybridCooldown: number = 3;
   postMatingDieoff: boolean = true;
   hybridStickiness: number = 42.874691796901615;
   hybridSpinSpeed: number = 0.2;

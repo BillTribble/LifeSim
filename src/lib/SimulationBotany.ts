@@ -74,6 +74,9 @@ const CONCRETE_HABITS: Exclude<BotanicalConcept, "auto">[] = [
   "rhizome_web",
 ];
 
+const TREE_HABITS: Exclude<BotanicalConcept, "auto">[] = ["oak", "elm", "pine"];
+const BUSH_HABITS: Exclude<BotanicalConcept, "auto">[] = ["willow", "oak", "elm"];
+
 /**
  * Resolves the concrete botanical growth habit for a given agent/genome.
  */
@@ -86,17 +89,27 @@ export function resolveAgentHabit(
   if (activeConcept !== "auto") {
     return activeConcept;
   }
-  if (genome.growthHabit && genome.growthHabit !== "auto") {
-    return genome.growthHabit as Exclude<BotanicalConcept, "auto">;
-  }
   if (genome.archetype === "rhizome") return "rhizome_web";
-  // Deterministic hash from strain name so each organism in Auto mode keeps a consistent habit
   let hash = 0;
   for (let i = 0; i < genome.name.length; i++) {
     hash = (hash * 31 + genome.name.charCodeAt(i)) | 0;
   }
-  const idx = Math.abs(hash) % CONCRETE_HABITS.length;
-  return CONCRETE_HABITS[idx];
+  if (genome.archetype === "tree") {
+    if (genome.growthHabit && TREE_HABITS.includes(genome.growthHabit as any)) {
+      return genome.growthHabit as Exclude<BotanicalConcept, "auto">;
+    }
+    return TREE_HABITS[Math.abs(hash) % TREE_HABITS.length];
+  }
+  if (genome.archetype === "bush") {
+    if (genome.growthHabit && BUSH_HABITS.includes(genome.growthHabit as any)) {
+      return genome.growthHabit as Exclude<BotanicalConcept, "auto">;
+    }
+    return BUSH_HABITS[Math.abs(hash) % BUSH_HABITS.length];
+  }
+  if (genome.growthHabit && genome.growthHabit !== "auto") {
+    return genome.growthHabit as Exclude<BotanicalConcept, "auto">;
+  }
+  return CONCRETE_HABITS[Math.abs(hash) % CONCRETE_HABITS.length];
 }
 
 /**
@@ -439,7 +452,7 @@ export function executeBotanicalBranching(
         isCanopy: true,
         thickness: childThick,
         targetThickness: childThick,
-        cooldown: Math.max(agent.cooldown || 0, 140),
+        cooldown: agent.cooldown || 0,
         id: engine.nextAgentId++,
         parentAgent: agent,
         parentId: agent.id,
@@ -483,7 +496,7 @@ export function executeBotanicalBranching(
           isCanopy: true,
           thickness: boughRadius,
           targetThickness: boughRadius,
-          cooldown: Math.max(agent.cooldown || 0, 140),
+          cooldown: agent.cooldown || 0,
           id: engine.nextAgentId++,
           parentAgent: agent,
           parentId: agent.id,
@@ -558,7 +571,7 @@ export function executeBotanicalBranching(
     isCanopy: agent.isCanopy || currentDepth >= 1,
     thickness: childThickness,
     targetThickness: childThickness,
-    cooldown: Math.max(agent.cooldown || 0, 150),
+    cooldown: agent.cooldown || 0,
     id: engine.nextAgentId++,
     parentAgent: agent,
     parentId: agent.id,

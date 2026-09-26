@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { sustainTreeGrowth } from "./SimulationTreeGrowth";
+import { getHybridCooldownTicks, getSeekRamp } from "./SimulationSeekRamp";
 import {
   canEnterDeleting,
   trySpawnTaperingFeeler,
@@ -59,7 +60,7 @@ function checkLifespanDeath(
   livingOrganismCount: number,
   maxM: number,
 ) {
-  const minMatingLifespan = (maxM + 1) * (engine.hybridCooldown || 340) * 1.2;
+  const minMatingLifespan = (maxM + 1) * getHybridCooldownTicks(engine) * 1.2;
   const maxLifespan = Math.max(minMatingLifespan, 1200 * Math.max(0.5, engine.timeScale));
   const lifecycle = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
   const speciesMCount = lifecycle?.matingCount || agent.matingCount || 0;
@@ -299,7 +300,6 @@ export function processAgents(
       let avoidanceCount = 0;
 
       const myStrain = agent.realGenome?.name || agent.genome.name;
-      const minGrowthTicks = 180;
       const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
       const myMCount =
         (engine as any).speciesLifecycleMap?.get(myStrain)?.matingCount ||
@@ -309,12 +309,12 @@ export function processAgents(
         agent.isFeeler && agent.realGenome ? agent.realGenome : agent.genome;
       const strainAge =
         evalGenome.createdAt !== undefined ? engine.time - evalGenome.createdAt : engine.time;
+      const seekRamp = getSeekRamp(engine, agent, strainAge);
       const canSeek =
         !agent.isFeeler &&
         !treeModel && // tree form comes from its own architecture, not from leaning toward mates
         !agent.tapering &&
-        agent.cooldown <= 0 &&
-        strainAge >= minGrowthTicks &&
+        seekRamp > 0 &&
         myMCount < maxM;
 
       for (let j = 0; j < activeAgents.length; j++) {
@@ -337,10 +337,10 @@ export function processAgents(
               (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount ||
               other.matingCount ||
               0;
+            const otherSeekRamp = getSeekRamp(engine, other, otherStrainAge);
             const otherReceptive =
               !other.tapering &&
-              other.cooldown <= 0 &&
-              otherStrainAge >= minGrowthTicks &&
+              otherSeekRamp > 0 &&
               otherMCount < maxM;
 
             if (otherReceptive && dSq < nearestDistSq) {
@@ -417,7 +417,7 @@ export function processAgents(
         // CRITICAL FIX (Bug A): Do NOT override structural branch vectors with 0.75 seekStrength!
         // Only outer canopy/rhizome tips (depth >= 2) apply a subtle phototropic/chemotropic lean (<= 0.022),
         // preserving 100% of the organism's true botanical silhouette in Simulation Mode!
-        if (canSeek && nearestTargetPos) {
+        if (canSeek && nearestTargetPos && seekRamp > 0) {
           const evo = getEvolutionStepConfig((engine as any).evolutionStep);
           const dist = Math.sqrt(nearestDistSq);
           const toTarget = new THREE.Vector3()
@@ -425,11 +425,11 @@ export function processAgents(
             .normalize();
           if (evo.round <= 3) {
             // Early rounds (Step 1..3): high seekLean pulls all branches into spindly ribbons
-            agent.direction.lerp(toTarget, evo.seekLean).normalize();
+            agent.direction.lerp(toTarget, evo.seekLean * seekRamp).normalize();
           } else if (dist < 24 && nearestTarget && !nearestTarget.isFeeler) {
-            agent.direction.lerp(toTarget, 0.16).normalize();
+            agent.direction.lerp(toTarget, 0.16 * seekRamp).normalize();
           } else if ((agent.branchDepth || 0) >= (evo.round >= 12 ? 2 : 1)) {
-            agent.direction.lerp(toTarget, evo.seekLean).normalize();
+            agent.direction.lerp(toTarget, evo.seekLean * seekRamp).normalize();
           }
         }
       }

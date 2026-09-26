@@ -75,7 +75,9 @@ function stateFor(engine: SimulationEngine, name: string): TreeGrowthState {
 export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   if (!isContinuousTreeGrowth(engine)) return false;
   const s = stateFor(engine, bud.genome.name);
-  if (s.growing < MAX_GROWING_TIPS && s.buds.length === 0) {
+  // Primary scaffold limbs (depth <= 1: oak boughs, elm vase limbs, pine whorls) open immediately
+  // so the tree establishes its signature shape during the initial 1s seek-free growth window.
+  if ((bud.branchDepth || 0) <= 1 || (s.growing < MAX_GROWING_TIPS && s.buds.length === 0)) {
     s.growing++;
     return false;
   }

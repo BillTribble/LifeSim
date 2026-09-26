@@ -71,7 +71,7 @@ export const DEFAULTS: Record<string, any> = {
   "widthGrowthEffect": 0,
   "diebackRate": 1.3182568226156233,
   "allowBreeding": true,
-  "hybridCooldown": 481.4585990989257,
+  "hybridCooldown": 3,
   "hybridStickiness": 27.901245938451485,
   "hybridSpinSpeed": 0.2,
   "branchTendencyVar": 38.48454257338023,
@@ -229,6 +229,7 @@ export function getStoredFloat(key: string, fallback?: number): number {
     const val = parseFloat(stored);
     if (!isNaN(val)) {
       if (key === "maxDOMs" && val > 500000) return 100000;
+      if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
       return val;
     }
   }

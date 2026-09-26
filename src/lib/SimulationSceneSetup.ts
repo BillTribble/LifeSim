@@ -17,6 +17,7 @@ import {
 } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { NOTE_NAMES } from "./SimulationSound";
+import { getHybridCooldownTicks } from "./SimulationSeekRamp";
 import type { SimulationEngine } from "./SimulationEngine";
 
 export function generateRandomGenome(engine: SimulationEngine, baseName: string, forceArchetype?: any): Genome {
@@ -418,8 +419,16 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   }
   genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
   const conceptMode = (engine as any).botanicalConcept || "auto";
-  const allHabits = ["oak", "elm", "pine", "willow", "rhizome_web"];
-  genome.growthHabit = conceptMode !== "auto" ? conceptMode : (arch === "rhizome" ? "rhizome_web" : allHabits[Math.floor(Math.random() * allHabits.length)]);
+  const treeHabits = ["oak", "elm", "pine"];
+  const bushHabits = ["willow", "oak", "elm"];
+  genome.growthHabit =
+    conceptMode !== "auto"
+      ? conceptMode
+      : arch === "rhizome"
+        ? "rhizome_web"
+        : arch === "tree"
+          ? treeHabits[Math.floor(Math.random() * treeHabits.length)]
+          : bushHabits[Math.floor(Math.random() * bushHabits.length)];
 
   // Claim a unique strain name: the organism census and culling are keyed by name, so a
   // collision with an existing strain would make this organism invisible to the population dials.
@@ -438,7 +447,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
     age: 0,
     thickness: genome.thicknessBase * 1.5,
     id: engine.nextAgentId++,
-    cooldown: 200,
+    cooldown: getHybridCooldownTicks(engine),
   };
 
   engine.agents.push(agent);
@@ -707,6 +716,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   alphaGenome.createdAt = engine.time;
   betaGenome.createdAt = engine.time;
 
+  const initialCooldown = getHybridCooldownTicks(engine);
   engine.agents.push({
     position: new THREE.Vector3(-40, 0, 0),
     direction: new THREE.Vector3(1, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2).normalize(),
@@ -716,7 +726,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: new THREE.Vector3(-40, 0, 0),
     thickness: alphaGenome.thicknessBase * 2.0,
-    cooldown: 180,
+    cooldown: initialCooldown,
   });
 
   engine.agents.push({
@@ -728,7 +738,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: new THREE.Vector3(40, 0, 0),
     thickness: betaGenome.thicknessBase * 2.0,
-    cooldown: 180,
+    cooldown: initialCooldown,
   });
 
   initSpeciesLifecycle(engine, alphaGenome.name);

@@ -3,6 +3,8 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { breedGenomes } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
+import { getFertilityMinTicks, getHybridCooldownTicks, getSeekRamp } from "./SimulationSeekRamp";
+import { isTreeModelAgent } from "./SimulationTreeArchitecture";
 
 export function canEnterDeleting(
   engine: SimulationEngine,
@@ -348,17 +350,26 @@ export function handleBreedingAndFeelers(
     }
   }
 
-  const minGrowthTicks = 180; // 3.0 seconds at 60 FPS
+  const minGrowthTicks = getFertilityMinTicks(engine);
+  const seekRamp = getSeekRamp(engine, agent, strainAge);
+  const isViableBody =
+    !agent.tapering || (!agent.isFeeler && agent.thickness > 0.1 && mCount === 0);
+  const canSeekPartner =
+    isViableBody &&
+    mCount < maxM &&
+    seekRamp > 0 &&
+    !bredThisFrame.has(agent);
   const isFertile =
-    (!agent.tapering || (!agent.isFeeler && agent.thickness > 0.1 && mCount === 0)) &&
+    isViableBody &&
     mCount < maxM &&
     agent.cooldown <= 0 &&
     (agent.isFeeler || strainAge >= minGrowthTicks);
   const canBreed =
     isFertile && agent.cooldown <= 0 && !bredThisFrame.has(agent);
 
-  if (canBreed) {
+  if (canSeekPartner || canBreed) {
     let bestPartner: any = null;
+    let bestPartnerFertile = false;
     let nearestDistSq = Infinity;
     let targetContactPos: THREE.Vector3 | null = null;
     const feelerOwnerMap = buildFeelerOwnerMap(engine, activeAgents);
@@ -379,20 +390,20 @@ export function handleBreedingAndFeelers(
         (engine as any).speciesLifecycleMap?.get(partnerEvalGenome.name)?.matingCount ||
         partner.matingCount ||
         0;
-
-      // Feelers can mate with any living partner species
+      const partnerSeekRamp = getSeekRamp(engine, partner, partnerStrainAge);
+      const partnerViable =
+        !partner.tapering || (!partner.isFeeler && partner.thickness > 0.1 && partnerMCount === 0);
+      const partnerSeekable =
+        partnerViable &&
+        (agent.isFeeler || (partnerMCount < maxM && partnerSeekRamp > 0));
       const partnerFertile =
-        (!partner.tapering || (!partner.isFeeler && partner.thickness > 0.1 && partnerMCount === 0)) &&
+        partnerViable &&
         (agent.isFeeler ||
           (partnerMCount < maxM &&
             partner.cooldown <= 0 &&
             (partner.isFeeler || partnerStrainAge >= minGrowthTicks)));
 
-      if (
-        !partnerFertile ||
-        bredThisFrame.has(partner)
-      )
-        continue;
+      if (!partnerSeekable || bredThisFrame.has(partner)) continue;
 
       if (evalGenome.name !== partnerEvalGenome.name) {
         let distSq = agent.position.distanceToSquared(partner.position);
@@ -432,6 +443,7 @@ export function handleBreedingAndFeelers(
         if (distSq < nearestDistSq) {
           nearestDistSq = distSq;
           bestPartner = partner;
+          bestPartnerFertile = partnerFertile;
           targetContactPos = closestPos;
         }
       }
@@ -453,18 +465,28 @@ export function handleBreedingAndFeelers(
         .normalize();
       if (agent.isFeeler) {
         agent.direction.copy(towardsPartner);
-      } else if (distSq < reach) {
-        // Blend between standard creature steering and feeler-like direct copy based on engine.seekAmount
+      } else if (distSq < reach && seekRamp > 0) {
+        // Blend between standard creature steering and feeler-like direct copy based on engine.seekAmount,
+        // scaled by seekRamp (0% during first 1/3 of hybridCooldown, ramping 0 -> 100% over next 2s).
         const feelerSimilarity = Math.max(0.0, Math.min(1.0, engine.seekAmount ?? 0.65));
         const baseLerp = isDesperate ? 0.85 : 0.40;
-        const effectiveLerp = Math.min(1.0, baseLerp + (1.0 - baseLerp) * feelerSimilarity);
-        agent.direction
-          .lerp(towardsPartner, effectiveLerp)
-          .normalize();
+        const effectiveLerp = Math.min(1.0, baseLerp + (1.0 - baseLerp) * feelerSimilarity) * seekRamp;
+        if (isTreeModelAgent(agent)) {
+          const depth = agent.branchDepth || 0;
+          const treeScale = depth === 0 ? 0 : depth === 1 ? 0.04 : 0.22;
+          if (treeScale > 0) {
+            agent.direction.lerp(towardsPartner, effectiveLerp * treeScale).normalize();
+          }
+        } else {
+          agent.direction
+            .lerp(towardsPartner, effectiveLerp)
+            .normalize();
+        }
       }
 
       const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
       if (
+        canBreed &&
         isDesperate &&
         !agent.isFeeler &&
         !hasActiveFeeler &&
@@ -524,7 +546,7 @@ export function handleBreedingAndFeelers(
       // without forcing a thin feeler to pass through a thick trunk first.
       const touchDist = Math.max(0.5, Math.min(agent.thickness, (bestPartner.thickness || 1.0)) * 0.5);
       const breedReach = touchDist * touchDist;
-      if (engine.allowBreeding && distSq < breedReach) {
+      if (canBreed && bestPartnerFertile && engine.allowBreeding && distSq < breedReach) {
         const nearestPartner = bestPartner;
         let allowBreeding = true;
         if (nonTaperingStrains.size >= engine.maxCreatures) {
@@ -622,7 +644,7 @@ export function handleBreedingAndFeelers(
           // Offspring spawn exactly at the midPoint (center of mating artifact) and grow outward
           const spawnPoint = midPoint.clone();
 
-          const cd = Math.max(minGrowthTicks, engine.hybridCooldown || minGrowthTicks);
+          const cd = Math.max(minGrowthTicks, getHybridCooldownTicks(engine));
           newAgents.push({
             position: spawnPoint.clone(),
             lastPosition: spawnPoint.clone(),
