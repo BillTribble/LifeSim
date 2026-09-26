@@ -6,7 +6,6 @@ import { sustainTreeGrowth } from "./SimulationTreeGrowth";
 import { getHybridCooldownTicks, getSeekRamp } from "./SimulationSeekRamp";
 import {
   canEnterDeleting,
-  trySpawnTaperingFeeler,
   updateFeelerSeeking,
   handleBreedingAndFeelers,
 } from "./SimulationBreeding";
@@ -242,9 +241,6 @@ export function processAgents(
         if (agent.active) tickTreeRest(engine, agent);
         continue;
       }
-      if (agent.tapering && isDying) {
-        trySpawnTaperingFeeler(agent, activeAgents, newAgents, engine);
-      }
       const { genome } = agent;
       const habit = resolveAgentHabit(engine, genome);
 
@@ -289,6 +285,9 @@ export function processAgents(
       if (treeModel) {
         ensureTreeAgentInit(engine, agent);
         effectiveStepSize = getTreeStepSize(engine, agent);
+      }
+      if (agent.isFeeler) {
+        effectiveStepSize = genome.stepSize;
       }
 
       agent.age++;

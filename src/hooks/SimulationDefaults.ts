@@ -84,9 +84,9 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 51,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 10,
+  "maxCreatures": 14,
   "ecoFade": 0.02946475338922394,
-  "minCreatures": 11,
+  "minCreatures": 3,
   "boundarySize": 60,
   "boundarySquash": 1,
   "desiccationSpeed": 4.289796350823339,
@@ -149,42 +149,15 @@ export const DEFAULTS: Record<string, any> = {
   "glowTraitDistance": 50,
   "glowTraitReflect": 1,
   "dialLimits": {
-    "DEATH RATE": {
-      "min": 0,
-      "max": 10
-    },
-    "MAGNET": {
-      "min": 0,
-      "max": 10
-    },
-    "BUDGET": {
-      "min": 500,
-      "max": 1000000
-    },
-    "HYBRID_DECAY": {
-      "min": 0,
-      "max": 1
-    },
-    "SPEED": {
-      "min": 0.1,
-      "max": 50
-    },
-    "SLOW_MO": {
-      "min": 0.1,
-      "max": 50
-    },
-    "GLOW_INTENSITY": {
-      "min": 0.1,
-      "max": 10
-    },
-    "GLOW_DIST": {
-      "min": 5,
-      "max": 200
-    },
-    "GLOW_REFLECT": {
-      "min": 0,
-      "max": 5
-    }
+    "DEATH RATE": { "min": 0, "max": 10 },
+    "MAGNET": { "min": 0, "max": 10 },
+    "BUDGET": { "min": 500, "max": 1000000 },
+    "HYBRID_DECAY": { "min": 0, "max": 1 },
+    "SPEED": { "min": 0.1, "max": 50 },
+    "SLOW_MO": { "min": 0.1, "max": 50 },
+    "GLOW_INTENSITY": { "min": 0.1, "max": 10 },
+    "GLOW_DIST": { "min": 5, "max": 200 },
+    "GLOW_REFLECT": { "min": 0, "max": 5 }
   },
   "version": "0.3",
   "appendageSize": 1,
@@ -230,6 +203,8 @@ export function getStoredFloat(key: string, fallback?: number): number {
     if (!isNaN(val)) {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
+      if (key === "minCreatures" && val === 11) return DEFAULTS.minCreatures;
+      if (key === "maxCreatures" && val === 10) return DEFAULTS.maxCreatures;
       return val;
     }
   }

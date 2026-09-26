@@ -172,7 +172,7 @@ export class SimulationEngine {
   growingStems: Set<number> = new Set();
   lastStemIndex: number = 0;
   lastAgentStemIndex: Map<number, number> = new Map();
-  minCreatures: number = 9;
+  minCreatures: number = 3;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
   boundarySize: number = 120;
