@@ -3,6 +3,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { resolveAgentHabit } from "./SimulationBotany";
 import { isContinuousTreeGrowth, offerTreeBud, recordTreeNode } from "./SimulationTreeGrowth";
+import { isOverSizeBudget } from "./SimulationPartnerSearch";
 
 /**
  * Tree architecture model (tree archetype only).
@@ -234,6 +235,8 @@ function spawnChild(
   depth: number,
   spacing: number,
 ) {
+  // Soft per-organism size budget: over-budget trees open no new buds (existing branches keep growing)
+  if (isOverSizeBudget(engine, parent.genome.name)) return;
   const bud = makeTreeAgent(engine, parent, parent.position, dir, thickness, budget, depth, spacing);
   // Ecosystem trees open buds a few at a time (steady growth) instead of all at once
   if (!offerTreeBud(engine, bud)) newAgents.push(bud);

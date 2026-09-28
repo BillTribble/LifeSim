@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
+import { isBreedingDrought, isInbreedingRelaxed, isRecentPartner } from "./SimulationDrought";
 
 /** Simulation ticks per second at speed=1 (timeScale=1 at 60 FPS). */
 export const TICKS_PER_SECOND = 60;
@@ -38,6 +39,107 @@ export function getFertilityMinTicks(engine: SimulationEngine): number {
     DEFAULT_HYBRID_COOLDOWN_SECONDS * TICKS_PER_SECOND,
     getHybridCooldownTicks(engine),
   );
+}
+
+/**
+ * Fertility is based on growth, not engine ticks (plan 3.2). 150 growth steps is ~21 s for a bush
+ * and ~35 s for a tree at speed 1 (growthSpeed 0.11), versus ~20 steps before; it lets an organism
+ * branch and spread before it starts mating. The 40-segment floor keeps starved or suppressed
+ * organisms that have aged but not grown from breeding. Both are timeScale-independent.
+ */
+export const FERTILITY_MIN_GROWTH_STEPS = 150;
+export const FERTILITY_MIN_SEGMENTS = 40;
+/** Post-mating cooldown in growth steps (converted to ticks per archetype). */
+export const POST_MATING_COOLDOWN_STEPS = 60;
+/** Target organism lifespan in growth steps; drives the global birth throttle. */
+export const TARGET_LIFESPAN_STEPS = 450;
+
+/** Archetype growth-speed multiplier, as applied per frame in processAgents. */
+export function getArchetypeSpeed(engine: SimulationEngine, archetype?: string): number {
+  if (archetype === "bush") return engine.bushSpeed ?? 1;
+  if (archetype === "tree") return engine.treeSpeed ?? 1;
+  if (archetype === "rhizome") return engine.rhizomeSpeed ?? 1;
+  return 1;
+}
+
+/** Nominal growth steps an organism has taken: ageTicks x growthSpeed x archetype speed. */
+export function getOrganismGrowthSteps(engine: SimulationEngine, genome: any): number {
+  const ageTicks = genome?.createdAt !== undefined ? engine.time - genome.createdAt : engine.time;
+  return Math.max(0, ageTicks) * (engine.growthSpeed || 0.11) * getArchetypeSpeed(engine, genome?.archetype);
+}
+
+/** Converts growth steps to engine ticks for an organism of this archetype. */
+export function growthStepsToTicks(engine: SimulationEngine, steps: number, archetype?: string): number {
+  return steps / Math.max(1e-4, (engine.growthSpeed || 0.11) * getArchetypeSpeed(engine, archetype));
+}
+
+/** Post-mating cooldown in ticks: at least hybridCooldown, and at least POST_MATING_COOLDOWN_STEPS of growth. */
+export function getPostMatingCooldownTicks(engine: SimulationEngine, genome: any): number {
+  return Math.max(
+    getHybridCooldownTicks(engine),
+    growthStepsToTicks(engine, POST_MATING_COOLDOWN_STEPS, genome?.archetype),
+  );
+}
+
+/** Birth interval (growth steps) at/below minCreatures and at maxCreatures; interpolated between. */
+export const BIRTH_INTERVAL_MIN_STEPS = 40;
+export const BIRTH_INTERVAL_MAX_STEPS = 3000;
+
+/**
+ * Global birth throttle, population-dependent: a sparse world refills quickly, a full one breeds
+ * slowly (at speed 20, 3000 steps is ~23 harness-seconds). Was a flat
+ * TARGET_LIFESPAN_STEPS / maxCreatures = 32 steps, which let a full world breed every 15 frames.
+ */
+export function getBirthIntervalTicks(engine: SimulationEngine): number {
+  const minC = engine.minCreatures ?? 3;
+  const maxC = Math.max(minC + 1, engine.maxCreatures || 14);
+  const frac = Math.min(1, Math.max(0, (getLivingCountCached(engine) - minC) / (maxC - minC)));
+  const steps = BIRTH_INTERVAL_MIN_STEPS + (BIRTH_INTERVAL_MAX_STEPS - BIRTH_INTERVAL_MIN_STEPS) * Math.pow(frac, 1.2);
+  return steps / Math.max(1e-4, engine.growthSpeed || 0.11);
+}
+
+export function isBirthThrottled(engine: SimulationEngine): boolean {
+  const last = (engine as any)._lastBirthTime;
+  return typeof last === "number" && engine.time - last < getBirthIntervalTicks(engine) && engine.time >= last;
+}
+
+export function recordBirth(engine: SimulationEngine): void {
+  (engine as any)._lastBirthTime = engine.time;
+}
+
+/** Growth steps past fertility after which an unmated organism becomes desperate. */
+export const DESPERATION_EXTRA_STEPS = 250;
+
+function getLivingCountCached(engine: SimulationEngine): number {
+  const c = (engine as any)._livingCountCache;
+  if (c && c.frame === engine.frameCount && c.time === engine.time) return c.n;
+  const n = engine.getLivingOrganisms().size;
+  (engine as any)._livingCountCache = { frame: engine.frameCount, time: engine.time, n };
+  return n;
+}
+
+/**
+ * Desperate organisms seek farther: the population is below minCreatures (e.g. the two
+ * founders spawned far apart), there has been no birth for DROUGHT_STEPS, the organism has grown long past fertility, or the tip is old.
+ */
+export function isOrganismDesperate(engine: SimulationEngine, genome: any, tipAgeSteps: number): boolean {
+  if (getLivingCountCached(engine) < (engine.minCreatures ?? 0)) return true;
+  if (isBreedingDrought(engine)) return true; // nobody has been born for a while
+  return (
+    getOrganismGrowthSteps(engine, genome) > FERTILITY_MIN_GROWTH_STEPS + DESPERATION_EXTRA_STEPS ||
+    tipAgeSteps > (engine.despairAge ?? Infinity)
+  );
+}
+
+/**
+ * Seek (lean) radius: min(proximity, 0.4 x world radius) normally; desperate organisms get
+ * proximity x desperation up to 0.9 x world radius. Feeler reach is NOT widened (see Feelers).
+ */
+export function getSeekRadius(engine: SimulationEngine, desperate: boolean): number {
+  const b = Math.max(10, engine.boundarySize || 60);
+  const prox = engine.proximity || 24;
+  if (!desperate) return Math.min(prox, 0.4 * b);
+  return Math.min(Math.max(prox, prox * (engine.desperation || 1)), 0.9 * b);
 }
 
 /**
@@ -81,7 +183,7 @@ export function getSeekRamp(
 }
 
 /** Minimum distance (world units) from an organism's birth point or last mating point before it can mate again. */
-export const MIN_NEXUS_DISPERSAL_DIST = 18;
+export const MIN_NEXUS_DISPERSAL_DIST = 20;
 export const MIN_NEXUS_DISPERSAL_DIST_SQ = MIN_NEXUS_DISPERSAL_DIST * MIN_NEXUS_DISPERSAL_DIST;
 
 export function isSpeciesOnCooldown(
@@ -131,17 +233,18 @@ export function recordSpeciesMatingPair(
   const s2 = map?.get(parent2Strain);
   const sc = map?.get(childStrain);
 
-  for (const obj of [parent1Genome, s1]) {
-    if (!obj) continue;
-    if (!obj.matedPartners) obj.matedPartners = new Set<string>();
-    obj.matedPartners.add(parent2Strain);
-    obj.lastMatingPos = nexusPos.clone();
-  }
-  for (const obj of [parent2Genome, s2]) {
-    if (!obj) continue;
-    if (!obj.matedPartners) obj.matedPartners = new Set<string>();
-    obj.matedPartners.add(parent1Strain);
-    obj.lastMatingPos = nexusPos.clone();
+  const sides: Array<[any[], string]> = [[[parent1Genome, s1], parent2Strain], [[parent2Genome, s2], parent1Strain]];
+  for (const [objs, partner] of sides) {
+    for (const obj of objs) {
+      if (!obj) continue;
+      if (!obj.matedPartners) obj.matedPartners = new Set<string>();
+      obj.matedPartners.add(partner);
+      // Timestamped so the pair may mate again after REPEAT_PARTNER_COOLDOWN_STEPS
+      if (!obj.matedPartnerTimes) obj.matedPartnerTimes = new Map<string, number>();
+      obj.matedPartnerTimes.set(partner, engine.time);
+      obj.lastMatingTime = engine.time;
+      obj.lastMatingPos = nexusPos.clone();
+    }
   }
   for (const obj of [childGenome, sc]) {
     if (!obj) continue;
@@ -162,12 +265,13 @@ export function areStrainsCompatibleForMating(
   const sA = map?.get(strainA);
   const sB = map?.get(strainB);
 
-  // Never allow the exact same pair of species to repeatedly mate with each other
+  // The same pair may not mate again until REPEAT_PARTNER_COOLDOWN_STEPS have passed (was: never,
+  // which starved small populations once every pair had mated once)
   if (
-    genomeA?.matedPartners?.has?.(strainB) ||
-    sA?.matedPartners?.has?.(strainB) ||
-    genomeB?.matedPartners?.has?.(strainA) ||
-    sB?.matedPartners?.has?.(strainA)
+    (genomeA?.matedPartners?.has?.(strainB) && isRecentPartner(engine, genomeA, strainB)) ||
+    (sA?.matedPartners?.has?.(strainB) && isRecentPartner(engine, sA, strainB)) ||
+    (genomeB?.matedPartners?.has?.(strainA) && isRecentPartner(engine, genomeB, strainA)) ||
+    (sB?.matedPartners?.has?.(strainA) && isRecentPartner(engine, sB, strainA))
   ) {
     return false;
   }
@@ -180,8 +284,10 @@ export function areStrainsCompatibleForMating(
       ? engine.getLivingOrganismCount()
       : 4;
 
-  // Once >= 4 organisms exist, prevent direct parent-offspring back-breeding and full-sibling inbreeding
-  if (livingCount >= 4) {
+  // Once >= 4 organisms exist, prevent direct parent-offspring back-breeding and full-sibling inbreeding,
+  // unless nobody has been born for INBREEDING_RELAX_DROUGHT_STEPS (a small inbred family would
+  // otherwise deadlock with every pair blocked)
+  if (livingCount >= 4 && !isInbreedingRelaxed(engine)) {
     if (parentsA?.includes(strainB) || parentsB?.includes(strainA)) {
       return false;
     }

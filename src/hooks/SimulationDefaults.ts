@@ -52,12 +52,12 @@ export const DEFAULTS: Record<string, any> = {
   "snakeSpeed": 1.4,
   "rotationSpeed": 0.2,
   "rotationSpeedY": 0,
-  "magnetism": 0.03424424546519402,
+  "magnetism": 0.15,
   "seekAmount": 0.65,
-  "proximity": 484.15032678546333,
+  "proximity": 24,
   "desperation": 4.461541435646918,
   "despairAge": 354.9836385179663,
-  "maxMatings": 6,
+  "maxMatings": 3,
   "startColorMode": "analogous",
   "flowerSize": 1,
   "tideSpeed": 0.4815048902998179,
@@ -72,7 +72,7 @@ export const DEFAULTS: Record<string, any> = {
   "diebackRate": 1.3182568226156233,
   "allowBreeding": true,
   "hybridCooldown": 3,
-  "hybridStickiness": 27.901245938451485,
+  "hybridStickiness": 10,
   "hybridSpinSpeed": 0.2,
   "branchTendencyVar": 38.48454257338023,
   "ornamentFrequency": 3.211846433936858,
@@ -161,14 +161,14 @@ export const DEFAULTS: Record<string, any> = {
   },
   "version": "0.3",
   "appendageSize": 1,
-  "hybridDecay": 27.901245938451485,
+  "hybridDecay": 10,
   "deathRate": 1.3182568226156233,
   "speed": 1,
   "slowMotion": 1,
   "rotationVelocity": 0.2,
   "rotationVelocityY": 0,
-  "swarmCohesion": 0.03424424546519402,
-  "detectionRange": 484.15032678546333,
+  "swarmCohesion": 0.15,
+  "detectionRange": 24,
   "extrusionSpeed": 0.11,
   "fadeSpeed": 4.289796350823339,
   "pulseSpeed": 0.22800937123499115,
@@ -205,6 +205,11 @@ export function getStoredFloat(key: string, fallback?: number): number {
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
       if (key === "minCreatures" && val === 11) return DEFAULTS.minCreatures;
       if (key === "maxCreatures" && val === 10) return DEFAULTS.maxCreatures;
+      // Ecology-health migrations: legacy stored values that would defeat the clumping fixes
+      if (key === "proximity" && val > 100) return DEFAULTS.proximity; // legacy 362 / 484 = whole world
+      if (key === "maxMatings" && val === 6) return DEFAULTS.maxMatings; // old default
+      if (key === "magnetism" && Math.abs(val - 0.03424424546519402) < 1e-9) return DEFAULTS.magnetism; // old default
+      if (key === "hybridStickiness" && Math.abs(val - 27.901245938451485) < 1e-9) return DEFAULTS.hybridStickiness; // old default
       return val;
     }
   }

@@ -89,7 +89,7 @@ export function killSpecies(engine: SimulationEngine, strainName: string, reason
 
   if (!engine.dyingStrains) engine.dyingStrains = new Set();
   engine.dyingStrains.add(strainName);
-  engine.markStrainSegmentsDying(strainName);
+  state.segsAtDeath = engine.markStrainSegmentsDying(strainName);
   engine.onLog(`🔻 dyingStrains now: [${Array.from(engine.dyingStrains).join(", ")}]`);
 }
 

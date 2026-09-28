@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
+import { getStrainDeathStart } from "./SimulationEngineHelpers";
 
 export function updateMeshSegments(
   engine: SimulationEngine,
@@ -285,7 +286,10 @@ export function updateMeshSegments(
 
   const isFeelerSeg = Boolean((genome as any)._isFeeler || genome.name.startsWith("Feeler-"));
   const resolvedStrainName = (genome as any).parentStrainName || genome.name;
-  const isStrainAlreadyDying = Boolean(engine.dyingStrains && engine.dyingStrains.has(resolvedStrainName));
+  // Lifecycle phase END_OF_LIFE counts as dying even after the strain left dyingStrains, and late
+  // segments share the strain's death clock so the whole body fades together (RC-B1 / RC-B2).
+  const strainDeathStart = getStrainDeathStart(engine, resolvedStrainName);
+  const isStrainAlreadyDying = strainDeathStart !== undefined;
   const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.35;
 
   if (targetMesh === engine.cylinderMesh) {
@@ -314,7 +318,7 @@ export function updateMeshSegments(
       agentId: agentId,
       countsForBiomass: shouldCountBiomass,
       isFeeler: isFeelerSeg,
-      dyingStart: isStrainAlreadyDying ? engine.unscaledTime : undefined,
+      dyingStart: strainDeathStart,
     };
     if (!reusedFreeSlot) {
       engine.pointCount++;
@@ -387,8 +391,11 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 180 unscaled frame ticks = 3.0 seconds of real-time transparency fade OUT
-    const wipeDuration = 180.0;
+    // 180 unscaled frame ticks = 3.0 seconds of real-time transparency fade OUT.
+    // Feeler trails dissolve on the FEELER_FADE dial: 10 (default) = 3 s, higher = faster.
+    const wipeDuration = seg.isFeeler
+      ? 180.0 * (10 / Math.max(1, engine.feelerFade ?? 10))
+      : 180.0;
 
     if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();

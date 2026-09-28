@@ -1,5 +1,6 @@
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
+import { isRatioCullProtected } from "./SimulationDrought";
 
 export function performBiomassSweep(engine: SimulationEngine): void {
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
@@ -30,6 +31,7 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
     engine.lastBiomassCheckTime = engine.time;
     let totalBiomass = 0;
     engine.biomassMap.forEach((v) => (totalBiomass += v));
+    const owners = getActiveOwnerNames(activeAgents);
 
     if (totalBiomass > 0) {
       engine.biomassMap.forEach((biomass, strainName) => {
@@ -62,13 +64,10 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
             }
           }
 
-          if (biomass <= 5 || ratio < 0.01) {
-            engine.biomassMap.delete(strainName);
-            engine.dyingStrains.delete(strainName);
-            if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.delete(strainName);
-            const genome = engine.genomeMap?.get(strainName);
-            const arch = genome?.archetype || 'bush';
-            engine.onLog(`☠️ Species ${strainName} [${arch.toUpperCase()}] was fully eradicated.`);
+          // Only forget a dying strain once none of its tips (or feelers) are still drawing.
+          // Dropping it earlier made its late taper segments come back as live ghosts (RC-B1).
+          if ((biomass <= 5 || ratio < 0.01) && !owners.has(strainName)) {
+            finalizeEradication(engine, strainName);
           }
           return;
         }
@@ -81,6 +80,8 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           ratio < 0.03 &&
           engine.speciesAbove3Percent.has(strainName) &&
           engine.hasAnyOrganismBred &&
+          // Don't cull an organism that was just born or just bred (it killed founders mid-breeding)
+          !isRatioCullProtected(engine, strainName) &&
           engine.getLivingOrganismCount() - 1 >= engine.minCreatures
         ) {
           engine.speciesAbove3Percent.delete(strainName);
@@ -91,7 +92,44 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
         }
       });
     }
+
+    // Dying strains whose biomass entry is already gone would otherwise sit in dyingStrains forever.
+    if (engine.dyingStrains) {
+      for (const strainName of Array.from(engine.dyingStrains)) {
+        if (!engine.biomassMap.has(strainName) && !owners.has(strainName)) {
+          finalizeEradication(engine, strainName);
+        }
+      }
+    }
   }
+}
+
+/** Names of organisms that still own an active agent (tips, plus feelers via realGenome/parentStrainName). */
+export function getActiveOwnerNames(agents: Agent[]): Set<string> {
+  const owners = new Set<string>();
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    if (!a.active) continue;
+    owners.add(a.genome.name);
+    if (a.realGenome?.name) owners.add(a.realGenome.name);
+    const parentStrain = (a.genome as any).parentStrainName;
+    if (parentStrain) owners.add(parentStrain);
+  }
+  return owners;
+}
+
+function finalizeEradication(engine: SimulationEngine, strainName: string): void {
+  engine.biomassMap.delete(strainName);
+  engine.dyingStrains.delete(strainName);
+  if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.delete(strainName);
+  const lifecycle = engine.speciesLifecycleMap?.get(strainName);
+  if (lifecycle?.eradicated) return;
+  if (lifecycle) lifecycle.eradicated = true;
+  const genome = engine.genomeMap?.get(strainName);
+  const arch = genome?.archetype || 'bush';
+  const ageSteps = lifecycle?.maxAgeSteps ?? 0;
+  const segs = lifecycle?.segsAtDeath ?? 0;
+  engine.onLog(`☠️ Species ${strainName} [${arch.toUpperCase()}] was fully eradicated. ageSteps=${ageSteps} segs=${segs}`);
 }
 
 export function performCapacityCulling(

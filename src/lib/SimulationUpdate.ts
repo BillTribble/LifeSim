@@ -10,11 +10,17 @@ import {
 import { performBranchPruning } from "./SimulationPruning";
 import { isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { emitStateUpdate } from "./SimulationSceneSetup";
+import { emitHealthTelemetry, sweepGhostStrains } from "./SimulationHealth";
+import { getStrainDeathStart } from "./SimulationEngineHelpers";
+import { getOrganismGrowthSteps } from "./SimulationSeekRamp";
 import {
   updateCameraAndThemeUniforms,
   updateMeshesAndStemsGrowth,
   updateHybridConnectionMesh,
 } from "./SimulationUpdateVisuals";
+
+/** Organisms younger than this (growth steps) keep their birth-point sibling tips unmerged. */
+const NEWBORN_MERGE_GUARD_STEPS = 10;
 
 export function updateSimulation(engine: SimulationEngine) {
   engine.time += engine.timeScale;
@@ -48,10 +54,11 @@ export function updateSimulation(engine: SimulationEngine) {
       for (let i = 0; i < appLim; i++) {
         const seg = app.segments[i];
         if (seg && !app.dyingSet.has(i)) {
-          const isStrainDying = engine.dyingStrains && engine.dyingStrains.has(seg.strainName);
+          // Lifecycle-phase aware + shared fade clock so appendages fade with their body
+          const strainDeathStart = getStrainDeathStart(engine, seg.strainName);
 
-          if (isStrainDying) {
-            engine.markDying(app.segments, app.dyingSet, i, engine.unscaledTime);
+          if (strainDeathStart !== undefined) {
+            engine.markDying(app.segments, app.dyingSet, i, strainDeathStart);
           } else if (seg.parentIndex !== undefined) {
             const parentSeg = engine.segments[seg.parentIndex];
             const parentDying = engine.dyingStems.has(seg.parentIndex);
@@ -138,6 +145,11 @@ export function updateSimulation(engine: SimulationEngine) {
       const a2 = activeAgents[j];
       if (!a2.active || a2.tapering) continue;
 
+      // Newborn guard (matches SimulationPruning): sibling tips at a birth point must not be
+      // merged and capped within milliseconds, which left tiny stubs at mating sites.
+      // Scoped to newborn ORGANISMS: a per-tip age guard also stopped the normal merging of fresh
+      // sibling tips everywhere and multiplied tip counts ~25x.
+      if (a1.genome.name === a2.genome.name && getOrganismGrowthSteps(engine, a1.genome) < NEWBORN_MERGE_GUARD_STEPS) continue;
       if (a1.genome.name === a2.genome.name && !isTreeModelAgent(a1)) {
         const dSq = a1.position.distanceToSquared(a2.position);
         if (dSq < 25) {
@@ -242,6 +254,9 @@ export function updateSimulation(engine: SimulationEngine) {
       `🔬 [GEOM] live=${liveSegs} dying=${dyingSegs} empty=${emptySlots} meshCount=${engine.cylinderMesh.count} | agents=${activeAgentCount} (tap=${taperingCount}) | liveSegs=[${strainSegSummary || "none"}] | dyingStrains=[${dyingStrainsList}]`
     );
 
+    // Safety net: fade any strain that still owns live geometry but has no agents and isn't dying
+    sweepGhostStrains(engine);
+
     // ALERT: geometry vanished while agents alive
     if (liveSegs < 10 && activeAgentCount > 0) {
       engine.onLog(
@@ -300,6 +315,8 @@ export function updateSimulation(engine: SimulationEngine) {
       );
     }
   }
+
+  emitHealthTelemetry(engine);
 
   if (engine.frameCount % 15 === 0) {
     emitStateUpdate(engine);

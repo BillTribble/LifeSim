@@ -479,11 +479,11 @@ export class SimulationEngine {
   markDying(segments: any[], dyingSet: Set<number>, idx: number, dyingStartOverride?: number) {
     markDyingHelper(this, segments, dyingSet, idx, dyingStartOverride);
   }
-  markAgentSegmentsDying(agentId?: number) {
-    markAgentSegmentsDyingHelper(this, agentId);
+  markAgentSegmentsDying(agentId?: number): number {
+    return markAgentSegmentsDyingHelper(this, agentId);
   }
-  markStrainSegmentsDying(strainName?: string) {
-    markStrainSegmentsDyingHelper(this, strainName);
+  markStrainSegmentsDying(strainName?: string): number {
+    return markStrainSegmentsDyingHelper(this, strainName);
   }
   initSpeciesLifecycle(strainName: string) {
     return initSpeciesLifecycle(this, strainName);

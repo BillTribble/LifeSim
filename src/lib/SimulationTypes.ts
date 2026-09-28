@@ -126,6 +126,15 @@ export interface Agent {
   treeDormant?: boolean; // resting tree keeper: no growth, still breeds + ages
   treeRestTicks?: number; // ticks left before a resting keeper wakes for a new growth flush
   treeFlushes?: number; // how many growth flushes this tip has had (vigor slowly declines)
+  // Feeler lifecycle (see SimulationFeelers.ts)
+  feelerTargetStrain?: string; // root organism the feeler was aimed at when spawned (locked)
+  feelerStep?: number; // per-step length, scaled from the parent's botanical step
+  feelerTravel?: number; // distance travelled so far
+  feelerMaxLen?: number; // min(1.2 x initial target distance, FEELER_MAX_REACH)
+  feelerNearestPos?: THREE.Vector3; // nearest target tissue found by the last full scan
+  feelerStepOverride?: number; // clamp for the final step onto the target
+  feelerEnded?: boolean; // [FEELER_END] already logged + segments dissolved
+  lastStepSize?: number; // last effective growth step length (used to scale feelers)
 }
 
 export interface Segment {
@@ -161,6 +170,9 @@ export interface SpeciesLifecycleState {
   parentStrains?: string[];
   birthPos?: THREE.Vector3;
   lastMatingPos?: THREE.Vector3;
+  maxAgeSteps?: number; // max growth-step age reached by any of the organism's tips
+  segsAtDeath?: number; // live stem segments marked dying when end-of-life began
+  eradicated?: boolean; // "fully eradicated" already logged
 }
 
 export const MAX_POINTS = 500000;

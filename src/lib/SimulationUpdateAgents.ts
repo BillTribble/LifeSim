@@ -5,15 +5,22 @@ import { Agent } from "./SimulationTypes";
 import { sustainTreeGrowth } from "./SimulationTreeGrowth";
 import {
   areStrainsCompatibleForMating,
-  getHybridCooldownTicks,
+  getSeekRadius,
   getSeekRamp,
+  isOrganismDesperate,
   isSpeciesOnCooldown,
 } from "./SimulationSeekRamp";
-import {
-  canEnterDeleting,
-  updateFeelerSeeking,
-  handleBreedingAndFeelers,
-} from "./SimulationBreeding";
+import { handleBreedingAndFeelers } from "./SimulationBreeding";
+import { endFeeler, getFeelerStepSize, updateFeelerSeeking } from "./SimulationFeelers";
+import { checkLifespanDeath, enforceCreatureCap } from "./SimulationCulling";
+import { reflectAtBoundary } from "./SimulationBoundary";
+import { isStrainDying as isStrainDyingPhase } from "./SimulationEngineHelpers";
+import { isOrganismMature, isOverSizeBudget } from "./SimulationPartnerSearch";
+
+/** Partners closer than this (6 units) are exempt from inter-species repulsion so they can touch. */
+const SEEK_CONTACT_RANGE_SQ = 36;
+/** Max per-step lean toward a partner. */
+const SEEK_LERP_MAX = 0.1;
 import {
   applyBotanicalConceptSteering,
   getBotanicalStepSize,
@@ -56,30 +63,6 @@ export function extrudePointedTerminalCap(
   );
 }
 
-/** Kills the agent's species once it has bred out or exceeded its max lifespan. */
-function checkLifespanDeath(
-  engine: SimulationEngine,
-  agent: Agent,
-  activeAgents: Agent[],
-  livingOrganismCount: number,
-  maxM: number,
-) {
-  const minMatingLifespan = (maxM + 1) * getHybridCooldownTicks(engine) * 1.2;
-  const maxLifespan = Math.max(minMatingLifespan, 1200 * Math.max(0.5, engine.timeScale));
-  const lifecycle = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
-  const speciesMCount = lifecycle?.matingCount || agent.matingCount || 0;
-  const hasSpeciesBred = !!(agent.hasBred || lifecycle?.hasBred);
-  const shouldDieFromMating = hasSpeciesBred && speciesMCount >= maxM;
-  const shouldDieFromAge = agent.age > maxLifespan;
-  const canSafelyDeleteSpecies = livingOrganismCount - 1 >= engine.minCreatures;
-
-  if (!agent.tapering && (shouldDieFromMating || shouldDieFromAge)) {
-    if (canSafelyDeleteSpecies && canEnterDeleting(engine, activeAgents, 1)) {
-      const reason = shouldDieFromMating ? `bred ${maxM} times` : "reached max lifespan";
-      engine.killSpecies(agent.genome.name, reason);
-    }
-  }
-}
 
 export function processAgents(
   engine: SimulationEngine,
@@ -120,42 +103,8 @@ export function processAgents(
     }
   }
 
-  // Cap maximum species by tapering the oldest variant when capacity exceeded
-  if (!engine.designerMode && nonTaperingStrains.size > engine.maxCreatures) {
-    let guard = 0;
-    while (
-      nonTaperingStrains.size > engine.maxCreatures &&
-      canEnterDeleting(engine, activeAgents, 1) &&
-      guard++ < 16
-    ) {
-      let bredVictim: string | null = null;
-      let bredAge = -Infinity;
-      let anyVictim: string | null = null;
-      let anyAge = -Infinity;
-
-      for (const a of activeAgents) {
-        if (!a.active || a.tapering || a.isFeeler) continue;
-        if (engine.dyingStrains && engine.dyingStrains.has(a.genome.name)) continue;
-        if (!nonTaperingStrains.has(a.genome.name)) continue;
-        const age = engine.time - (a.genome.createdAt || 0);
-        if (a.hasBred && age > bredAge) {
-          bredAge = age;
-          bredVictim = a.genome.name;
-        }
-        if (age > anyAge) {
-          anyAge = age;
-          anyVictim = a.genome.name;
-        }
-      }
-
-      const victim = bredVictim ?? anyVictim;
-      if (!victim) break;
-      if (engine.getLivingOrganismCount() - 1 < engine.minCreatures) break;
-
-      engine.killSpecies(victim, "maximum species capacity reached");
-      nonTaperingStrains.delete(victim);
-    }
-  }
+  // Cap maximum species by culling a victim when capacity exceeded (see SimulationCulling.ts)
+  enforceCreatureCap(engine, activeAgents, nonTaperingStrains);
 
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
@@ -246,6 +195,17 @@ export function processAgents(
         if (agent.active) tickTreeRest(engine, agent);
         continue;
       }
+      if (!isDying && !agent.isFeeler && isOverSizeBudget(engine, agent.genome.name)) {
+        // Soft size budget: an over-budget organism rests (no new segments, no new tips) but still
+        // ages, breeds via feelers and reaches its lifespan, like a dormant tree keeper
+        agent.age++;
+        if (!engine.designerMode) {
+          handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
+          const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+          checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
+        }
+        continue;
+      }
       const { genome } = agent;
       const habit = resolveAgentHabit(engine, genome);
 
@@ -258,9 +218,9 @@ export function processAgents(
         effectiveStepSize *= engine.bushStepSize ?? 0.65;
         effectiveWanderIntensity *= 0.65;
       } else if (genome.archetype === "tree" || habit === "oak" || habit === "elm" || habit === "pine") {
+        // Compared against agent.age (growth steps), so no timeScale factor
         const trunkDurationTicks =
-          (habit === "oak" ? 12 : habit === "elm" ? 16 : (engine.treeBranchDelay ?? 15)) *
-          Math.max(0.5, engine.timeScale);
+          habit === "oak" ? 12 : habit === "elm" ? 16 : (engine.treeBranchDelay ?? 15);
         if (!agent.isCanopy && (agent.branchDepth || 0) === 0 && agent.age < trunkDurationTicks) {
           effectiveBifurcationRate *= (habit === "pine" ? 0.6 : 0.04) * (engine.treeBranching ?? 1.0);
           effectiveStepSize *= (engine.treeStepSize ?? 0.75) * 1.15;
@@ -283,6 +243,8 @@ export function processAgents(
       const thickRatio = agent.thickness / Math.max(0.5, genome.thicknessBase);
       const widthBoost = 1.0 + (thickRatio - 1.0) * engine.widthVariance * 2.5;
       effectiveBifurcationRate *= Math.max(0.8, widthBoost);
+      // Soft size budget: an organism over its live-segment budget stops spawning new tips
+      if (isOverSizeBudget(engine, genome.name)) effectiveBifurcationRate = 0;
 
       // Botanical step-size scaling per branch order
       effectiveStepSize = getBotanicalStepSize(engine, agent, effectiveStepSize);
@@ -292,10 +254,17 @@ export function processAgents(
         effectiveStepSize = getTreeStepSize(engine, agent);
       }
       if (agent.isFeeler) {
-        effectiveStepSize = genome.stepSize;
+        // Scaled from the parent's botanical step at spawn (was a fixed 1.3)
+        effectiveStepSize = getFeelerStepSize(agent);
+      } else {
+        agent.lastStepSize = effectiveStepSize;
       }
 
       agent.age++;
+      if (!agent.isFeeler) {
+        const lc = engine.speciesLifecycleMap.get(agent.genome.name);
+        if (lc && agent.age > (lc.maxAgeSteps ?? 0)) lc.maxAgeSteps = agent.age;
+      }
 
       let nearestDistSq = Infinity;
       let nearestTarget: Agent | null = null;
@@ -321,7 +290,10 @@ export function processAgents(
         !isSpeciesOnCooldown(engine, myStrain, evalGenome) &&
         agent.cooldown <= 0 &&
         seekRamp > 0 &&
-        myMCount < maxM;
+        myMCount < maxM &&
+        isOrganismMature(engine, evalGenome);
+      const desperate = canSeek && isOrganismDesperate(engine, evalGenome, agent.age);
+      const seekRadius = getSeekRadius(engine, desperate);
 
       for (let j = 0; j < activeAgents.length; j++) {
         const other = activeAgents[j];
@@ -339,6 +311,7 @@ export function processAgents(
               (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount ||
               other.matingCount ||
               0;
+            // Only fertile partners attract (plan 3.1)
             const otherReceptive =
               !other.tapering &&
               areStrainsCompatibleForMating(
@@ -348,12 +321,23 @@ export function processAgents(
                 otherStrain,
                 otherEvalGenome,
               ) &&
-              otherMCount < maxM;
+              otherMCount < maxM &&
+              other.cooldown <= 0 &&
+              !isSpeciesOnCooldown(engine, otherStrain, otherEvalGenome) &&
+              isOrganismMature(engine, otherEvalGenome);
 
             if (otherReceptive && dSq < nearestDistSq) {
               nearestDistSq = dSq;
               nearestTarget = other;
               nearestTargetPos = other.position.clone();
+            }
+            // Keep spacing while seeking: only a receptive partner inside contact range is exempt
+            // (any receptive partner when desperate, or far-spawned founders never meet)
+            if (dSq < 1600 && !(otherReceptive && (desperate || dSq < SEEK_CONTACT_RANGE_SQ))) {
+              avoidanceForce.add(
+                new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
+              );
+              avoidanceCount++;
             }
           } else if (dSq < 1600) {
             avoidanceForce.add(
@@ -372,7 +356,7 @@ export function processAgents(
       if (avoidanceCount > 0) {
         avoidanceForce
           .divideScalar(avoidanceCount)
-          .multiplyScalar((engine.magnetism || 0.08) * 0.65 * (treeModel ? 0.35 : 1));
+          .multiplyScalar((engine.magnetism || 0.08) * (treeModel ? 0.35 : 1)); // dropped the extra 0.65 damping
         agent.direction.add(avoidanceForce).normalize();
       }
 
@@ -380,6 +364,11 @@ export function processAgents(
 
       if (agent.isFeeler) {
         updateFeelerSeeking(agent, engine);
+        // Ended feelers must not move or draw one more segment this iteration
+        if (!agent.active) break;
+        if (agent.feelerStepOverride !== undefined) {
+          effectiveStepSize = Math.min(effectiveStepSize, agent.feelerStepOverride);
+        }
       } else {
         // Apply authentic botanical steering (Gnarled Oak, Elm vase, Pine whorls, Willow droop, Rhizome web)
         applyBotanicalConceptSteering(
@@ -424,87 +413,25 @@ export function processAgents(
         // CRITICAL FIX (Bug A): Do NOT override structural branch vectors with 0.75 seekStrength!
         // Only outer canopy/rhizome tips (depth >= 2) apply a subtle phototropic/chemotropic lean (<= 0.022),
         // preserving 100% of the organism's true botanical silhouette in Simulation Mode!
-        if (canSeek && nearestTargetPos && seekRamp > 0) {
+        // Bounded seeking (plan 3.1): outer tips only, within 0.4 x world radius, lerp <= 0.1
+        const dist = Math.sqrt(nearestDistSq);
+        if (canSeek && nearestTargetPos && nearestTarget && seekRamp > 0 &&
+          (agent.branchDepth || 0) >= (desperate ? 1 : 2) && dist < seekRadius) {
           const evo = getEvolutionStepConfig((engine as any).evolutionStep);
-          const dist = Math.sqrt(nearestDistSq);
           const toTarget = new THREE.Vector3()
             .subVectors(nearestTargetPos, agent.position)
             .normalize();
-          if (evo.round <= 3) {
-            // Early rounds (Step 1..3): high seekLean pulls all branches into spindly ribbons
-            agent.direction.lerp(toTarget, evo.seekLean * seekRamp).normalize();
-          } else if (dist < 24 && nearestTarget && !nearestTarget.isFeeler) {
-            agent.direction.lerp(toTarget, 0.16 * seekRamp).normalize();
-          } else if ((agent.branchDepth || 0) >= (evo.round >= 12 ? 2 : 1)) {
-            agent.direction.lerp(toTarget, evo.seekLean * seekRamp).normalize();
-          }
+          agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean) * seekRamp).normalize();
         }
       }
 
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
+      if (agent.isFeeler) agent.feelerTravel = (agent.feelerTravel ?? 0) + effectiveStepSize;
       if (engine.sound) {
         engine.sound.onAgentStep(agent, engine.camera);
       }
 
-      // Boundary reflection
-      const bX = engine.boundarySize;
-      const bZ = engine.boundarySize;
-      const squash = engine.boundarySquash ?? 1.0;
-      const bY = Math.max(5.0, engine.boundarySize * squash);
-      const creatureCenterY = engine.creatureCenterY || 18.921075;
-      let bounced = false;
-
-      if (engine.boundaryShape === "sphere") {
-        const dy = agent.position.y - creatureCenterY;
-        const normX = agent.position.x / bX;
-        const normY = dy / bY;
-        const normZ = agent.position.z / bZ;
-        const distSq = normX * normX + normY * normY + normZ * normZ;
-        if (distSq > 1.0) {
-          const scale = 1.0 / Math.sqrt(distSq);
-          agent.position.x *= scale;
-          agent.position.y = creatureCenterY + dy * scale;
-          agent.position.z *= scale;
-          const normal = new THREE.Vector3(
-            agent.position.x / (bX * bX),
-            (agent.position.y - creatureCenterY) / (bY * bY),
-            agent.position.z / (bZ * bZ),
-          ).normalize();
-          const dot = agent.direction.dot(normal);
-          agent.direction.sub(normal.multiplyScalar(2 * dot));
-          bounced = true;
-        }
-      } else {
-        if (agent.position.x > bX) {
-          agent.position.x = bX;
-          agent.direction.x *= -1;
-          bounced = true;
-        } else if (agent.position.x < -bX) {
-          agent.position.x = -bX;
-          agent.direction.x *= -1;
-          bounced = true;
-        }
-        const minY = creatureCenterY - bY;
-        const maxY = creatureCenterY + bY;
-        if (agent.position.y > maxY) {
-          agent.position.y = maxY;
-          agent.direction.y *= -1;
-          bounced = true;
-        } else if (agent.position.y < minY) {
-          agent.position.y = minY;
-          agent.direction.y *= -1;
-          bounced = true;
-        }
-        if (agent.position.z > bZ) {
-          agent.position.z = bZ;
-          agent.direction.z *= -1;
-          bounced = true;
-        } else if (agent.position.z < -bZ) {
-          agent.position.z = -bZ;
-          agent.direction.z *= -1;
-          bounced = true;
-        }
-      }
+      const bounced = reflectAtBoundary(engine, agent);
 
       if (bounced) {
         agent.direction.normalize();
@@ -513,7 +440,7 @@ export function processAgents(
         }
         // Feelers stop at boundary instead of bouncing
         if (agent.isFeeler) {
-          agent.active = false;
+          endFeeler(engine, agent, "boundary", { dissolve: true });
         }
       }
 
@@ -553,8 +480,9 @@ export function processAgents(
             currentActiveCount--;
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
-            if (engine.dyingStrains && engine.dyingStrains.has(genome.name)) {
-              (engine as any).markStrainSegmentsDying?.(genome.name);
+            // Gate on lifecycle phase too: the strain may already have left dyingStrains
+            if (isStrainDyingPhase(engine, genome.name)) {
+              engine.markStrainSegmentsDying(genome.name);
             }
           }
         } else if (treeModel) {
@@ -733,6 +661,17 @@ export function processAgents(
           );
         }
       }
+    }
+  }
+
+  // Feelers deactivated by any other path (pruning, fade cascade, …) still get a [FEELER_END] line
+  for (let i = 0; i < activeAgents.length; i++) {
+    const a = activeAgents[i];
+    if (a.isFeeler && !a.active && !a.feelerEnded) {
+      endFeeler(engine, a, isStrainDyingPhase(engine, a.realGenome?.name) ? "parentDying" : "targetLost", {
+        dissolve: true,
+        detail: "external",
+      });
     }
   }
 
