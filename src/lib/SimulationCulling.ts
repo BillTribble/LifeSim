@@ -32,7 +32,7 @@ export function canEnterDeleting(
           }
           return living.size;
         })();
-  const minCreatures = engine.minCreatures ?? 3;
+  const minCreatures = engine.minCreatures ?? 4;
   if (livingOrganisms < minCreatures) return false;
   if (livingOrganisms - countAsRemoved < minCreatures) return false;
   return true;

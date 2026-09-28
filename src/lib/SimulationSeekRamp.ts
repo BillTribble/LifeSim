@@ -47,8 +47,8 @@ export function getFertilityMinTicks(engine: SimulationEngine): number {
  * branch and spread before it starts mating. The 40-segment floor keeps starved or suppressed
  * organisms that have aged but not grown from breeding. Both are timeScale-independent.
  */
-export const FERTILITY_MIN_GROWTH_STEPS = 150;
-export const FERTILITY_MIN_SEGMENTS = 40;
+export const FERTILITY_MIN_GROWTH_STEPS = 25;
+export const FERTILITY_MIN_SEGMENTS = 30;
 /** Post-mating cooldown in growth steps (converted to ticks per archetype). */
 export const POST_MATING_COOLDOWN_STEPS = 60;
 /** Target organism lifespan in growth steps; drives the global birth throttle. */
@@ -57,8 +57,7 @@ export const TARGET_LIFESPAN_STEPS = 450;
 /** Archetype growth-speed multiplier, as applied per frame in processAgents. */
 export function getArchetypeSpeed(engine: SimulationEngine, archetype?: string): number {
   if (archetype === "bush") return engine.bushSpeed ?? 1;
-  if (archetype === "tree") return engine.treeSpeed ?? 1;
-  if (archetype === "rhizome") return engine.rhizomeSpeed ?? 1;
+  if (archetype === "tree" || archetype === "rhizome") return engine.treeSpeed ?? 0.65;
   return 1;
 }
 
@@ -91,8 +90,8 @@ export const BIRTH_INTERVAL_MAX_STEPS = 3000;
  * TARGET_LIFESPAN_STEPS / maxCreatures = 32 steps, which let a full world breed every 15 frames.
  */
 export function getBirthIntervalTicks(engine: SimulationEngine): number {
-  const minC = engine.minCreatures ?? 3;
-  const maxC = Math.max(minC + 1, engine.maxCreatures || 14);
+  const minC = engine.minCreatures ?? 4;
+  const maxC = Math.max(minC + 1, engine.maxCreatures || 7);
   const frac = Math.min(1, Math.max(0, (getLivingCountCached(engine) - minC) / (maxC - minC)));
   const steps = BIRTH_INTERVAL_MIN_STEPS + (BIRTH_INTERVAL_MAX_STEPS - BIRTH_INTERVAL_MIN_STEPS) * Math.pow(frac, 1.2);
   return steps / Math.max(1e-4, engine.growthSpeed || 0.11);
@@ -138,8 +137,8 @@ export function isOrganismDesperate(engine: SimulationEngine, genome: any, tipAg
 export function getSeekRadius(engine: SimulationEngine, desperate: boolean): number {
   const b = Math.max(10, engine.boundarySize || 60);
   const prox = engine.proximity || 24;
-  if (!desperate) return Math.min(prox, 0.4 * b);
-  return Math.min(Math.max(prox, prox * (engine.desperation || 1)), 0.9 * b);
+  if (!desperate) return Math.max(prox, 1.5 * b);
+  return Math.max(prox * (engine.desperation || 1.5), 2.0 * b);
 }
 
 /**

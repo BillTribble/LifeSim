@@ -96,6 +96,13 @@ export function HUD({
   React.useEffect(() => {
     if (showHUD) {
       setIsControlsExpanded(true);
+    } else {
+      setSoundPanelOpen(false);
+      setThemePanelOpen(false);
+      setPresetPanelOpen(false);
+      setCloudPanelOpen(false);
+      setMutationPanelOpen(false);
+      setLeafPanelOpen(false);
     }
   }, [showHUD]);
 
@@ -143,11 +150,11 @@ export function HUD({
 
   return (
     <>
-      {cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
-      {mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
-      {presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} onClose={() => setPresetPanelOpen(false)} />}
-      {leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
-      {soundPanelOpen && <SoundConfigPanel state={state} setters={setters} stats={stats} />}
+      {showHUD && cloudPanelOpen && <CloudConfigPanel state={state} setters={setters} />}
+      {showHUD && mutationPanelOpen && <MutationPanel state={state} setters={setters} />}
+      {showHUD && presetPanelOpen && <PresetPanel state={state} setters={setters} stats={stats} setRandomizeKey={setRandomizeKey} handleRestart={handleRestart} onClose={() => setPresetPanelOpen(false)} />}
+      {showHUD && leafPanelOpen && <LeafConfigPanel state={state} setters={setters} />}
+      {showHUD && soundPanelOpen && <SoundConfigPanel state={state} setters={setters} stats={stats} />}
 
       {/* Middle-Top Persistent Unmute Button (only when sound is muted) */}
       {!state.soundEnabled && (
@@ -402,6 +409,13 @@ export function HUD({
                   setShowHUD(nextHUD);
                   if (nextHUD) {
                     setIsControlsExpanded(true);
+                  } else {
+                    setSoundPanelOpen(false);
+                    setThemePanelOpen(false);
+                    setPresetPanelOpen(false);
+                    setCloudPanelOpen(false);
+                    setMutationPanelOpen(false);
+                    setLeafPanelOpen(false);
                   }
                 }}
                 className="h-7 flex items-center gap-2 bg-[#001220]/80 border border-[#D2B48C]/50 px-3 backdrop-blur-md pointer-events-auto rounded-full transition-all duration-200 hover:bg-white/20 shrink-0 shadow-md select-none"
@@ -753,16 +767,6 @@ export function HUD({
                     )}
                   </div>
 
-                  {onSelectConcept && (
-                    <BotanicalConceptSwitcher
-                      activeConcept={botanicalConcept || "auto"}
-                      onSelectConcept={onSelectConcept}
-                      evolutionStep={evolutionStep}
-                      onSelectEvolutionStep={onSelectEvolutionStep}
-                      onOpenEvolutionModal={onOpenEvolutionModal}
-                      compact={true}
-                    />
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {["SYSTEM", "ECOLOGY", "LIFECYCLE", "REPRODUCTION", "BRANCHING", "SPEEDS", "MORPHOLOGY"].map((name, idx) => (

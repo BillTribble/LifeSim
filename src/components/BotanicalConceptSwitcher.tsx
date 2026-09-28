@@ -36,8 +36,9 @@ export function BotanicalConceptSwitcher({
     { step: 20, label: "Step 20", hint: "Final Natural Form (γ=2.12 + Crown Shyness)" },
   ];
 
+  return null;
   return (
-    <div className="pointer-events-auto flex flex-wrap items-center gap-2 bg-[#001220]/90 border border-emerald-500/40 px-2.5 py-1.5 rounded-lg backdrop-blur-md shadow-lg">
+    <div className="hidden pointer-events-auto flex-wrap items-center gap-2 bg-[#001220]/90 border border-emerald-500/40 px-2.5 py-1.5 rounded-lg backdrop-blur-md shadow-lg">
       {/* Botanical Habit Selector */}
       <div className="flex items-center gap-1.5 pr-1.5 border-r border-emerald-500/25 shrink-0">
         <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />

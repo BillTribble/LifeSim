@@ -9,14 +9,14 @@ interface SoundConfigPanelProps {
   stats?: any;
 }
 
-const MIXER_CHANNELS: { id: string; label: string; color: string; defaultOct: number; tip: string }[] = [
-  { id: "pad", label: "PAD", color: "#22D3EE", defaultOct: 4, tip: "Birth & mating harmonic pads" },
-  { id: "step", label: "STEP", color: "#4ADE80", defaultOct: 5, tip: "Agent movement plucks (the fast ticks)" },
-  { id: "branch", label: "BRANCH", color: "#FBBF24", defaultOct: 5, tip: "Branch bifurcation plucks" },
-  { id: "bell", label: "BELL", color: "#F472B6", defaultOct: 6, tip: "Sparkle chimes & celebration tones" },
-  { id: "drone", label: "DRONE", color: "#A78BFA", defaultOct: 2, tip: "Sustained bass & mating drones" },
-  { id: "perc", label: "PERC", color: "#FB923C", defaultOct: 4, tip: "Bounce impacts & pulse thumps" },
-  { id: "weather", label: "WX", color: "#67E8F9", defaultOct: 6, tip: "Rain, breeze & atmospheric droplets" },
+const MIXER_CHANNELS: { id: string; label: string; color: string; defaultVol: number; defaultRev: number; defaultOct: number; tip: string }[] = [
+  { id: "pad", label: "PAD", color: "#22D3EE", defaultVol: 57, defaultRev: 79, defaultOct: 2, tip: "Birth & mating harmonic pads" },
+  { id: "step", label: "STEP", color: "#4ADE80", defaultVol: 51, defaultRev: 35, defaultOct: 4, tip: "Agent movement plucks (the fast ticks)" },
+  { id: "branch", label: "BRANCH", color: "#FBBF24", defaultVol: 69, defaultRev: 45, defaultOct: 5, tip: "Branch bifurcation plucks" },
+  { id: "bell", label: "BELL", color: "#F472B6", defaultVol: 75, defaultRev: 50, defaultOct: 6, tip: "Sparkle chimes & celebration tones" },
+  { id: "drone", label: "DRONE", color: "#A78BFA", defaultVol: 70, defaultRev: 45, defaultOct: 2, tip: "Sustained bass & mating drones" },
+  { id: "perc", label: "PERC", color: "#FB923C", defaultVol: 58, defaultRev: 30, defaultOct: 4, tip: "Bounce impacts & pulse thumps" },
+  { id: "weather", label: "WX", color: "#67E8F9", defaultVol: 65, defaultRev: 30, defaultOct: 6, tip: "Rain, breeze & atmospheric droplets" },
 ];
 
 export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProps) {
@@ -36,8 +36,8 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
     setters.setSoundMixer({
       ...mixer,
       [ch]: {
-        vol: 70,
-        rev: 35,
+        vol: def?.defaultVol ?? 70,
+        rev: def?.defaultRev ?? 35,
         oct: def?.defaultOct ?? 4,
         ...(mixer[ch] || {}),
         [key]: val,
@@ -51,12 +51,12 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
   const shiftAllOctaves = (delta: number | "reset") => {
     const nextMixer: Record<string, { vol: number; rev: number; oct: number }> = { ...mixer };
     for (const ch of MIXER_CHANNELS) {
-      const cur = nextMixer[ch.id] || { vol: 70, rev: 35, oct: ch.defaultOct };
+      const cur = nextMixer[ch.id] || { vol: ch.defaultVol, rev: ch.defaultRev, oct: ch.defaultOct };
       const curOct = cur.oct ?? ch.defaultOct;
       const newOct = delta === "reset" ? ch.defaultOct : Math.max(1, Math.min(7, curOct + delta));
       nextMixer[ch.id] = {
-        vol: cur.vol ?? 70,
-        rev: cur.rev ?? 35,
+        vol: cur.vol ?? ch.defaultVol,
+        rev: cur.rev ?? ch.defaultRev,
         oct: newOct,
       };
     }
@@ -211,7 +211,7 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
             </div>
           </div>
           {MIXER_CHANNELS.map((ch) => {
-            const chData = mixer[ch.id] || { vol: 70, rev: 35, oct: ch.defaultOct };
+            const chData = mixer[ch.id] || { vol: ch.defaultVol, rev: ch.defaultRev, oct: ch.defaultOct };
             const oct = chData.oct ?? ch.defaultOct;
             return (
               <div key={ch.id} className="flex items-center justify-between gap-1">

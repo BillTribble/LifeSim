@@ -132,29 +132,35 @@ export function createFeelerGenome(agent: Agent, engine?: SimulationEngine): any
   };
 }
 
-/** Feeler lifetime cap in growth steps (commit 32e304d doubled it to 360; reverted). */
-export const FEELER_MAX_LIFETIME_STEPS = 180;
+/** Feeler lifetime cap in growth steps. */
+export const FEELER_MAX_LIFETIME_STEPS = 450;
 /** Feeler step relative to the parent tip's botanical step. */
-const FEELER_STEP_SCALE = 1.1;
+const FEELER_STEP_SCALE = 1.25;
 /** Per-step turn toward the target (was a hard copy, which drew ruler-straight rays). */
 const FEELER_HOMING_LERP = 0.25;
 /** Stronger homing inside a few steps of the target so feelers land instead of orbiting. */
 const FEELER_CLOSE_HOMING_LERP = 0.6;
 
 /**
- * Maximum feeler reach (spawn distance gate and travel cap): 0.4 x boundarySize, growing to
- * 0.6 x over FEELER_REACH_GROWTH_STEPS since the organism last mated (or was born).
+ * Maximum feeler reach (spawn distance gate and travel cap): starts at 0.85 x boundarySize,
+ * ramping up to 1.65 x, and up to 1.85 x when population is at or below minCreatures.
  */
 export function getFeelerMaxReach(engine: SimulationEngine, genome?: any): number {
   const b = Math.max(10, engine.boundarySize || 60);
-  if (!genome) return 0.4 * b;
-  const t = Math.min(1, getStepsSinceLastMating(engine, genome) / FEELER_REACH_GROWTH_STEPS);
-  return (0.4 + 0.2 * t) * b;
+  const living = typeof engine.getLivingOrganismCount === "function"
+    ? engine.getLivingOrganismCount()
+    : typeof engine.getLivingOrganisms === "function"
+      ? engine.getLivingOrganisms().size
+      : 2;
+  const underMin = living <= (engine.minCreatures ?? 4);
+  const t = genome ? Math.min(1, getStepsSinceLastMating(engine, genome) / FEELER_REACH_GROWTH_STEPS) : 0;
+  const mult = underMin ? 1.85 : 0.85 + 0.8 * t;
+  return mult * b;
 }
 
 /** Per-step feeler length, scaled from the parent tip's last botanical step. */
 export function getFeelerStepSize(agent: Agent): number {
-  return agent.feelerStep ?? Math.min(1.3, agent.genome.stepSize || 1.0);
+  return agent.feelerStep ?? Math.min(1.6, Math.max(1.0, agent.genome.stepSize || 1.0));
 }
 
 /**
@@ -173,8 +179,8 @@ export function spawnFeeler(
 ): void {
   const rootGenome = resolveRootOrganismGenome(agent, engine);
   const feelerGenome = createFeelerGenome(agent, engine);
-  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 0.8) * FEELER_STEP_SCALE, 0.25, 1.3);
-  const maxLen = Math.min(1.2 * targetDist + 2 * step, getFeelerMaxReach(engine, rootGenome));
+  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 1.1) * FEELER_STEP_SCALE, 0.85, 1.6);
+  const maxLen = Math.min(1.3 * targetDist + 4 * step, getFeelerMaxReach(engine, rootGenome));
   newAgents.push({
     position: agent.position.clone(),
     lastPosition: agent.position.clone(),
@@ -258,7 +264,11 @@ export function updateFeelerSeeking(
   if (isSpeciesOnCooldown(engine, myStrainName, evalGenome)) {
     return endFeeler(engine, agent, "parentDying", { ...dissolve, detail: "parentOnCooldown" });
   }
-  if (agent.age > FEELER_MAX_LIFETIME_STEPS) return endFeeler(engine, agent, "lifetime", dissolve);
+  const maxLifetime = Math.max(
+    FEELER_MAX_LIFETIME_STEPS,
+    Math.ceil((agent.feelerMaxLen ?? 120) / Math.max(0.4, getFeelerStepSize(agent))) + 80,
+  );
+  if (agent.age > maxLifetime) return endFeeler(engine, agent, "lifetime", dissolve);
   if ((agent.feelerTravel ?? 0) >= (agent.feelerMaxLen ?? getFeelerMaxReach(engine))) {
     return endFeeler(engine, agent, "reach", dissolve);
   }

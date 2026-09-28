@@ -92,23 +92,24 @@ export function updateSimulation(engine: SimulationEngine) {
 
   updateHybridConnectionMesh(engine);
 
-  // Instant Comprehensive Cleanup: Remove breeding polygon artifacts as soon as parent organisms die or taper out
-  const activeAgentIds = new Set(engine.agents.filter(a => a.active && !a.tapering).map(a => a.id));
+  // Hybrid artifacts persist for the lifetime of their child organism and only vanish when their child dies
+  const activeChildStrains = new Set<string>();
+  for (let i = 0; i < engine.agents.length; i++) {
+    const a = engine.agents[i];
+    if (a.active && !a.isFeeler) {
+      activeChildStrains.add(a.genome.name);
+    }
+  }
 
   for (let idx = 0; idx < engine.hybridSegments.length; idx++) {
     const seg = engine.hybridSegments[idx];
     if (seg && !engine.dyingHybrids.has(idx)) {
-      const age = engine.time - seg.timestamp;
-      const maxHybridLife = engine.hybridStickiness * 30 + 3;
-
-      if (age > maxHybridLife) {
-        engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
-      } else if (effectiveDieback > 0.000001) {
-        const deathProb = Math.min(
-          1.0,
-          Math.pow(age / 1000, engine.diebackAgeBias) * Math.max(0.000001, effectiveDieback) * 0.2,
-        );
-        if (Math.random() < deathProb) {
+      const childStrain = seg.childStrainName || (seg.strainName !== "hybrid" ? seg.strainName : undefined);
+      if (childStrain) {
+        const childDeathStart = getStrainDeathStart(engine, childStrain);
+        if (childDeathStart !== undefined) {
+          engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx, childDeathStart);
+        } else if (!activeChildStrains.has(childStrain)) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
         }
       }

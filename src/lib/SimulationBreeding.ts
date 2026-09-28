@@ -128,7 +128,7 @@ export function handleBreedingAndFeelers(
         const effectiveLerp = Math.min(SEEK_LERP_MAX, (isDesperate ? 0.05 : 0.03) + 0.07 * seekAmt) * seekRamp;
         if (isTreeModelAgent(agent)) {
           const depth = agent.branchDepth || 0;
-          const treeScale = depth === 0 ? 0.15 : 0.35;
+          const treeScale = agent.isSeekerTwig ? 0.95 : depth === 0 ? 0.15 : 0.55;
           agent.direction.lerp(towardsPartner, effectiveLerp * treeScale).normalize();
         } else {
           agent.direction
@@ -160,9 +160,10 @@ export function handleBreedingAndFeelers(
         !isThrottled &&
         // Don't emit a feeler that is doomed from the start (its organism is the next cull victim)
         !isNextCullVictim(engine, activeAgents, nonTaperingStrains, evalGenome.name);
-
       if (canSpawnFeeler) {
-        const baseSpawnChance = isDesperate ? 0.08 * reachMultiplier : 0.025 * feelerProb;
+        const baseSpawnChance = isDesperate
+          ? Math.max(0.08 * reachMultiplier, 0.025 * feelerProb)
+          : 0.025 * feelerProb;
         // Roll runs once per growth step, which already scales with timeScale (no extra factor)
         if (distSq < feelerReach * feelerReach && isPastDelay && Math.random() < baseSpawnChance) {
           spawnFeeler(
@@ -341,28 +342,30 @@ export function handleBreedingAndFeelers(
           applyTreeStrainCooldown(engine, host1Strain, cd);
           applyTreeStrainCooldown(engine, host2Strain, cd);
 
-          // Freeze all active feelers belonging to either parent strain immediately
+          // Freeze all active feelers belonging to either parent strain immediately (stop growing, do not vanish)
           const host1 = agent.isFeeler && agent.parentAgent ? agent.parentAgent : agent;
           const host2 = nearestPartner.isFeeler && nearestPartner.parentAgent ? nearestPartner.parentAgent : nearestPartner;
-          for (const fa of activeAgents) {
-            if (!fa.active || !fa.isFeeler) continue;
-            const faStrain = fa.realGenome?.name || fa.parentAgent?.genome?.name || fa.genome.name;
-            if (
-              faStrain === host1Strain ||
-              faStrain === host2Strain ||
-              fa.parentAgent === host1 ||
-              fa.parentAgent === host2 ||
-              fa === agent ||
-              fa === nearestPartner
-            ) {
-              endFeeler(engine, fa, "mated", {
-                dissolve: true,
-                detail: fa === agent || fa === nearestPartner ? "self" : "organism",
-              });
+          for (const list of [activeAgents, newAgents]) {
+            for (const fa of list) {
+              if (!fa.active || !fa.isFeeler) continue;
+              const faStrain = fa.realGenome?.name || fa.parentAgent?.genome?.name || fa.genome.name;
+              if (
+                faStrain === host1Strain ||
+                faStrain === host2Strain ||
+                fa.parentAgent === host1 ||
+                fa.parentAgent === host2 ||
+                fa === agent ||
+                fa === nearestPartner
+              ) {
+                endFeeler(engine, fa, "mated", {
+                  dissolve: false,
+                  detail: fa === agent || fa === nearestPartner ? "self" : "organism",
+                });
+              }
             }
           }
 
-          engine.spawnHybridArtifact(midPoint, childGenome.color, host1Strain, host2Strain, agent.id, nearestPartner.id);
+          engine.spawnHybridArtifact(midPoint, childGenome.color, host1Strain, host2Strain, agent.id, nearestPartner.id, childGenome.name);
           engine.sound?.onMatingSuccess(midPoint, childGenome, engine.camera);
           engine.totalHybridCount = (engine.totalHybridCount || 0) + 1;
           const isFeelerMating = !!(agent.isFeeler || nearestPartner.isFeeler);
@@ -395,8 +398,8 @@ export function handleBreedingAndFeelers(
             }
           }
 
-          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: true, detail: "self" });
-          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: true, detail: "self" });
+          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: false, detail: "self" });
+          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: false, detail: "self" });
         }
       }
     }

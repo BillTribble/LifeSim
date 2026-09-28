@@ -120,8 +120,14 @@ export function performBranchPruning(
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];
     const arch = firstAgent.genome.archetype || "bush";
-    // Trees self-limit through the length-budgeted architecture model (SimulationTreeArchitecture)
-    if (firstAgent.genome.archetype === "tree") continue;
+    // Trees and rhizomes self-limit through the length-budgeted architecture model (SimulationTreeArchitecture)
+    if (
+      firstAgent.genome.archetype === "tree" ||
+      firstAgent.genome.archetype === "rhizome" ||
+      firstAgent.genome.growthHabit === "rhizome_web"
+    ) {
+      continue;
+    }
 
     let minFloor = 1;
     if (arch === "bush") minFloor = engine.bushMinBranches ?? 2;
@@ -248,6 +254,14 @@ export function performBranchPruning(
       if (seg && !engine.dyingStems.has(i)) {
         if (seg.thickness < 0.20) {
           engine.markDying(engine.segments, engine.dyingStems, i, now);
+          for (const app of engine.appendages.values()) {
+            for (let aIdx = 0; aIdx < app.segments.length; aIdx++) {
+              const appSeg = app.segments[aIdx];
+              if (appSeg && appSeg.parentIndex === i && !app.dyingSet.has(aIdx)) {
+                engine.markDying(app.segments, app.dyingSet, aIdx, now);
+              }
+            }
+          }
           prunedCount++;
           stats.prunedBudget++;
         }

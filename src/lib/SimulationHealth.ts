@@ -78,6 +78,12 @@ export function sweepGhostStrains(engine: SimulationEngine): number {
       }
     }
   }
+  for (let i = 0; i < engine.hybridSegments.length; i++) {
+    const seg = engine.hybridSegments[i];
+    if (seg && !seg.dyingStart && seg.childStrainName && ghostSet.has(seg.childStrainName)) {
+      markDyingHelper(engine, engine.hybridSegments, engine.dyingHybrids, i, t);
+    }
+  }
   for (const name of ghosts) {
     const state = engine.speciesLifecycleMap.get(name);
     if (state && state.phase !== "END_OF_LIFE") {

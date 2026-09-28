@@ -8,12 +8,12 @@ export const DEFAULTS: Record<string, any> = {
   "soundMovement": true,
   "soundWeather": true,
   "soundMixer": {
-    "pad": { "vol": 80, "rev": 55, "oct": 4 },
-    "step": { "vol": 50, "rev": 35, "oct": 5 },
-    "branch": { "vol": 70, "rev": 45, "oct": 5 },
+    "pad": { "vol": 57, "rev": 79, "oct": 2 },
+    "step": { "vol": 51, "rev": 35, "oct": 4 },
+    "branch": { "vol": 69, "rev": 45, "oct": 5 },
     "bell": { "vol": 75, "rev": 50, "oct": 6 },
     "drone": { "vol": 70, "rev": 45, "oct": 2 },
-    "perc": { "vol": 60, "rev": 30, "oct": 4 },
+    "perc": { "vol": 58, "rev": 30, "oct": 4 },
     "weather": { "vol": 65, "rev": 30, "oct": 6 }
   },
   "soundReverbDecay": 50,
@@ -26,12 +26,12 @@ export const DEFAULTS: Record<string, any> = {
   "theme": 0,
   "timeScale": 1,
   "postMatingDieoff": true,
-  "rhizomeSpeed": 1,
+  "rhizomeSpeed": 0.65,
   "treeSpeed": 0.65,
   "bushSpeed": 1.1,
   "bushStepSize": 0.8500000000000001,
   "treeStepSize": 0.6000000000000001,
-  "rhizomeStepSize": 1.2,
+  "rhizomeStepSize": 0.6000000000000001,
   "bushBranching": 50,
   "widthVariance": 0.5,
   "branchGrowthBoost": 0.1,
@@ -50,7 +50,7 @@ export const DEFAULTS: Record<string, any> = {
   "snakeWander": 1,
   "snakeStepSize": 1.7,
   "snakeSpeed": 1.4,
-  "rotationSpeed": 0.2,
+  "rotationSpeed": 0.1,
   "rotationSpeedY": 0,
   "magnetism": 0.15,
   "seekAmount": 0.65,
@@ -84,9 +84,9 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 51,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 14,
+  "maxCreatures": 7,
   "ecoFade": 0.02946475338922394,
-  "minCreatures": 3,
+  "minCreatures": 4,
   "boundarySize": 60,
   "boundarySquash": 1,
   "desiccationSpeed": 4.289796350823339,
@@ -152,7 +152,7 @@ export const DEFAULTS: Record<string, any> = {
     "DEATH RATE": { "min": 0, "max": 10 },
     "MAGNET": { "min": 0, "max": 10 },
     "BUDGET": { "min": 500, "max": 1000000 },
-    "HYBRID_DECAY": { "min": 0, "max": 1 },
+    "HYBRID_DECAY": { "min": 0.1, "max": 20 },
     "SPEED": { "min": 0.1, "max": 50 },
     "SLOW_MO": { "min": 0.1, "max": 50 },
     "GLOW_INTENSITY": { "min": 0.1, "max": 10 },
@@ -165,7 +165,7 @@ export const DEFAULTS: Record<string, any> = {
   "deathRate": 1.3182568226156233,
   "speed": 1,
   "slowMotion": 1,
-  "rotationVelocity": 0.2,
+  "rotationVelocity": 0.1,
   "rotationVelocityY": 0,
   "swarmCohesion": 0.15,
   "detectionRange": 24,
@@ -182,19 +182,33 @@ export const DEFAULTS: Record<string, any> = {
 };
 
 export const DEFAULT_PALETTE: string[] = [
-  "#0b939c",
-  "#3e5e50",
-  "#000000",
-  "#4a90e2",
-  "#50e3c2",
-  "#b8e986",
-  "#f8e71c",
-  "#f5a623",
-  "#d0021b",
-  "#9013fe",
+  "#0b939c", "#3e5e50", "#000000", "#4a90e2", "#50e3c2",
+  "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
 export const CURRENT_SCHEMA = "2026-09-24-v1.0";
+export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
+
+const SOUND_STORAGE_KEYS = [
+  "soundEnabled", "soundVolume", "soundSpace", "soundEnvironment", "soundAutoCycle",
+  "soundSyncThemes", "soundMovement", "soundWeather", "soundMixer",
+  "soundReverbDecay", "soundReverbDamping", "soundReverbPreDelay", "soundStepCadence",
+];
+
+export function getStoredSoundMixer(): Record<string, { vol: number; rev: number; oct?: number }> {
+  try {
+    const stored = localStorage.getItem("soundMixer");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const merged: Record<string, { vol: number; rev: number; oct?: number }> = { ...DEFAULTS.soundMixer };
+      for (const k of Object.keys(parsed)) {
+        merged[k] = { ...(DEFAULTS.soundMixer[k] || { vol: 70, rev: 35, oct: 4 }), ...parsed[k] };
+      }
+      return merged;
+    }
+  } catch {}
+  return DEFAULTS.soundMixer;
+}
 
 export function getStoredFloat(key: string, fallback?: number): number {
   const stored = localStorage.getItem(key);
@@ -203,8 +217,9 @@ export function getStoredFloat(key: string, fallback?: number): number {
     if (!isNaN(val)) {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
-      if (key === "minCreatures" && val === 11) return DEFAULTS.minCreatures;
-      if (key === "maxCreatures" && val === 10) return DEFAULTS.maxCreatures;
+      if (key === "minCreatures" && (val === 11 || val === 3 || val === 14)) return DEFAULTS.minCreatures;
+      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19)) return DEFAULTS.maxCreatures;
+      if (key === "rotationSpeed" && val === 0.2) return DEFAULTS.rotationSpeed;
       // Ecology-health migrations: legacy stored values that would defeat the clumping fixes
       if (key === "proximity" && val > 100) return DEFAULTS.proximity; // legacy 362 / 484 = whole world
       if (key === "maxMatings" && val === 6) return DEFAULTS.maxMatings; // old default
@@ -218,25 +233,15 @@ export function getStoredFloat(key: string, fallback?: number): number {
 
 export function getStoredBool(key: string, fallback?: boolean): boolean {
   const stored = localStorage.getItem(key);
-  return stored !== null
-    ? stored === "true"
-    : fallback !== undefined
-      ? fallback
-      : DEFAULTS[key];
+  return stored !== null ? stored === "true" : fallback !== undefined ? fallback : DEFAULTS[key];
 }
 
 export function getStoredString(key: string, fallback?: string): string {
-  return (
-    localStorage.getItem(key) ||
-    (fallback !== undefined ? fallback : DEFAULTS[key])
-  );
+  return localStorage.getItem(key) || (fallback !== undefined ? fallback : DEFAULTS[key]);
 }
 
 export function getStoredTimeScale(): number {
-  const savedTs =
-    localStorage.getItem("speed") ||
-    localStorage.getItem("timeScale") ||
-    localStorage.getItem("slowMotion");
+  const savedTs = localStorage.getItem("speed") || localStorage.getItem("timeScale") || localStorage.getItem("slowMotion");
   if (savedTs !== null) {
     const val = parseFloat(savedTs);
     if (!isNaN(val)) return val;
@@ -251,31 +256,29 @@ export function getStoredDialLimits(): Record<string, { min: number; max: number
       const parsed = JSON.parse(stored);
       if (Object.keys(parsed).length > 0) return parsed;
     }
-    return DEFAULTS.dialLimits;
-  } catch {
-    return DEFAULTS.dialLimits;
-  }
+  } catch {}
+  return DEFAULTS.dialLimits;
 }
 
 export function getStoredTraitProbs(): Record<string, number> {
   try {
     const stored = JSON.parse(localStorage.getItem("traitProbs") || "null");
-    if (stored && typeof stored === "object" && Object.keys(stored).length > 0) {
-      return stored;
-    }
-    return DEFAULTS.traitProbs;
-  } catch {
-    return DEFAULTS.traitProbs;
-  }
+    if (stored && typeof stored === "object" && Object.keys(stored).length > 0) return stored;
+  } catch {}
+  return DEFAULTS.traitProbs;
 }
 
 export function checkSchemaVersion(): void {
   if (typeof window !== "undefined") {
     if (localStorage.getItem("lifesim_schema_ver") !== CURRENT_SCHEMA) {
-      try {
-        localStorage.clear();
-      } catch (e) {}
+      try { localStorage.clear(); } catch (e) {}
       localStorage.setItem("lifesim_schema_ver", CURRENT_SCHEMA);
+      localStorage.setItem("lifesim_sound_schema_ver", CURRENT_SOUND_SCHEMA);
+    } else if (localStorage.getItem("lifesim_sound_schema_ver") !== CURRENT_SOUND_SCHEMA) {
+      try {
+        for (const k of SOUND_STORAGE_KEYS) localStorage.removeItem(k);
+      } catch (e) {}
+      localStorage.setItem("lifesim_sound_schema_ver", CURRENT_SOUND_SCHEMA);
     }
   }
 }

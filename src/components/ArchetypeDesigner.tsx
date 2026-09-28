@@ -252,16 +252,7 @@ export function ArchetypeDesigner({
         </div>
       </header>
 
-      {/* BOTANICAL CONCEPT MODE SWITCHER */}
-      <div className="w-full flex justify-start mb-2 z-30 pointer-events-none">
-        <BotanicalConceptSwitcher
-          activeConcept={botanicalConcept}
-          onSelectConcept={onSelectConcept}
-          evolutionStep={evolutionStep}
-          onSelectEvolutionStep={onSelectEvolutionStep}
-          onOpenEvolutionModal={onOpenEvolutionModal}
-        />
-      </div>
+      {/* Botanical Concept Mode Switcher hidden */}
 
       {/* RIGHT SLIDE-OUT PANEL: APPENDAGES / LEAF CONTROLS */}
       {appendagesPanelOpen && (

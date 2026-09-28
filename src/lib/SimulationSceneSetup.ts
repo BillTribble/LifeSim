@@ -631,9 +631,11 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     return;
   }
 
-  const alphaArchetype = getRandomWeightedArchetype();
-  let betaArchetype = getRandomWeightedArchetype();
-  while (betaArchetype === alphaArchetype) {
+  const forcedArch = typeof window !== "undefined" ? (localStorage.getItem("forceArchetype") as Archetype | null) : null;
+  const forceBoth = typeof window !== "undefined" && localStorage.getItem("forceBothArchetypes") === "true";
+  const alphaArchetype = forcedArch || getRandomWeightedArchetype();
+  let betaArchetype = (forceBoth && forcedArch) ? forcedArch : getRandomWeightedArchetype();
+  while (!forceBoth && betaArchetype === alphaArchetype) {
     betaArchetype = getRandomWeightedArchetype();
   }
 
@@ -666,7 +668,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     attempts < 50 &&
     (betaGenome.geometryType === alphaGenome.geometryType ||
       betaGenome.movementType === alphaGenome.movementType ||
-      betaGenome.archetype === alphaGenome.archetype ||
+      (!forceBoth && betaGenome.archetype === alphaGenome.archetype) ||
       betaGenome.canopyZone === alphaGenome.canopyZone)
   ) {
     attempts++;

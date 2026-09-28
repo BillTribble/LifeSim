@@ -126,6 +126,7 @@ export interface Agent {
   treeDormant?: boolean; // resting tree keeper: no growth, still breeds + ages
   treeRestTicks?: number; // ticks left before a resting keeper wakes for a new growth flush
   treeFlushes?: number; // how many growth flushes this tip has had (vigor slowly declines)
+  isSeekerTwig?: boolean;
   // Feeler lifecycle (see SimulationFeelers.ts)
   feelerTargetStrain?: string; // root organism the feeler was aimed at when spawned (locked)
   feelerStep?: number; // per-step length, scaled from the parent's botanical step
@@ -142,6 +143,7 @@ export interface Segment {
   timestamp: number;
   strainName: string;
   strainBName?: string;
+  childStrainName?: string;
   agentId?: number;
   agentAId?: number;
   agentBId?: number;

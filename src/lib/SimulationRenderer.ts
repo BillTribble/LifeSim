@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SimulationEngine } from './SimulationEngine';
 import { MAX_POINTS } from './SimulationTypes';
 import { setupShaderMaterial, setupLeafShaderMaterial } from './SimulationGenetics';
+import { APPENDAGE_BUILDERS, buildVariants, registerLodMesh, stemGeometry } from './SimulationLOD';
 
 export function setupSimulationScene(engine: SimulationEngine, width: number, height: number) {
     engine.width = width;
@@ -167,9 +168,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
 
     engine.dummy = new THREE.Object3D();
 
-    const cylinderGeo = new THREE.CylinderGeometry(1, 1, 1, 7);
-    cylinderGeo.translate(0, 0.5, 0); 
-    cylinderGeo.rotateX(-Math.PI / 2);
+    const stemVariants = buildVariants(stemGeometry);
+    const cylinderGeo = stemVariants[0];
 
     const material = setupShaderMaterial(new THREE.MeshPhysicalMaterial({
       transparent: false,
@@ -224,6 +224,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
 
     engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);
     initMeshAttributes(engine.cylinderMesh, MAX_POINTS);
+    registerLodMesh(engine, engine.cylinderMesh, stemVariants);
 
     const leafMaterial = setupLeafShaderMaterial(new THREE.MeshPhysicalMaterial({
       transparent: false,
@@ -236,49 +237,20 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       reflectivity: 1.0
     }));
 
-    function createFernGeometry(): THREE.BufferGeometry {
-      const geo = new THREE.PlaneGeometry(1.0, 2.2, 8, 16);
-      const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const y = pos.getY(i);
-        const t = Math.max(0, Math.min(1, (y + 1.1) / 2.2));
-        const widthFactor = Math.sin(Math.pow(t, 0.7) * Math.PI) * (1.0 - t * 0.2);
-        pos.setX(i, x * Math.max(0.08, widthFactor));
-        const archZ = Math.sin(t * Math.PI * 0.5) * 0.45;
-        const ripple = Math.sin(y * 22.0) * 0.04 * (1.0 - t * 0.5);
-        pos.setZ(i, archZ + ripple);
-      }
-      geo.computeVertexNormals();
-      geo.translate(0, 1.1, 0);
-      return geo;
-    }
-
-    const appendagesConfig: Record<string, THREE.BufferGeometry> = {
-      flowers: new THREE.ConeGeometry(0.5, 1, 12).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
-      lillyPads: new THREE.SphereGeometry(0.5, 8, 8),
-      leaves: new THREE.BoxGeometry(1, 1, 0.05, 32, 48, 1).translate(0, 0.5, 0),
-      ferns: createFernGeometry(),
-      petals: new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
-      needles: new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
-      thorns: new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(-Math.PI / 2),
-      hair: new THREE.CylinderGeometry(0.04, 0.04, 1, 5).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
-      curlyHair: new THREE.TorusKnotGeometry(0.4, 0.08, 64, 8),
-      crystals: new THREE.OctahedronGeometry(0.6),
-      spores: new THREE.DodecahedronGeometry(0.5),
-      scales: new THREE.PlaneGeometry(0.8, 0.8),
-      spirals: new THREE.TorusGeometry(0.5, 0.15, 8, 16),
-      sparkles: new THREE.OctahedronGeometry(0.35, 0).scale(0.9, 1.4, 0.9),
-      buds: new THREE.SphereGeometry(0.4, 8, 8).scale(0.8, 1.25, 0.8).translate(0, 0.4, 0)
-    };
+    // Per-tier geometry lives in SimulationLOD.ts (view-only LOD). Order preserved from the legacy config.
+    const appendageKeys = [
+      "flowers", "lillyPads", "leaves", "ferns", "petals", "needles", "thorns", "hair",
+      "curlyHair", "crystals", "spores", "scales", "spirals", "sparkles", "buds",
+    ];
 
     const appendageCount = Math.floor(MAX_POINTS / 4);
-    for (const [key, geo] of Object.entries(appendagesConfig)) {
+    for (const key of appendageKeys) {
+        const variants = buildVariants(APPENDAGE_BUILDERS[key]);
         const useMat = (key === 'leaves' || key === 'ferns') ? leafMaterial : material;
-        const mesh = new THREE.InstancedMesh(geo, useMat, appendageCount);
+        const mesh = new THREE.InstancedMesh(variants[0], useMat, appendageCount);
         initMeshAttributes(mesh, appendageCount);
-        
-      engine.scene.add(mesh);
+        registerLodMesh(engine, mesh, variants);
+        engine.scene.add(mesh);
         engine.appendages.set(key, { mesh, segments: [], dyingSet: new Set(), count: 0 });
     }
 
@@ -332,7 +304,8 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
             mesh.setMatrixAt(i, dummyMatrix);
         }
         mesh.instanceMatrix.needsUpdate = true;
-        mesh.count = 2000; 
+        // Draw only slots that have ever held a hybrid (was 2000 x 5 meshes from frame 1).
+        mesh.count = 0;
         return mesh;
     });
 

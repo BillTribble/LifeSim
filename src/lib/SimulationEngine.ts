@@ -39,6 +39,7 @@ import {
   getTrackedPositions,
 } from "./SimulationSceneSetup";
 import { SimulationSound, SoundEnvironmentId } from "./SimulationSound";
+import { LodState, createLodState, updateAdaptiveLOD } from "./SimulationLOD";
 export class SimulationEngine {
   scene: THREE.Scene = new THREE.Scene();
   camera!: THREE.PerspectiveCamera;
@@ -46,6 +47,9 @@ export class SimulationEngine {
   controls!: OrbitControls;
   sound: SimulationSound = new SimulationSound();
   lastSoundRealTime: number = performance.now();
+  /** View-only LOD state (must be initialized before setupSimulationScene registers meshes). */
+  lod: LodState = createLodState();
+  lastFrameRealTime: number = 0;
   agents: Agent[] = [];
   maxAgents: number = 200;
   cylinderMesh!: THREE.InstancedMesh;
@@ -109,7 +113,7 @@ export class SimulationEngine {
   botanicalConcept: string = "auto";
   evolutionStep: number = 20;
   onDesignerStrainName?: (name: string) => void;
-  rotationSpeed: number = 0.2;
+  rotationSpeed: number = 0.1;
   rotationSpeedY: number = 0.0;
   phiDirection: number = -1;
   magnetism: number = 0.08708895046646814;
@@ -172,13 +176,13 @@ export class SimulationEngine {
   growingStems: Set<number> = new Set();
   lastStemIndex: number = 0;
   lastAgentStemIndex: Map<number, number> = new Map();
-  minCreatures: number = 3;
+  minCreatures: number = 4;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
   boundarySize: number = 120;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxCreatures: number = 14;
+  maxCreatures: number = 7;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;
@@ -537,7 +541,7 @@ export class SimulationEngine {
   ) {
     processDyingSegments(this, segments, dyingSet, mesh, isFlower);
   }
-  spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color, strainName?: string, strainBName?: string, agentAId?: number, agentBId?: number) {
+  spawnHybridArtifact(pos: THREE.Vector3, color: THREE.Color, strainName?: string, strainBName?: string, agentAId?: number, agentBId?: number, childStrainName?: string) {
     spawnHybridArtifact(
       this,
       pos,
@@ -546,6 +550,7 @@ export class SimulationEngine {
       strainBName,
       agentAId,
       agentBId,
+      childStrainName,
     );
   }
   update() {
@@ -576,6 +581,9 @@ export class SimulationEngine {
     const density = Math.min(1.0, activeLivingAgents / Math.max(1, this.maxAgents || 50));
     const activity = Math.min(1.0, (this.growthSpeed || 0.1) * 6.0);
     this.sound.tick(realDt, { density, activity, activeAgents: activeLivingAgents }, this.camera);
+    // View-only adaptive LOD: swaps geometry detail based on real frame time. Never affects simulation.
+    updateAdaptiveLOD(this, this.lastFrameRealTime ? now - this.lastFrameRealTime : 16.7);
+    this.lastFrameRealTime = now;
     this.renderer.render(this.scene, this.camera);
     const activeFade = Math.max(this.fadeProgress, this.kioskFadeProgress || 0);
     if (activeFade > 0 && this.fadeScene && this.fadeQuadMat) {

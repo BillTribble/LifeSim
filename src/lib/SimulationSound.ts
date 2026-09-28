@@ -237,13 +237,13 @@ export class SimulationSound {
 
   // Mixer channel volume (0–100), reverb send (0–100), and active octave (1–7)
   channelVolumes: Record<string, number> = {
-    pad: 80, step: 50, branch: 70, bell: 75, drone: 70, perc: 60, weather: 65,
+    pad: 57, step: 51, branch: 69, bell: 75, drone: 70, perc: 58, weather: 65,
   };
   channelReverbSends: Record<string, number> = {
-    pad: 55, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
+    pad: 79, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
   };
   channelOctaves: Record<string, number> = {
-    pad: 4, step: 5, branch: 5, bell: 6, drone: 2, perc: 4, weather: 6,
+    pad: 2, step: 4, branch: 5, bell: 6, drone: 2, perc: 4, weather: 6,
   };
 
   // Per-channel mixer audio graph nodes
@@ -271,7 +271,7 @@ export class SimulationSound {
   // Synthesis Parameters (aligned with Sleeper Murmur Sound)
   aWave1: OscillatorType = "triangle";
   aWave2: OscillatorType | "off" = "sine";
-  aOct: number = 4;
+  aOct: number = 2;
   aVol: number = 70;
   aAttk: number = 0.12;
   aDec: number = 0.50;
@@ -282,7 +282,7 @@ export class SimulationSound {
 
   bWave: OscillatorType = "sine";
   bNoteMode: "chord" | "scale" = "chord";
-  bOct: number = 5;
+  bOct: number = 4;
   bVol: number = 52;
   bDur: number = 110;
   bCut: number = 6500;
@@ -366,7 +366,7 @@ export class SimulationSound {
 
       // Default reverb send levels per channel
       this.channelReverbSends = {
-        pad: 55, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
+        pad: 79, step: 35, branch: 45, bell: 50, drone: 45, perc: 30, weather: 30,
         ...this.channelReverbSends,
       };
 
@@ -1090,7 +1090,7 @@ export class SimulationSound {
     if (!this.allow("pad", t)) return;
 
     // Rich blossoming pad chord across harmonic degrees in the chosen pad octave
-    const oct = this.channelOctaves.pad ?? 4;
+    const oct = this.channelOctaves.pad ?? 2;
     const chordNotes = [
       this.tone(0, oct),
       this.tone(2, oct),
@@ -1125,7 +1125,7 @@ export class SimulationSound {
     this.bloom();
 
     // Cascading bloom chord sequence in the chosen pad octave
-    const oct = this.channelOctaves.pad ?? 4;
+    const oct = this.channelOctaves.pad ?? 2;
     [0, 2, 4, 6].forEach((degOffset, idx) => {
       setTimeout(() => {
         if (!this.ctx || !this.enabled) return;
@@ -1200,7 +1200,7 @@ export class SimulationSound {
     const { pan, presence } = this.getPanAndPresence(camera, agent.position);
     if (presence < 0.15) return;
 
-    const oct = this.channelOctaves.step ?? 5;
+    const oct = this.channelOctaves.step ?? 4;
     const toneIdx = (agent.id || 0) % 7;
     const midi = this.bNoteMode === "scale"
       ? this.scaleTone(toneIdx, oct)

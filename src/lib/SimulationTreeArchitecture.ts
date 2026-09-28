@@ -2,8 +2,9 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { resolveAgentHabit } from "./SimulationBotany";
-import { isContinuousTreeGrowth, offerTreeBud, recordTreeNode } from "./SimulationTreeGrowth";
+import { hasBankedTreeBuds, isContinuousTreeGrowth, offerTreeBud, recordTreeNode } from "./SimulationTreeGrowth";
 import { isOverSizeBudget } from "./SimulationPartnerSearch";
+import { getSeekRamp } from "./SimulationSeekRamp";
 
 /**
  * Tree architecture model (tree archetype only).
@@ -19,7 +20,7 @@ import { isOverSizeBudget } from "./SimulationPartnerSearch";
  *    pine (excurrent leader with horizontal tiers).
  */
 
-export type TreeHabit = "oak" | "elm" | "pine";
+export type TreeHabit = "oak" | "elm" | "pine" | "rhizome";
 
 interface TreeProfile {
   trunkLength: number; // clear bole (or full leader height for pine)
@@ -89,10 +90,33 @@ const PROFILES: Record<TreeHabit, TreeProfile> = {
     maxDepth: 4,
     whorlSpacing: 4.4,
   },
+  rhizome: {
+    trunkLength: 0.8,
+    crownDivision: 8,
+    divisionSpreadDeg: 78,
+    trunkLateralsFrom: 2.0,
+    limbLength: 25,
+    lengthRatio: 0.72,
+    lateralSpacing: 0.16,
+    lateralAngleDeg: 48,
+    lateralAlpha: 0.24,
+    forkAngleDeg: 38,
+    endTaper: 0.76,
+    stepMin: 0.42,
+    stepMax: 1.15,
+    maxDepth: 6,
+  },
 };
 
 const PIPE_GAMMA = 2.6;
 const MIN_TWIG = 0.038;
+
+function minBranchThick(agent: Agent, habit: TreeHabit): number {
+  if (habit === "rhizome") {
+    return Math.max(0.32, (agent.genome?.minThickness || 0.32) * 1.15);
+  }
+  return MIN_TWIG;
+}
 const STEP_PER_BUDGET = 0.13;
 // Ecosystem-mode step scaling factor; reduced from 1.6 to 0.7 so trees grow at ~44% rate, aligning with other organisms.
 const SIM_STEP_SCALE = 0.7;
@@ -101,11 +125,15 @@ const X_AXIS = new THREE.Vector3(1, 0, 0);
 const GOLDEN = 2.39996323;
 
 export function isTreeModelAgent(agent: Agent): boolean {
-  return !agent.isFeeler && agent.genome?.archetype === "tree";
+  if (agent.isFeeler) return false;
+  const arch = agent.genome?.archetype;
+  return arch === "tree" || arch === "rhizome" || agent.genome?.growthHabit === "rhizome_web";
 }
 
 export function getTreeHabit(engine: SimulationEngine, agent: Agent): TreeHabit {
+  if (agent.genome?.archetype === "rhizome") return "rhizome";
   const h = resolveAgentHabit(engine, agent.genome);
+  if (h === "rhizome_web") return "rhizome";
   return h === "elm" || h === "pine" ? h : "oak";
 }
 
@@ -113,18 +141,29 @@ function profileFor(engine: SimulationEngine, agent: Agent): TreeProfile {
   return PROFILES[getTreeHabit(engine, agent)];
 }
 
-function maxDepthFor(engine: SimulationEngine, p: TreeProfile): number {
+function maxDepthFor(engine: SimulationEngine, p: TreeProfile, habit?: TreeHabit): number {
+  if (habit === "rhizome" || p === PROFILES.rhizome) {
+    return Math.max(5, Math.min(p.maxDepth, (engine.maxBranchDepth ?? 5) + 1));
+  }
   return Math.max(2, Math.min(p.maxDepth, engine.maxBranchDepth ?? p.maxDepth));
 }
 
-/** Lateral density follows the TREE BRANCHING dial (17.5 = profile default). */
-function spacingScale(engine: SimulationEngine): number {
+/** Lateral density follows the TREE BRANCHING dial (17.5 = profile default) or RHIZOME BRANCHING. */
+function spacingScale(engine: SimulationEngine, agent?: Agent): number {
+  if (agent && getTreeHabit(engine, agent) === "rhizome") {
+    const b = Math.max(0.5, engine.rhizomeBranching ?? 7.5);
+    return THREE.MathUtils.clamp(Math.sqrt(7.5 / b), 0.45, 1.8);
+  }
   const b = Math.max(1, engine.treeBranching ?? 17.5);
   return THREE.MathUtils.clamp(Math.sqrt(17.5 / b), 0.5, 2.0);
 }
 
-/** Tip taper follows the TREE TAPER dial (0.6 = profile default). */
-function endTaperFor(engine: SimulationEngine, p: TreeProfile): number {
+/** Tip taper follows the TREE TAPER dial (0.6 = profile default) or RHIZOME TAPER. */
+function endTaperFor(engine: SimulationEngine, p: TreeProfile, agent?: Agent): number {
+  if (agent && getTreeHabit(engine, agent) === "rhizome") {
+    const t = engine.rhizomeTaper ?? 0.55;
+    return THREE.MathUtils.clamp(p.endTaper - (t - 0.55) * 0.45, 0.35, 0.95);
+  }
   const t = engine.treeTaper ?? 0.6;
   return THREE.MathUtils.clamp(p.endTaper - (t - 0.6) * 0.5, 0.25, 0.95);
 }
@@ -141,9 +180,9 @@ function tipCap(engine: SimulationEngine): number {
  */
 export function getTreeStepSize(engine: SimulationEngine, agent: Agent): number {
   const p = profileFor(engine, agent);
-  const dial = (engine.treeStepSize ?? 0.6) / 0.6;
   const budget = agent.treeBudget ?? p.trunkLength;
-  // Ecosystem mode hosts many trees at once; SIM_STEP_SCALE (0.7) slows growth rate to match other organisms while keeping segments balanced.
+  const dial = (engine.treeStepSize ?? 0.6) / 0.6;
+  // Ecosystem mode hosts many trees/rhizomes at once; SIM_STEP_SCALE (0.7) slows growth rate to match other organisms while keeping segments balanced.
   const simScale = engine.designerMode ? 1 : SIM_STEP_SCALE;
   return THREE.MathUtils.clamp(budget * STEP_PER_BUDGET, p.stepMin, p.stepMax) * dial * simScale;
 }
@@ -157,7 +196,11 @@ function deflect(dir: THREE.Vector3, angle: number, azimuth: number): THREE.Vect
 
 function initTreeAgent(engine: SimulationEngine, agent: Agent) {
   const p = profileFor(engine, agent);
-  const delayScale = THREE.MathUtils.clamp(0.75 + (engine.treeBranchDelay ?? 5) * 0.05, 0.6, 1.6);
+  const habit = getTreeHabit(engine, agent);
+  const delayScale =
+    habit === "rhizome"
+      ? 1.0
+      : THREE.MathUtils.clamp(0.75 + (engine.treeBranchDelay ?? 5) * 0.05, 0.6, 1.6);
   agent.treeLen = 0;
   agent.treeBudget = p.trunkLength * delayScale * (0.92 + Math.random() * 0.16);
   agent.treeBudIdx = Math.floor(Math.random() * 8);
@@ -167,7 +210,12 @@ function initTreeAgent(engine: SimulationEngine, agent: Agent) {
       ? agent.treeBudget * p.trunkLateralsFrom
       : agent.treeBudget * Math.min(1.5, p.trunkLateralsFrom);
   agent.treeBaseThick = agent.thickness;
-  if (isTreeZeroGravity(engine) && !agent.treeAxis) {
+  if (habit === "rhizome") {
+    agent.treeAxis =
+      agent.direction && agent.direction.lengthSq() > 0.01
+        ? agent.direction.clone().normalize()
+        : UP.clone();
+  } else if (isTreeZeroGravity(engine) && !agent.treeAxis) {
     if (agent.direction && agent.direction.lengthSq() > 0.01) {
       agent.treeAxis = agent.direction.clone().normalize();
       agent.direction.copy(agent.treeAxis);
@@ -205,6 +253,12 @@ const TRUNK_RADIUS_FACTOR = 0.34;
 const ZERO_G_TRUNK_FACTOR = 0.22;
 
 function initTrunkThickness(agent: Agent, zeroG: boolean) {
+  if (agent.genome?.archetype === "rhizome" || agent.genome?.growthHabit === "rhizome_web") {
+    const base = Math.max(1.3, agent.genome.thicknessBase || 2.0);
+    agent.thickness = Math.min(agent.thickness, base * 0.92);
+    agent.treeBaseThick = agent.thickness;
+    return;
+  }
   const base = Math.max(0.5, agent.genome.thicknessBase || 4);
   agent.thickness = Math.min(agent.thickness, base * (zeroG ? ZERO_G_TRUNK_FACTOR : TRUNK_RADIUS_FACTOR));
   agent.treeBaseThick = agent.thickness;
@@ -235,8 +289,15 @@ function spawnChild(
   depth: number,
   spacing: number,
 ) {
-  // Soft per-organism size budget: over-budget trees open no new buds (existing branches keep growing)
-  if (isOverSizeBudget(engine, parent.genome.name)) return;
+  // Soft per-organism size budget: allow seeker twigs if organism tip count is low
+  if (isOverSizeBudget(engine, parent.genome.name)) {
+    const habit = getTreeHabit(engine, parent);
+    const maxSeekers = habit === "rhizome" ? 6 : 4;
+    const currentTips = engine.agents.filter(
+      (a: Agent) => a.active && !a.tapering && !a.isFeeler && a.genome.name === parent.genome.name,
+    ).length;
+    if (currentTips >= maxSeekers) return;
+  }
   const bud = makeTreeAgent(engine, parent, parent.position, dir, thickness, budget, depth, spacing);
   // Ecosystem trees open buds a few at a time (steady growth) instead of all at once
   if (!offerTreeBud(engine, bud)) newAgents.push(bud);
@@ -291,19 +352,30 @@ export function createTreeShoot(
   vigor: number,
 ): Agent {
   const p = profileFor(engine, template);
-  const maxDepth = maxDepthFor(engine, p);
+  const habit = getTreeHabit(engine, template);
+  const maxDepth = maxDepthFor(engine, p, habit);
   const depth = Math.max(1, Math.min(woodDepth + 1, maxDepth - 2));
   const budget = p.limbLength * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.8 + Math.random() * 0.4);
-  const thickness = THREE.MathUtils.clamp(woodThickness * 0.7, MIN_TWIG * (2 + 2 * vigor), MIN_TWIG * 8);
+  const minT = minBranchThick(template, habit);
+  const thickness =
+    habit === "rhizome"
+      ? THREE.MathUtils.clamp(Math.max(woodThickness * 0.82, minT * (1.15 + 0.35 * vigor)), minT, minT * 3.2)
+      : THREE.MathUtils.clamp(woodThickness * 0.7, MIN_TWIG * (2 + 2 * vigor), MIN_TWIG * 8);
   const A = axisOf(template);
   const root = template.treeRoot || pos;
-  const radial = new THREE.Vector3().subVectors(pos, root);
-  radial.addScaledVector(A, -radial.dot(A));
   const angle = THREE.MathUtils.degToRad(p.lateralAngleDeg + (Math.random() - 0.5) * 20);
   const dir = deflect(woodDir, angle, Math.random() * Math.PI * 2);
-  if (radial.lengthSq() > 0.01) dir.addScaledVector(radial.normalize(), 0.5);
-  dir.addScaledVector(A, 0.15).normalize();
-  const spacing = p.lateralSpacing * spacingScale(engine);
+  if (habit === "rhizome") {
+    const rel3D = new THREE.Vector3().subVectors(pos, root);
+    if (rel3D.lengthSq() > 0.01) dir.addScaledVector(rel3D.normalize(), 0.55);
+    dir.normalize();
+  } else {
+    const radial = new THREE.Vector3().subVectors(pos, root);
+    radial.addScaledVector(A, -radial.dot(A));
+    if (radial.lengthSq() > 0.01) dir.addScaledVector(radial.normalize(), 0.5);
+    dir.addScaledVector(A, 0.15).normalize();
+  }
+  const spacing = p.lateralSpacing * spacingScale(engine, template);
   return makeTreeAgent(engine, template, pos, dir, thickness, budget, depth, spacing);
 }
 
@@ -319,8 +391,23 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   const habit = getTreeHabit(engine, agent);
   const depth = agent.branchDepth || 0;
   const d = agent.direction;
-  const A = axisOf(agent);
   const root = agent.treeRoot || agent.position;
+  const seekFactor = depth >= 1 ? Math.max(0.15, 1.0 - 0.75 * getSeekRamp(engine, agent)) : 1.0;
+
+  if (habit === "rhizome") {
+    const rel3D = new THREE.Vector3().subVectors(agent.position, root);
+    if (rel3D.lengthSq() > 0.04) {
+      if (Math.sign(rel3D.y) !== Math.sign(d.y) && Math.abs(d.y) > 0.05) {
+        rel3D.y = Math.sign(d.y) * Math.abs(rel3D.y);
+      }
+      rel3D.normalize();
+      d.addScaledVector(rel3D, (depth <= 1 ? 0.028 : 0.018) * seekFactor);
+    }
+    d.normalize();
+    return;
+  }
+
+  const A = axisOf(agent);
   // Outward direction from the tree's axis line (the "radial" of the crown)
   const rel = new THREE.Vector3().subVectors(agent.position, root);
   const radial = rel.addScaledVector(A, -rel.dot(A));
@@ -331,7 +418,7 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   // Pull the along-axis component of the heading toward `target` at rate k
   const lean = (target: number, k: number) => {
     const a = d.dot(A);
-    d.addScaledVector(A, THREE.MathUtils.lerp(a, target, k) - a);
+    d.addScaledVector(A, THREE.MathUtils.lerp(a, target, k * seekFactor) - a);
   };
 
   if (depth === 0) {
@@ -339,7 +426,7 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   } else if (habit === "oak") {
     // White oak: ascending limbs, outward-reaching crooked branches
     lean(depth === 1 ? 0.68 : depth === 2 ? 0.5 : 0.35, 0.035);
-    d.addScaledVector(radial, 0.018);
+    d.addScaledVector(radial, 0.018 * seekFactor);
   } else if (habit === "elm") {
     // Elm: vase limbs that arch outward, fine spreading/drooping twigs at the rim
     const target =
@@ -351,11 +438,11 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
             ? 0.08
             : -0.25;
     lean(target, 0.04);
-    d.addScaledVector(radial, depth === 1 ? 0.008 : 0.015);
+    d.addScaledVector(radial, (depth === 1 ? 0.008 : 0.015) * seekFactor);
   } else {
     // White pine: horizontal tiers with a slight upturn toward the tips
     lean(depth === 1 ? 0.02 + progress * 0.16 : 0.04, 0.05);
-    if (depth === 1) d.addScaledVector(radial, 0.04);
+    if (depth === 1) d.addScaledVector(radial, 0.04 * seekFactor);
   }
   d.normalize();
 }
@@ -391,13 +478,14 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   if (agent.treeRestTicks > 0) return false;
 
   const p = profileFor(engine, agent);
-  const maxDepth = maxDepthFor(engine, p);
+  const habit = getTreeHabit(engine, agent);
+  const maxDepth = maxDepthFor(engine, p, habit);
   const flushes = (agent.treeFlushes = (agent.treeFlushes || 0) + 1);
   const vigor = Math.max(FLUSH_VIGOR_FLOOR, Math.pow(FLUSH_VIGOR_DECAY, flushes - 1));
   // Resume two orders below the depth limit so the flush can fork and spread again
   const depth = Math.max(1, maxDepth - 2);
   const budget = p.limbLength * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.85 + Math.random() * 0.3);
-  const spacing = p.lateralSpacing * spacingScale(engine);
+  const spacing = p.lateralSpacing * spacingScale(engine, agent);
 
   agent.treeDormant = false;
   agent.treeRestTicks = undefined;
@@ -408,11 +496,19 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   // New shoot: enough girth to fork again (twig ends are too thin to branch)
   agent.thickness = Math.max(agent.thickness, MIN_TWIG * 3 * vigor + MIN_TWIG);
   agent.targetThickness = agent.thickness;
-  // Break out of the old heading, leaning back toward the tree's own axis
+  // Break out of the old heading
   const az = Math.random() * Math.PI * 2;
   agent.direction.copy(deflect(agent.direction, THREE.MathUtils.degToRad(p.forkAngleDeg), az));
-  agent.direction.lerp(axisOf(agent), 0.35).normalize();
-  engine.onLog(`🌳 ${agent.genome.name} [TREE] new growth flush #${flushes}`);
+  if (habit === "rhizome") {
+    const root = agent.treeRoot || agent.position;
+    const rel3D = new THREE.Vector3().subVectors(agent.position, root);
+    if (rel3D.lengthSq() > 0.01) agent.direction.addScaledVector(rel3D.normalize(), 0.4);
+    agent.direction.add(new THREE.Vector3().randomDirection().multiplyScalar(0.3)).normalize();
+  } else {
+    agent.direction.lerp(axisOf(agent), 0.35).normalize();
+  }
+  const label = habit === "rhizome" ? "RHIZOME" : "TREE";
+  engine.onLog(`🌳 ${agent.genome.name} [${label}] new growth flush #${flushes}`);
   return true;
 }
 
@@ -447,8 +543,8 @@ export function stepTreeArchitecture(
   const p = profileFor(engine, agent);
   const habit = getTreeHabit(engine, agent);
   const depth = agent.branchDepth || 0;
-  const maxDepth = maxDepthFor(engine, p);
-  const spacing = p.lateralSpacing * spacingScale(engine);
+  const maxDepth = maxDepthFor(engine, p, habit);
+  const spacing = p.lateralSpacing * spacingScale(engine, agent);
   const budget = agent.treeBudget!;
   const roomForTips = strainCount + newAgents.length < tipCap(engine);
 
@@ -456,14 +552,20 @@ export function stepTreeArchitecture(
   recordTreeNode(engine, agent);
 
   // Continuous taper along the branch (pine leader tapers harder to a spire)
-  const endTaper = depth === 0 && habit === "pine" ? 0.3 : endTaperFor(engine, p);
-  agent.thickness = Math.max(0.02, agent.thickness * Math.pow(endTaper, stepLen / budget));
+  const minT = minBranchThick(agent, habit);
+  const endTaper =
+    depth === 0 && habit === "pine"
+      ? 0.3
+      : habit === "rhizome"
+        ? Math.max(0.82, endTaperFor(engine, p, agent))
+        : endTaperFor(engine, p, agent);
+  agent.thickness = Math.max(habit === "rhizome" ? minT : 0.02, agent.thickness * Math.pow(endTaper, stepLen / budget));
 
   // ---- Lateral buds ----
   const canLateral = depth + 1 <= maxDepth && roomForTips;
   while (agent.treeLen >= (agent.treeNextBud ?? Infinity) && agent.treeLen < budget * 0.94) {
     const frac = agent.treeLen / budget;
-    if (canLateral && agent.thickness > MIN_TWIG * 1.4) {
+    if (canLateral && agent.thickness > (habit === "rhizome" ? minT * 0.95 : MIN_TWIG * 1.4)) {
       if (depth === 0 && habit === "pine") {
         // Whorl of 3-5 horizontal branches; lower tiers longer (conical crown)
         const count = 2 + Math.floor(Math.random() * 4);
@@ -479,15 +581,36 @@ export function stepTreeArchitecture(
         agent.thickness *= 0.95;
       } else {
         const alpha = p.lateralAlpha * (0.8 + Math.random() * 0.4);
-        const childT = Math.max(MIN_TWIG, agent.thickness * Math.pow(alpha, 1 / PIPE_GAMMA));
-        agent.thickness *= Math.pow(1 - alpha, 1 / PIPE_GAMMA);
+        const childT =
+          habit === "rhizome"
+            ? Math.max(minT, agent.thickness * Math.max(0.68, Math.pow(alpha, 1 / PIPE_GAMMA)))
+            : Math.max(MIN_TWIG, agent.thickness * Math.pow(alpha, 1 / PIPE_GAMMA));
+        if (habit === "rhizome") {
+          // Preserve main channel thickness so the body remains clearly visible across tributaries
+          agent.thickness = Math.max(minT * 1.1, agent.thickness * Math.pow(1 - alpha * 0.35, 1 / PIPE_GAMMA));
+        } else {
+          agent.thickness *= Math.pow(1 - alpha, 1 / PIPE_GAMMA);
+        }
         const az = (agent.treeBudIdx = (agent.treeBudIdx || 0) + 1) * GOLDEN;
         const angle = THREE.MathUtils.degToRad(p.lateralAngleDeg + (Math.random() - 0.5) * 20);
         const dir = deflect(agent.direction, angle, az);
+        if (habit === "rhizome") {
+          // Sympodial river-bend counter-deflection to parent channel
+          agent.direction.copy(deflect(agent.direction, angle * alpha * 0.55, az + Math.PI));
+          const out3D = new THREE.Vector3().subVectors(agent.position, agent.treeRoot || agent.position);
+          if (out3D.lengthSq() > 0.04) dir.addScaledVector(out3D.normalize(), 0.22).normalize();
+        }
         // Acrotony for broadleaves (upper laterals longer); trunk laterals become limbs
-        const posFactor = habit === "pine" ? 1.0 - 0.4 * frac : 0.6 + 0.4 * frac;
-        const childBudget =
-          (depth === 0 ? p.limbLength * 0.7 : budget * p.lengthRatio) * posFactor * (0.85 + Math.random() * 0.3);
+        let childBudget: number;
+        if (habit === "rhizome") {
+          childBudget =
+            (depth === 0 ? p.limbLength * (0.85 + Math.random() * 0.25) : budget * p.lengthRatio) *
+            (0.85 + Math.random() * 0.3);
+        } else {
+          const posFactor = habit === "pine" ? 1.0 - 0.4 * frac : 0.6 + 0.4 * frac;
+          childBudget =
+            (depth === 0 ? p.limbLength * 0.7 : budget * p.lengthRatio) * posFactor * (0.85 + Math.random() * 0.3);
+        }
         spawnChild(engine, agent, newAgents, dir, childT, childBudget, depth + 1, spacing);
       }
     }
@@ -499,6 +622,34 @@ export function stepTreeArchitecture(
 
   // ---- Terminal bud: crown division, sympodial fork, or fine tapered tip ----
   if (depth === 0 && p.crownDivision > 0) {
+    if (habit === "rhizome") {
+      const n = p.crownDivision;
+      const baseAz = (Math.random() - 0.5) * 0.18;
+      const limbT = Math.max(minT * 2.1, agent.thickness * 0.76);
+      for (let k = 0; k < n; k++) {
+        const q = Math.floor(k / 2);
+        const az = baseAz + (q * Math.PI * 0.5) + Math.PI * 0.25 + (Math.random() - 0.5) * 0.22;
+        const signY = k % 2 === 0 ? 1 : -1;
+        const elev = signY * (0.28 + (k % 4) * 0.12) + (Math.random() - 0.5) * 0.08;
+        const clampedY = THREE.MathUtils.clamp(elev, -0.88, 0.88);
+        const rXZ = Math.sqrt(Math.max(0.08, 1 - clampedY * clampedY));
+        const dir = new THREE.Vector3(Math.cos(az) * rXZ, clampedY, Math.sin(az) * rXZ).normalize();
+        const limbBudget = p.limbLength * (0.88 + Math.random() * 0.28);
+        if (k === 0) {
+          agent.direction.copy(dir);
+          agent.thickness = limbT;
+          agent.branchDepth = 1;
+          agent.isCanopy = true;
+          agent.treeLen = 0;
+          agent.treeBudget = limbBudget;
+          agent.treeNextBud = limbBudget * spacing * (0.35 + Math.random() * 0.35);
+        } else {
+          spawnChild(engine, agent, newAgents, dir, limbT, limbBudget, 1, spacing);
+        }
+      }
+      return;
+    }
+
     const n = p.crownDivision + (Math.random() < 0.35 ? 1 : 0) - (Math.random() < 0.2 ? 1 : 0);
     const baseAz = Math.random() * Math.PI * 2;
     const limbT = agent.thickness * Math.pow(1 / n, 1 / PIPE_GAMMA) * 1.05;
@@ -522,8 +673,34 @@ export function stepTreeArchitecture(
     return;
   }
 
-  const canFork = depth >= 1 && depth < maxDepth && agent.thickness > MIN_TWIG * 1.3 && roomForTips;
+  const minForkThick = habit === "rhizome" ? minT * 0.95 : MIN_TWIG * 1.3;
+  const canFork = depth >= 1 && depth < maxDepth && agent.thickness > minForkThick && roomForTips;
   if (!canFork) {
+    if (!engine.designerMode) {
+      const name = agent.genome.name;
+      const banked = hasBankedTreeBuds(engine, name);
+      const targetSeekers = banked ? 2 : 4;
+      const aliveCount =
+        engine.agents.filter((a: Agent) => a.active && !a.tapering && !a.isFeeler && a.genome.name === name).length +
+        newAgents.filter((a: Agent) => a.active && !a.tapering && !a.isFeeler && a.genome.name === name).length;
+
+      if (aliveCount <= targetSeekers || (agent.isSeekerTwig && !banked)) {
+        // Continue as an exploratory seeker twig instead of dying or entering long sleep
+        agent.isSeekerTwig = true;
+        agent.treeLen = 0;
+        agent.treeBudget = 10 + Math.random() * 8;
+        const seekerThick = habit === "rhizome" ? minT * 1.15 : MIN_TWIG * 1.3;
+        agent.thickness = habit === "rhizome" ? Math.max(minT, Math.min(agent.thickness, seekerThick)) : Math.min(agent.thickness, seekerThick);
+        agent.treeNextBud = agent.treeBudget * spacing * (0.6 + Math.random() * 0.4);
+        if (!banked && (aliveCount < targetSeekers || Math.random() < 0.35)) {
+          const sideAng = THREE.MathUtils.degToRad(25 + Math.random() * 13);
+          const sideDir = deflect(agent.direction, sideAng, Math.random() * Math.PI * 2);
+          spawnChild(engine, agent, newAgents, sideDir, Math.max(minT, agent.thickness * 0.9), agent.treeBudget * 0.85, Math.min(maxDepth, depth + 1), spacing);
+        }
+        return;
+      }
+    }
+
     if (shouldBecomeKeeper(engine, agent, newAgents)) {
       enterTreeRest(agent); // last tip: rests (organism stays alive), then regrows in a new flush
       return;
@@ -533,13 +710,20 @@ export function stepTreeArchitecture(
     return;
   }
 
-  const n = Math.random() < (habit === "oak" ? 0.25 : 0.15) ? 3 : 2;
+  const n = Math.random() < (habit === "rhizome" ? 0.35 : habit === "oak" ? 0.25 : 0.15) ? 3 : 2;
   const equal = Math.random() < (engine.branchSplitSizeProb ?? 0.35);
   const baseAz = Math.random() * Math.PI * 2;
   const startT = agent.thickness;
   for (let k = 0; k < n; k++) {
-    const share = equal ? 1 / n : k === 0 ? 0.55 : 0.45 / (n - 1);
-    const t = Math.max(MIN_TWIG * 0.8, startT * Math.pow(share, 1 / PIPE_GAMMA));
+    const share = equal
+      ? 1 / n
+      : habit === "rhizome"
+        ? (k === 0 ? 0.56 : 0.48 / (n - 1))
+        : (k === 0 ? 0.55 : 0.45 / (n - 1));
+    const t =
+      habit === "rhizome"
+        ? Math.max(minT, startT * Math.max(0.72, Math.pow(share, 1 / PIPE_GAMMA)))
+        : Math.max(MIN_TWIG * 0.8, startT * Math.pow(share, 1 / PIPE_GAMMA));
     const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.6;
     const ang = THREE.MathUtils.degToRad(p.forkAngleDeg * (k === 0 && !equal ? 0.45 : 1) + (Math.random() - 0.5) * 14);
     const dir = deflect(agent.direction, ang, az);

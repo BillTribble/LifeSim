@@ -61,7 +61,7 @@ export const BOTANICAL_CONCEPTS: BotanicalConceptMeta[] = [
     id: "rhizome_web",
     label: "Vascular rhizome",
     shortLabel: "Vascular Web",
-    subtitle: "Da Vinci pipe-model arterial network with anastomosing capillary loops",
+    subtitle: "Omnidirectional dendritic river-basin network with multi-order tributaries",
     archetype: "rhizome",
   },
 ];
@@ -142,7 +142,7 @@ export function applyBotanicalConceptSteering(
         : habit === "pine"
           ? 0.06 + depth * 0.04
           : habit === "rhizome_web"
-            ? 0.07 + depth * 0.045
+            ? 0.085 + depth * 0.048
             : 0.05 + depth * 0.035;
     const amp =
       (habit === "oak"
@@ -150,13 +150,13 @@ export function applyBotanicalConceptSteering(
         : habit === "pine"
           ? 0.05 + Math.min(0.07, depth * 0.016)
           : habit === "rhizome_web"
-            ? 0.045 + Math.min(0.06, depth * 0.014)
+            ? 0.052 + Math.min(0.072, depth * 0.016)
             : 0.028 + depth * 0.01) * curviness;
 
     const curlX =
       Math.sin(age * freq + idSeed) * Math.cos(age * freq * 0.61 - idSeed);
     const curlY =
-      Math.cos(age * freq * 0.83 + idSeed * 1.3) * 0.6;
+      Math.cos(age * freq * 0.83 + idSeed * 1.3) * (habit === "rhizome_web" ? 0.85 : 0.6);
     const curlZ =
       Math.sin(age * freq * 1.17 - idSeed * 0.7) *
       Math.sin(age * freq * 0.53 + idSeed);
@@ -237,20 +237,18 @@ export function applyBotanicalConceptSteering(
       agent.direction.normalize();
     }
   } else if (habit === "rhizome_web") {
-    // Vascular Rhizome: Creeping radial fan with gentle undulation & capillary anastomosis
+    // Vascular Rhizome: Creeping radial fan with gentle undulation
     agent.direction.y *= 0.92;
     agent.direction.normalize();
   }
 
-  // 3. Crown Shyness (for Tree/Bush habits) & Capillary Anastomosis (for Vascular Rhizome)
+  // 3. Crown Shyness (for Tree/Bush/Rhizome habits)
   const treeModel = isTreeModelAgent(agent);
   if (depth >= 1 && activeAgents.length > 1 && !(treeModel && depth === 1)) {
     const shynessVec = new THREE.Vector3();
     let shynessCount = 0;
-    const anastomosisVec = new THREE.Vector3();
-    let anastomosisCount = 0;
 
-    const shyRadiusSq = habit === "oak" ? 81.0 : 49.0; // 9 or 7 units
+    const shyRadiusSq = habit === "oak" ? 81.0 : habit === "rhizome_web" ? 64.0 : 49.0;
 
     for (let i = 0; i < activeAgents.length; i += 2) {
       const other = activeAgents[i];
@@ -258,21 +256,8 @@ export function applyBotanicalConceptSteering(
       if (other.parentId === agent.id || agent.parentId === other.id) continue;
 
       const dSq = agent.position.distanceToSquared(other.position);
-      if (habit === "rhizome_web" && depth >= 2) {
-        // Anastomosis: fine capillary tendrils between 3.5 and 11 units gently attract to form webbed loops
-        if (dSq > 12.0 && dSq < 121.0 && (other.branchDepth || 0) >= 1) {
-          anastomosisVec.add(
-            new THREE.Vector3().subVectors(other.position, agent.position).normalize(),
-          );
-          anastomosisCount++;
-        } else if (dSq <= 12.0 && dSq > 0.01) {
-          shynessVec.add(
-            new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
-          );
-          shynessCount++;
-        }
-      } else if (dSq < shyRadiusSq && dSq > 0.01) {
-        // Crown Shyness: twig clouds repel each other to keep crisp sky channels between boughs (Pic 3)
+      if (dSq < shyRadiusSq && dSq > 0.01) {
+        // Crown Shyness / Watershed repulsion: twig clouds and river tributaries repel to keep channels open
         const weight = 1.0 - Math.sqrt(dSq / shyRadiusSq);
         shynessVec.addScaledVector(
           new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
@@ -285,12 +270,10 @@ export function applyBotanicalConceptSteering(
     if (shynessCount > 0) {
       shynessVec.divideScalar(shynessCount);
       const shyStrength =
-        (habit === "oak" ? 1.15 : 0.85) * evo.crownShynessStrength * (treeModel ? 0.6 : 1);
+        (habit === "oak" ? 1.15 : habit === "rhizome_web" ? 0.95 : 0.85) *
+        evo.crownShynessStrength *
+        (treeModel ? 0.6 : 1);
       agent.direction.addScaledVector(shynessVec, shyStrength).normalize();
-    }
-    if (anastomosisCount > 0) {
-      anastomosisVec.divideScalar(anastomosisCount);
-      agent.direction.addScaledVector(anastomosisVec, evo.anastomosisStrength).normalize();
     }
   }
 }
@@ -601,13 +584,16 @@ export function spawnAgentAppendages(
   if (depth === 0 && evo.round >= 6 && renderThickness > 0.95) return;
 
   const cappedAppThickness = Math.min(renderThickness, evo.maxAppThickness);
+  const isRhizome = genome.archetype === "rhizome" || genome.growthHabit === "rhizome_web";
+  if (isRhizome && (depth === 0 || (depth === 1 && (agent.treeLen || 0) < 3.5))) return;
 
-  if (
-    (genome.appendage === "hair" ||
-      genome.appendage === "curlyHair" ||
-      genome.appendage === "spirals") &&
-    Math.random() < 0.45 * engine.ornamentFrequency
-  ) {
+  const isHairApp =
+    genome.appendage === "hair" ||
+    genome.appendage === "curlyHair" ||
+    genome.appendage === "spirals";
+  const hairProb = (isRhizome ? 0.22 : 0.45) * engine.ornamentFrequency;
+
+  if (isHairApp && Math.random() < hairProb) {
     const rad = Math.random() * Math.PI * 2;
     const ax1 = new THREE.Vector3()
       .crossVectors(agent.direction, new THREE.Vector3(0, 1, 0))
@@ -618,12 +604,15 @@ export function spawnAgentAppendages(
       .add(ax2.multiplyScalar(Math.sin(rad)))
       .normalize();
 
+    const hairLength = isRhizome
+      ? (1.0 + Math.random() * 1.4) * Math.min(1.0, renderThickness * 2.2)
+      : 3 + Math.random() * 4;
     const hairStart = agent.position
       .clone()
       .add(dir.clone().multiplyScalar(renderThickness));
     const hairEnd = hairStart
       .clone()
-      .add(dir.clone().multiplyScalar(3 + Math.random() * 4));
+      .add(dir.clone().multiplyScalar(hairLength));
     engine.addLineSegment(
       hairStart,
       hairEnd,

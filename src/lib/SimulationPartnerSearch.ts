@@ -80,7 +80,7 @@ export function getStrainTissueCount(engine: SimulationEngine, strainName: strin
 export const GLOBAL_SEGMENT_BUDGET = 28000;
 
 export function getOrganismSegmentBudget(engine: SimulationEngine): number {
-  return Math.min(2500, Math.max(1500, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 14)));
+  return Math.min(2500, Math.max(1500, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 7)));
 }
 
 /** True when the organism's live tissue exceeds its soft size budget (it then stops branching). */

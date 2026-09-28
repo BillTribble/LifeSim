@@ -70,6 +70,7 @@ export function processAgents(
   newAgents: Agent[],
   bredThisFrame: Set<Agent>,
 ) {
+  (engine as any)._frameSeekerTwigCounts = new Map<string, number>();
   const strainCounts = new Map<string, number>();
   const nonTaperingStrains = new Set<string>();
   let currentActiveCount = 0;
@@ -105,6 +106,7 @@ export function processAgents(
 
   // Cap maximum species by culling a victim when capacity exceeded (see SimulationCulling.ts)
   enforceCreatureCap(engine, activeAgents, nonTaperingStrains);
+  (engine as any)._frameSeekerTwigCounts = new Map<string, number>();
 
   for (let i = 0; i < activeAgents.length; i++) {
     const agent = activeAgents[i];
@@ -124,10 +126,10 @@ export function processAgents(
     }
 
     let baseSpeedMult = 1.0;
-    if (agent.genome.archetype === "snake") baseSpeedMult = engine.snakeSpeed;
+    if (agent.isFeeler) baseSpeedMult = 1.6;
+    else if (agent.genome.archetype === "snake") baseSpeedMult = engine.snakeSpeed;
     else if (agent.genome.archetype === "bush") baseSpeedMult = engine.bushSpeed;
-    else if (agent.genome.archetype === "tree") baseSpeedMult = engine.treeSpeed;
-    else if (agent.genome.archetype === "rhizome") baseSpeedMult = engine.rhizomeSpeed;
+    else if (agent.genome.archetype === "tree" || agent.genome.archetype === "rhizome") baseSpeedMult = engine.treeSpeed ?? 0.65;
 
     agent.growthBoost = agent.growthBoost || 1.0;
     if (agent.growthBoost > 1.0) {
@@ -195,19 +197,34 @@ export function processAgents(
         if (agent.active) tickTreeRest(engine, agent);
         continue;
       }
-      if (!isDying && !agent.isFeeler && isOverSizeBudget(engine, agent.genome.name)) {
-        // Soft size budget: an over-budget organism rests (no new segments, no new tips) but still
-        // ages, breeds via feelers and reaches its lifespan, like a dormant tree keeper
-        agent.age++;
-        if (!engine.designerMode) {
-          handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
-          const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
-          checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
-        }
-        continue;
-      }
       const { genome } = agent;
       const habit = resolveAgentHabit(engine, genome);
+      if (!isDying && !agent.isFeeler && isOverSizeBudget(engine, genome.name)) {
+        // Soft size budget: allow exploratory seeker twigs to keep growing and seeking
+        const targetSeekerTwigs = 4;
+        const seekerCount = (engine as any)._frameSeekerTwigCounts.get(genome.name) || 0;
+        const isEligibleTwig = (agent.branchDepth || 0) >= 2 || agent.isSeekerTwig;
+
+        if (isEligibleTwig && seekerCount < targetSeekerTwigs) {
+          (engine as any)._frameSeekerTwigCounts.set(genome.name, seekerCount + 1);
+          agent.isSeekerTwig = true;
+          const isRhizomeTwig = genome.archetype === "rhizome" || habit === "rhizome_web";
+          const minSeekerT = isRhizomeTwig
+            ? Math.max(0.32, (genome.minThickness || 0.32) * 1.15)
+            : Math.max(0.04, (genome.minThickness || 0.05) * 1.3);
+          agent.thickness = isRhizomeTwig
+            ? Math.max(minSeekerT, Math.min(agent.thickness, minSeekerT * 1.25))
+            : Math.min(agent.thickness, minSeekerT);
+        } else {
+          agent.age++;
+          if (!engine.designerMode) {
+            handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
+            const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+            checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
+          }
+          continue;
+        }
+      }
 
       let effectiveBifurcationRate = genome.bifurcationRate;
       let effectiveWanderIntensity = genome.wanderIntensity;
@@ -285,13 +302,13 @@ export function processAgents(
       const seekRamp = getSeekRamp(engine, agent, strainAge);
       const canSeek =
         !agent.isFeeler &&
-        !treeModel && // tree form comes from its own architecture, not from leaning toward mates
         !agent.tapering &&
         !isSpeciesOnCooldown(engine, myStrain, evalGenome) &&
         agent.cooldown <= 0 &&
         seekRamp > 0 &&
         myMCount < maxM &&
-        isOrganismMature(engine, evalGenome);
+        isOrganismMature(engine, evalGenome) &&
+        (!treeModel || (agent.branchDepth || 0) >= 1 || agent.isSeekerTwig);
       const desperate = canSeek && isOrganismDesperate(engine, evalGenome, agent.age);
       const seekRadius = getSeekRadius(engine, desperate);
 
@@ -333,13 +350,13 @@ export function processAgents(
             }
             // Keep spacing while seeking: only a receptive partner inside contact range is exempt
             // (any receptive partner when desperate, or far-spawned founders never meet)
-            if (dSq < 1600 && !(otherReceptive && (desperate || dSq < SEEK_CONTACT_RANGE_SQ))) {
+            if (dSq < 1600 && !(otherReceptive && (desperate || dSq < SEEK_CONTACT_RANGE_SQ || treeModel))) {
               avoidanceForce.add(
                 new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
               );
               avoidanceCount++;
             }
-          } else if (dSq < 1600) {
+          } else if (dSq < 1600 && !treeModel) {
             avoidanceForce.add(
               new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
             );
@@ -416,12 +433,13 @@ export function processAgents(
         // Bounded seeking (plan 3.1): outer tips only, within 0.4 x world radius, lerp <= 0.1
         const dist = Math.sqrt(nearestDistSq);
         if (canSeek && nearestTargetPos && nearestTarget && seekRamp > 0 &&
-          (agent.branchDepth || 0) >= (desperate ? 1 : 2) && dist < seekRadius) {
+          ((agent.branchDepth || 0) >= (desperate ? 1 : 2) || agent.isSeekerTwig) && dist < seekRadius) {
           const evo = getEvolutionStepConfig((engine as any).evolutionStep);
           const toTarget = new THREE.Vector3()
             .subVectors(nearestTargetPos, agent.position)
             .normalize();
-          agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean) * seekRamp).normalize();
+          const twigBoost = agent.isSeekerTwig ? 1.5 : 1.0;
+          agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean * twigBoost) * seekRamp).normalize();
         }
       }
 
@@ -517,6 +535,9 @@ export function processAgents(
                 : Math.max(0.04, genome.thicknessBase * 0.03);
             if (agent.thickness < floorThickness) {
               agent.thickness = floorThickness;
+            }
+            if (branchDepth >= (engine.maxBranchDepth ?? 5) && agent.age > 90) {
+              agent.branchDepth = Math.max(1, (engine.maxBranchDepth ?? 5) - 2);
             }
           } else if (arch !== "snake") {
             const maxDepth = Math.max(5, engine.maxBranchDepth ?? 5);

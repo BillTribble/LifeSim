@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
+import { PerfIndicator } from "./components/PerfIndicator";
 import { ArchetypeDesigner } from "./components/ArchetypeDesigner";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
@@ -13,9 +14,15 @@ import { BotanicalConceptSwitcher } from "./components/BotanicalConceptSwitcher"
 import { EvolutionStepperModal } from "./components/EvolutionStepperModal";
 
 export default function App() {
-  const [mode, setMode] = useState<"simulation" | "designer">("simulation");
-  const [designerArchetype, setDesignerArchetype] = useState<Archetype>("bush");
-  const [botanicalConcept, setBotanicalConcept] = useState<BotanicalConcept>("auto");
+  const [mode, setMode] = useState<"simulation" | "designer">(() =>
+    typeof window !== "undefined" && localStorage.getItem("designerMode") === "true" ? "designer" : "simulation"
+  );
+  const [designerArchetype, setDesignerArchetype] = useState<Archetype>(() =>
+    (typeof window !== "undefined" && (localStorage.getItem("designerArchetype") as Archetype)) || "bush"
+  );
+  const [botanicalConcept, setBotanicalConcept] = useState<BotanicalConcept>(() =>
+    (typeof window !== "undefined" && (localStorage.getItem("botanicalConcept") as BotanicalConcept)) || "auto"
+  );
   const [evolutionStep, setEvolutionStep] = useState<number>(20);
   const [evolutionModalOpen, setEvolutionModalOpen] = useState<boolean>(false);
 
@@ -385,6 +392,8 @@ export default function App() {
       {mode === "simulation" && (
         <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
       )}
+
+      {mode === "simulation" && <PerfIndicator perf={(stats as any).perf} showHUD={showHUD} />}
 
       {mode === "simulation" ? (
         <HUD

@@ -30,7 +30,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
     shader.uniforms.themeColor2_B = material.userData.themeColor2_B;
 
     const leafUVDecl = isLeaf ? 'varying vec3 vLeafUV;' : '';
-    const leafFragDecl = isLeaf ? 'varying vec3 vLeafUV;\nuniform float veinStrength;\nuniform float veinGlow;' : '';
+    const leafFragDecl = isLeaf ? 'varying vec3 vLeafUV;\nuniform float veinStrength;\nuniform float veinGlow;\nuniform float uLodLevel;' : '';
     const leafUVInit = isLeaf ? `
              float leafHash = instancePackA.w;
              float leafHash2 = fract(leafHash * 13.7);
@@ -199,7 +199,9 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
 
              // === Screen-Space Normal Perturbation (Bump Mapping) ===
              // Scale normal perturbation intensity by veinGlow morph slider
+             // View-only LOD: derivative bump mapping is skipped at medium detail and below.
              float bumpH = finalVeinMask * veinStrength * mix(0.18, 0.45, veinGlow); 
+             if (uLodLevel < 0.5) {
              vec3 dpdx = dFdx(-vViewPosition);
              vec3 dpdy = dFdy(-vViewPosition);
              float dhdx = dFdx(bumpH);
@@ -210,6 +212,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              if (abs(denom) > 0.00001) {
                  vec3 surfGrad = (r1 * dhdx + r2 * dhdy) / denom;
                  perturbedNormal = normalize(perturbedNormal - surfGrad * mix(0.35, 0.6, veinGlow));
+             }
              }
 
              // Blend vein color from organic yellow-green to bright lime highlight
@@ -291,6 +294,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
   material.userData.stemCurviness = { value: 1.0 };
   material.userData.veinStrength = { value: 1.0 };
   material.userData.veinGlow = { value: 0.5 };
+  material.userData.uLodLevel = { value: 0.0 };
 
   const prevBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -300,11 +304,13 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
     shader.uniforms.stemCurviness = material.userData.stemCurviness;
     shader.uniforms.veinStrength = material.userData.veinStrength;
     shader.uniforms.veinGlow = material.userData.veinGlow;
+    shader.uniforms.uLodLevel = material.userData.uLodLevel;
 
     shader.vertexShader = `
       uniform float botanyRealism;
       uniform float stemCurviness;
       uniform float veinStrength;
+      uniform float uLodLevel;
       ${shader.vertexShader}
     `.replace(
       "#include <begin_vertex>",
@@ -497,7 +503,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        transformed.z += cup;
 
        // === 3.5 VEIN 3D RIDGE DISPLACEMENT ===
-       if (isBlade > 0.5 && veinStrength > 0.0) {
+       if (isBlade > 0.5 && veinStrength > 0.0 && uLodLevel < 0.5) {
            // --- Midrib: wide, tapered central ridge ---
            float midribWidth = mix(0.12, 0.04, bladeT);
            float midribVal = smoothstep(midribWidth, midribWidth * 0.2, abs(position.x * 2.0));
@@ -580,7 +586,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        // Wavy Margin Wiggles: detailed ripples along the outer edges of the blade
        float rippleFreq = 10.0 + instanceHash * 6.0;
        float rippleWave = sin(bladeT * rippleFreq + instanceHash * 6.28) * 0.07 * abs(position.x);
-       transformed.z += rippleWave * U * isBlade;
+       transformed.z += rippleWave * U * isBlade * step(uLodLevel, 1.5);
 
        // === STEM CURVING & RIGID BLADE ROTATION/TRANSLATION ===
        // Compute stem-deformed position

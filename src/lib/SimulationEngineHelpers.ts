@@ -87,5 +87,13 @@ export function markStrainSegmentsDyingHelper(engine: any, strainName?: string):
       }
     }
   }
+  if (engine.hybridSegments && engine.dyingHybrids) {
+    for (let i = 0; i < engine.hybridSegments.length; i++) {
+      const seg = engine.hybridSegments[i];
+      if (seg && seg.childStrainName === strainName && !seg.dyingStart) {
+        markDyingHelper(engine, engine.hybridSegments, engine.dyingHybrids, i, now);
+      }
+    }
+  }
   return marked;
 }

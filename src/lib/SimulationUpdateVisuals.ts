@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
+import { WIND_STRIDE } from "./SimulationLOD";
+
+// Scratch objects reused every frame (avoids per-instance heap allocations in the hot loop).
+const scratchQuat = new THREE.Quaternion();
+const scratchEuler = new THREE.Euler();
 
 export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
   // Kiosk Mode Interval & Smooth Fade Handling
@@ -141,6 +146,8 @@ export function updateMeshesAndStemsGrowth(
     const pB = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
     if (isLeaf && !pB) throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
     const leafWind = isLeaf && engine.windVelocity > 0;
+    // View-only LOD: settled leaves re-pose for wind on a stride (1/2 at medium, 1/4 at low, paused at minimal).
+    const windStride = WIND_STRIDE[engine.lod?.tier ?? 0];
 
     for (let i = 0; i < (mesh.count || 0); i++) {
       const seg = segments[i];
@@ -175,20 +182,21 @@ export function updateMeshesAndStemsGrowth(
       }
 
       // Settled leaves only need per-frame matrices while wind flutter is active
-      if (age <= growthDuration || appChanged || sizePulse !== 1.0 || colPulse !== 1.0 || isHybrid || leafWind) {
+      const windThisFrame = leafWind && windStride > 0 && (windStride === 1 || (i + engine.frameCount) % windStride === 0);
+      if (age <= growthDuration || appChanged || sizePulse !== 1.0 || colPulse !== 1.0 || isHybrid || windThisFrame) {
         const growth = isLeaf ? 1.0 : isHybrid ? 1.0 - Math.pow(1.0 - Math.min(1.0, age / 120), 3) : (age <= growthDuration ? age / growthDuration : 1.0);
         engine.dummy.matrix.copy(seg.matrix);
         engine.dummy.matrix.decompose(engine.dummy.position, engine.dummy.quaternion, engine.dummy.scale);
 
         if (isHybrid) {
           const rot = i * 2.5 + engine.unscaledTime * 0.005 * (engine.hybridSpinSpeed ?? 0.2);
-          engine.dummy.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rot, rot * 1.1, rot * 0.8)));
-        } else if (mesh === engine.appendages.get("leaves")?.mesh && engine.windVelocity > 0) {
+          engine.dummy.quaternion.multiply(scratchQuat.setFromEuler(scratchEuler.set(rot, rot * 1.1, rot * 0.8)));
+        } else if (isLeaf && engine.windVelocity > 0) {
           const t = engine.unscaledTime * 0.1 * engine.windVelocity;
           const po = i * 0.2;
           const w1 = Math.sin(t + po) * 0.05 * engine.flutterIntensity;
           const w2 = Math.cos(t * 0.7 + po) * 0.03 * engine.flutterIntensity;
-          engine.dummy.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(w1, w2, w1 * 0.5)));
+          engine.dummy.quaternion.multiply(scratchQuat.setFromEuler(scratchEuler.set(w1, w2, w1 * 0.5)));
           engine.dummy.position.x += w1 * 2.0;
           engine.dummy.position.y += w2 * 1.5;
         }
@@ -347,7 +355,7 @@ export function updateHybridConnectionMesh(engine: SimulationEngine) {
       if (engine.dyingHybrids.has(seg.index)) {
         if (seg.dyingStart) {
           const fadeAge = engine.unscaledTime - seg.dyingStart;
-          const wipeDuration = (engine.hybridStickiness * 12) / (engine.desiccationSpeed || 1.0);
+          const wipeDuration = 180.0;
           if (fadeAge > wipeDuration) continue;
           alpha = Math.max(0, 1.0 - fadeAge / wipeDuration);
         }

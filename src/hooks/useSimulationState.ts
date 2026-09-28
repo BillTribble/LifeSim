@@ -9,6 +9,7 @@ import {
   getStoredTimeScale,
   getStoredDialLimits,
   getStoredTraitProbs,
+  getStoredSoundMixer,
   checkSchemaVersion,
 } from "./SimulationDefaults";
 
@@ -140,20 +141,7 @@ export function useSimulationState() {
   const [soundSyncThemes, setSoundSyncThemes] = useState(() => getStoredBool("soundSyncThemes", DEFAULTS.soundSyncThemes));
   const [soundMovement, setSoundMovement] = useState(() => getStoredBool("soundMovement", DEFAULTS.soundMovement));
   const [soundWeather, setSoundWeather] = useState(() => getStoredBool("soundWeather", DEFAULTS.soundWeather));
-  const [soundMixer, setSoundMixer] = useState<Record<string, { vol: number; rev: number; oct?: number }>>(() => {
-    try {
-      const stored = localStorage.getItem("soundMixer");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const merged: Record<string, { vol: number; rev: number; oct?: number }> = { ...DEFAULTS.soundMixer };
-        for (const k of Object.keys(parsed)) {
-          merged[k] = { ...(DEFAULTS.soundMixer[k] || { vol: 70, rev: 35, oct: 4 }), ...parsed[k] };
-        }
-        return merged;
-      }
-    } catch {}
-    return DEFAULTS.soundMixer;
-  });
+  const [soundMixer, setSoundMixer] = useState<Record<string, { vol: number; rev: number; oct?: number }>>(() => getStoredSoundMixer());
   const [soundReverbDecay, setSoundReverbDecay] = useState(() => getStoredFloat("soundReverbDecay", DEFAULTS.soundReverbDecay));
   const [soundReverbDamping, setSoundReverbDamping] = useState(() => getStoredFloat("soundReverbDamping", DEFAULTS.soundReverbDamping));
   const [soundReverbPreDelay, setSoundReverbPreDelay] = useState(() => getStoredFloat("soundReverbPreDelay", DEFAULTS.soundReverbPreDelay));
@@ -592,10 +580,7 @@ export function useSimulationState() {
       setDespairAge,
       setMaxMatings,
       setStartColorMode,
-      setFlowerSize: (v: number) => {
-        setFlowerSize(v);
-        setLeafScale(v);
-      },
+      setFlowerSize: (v: number) => { setFlowerSize(v); setLeafScale(v); },
       setTideSpeed,
       setTideColor,
       setBgColor,
@@ -660,19 +645,13 @@ export function useSimulationState() {
       setSameColorAppProb,
       setPostMatingDieoff,
       setMaxSaturation,
-      setColorClamp: (v: number) => {
-        setColorClamp(v);
-        setMaxSaturation(v);
-      },
+      setColorClamp: (v: number) => { setColorClamp(v); setMaxSaturation(v); },
       setGridHeight,
       setLayerGap,
       setFloorHeight,
       setCeilingHeight,
       setCameraProjection,
-      setShowBoundaryBox: (val: boolean) => {
-        setShowBoundaryBox(val);
-        localStorage.setItem("showBoundaryBox", val ? "true" : "false");
-      },
+      setShowBoundaryBox: (val: boolean) => { setShowBoundaryBox(val); localStorage.setItem("showBoundaryBox", val ? "true" : "false"); },
       setFeelerFade,
       setFeelerDelay,
       setCullRate,
@@ -682,11 +661,7 @@ export function useSimulationState() {
       setKioskMode,
       setDialLimits,
       resetToDefaults: () => {
-        try {
-          localStorage.clear();
-        } catch (e) {
-          console.warn("Could not clear localStorage", e);
-        }
+        try { localStorage.clear(); } catch (e) { console.warn("Could not clear localStorage", e); }
         setKioskMode(DEFAULTS.kioskMode);
         setSoundEnabled(DEFAULTS.soundEnabled);
         setSoundVolume(DEFAULTS.soundVolume);

@@ -33,17 +33,17 @@ interface TreeGrowthState {
   template?: Agent;
 }
 
-/** Growing tips per tree at once (bushes/rhizomes have similar live tip counts per branch cluster). */
-const MAX_GROWING_TIPS = 6;
+/** Growing tips per tree/rhizome at once (shared so both grow at the same pace). */
+const MAX_GROWING_TIPS = 32;
 /** Below this many growing tips (and an empty bud bank) the tree sprouts a new shoot. */
-const MIN_GROWING_TIPS = 2;
-const MAX_BANKED_BUDS = 48;
+const MIN_GROWING_TIPS = 3;
+const MAX_BANKED_BUDS = 96;
 const MAX_NODES = 240;
 /** Growth steps between bud openings / new shoots. */
-const BUD_RELEASE_MIN = 1.5;
-const BUD_RELEASE_RANGE = 1.5;
-const SHOOT_MIN = 5;
-const SHOOT_RANGE = 5;
+const BUD_RELEASE_MIN = 0.55;
+const BUD_RELEASE_RANGE = 0.55;
+const SHOOT_MIN = 4;
+const SHOOT_RANGE = 4;
 /** Shoots slowly lose vigor (shorter), floored so the tree never stops growing. */
 const SHOOT_VIGOR_DECAY = 0.985;
 const SHOOT_VIGOR_FLOOR = 0.55;
@@ -52,6 +52,11 @@ const states = new WeakMap<SimulationEngine, Map<string, TreeGrowthState>>();
 
 export function isContinuousTreeGrowth(engine: SimulationEngine): boolean {
   return !engine.designerMode;
+}
+
+export function hasBankedTreeBuds(engine: SimulationEngine, name: string): boolean {
+  const s = states.get(engine)?.get(name);
+  return !!s && s.buds.length > 0;
 }
 
 function stateFor(engine: SimulationEngine, name: string): TreeGrowthState {
@@ -75,13 +80,14 @@ function stateFor(engine: SimulationEngine, name: string): TreeGrowthState {
 export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   if (!isContinuousTreeGrowth(engine)) return false;
   const s = stateFor(engine, bud.genome.name);
-  // Primary scaffold limbs (depth <= 1: oak boughs, elm vase limbs, pine whorls) open immediately
-  // so the tree establishes its signature shape during the initial 1s seek-free growth window.
-  if ((bud.branchDepth || 0) <= 1 || (s.growing < MAX_GROWING_TIPS && s.buds.length === 0)) {
+  const maxBank = MAX_BANKED_BUDS;
+  // Primary scaffold limbs / early river channels open immediately (capped to 6 initial tips)
+  // so the organism establishes its signature shape at the same pace as a tree.
+  if (((bud.branchDepth || 0) <= 1 && s.growing < 6) || (s.growing < 4 && s.buds.length === 0)) {
     s.growing++;
     return false;
   }
-  if (s.buds.length >= MAX_BANKED_BUDS) {
+  if (s.buds.length >= maxBank) {
     // Keep structural buds: drop the finest (deepest) one, which may be the incoming bud
     let worst = -1;
     let worstDepth = bud.branchDepth || 0;
@@ -167,7 +173,6 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
   count(newAgents);
 
   const dt = engine.timeScale ?? 1;
-  const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 1) * dt;
   for (const [name, s] of map) {
     if (!alive.has(name)) {
       map.delete(name); // organism gone
@@ -186,29 +191,38 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
       }
     }
     if (engine.suppressedStrains?.has(name)) continue;
+
+    const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 0.65) * dt;
+    const maxTips = MAX_GROWING_TIPS;
+    const minTips = 3;
+
     s.growing = growing.get(name) || 0;
     s.clock += tick;
-    if (s.clock < s.nextRelease || s.growing >= MAX_GROWING_TIPS) continue;
+    if (s.clock < s.nextRelease || s.growing >= maxTips) continue;
 
     if (s.buds.length > 0) {
       // Mostly FIFO (breadth-first crown) with a little shuffle
-      const idx = Math.floor(Math.random() * Math.min(3, s.buds.length));
-      const bud = s.buds.splice(idx, 1)[0];
-      bud.lastPosition.copy(bud.position);
-      newAgents.push(bud);
-      s.growing++;
+      const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips ? 2 : 1;
+      for (let r = 0; r < toRelease && s.buds.length > 0; r++) {
+        const idx = Math.floor(Math.random() * Math.min(3, s.buds.length));
+        const bud = s.buds.splice(idx, 1)[0];
+        bud.lastPosition.copy(bud.position);
+        newAgents.push(bud);
+        s.growing++;
+      }
       s.nextRelease = s.clock + BUD_RELEASE_MIN + Math.random() * BUD_RELEASE_RANGE;
-    } else if (s.growing < MIN_GROWING_TIPS && s.template && s.nodes.length > 0) {
+    } else if (s.growing < minTips && s.template && s.nodes.length > 0) {
       const node = pickNode(engine, s);
+      const shootInterval = SHOOT_MIN + Math.random() * SHOOT_RANGE;
       if (!node) {
-        s.nextRelease = s.clock + SHOOT_MIN;
+        s.nextRelease = s.clock + shootInterval;
         continue;
       }
       const vigor = Math.max(SHOOT_VIGOR_FLOOR, Math.pow(SHOOT_VIGOR_DECAY, s.shoots));
       newAgents.push(createTreeShoot(engine, s.template, node.pos, node.dir, node.depth, node.thickness, vigor));
       s.shoots++;
       s.growing++;
-      s.nextRelease = s.clock + SHOOT_MIN + Math.random() * SHOOT_RANGE;
+      s.nextRelease = s.clock + shootInterval;
     }
   }
 }

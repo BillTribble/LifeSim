@@ -23,6 +23,13 @@ export function performBiomassSweep(engine: SimulationEngine): void {
         }
       }
     }
+
+    for (let i = 0; i < engine.hybridSegments.length; i++) {
+      const seg = engine.hybridSegments[i];
+      if (seg && !engine.dyingHybrids.has(i) && seg.childStrainName && engine.dyingStrains.has(seg.childStrainName)) {
+        engine.markDying(engine.hybridSegments, engine.dyingHybrids, i, now);
+      }
+    }
   }
 }
 

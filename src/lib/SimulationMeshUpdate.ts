@@ -50,7 +50,7 @@ export function updateMeshSegments(
     const radialDir = right.clone().applyAxisAngle(forward, phiAngle).normalize();
 
     // Stem outer radius
-    const stemRadius = Math.max(0.5, thickness * 0.45);
+    const stemRadius = Math.max(0.12, thickness * 0.35);
 
     // Position dummy on outer surface along radial direction
     engine.dummy.position.copy(p1).addScaledVector(radialDir, stemRadius);
@@ -149,7 +149,8 @@ export function updateMeshSegments(
 
       const isLeafType = genome.appendage === "leaves" || genome.appendage === "ferns";
       const scaleDial = isLeafType ? (engine.leafScale ?? 0.55) : (engine.flowerSize ?? 1.0);
-      const baseScale = 2.0 * scaleDial * 0.70;
+      const thickFactor = THREE.MathUtils.clamp(0.55 + Math.min(thickness, 1.2) * 0.45, 0.55, 1.1);
+      const baseScale = 2.0 * scaleDial * 0.70 * thickFactor;
       if (genome.appendage === "flowers") {
         scaleX = baseScale * 1.8;
         scaleY = baseScale * 1.8;

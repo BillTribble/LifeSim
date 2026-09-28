@@ -101,6 +101,7 @@ export function spawnHybridArtifact(
   strainBName?: string,
   agentAId?: number,
   agentBId?: number,
+  childStrainName?: string,
 ): void {
   if (engine.hybridMeshes.length === 0) return;
   const currentCount = engine.hybridCount % 2000;
@@ -114,6 +115,11 @@ export function spawnHybridArtifact(
   const mesh = engine.hybridMeshes[variant];
   mesh.setMatrixAt(currentCount, engine.dummy.matrix);
   mesh.setColorAt(currentCount, color);
+  const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
+  if (packAAttr) {
+    packAAttr.setZ(currentCount, 0.0);
+    packAAttr.needsUpdate = true;
+  }
 
   engine.hybridSegments[currentCount] = {
     index: currentCount,
@@ -122,17 +128,20 @@ export function spawnHybridArtifact(
     thickness: engine.hybridSize,
     strainName: strainName || "hybrid",
     strainBName: strainBName || "hybrid",
+    childStrainName: childStrainName,
     agentAId: agentAId,
     agentBId: agentBId,
     variant: variant,
     color: color.clone(),
+    countsForBiomass: false,
   };
 
   engine.dyingHybrids.delete(currentCount);
   engine.hybridCount++;
 
+  const drawCount = Math.min(2000, Math.max(engine.hybridCount, currentCount + 1));
   for (const m of engine.hybridMeshes) {
-    m.count = 2000;
+    m.count = Math.max(m.count, drawCount);
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }
@@ -249,6 +258,14 @@ export function emitStateUpdate(engine: SimulationEngine): void {
 
   engine.onStateUpdate({
     geometryCount: totalActiveGeometries,
+    perf: {
+      fps: Math.round(engine.lod.fps),
+      frameMs: Math.round(engine.lod.emaFrameMs * 10) / 10,
+      lodTier: engine.lod.tier,
+      lodMode: engine.lod.mode,
+      triangles: engine.lod.activeTriangles,
+      trianglesAtHigh: engine.lod.activeTrianglesTier0,
+    },
     totalAgents: activeCount,
     hybridCount: engine.totalHybridCount || 0,
     kioskFadeProgress: engine.kioskFadeProgress,

@@ -430,13 +430,11 @@ Low: Tiny, fragile newborns."
           setters={setters}
           keywords={["creature adhesive", "mating bond", "contact friction"]}
           tooltip="HYBRID DECAY
-Duration that hybridization artifacts persist before fading.
-High: Artifacts linger for a long time.
-Low: Artifacts fade away quickly."
+Fade duration multiplier for hybridization artifacts once their child organism dies."
           label="HYBRID_DECAY"
-          min={0.01}
-          max={1.0}
-          step={0.01}
+          min={0.1}
+          max={20.0}
+          step={0.1}
           value={state.hybridStickiness}
           onChange={setters.setHybridStickiness}
           color="#87CEEB"
