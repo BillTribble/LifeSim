@@ -5,7 +5,6 @@ import { PerfIndicator } from "./components/PerfIndicator";
 import { ArchetypeDesigner } from "./components/ArchetypeDesigner";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
-import { triggerRandomize } from "./utils/randomize";
 import { ActivityLog, LogEntry } from "./components/ActivityLog";
 import { generateSessionCode } from "./utils/sessionCode";
 import { Archetype } from "./lib/SimulationTypes";
@@ -365,7 +364,7 @@ export default function App() {
         glowProbability={state.glowProbability}
         stemCurviness={state.stemCurviness}
         kioskMode={state.kioskMode}
-        onKioskTrigger={() => triggerRandomize(setters, state, setRandomizeKey, handleRestart)}
+        onKioskTrigger={handleRestart}
         onInitOrganisms={handleInitOrganisms}
         onMatingEvent={handleMatingEvent}
         onFeelerEvent={handleFeelerEvent}

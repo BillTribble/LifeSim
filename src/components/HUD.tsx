@@ -339,7 +339,7 @@ export function HUD({
                     : "bg-[#001220]/60 border-[#D2B48C]/30 text-[#D2B48C]/60 hover:text-[#D2B48C]"
                 }`}
                 onClick={() => setters.setKioskMode && setters.setKioskMode(!state.kioskMode)}
-                title="KIOSK MODE — Periodically fades out and randomizes the ecosystem"
+                title="KIOSK MODE — Periodically fades out and restarts the ecosystem"
               >
                 <Tv className={`w-3.5 h-3.5 shrink-0 ${state.kioskMode ? "text-purple-300" : "text-[#D2B48C]/60"}`} />
                 <span>KIOSK: {state.kioskMode ? "ON" : "OFF"}</span>

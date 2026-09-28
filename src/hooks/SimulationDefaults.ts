@@ -186,7 +186,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-09-24-v1.0";
+export const CURRENT_SCHEMA = "2026-09-28-v1.1";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
