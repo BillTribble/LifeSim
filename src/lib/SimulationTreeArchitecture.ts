@@ -167,13 +167,17 @@ function initTreeAgent(engine: SimulationEngine, agent: Agent) {
       : agent.treeBudget * Math.min(1.5, p.trunkLateralsFrom);
   agent.treeBaseThick = agent.thickness;
   if (isTreeZeroGravity(engine) && !agent.treeAxis) {
-    // No gravity: the tree grows along its own random axis, biased toward open space
-    const centre = new THREE.Vector3(0, engine.creatureCenterY || 18.921075, 0);
-    const toCentre = centre.sub(agent.position);
-    const bias = toCentre.lengthSq() > 1 ? toCentre.normalize().multiplyScalar(0.9) : toCentre.set(0, 0, 0);
-    const axis = new THREE.Vector3().randomDirection().add(bias).normalize();
-    agent.treeAxis = axis;
-    agent.direction.copy(axis);
+    if (agent.direction && agent.direction.lengthSq() > 0.01) {
+      agent.treeAxis = agent.direction.clone().normalize();
+      agent.direction.copy(agent.treeAxis);
+    } else {
+      const centre = new THREE.Vector3(0, engine.creatureCenterY || 18.921075, 0);
+      const toCentre = centre.sub(agent.position);
+      const bias = toCentre.lengthSq() > 1 ? toCentre.normalize().multiplyScalar(0.9) : toCentre.set(0, 0, 0);
+      const axis = new THREE.Vector3().randomDirection().add(bias).normalize();
+      agent.treeAxis = axis;
+      agent.direction.copy(axis);
+    }
   }
 }
 

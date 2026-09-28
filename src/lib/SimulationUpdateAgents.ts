@@ -3,7 +3,12 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { sustainTreeGrowth } from "./SimulationTreeGrowth";
-import { getHybridCooldownTicks, getSeekRamp } from "./SimulationSeekRamp";
+import {
+  areStrainsCompatibleForMating,
+  getHybridCooldownTicks,
+  getSeekRamp,
+  isSpeciesOnCooldown,
+} from "./SimulationSeekRamp";
 import {
   canEnterDeleting,
   updateFeelerSeeking,
@@ -313,6 +318,8 @@ export function processAgents(
         !agent.isFeeler &&
         !treeModel && // tree form comes from its own architecture, not from leaning toward mates
         !agent.tapering &&
+        !isSpeciesOnCooldown(engine, myStrain, evalGenome) &&
+        agent.cooldown <= 0 &&
         seekRamp > 0 &&
         myMCount < maxM;
 
@@ -328,18 +335,19 @@ export function processAgents(
           if (canSeek) {
             const otherEvalGenome =
               other.isFeeler && other.realGenome ? other.realGenome : other.genome;
-            const otherStrainAge =
-              otherEvalGenome.createdAt !== undefined
-                ? engine.time - otherEvalGenome.createdAt
-                : engine.time;
             const otherMCount =
               (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount ||
               other.matingCount ||
               0;
-            const otherSeekRamp = getSeekRamp(engine, other, otherStrainAge);
             const otherReceptive =
               !other.tapering &&
-              otherSeekRamp > 0 &&
+              areStrainsCompatibleForMating(
+                engine,
+                myStrain,
+                evalGenome,
+                otherStrain,
+                otherEvalGenome,
+              ) &&
               otherMCount < maxM;
 
             if (otherReceptive && dSq < nearestDistSq) {
@@ -545,6 +553,9 @@ export function processAgents(
             currentActiveCount--;
             const newCount = (strainCounts.get(agent.genome.name) || 1) - 1;
             strainCounts.set(agent.genome.name, Math.max(0, newCount));
+            if (engine.dyingStrains && engine.dyingStrains.has(genome.name)) {
+              (engine as any).markStrainSegmentsDying?.(genome.name);
+            }
           }
         } else if (treeModel) {
           // Tree architecture model handles taper + termination by length budget (stepTreeArchitecture)
@@ -614,11 +625,11 @@ export function processAgents(
             : 0.55 + 0.45 * (agent.age / 25);
       const renderThickness = Math.max(0.001, agent.thickness * ageScale);
 
-      // All feelers draw visible trail segments
+      // All feelers draw visible trail segments (tagged with _isFeeler + parentStrainName)
       engine.addLineSegment(
         agent.lastPosition,
         agent.position,
-        agent.isFeeler && agent.realGenome ? agent.realGenome : genome,
+        genome,
         renderThickness,
         false,
         agent.id,

@@ -283,7 +283,10 @@ export function updateMeshSegments(
     packBAttr.needsUpdate = true;
   }
 
-  const shouldCountBiomass = !genome.name.startsWith("Feeler-") && !isAppendage && thickness >= 0.35;
+  const isFeelerSeg = Boolean((genome as any)._isFeeler || genome.name.startsWith("Feeler-"));
+  const resolvedStrainName = (genome as any).parentStrainName || genome.name;
+  const isStrainAlreadyDying = Boolean(engine.dyingStrains && engine.dyingStrains.has(resolvedStrainName));
+  const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.35;
 
   if (targetMesh === engine.cylinderMesh) {
     const prevSeg = engine.segments[targetIndex];
@@ -292,7 +295,11 @@ export function updateMeshSegments(
       if (prevCount > 1) engine.biomassMap.set(prevSeg.strainName, prevCount - 1);
       else engine.biomassMap.delete(prevSeg.strainName);
     }
-    engine.dyingStems.delete(targetIndex);
+    if (isStrainAlreadyDying) {
+      engine.dyingStems.add(targetIndex);
+    } else {
+      engine.dyingStems.delete(targetIndex);
+    }
     if (engine.growingStems) engine.growingStems.add(targetIndex);
     engine.lastStemIndex = targetIndex;
     if (agentId !== undefined && engine.lastAgentStemIndex) {
@@ -303,9 +310,11 @@ export function updateMeshSegments(
       timestamp: engine.time,
       matrix: fullMatrix,
       thickness,
-      strainName: genome.name,
+      strainName: resolvedStrainName,
       agentId: agentId,
       countsForBiomass: shouldCountBiomass,
+      isFeeler: isFeelerSeg,
+      dyingStart: isStrainAlreadyDying ? engine.unscaledTime : undefined,
     };
     if (!reusedFreeSlot) {
       engine.pointCount++;

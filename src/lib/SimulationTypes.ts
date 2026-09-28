@@ -77,6 +77,11 @@ export interface Genome {
 
   recessive?: RecessiveGenes;
   genomeHash?: number;
+  cooldownUntil?: number;
+  matedPartners?: Set<string>;
+  parentStrains?: string[];
+  birthPos?: THREE.Vector3;
+  lastMatingPos?: THREE.Vector3;
 }
 
 export interface Agent {
@@ -140,6 +145,7 @@ export interface Segment {
   color?: THREE.Color;
   randomFactor?: number;
   countsForBiomass?: boolean;
+  isFeeler?: boolean;
 }
 
 export interface SpeciesLifecycleState {
@@ -150,6 +156,11 @@ export interface SpeciesLifecycleState {
   feelerAttempted?: boolean;
   deathStartTick?: number;
   reason?: string;
+  cooldownUntil?: number;
+  matedPartners?: Set<string>;
+  parentStrains?: string[];
+  birthPos?: THREE.Vector3;
+  lastMatingPos?: THREE.Vector3;
 }
 
 export const MAX_POINTS = 500000;

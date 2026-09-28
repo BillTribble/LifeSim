@@ -166,13 +166,26 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
   count(activeAgents);
   count(newAgents);
 
-  const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 1) * (engine.timeScale ?? 1);
+  const dt = engine.timeScale ?? 1;
+  const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 1) * dt;
   for (const [name, s] of map) {
     if (!alive.has(name)) {
       map.delete(name); // organism gone
       continue;
     }
-    if (engine.dyingStrains?.has(name) || engine.suppressedStrains?.has(name)) continue;
+    if (engine.dyingStrains?.has(name)) {
+      map.delete(name);
+      continue;
+    }
+    if (s.template && s.template.cooldown > 0) {
+      s.template.cooldown = Math.max(0, s.template.cooldown - dt);
+    }
+    for (let i = 0; i < s.buds.length; i++) {
+      if (s.buds[i].cooldown > 0) {
+        s.buds[i].cooldown = Math.max(0, s.buds[i].cooldown - dt);
+      }
+    }
+    if (engine.suppressedStrains?.has(name)) continue;
     s.growing = growing.get(name) || 0;
     s.clock += tick;
     if (s.clock < s.nextRelease || s.growing >= MAX_GROWING_TIPS) continue;
@@ -197,5 +210,16 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
       s.growing++;
       s.nextRelease = s.clock + SHOOT_MIN + Math.random() * SHOOT_RANGE;
     }
+  }
+}
+
+/** Propagates post-mating cooldown to banked tree buds and template for a strain. */
+export function applyTreeStrainCooldown(engine: SimulationEngine, strainName: string, cd: number) {
+  const map = states.get(engine);
+  const s = map?.get(strainName);
+  if (!s) return;
+  if (s.template) s.template.cooldown = Math.max(s.template.cooldown || 0, cd);
+  for (let i = 0; i < s.buds.length; i++) {
+    s.buds[i].cooldown = Math.max(s.buds[i].cooldown || 0, cd);
   }
 }
