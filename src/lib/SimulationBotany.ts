@@ -4,6 +4,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent, Archetype, Genome } from "./SimulationTypes";
 import { getMaxBranchesForArchetype } from "./SimulationPruning";
 import { isTreeModelAgent, applyTreeTropism } from "./SimulationTreeArchitecture";
+import { applyBushTendrilSteering } from "./SimulationBushTendrils";
 
 export type BotanicalConcept =
   | "auto"
@@ -135,7 +136,7 @@ export function applyBotanicalConceptSteering(
   const curviness = Math.max(0.1, ((engine.stemCurviness ?? 3.0) / 3.0) * evo.curvinessAmp);
 
   // 1. Coherent 3D Curl / Tortuosity (replaces flat noisy jitter with organic crookedness)
-  if (habit === "oak" || habit === "rhizome_web" || habit === "elm" || habit === "pine") {
+  if (habit === "oak" || habit === "rhizome_web" || habit === "elm" || habit === "pine" || (habit === "willow" && agent.genome.archetype === "bush")) {
     const freq =
       habit === "oak"
         ? 0.09 + depth * 0.055
@@ -225,7 +226,8 @@ export function applyBotanicalConceptSteering(
         1.0 - agent.thickness / (baseR * 0.85),
       );
       const droopStrength = 0.045 + thinFactor * 0.075 + depth * 0.015;
-      agent.direction.lerp(new THREE.Vector3(0, -1, 0), Math.min(0.18, droopStrength)).normalize();
+      const effectiveDroop = agent.genome.archetype === "bush" ? Math.min(0.07, droopStrength * 0.55) : droopStrength;
+      agent.direction.lerp(new THREE.Vector3(0, -1, 0), Math.min(0.18, effectiveDroop)).normalize();
     }
   } else if (habit === "oak") {
     // White Oak / Gnarled Canopy (Pic 3 & Pic 4 Bottom-Right)
@@ -276,6 +278,7 @@ export function applyBotanicalConceptSteering(
       agent.direction.addScaledVector(shynessVec, shyStrength).normalize();
     }
   }
+  applyBushTendrilSteering(engine, agent);
 }
 
 /**

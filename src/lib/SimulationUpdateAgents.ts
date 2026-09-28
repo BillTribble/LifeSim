@@ -16,6 +16,11 @@ import { checkLifespanDeath, enforceCreatureCap } from "./SimulationCulling";
 import { reflectAtBoundary } from "./SimulationBoundary";
 import { isStrainDying as isStrainDyingPhase } from "./SimulationEngineHelpers";
 import { isOrganismMature, isOverSizeBudget } from "./SimulationPartnerSearch";
+import {
+  trackBushBranchStep,
+  stepBushTendrilBranching,
+  canBushTipTaper,
+} from "./SimulationBushTendrils";
 
 /** Partners closer than this (6 units) are exempt from inter-species repulsion so they can touch. */
 const SEEK_CONTACT_RANGE_SQ = 36;
@@ -199,9 +204,9 @@ export function processAgents(
       }
       const { genome } = agent;
       const habit = resolveAgentHabit(engine, genome);
-      if (!isDying && !agent.isFeeler && isOverSizeBudget(engine, genome.name)) {
+      if (!isDying && !agent.isFeeler && !agent.tapering && isOverSizeBudget(engine, genome.name)) {
         // Soft size budget: allow exploratory seeker twigs to keep growing and seeking
-        const targetSeekerTwigs = 4;
+        const targetSeekerTwigs = genome.archetype === "bush" ? 10 : 4;
         const seekerCount = (engine as any)._frameSeekerTwigCounts.get(genome.name) || 0;
         const isEligibleTwig = (agent.branchDepth || 0) >= 2 || agent.isSeekerTwig;
 
@@ -216,13 +221,20 @@ export function processAgents(
             ? Math.max(minSeekerT, Math.min(agent.thickness, minSeekerT * 1.25))
             : Math.min(agent.thickness, minSeekerT);
         } else {
-          agent.age++;
-          if (!engine.designerMode) {
-            handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
-            const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
-            checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
+          if (genome.archetype === "bush") {
+            if (canBushTipTaper(agent)) {
+              agent.tapering = true;
+              agent.taperBudget = 0;
+            }
+          } else {
+            agent.age++;
+            if (!engine.designerMode) {
+              handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
+              const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+              checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
+            }
+            continue;
           }
-          continue;
         }
       }
 
@@ -230,9 +242,12 @@ export function processAgents(
       let effectiveWanderIntensity = genome.wanderIntensity;
       let effectiveStepSize = genome.stepSize;
 
-      if (genome.archetype === "bush" || habit === "willow") {
+      if (genome.archetype === "bush") {
         effectiveBifurcationRate *= 7.5 * (engine.bushBranching ?? 1.0);
-        effectiveStepSize *= engine.bushStepSize ?? 0.65;
+        effectiveWanderIntensity *= 0.65;
+      } else if (habit === "willow") {
+        effectiveBifurcationRate *= 7.5;
+        effectiveStepSize *= 0.65;
         effectiveWanderIntensity *= 0.65;
       } else if (genome.archetype === "tree" || habit === "oak" || habit === "elm" || habit === "pine") {
         // Compared against agent.age (growth steps), so no timeScale factor
@@ -260,11 +275,19 @@ export function processAgents(
       const thickRatio = agent.thickness / Math.max(0.5, genome.thicknessBase);
       const widthBoost = 1.0 + (thickRatio - 1.0) * engine.widthVariance * 2.5;
       effectiveBifurcationRate *= Math.max(0.8, widthBoost);
-      // Soft size budget: an organism over its live-segment budget stops spawning new tips
-      if (isOverSizeBudget(engine, genome.name)) effectiveBifurcationRate = 0;
+      // Soft size budget: an organism over its live-segment budget stops spawning new tips, EXCEPT bushes which use turnover relay
+      if (isOverSizeBudget(engine, genome.name) && genome.archetype !== "bush") effectiveBifurcationRate = 0;
 
       // Botanical step-size scaling per branch order
-      effectiveStepSize = getBotanicalStepSize(engine, agent, effectiveStepSize);
+      if (genome.archetype === "bush") {
+        const bushStepScale = engine.bushStepSize ?? 0.75;
+        effectiveStepSize = Math.max(
+          0.48,
+          genome.stepSize * bushStepScale * Math.pow(0.86, Math.min(4, agent.branchDepth || 0)),
+        );
+      } else {
+        effectiveStepSize = getBotanicalStepSize(engine, agent, effectiveStepSize);
+      }
       const treeModel = isTreeModelAgent(agent);
       if (treeModel) {
         ensureTreeAgentInit(engine, agent);
@@ -444,6 +467,7 @@ export function processAgents(
       }
 
       agent.position.addScaledVector(agent.direction, effectiveStepSize);
+      if (genome.archetype === "bush") trackBushBranchStep(agent, effectiveStepSize);
       if (agent.isFeeler) agent.feelerTravel = (agent.feelerTravel ?? 0) + effectiveStepSize;
       if (engine.sound) {
         engine.sound.onAgentStep(agent, engine.camera);
@@ -487,12 +511,11 @@ export function processAgents(
         };
 
         if (agent.tapering) {
-          // CRITICAL FIX (Bug B): Let tapering branches smoothly complete their 8-step sculptural taper
-          agent.taperBudget = (agent.taperBudget || 0) + 1;
-          const taperDecay = Math.max(0.68, 0.86 - agent.taperBudget * 0.03);
+          const taperDecay = Math.max(0.62, 0.78 - (agent.taperBudget || 0) * 0.03);
           agent.thickness *= taperDecay;
+          agent.taperBudget = (agent.taperBudget || 0) + 1;
 
-          if (agent.thickness <= 0.035 || agent.taperBudget >= 8) {
+          if (agent.thickness <= 0.035 || agent.taperBudget >= 14) {
             extrudePointedTerminalCap(engine, agent, genome, agent.thickness);
             agent.active = false;
             currentActiveCount--;
@@ -547,11 +570,13 @@ export function processAgents(
             const termChance =
               (engine.terminationProb || 0.05) * 0.018 * (1.0 + branchDepth * 0.5) * archTaper;
             const minTwigThreshold = 0.055;
+            const canTaper = canBushTipTaper(agent);
             if (
-              branchDepth >= maxDepth ||
+              canTaper &&
+              (branchDepth >= maxDepth ||
               agent.age > branchAgeLimit ||
               Math.random() < termChance ||
-              (branchDepth > 0 && agent.thickness <= minTwigThreshold)
+              (branchDepth > 0 && agent.thickness <= minTwigThreshold))
             ) {
               agent.tapering = true;
               agent.taperBudget = 0;
@@ -563,7 +588,9 @@ export function processAgents(
       agent.thickness = THREE.MathUtils.clamp(
         agent.thickness,
         0.001,
-        Math.max(engine.maxLineWidth, genome.thicknessBase * 1.5),
+        genome.archetype === "bush"
+          ? Math.min(agent.thickness, genome.thicknessBase * 1.05)
+          : Math.max(engine.maxLineWidth, genome.thicknessBase * 1.5),
       );
       const ageScale = treeModel
         ? getTreeRenderScale(agent)
@@ -610,15 +637,26 @@ export function processAgents(
           (a) => a.active && !a.tapering && !a.isFeeler,
         ).length;
         const isUnderMinCreatures = livingNonFeelerCount < engine.minCreatures;
-        executeBotanicalBranching(
-          engine,
-          agent,
-          activeAgents,
-          newAgents,
-          strainCounts,
-          effectiveBifurcationRate,
-          isUnderMinCreatures,
-        );
+        if (genome.archetype === "bush") {
+          stepBushTendrilBranching(
+            engine,
+            agent,
+            activeAgents,
+            newAgents,
+            strainCounts,
+            isUnderMinCreatures,
+          );
+        } else {
+          executeBotanicalBranching(
+            engine,
+            agent,
+            activeAgents,
+            newAgents,
+            strainCounts,
+            effectiveBifurcationRate,
+            isUnderMinCreatures,
+          );
+        }
       }
 
       if (!engine.designerMode) {

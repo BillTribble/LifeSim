@@ -77,7 +77,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              ${!isLeaf ? `
              float terminalFlag = instancePackB.w;
              if (terminalFlag > 1.5) {
-               float taperFactor = 1.0 - transformed.z;
+               float taperFactor = clamp(1.0 - abs(transformed.z), 0.0, 1.0);
                transformed.x *= taperFactor;
                transformed.y *= taperFactor;
              }` : ''}`

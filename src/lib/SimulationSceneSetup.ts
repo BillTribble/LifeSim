@@ -608,7 +608,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       active: true,
       age: 0,
       lastPosition: spawnPos.clone(),
-      thickness: designerGenome.thicknessBase * (arch === "rhizome" ? 1.3 : 2.0),
+      thickness: designerGenome.thicknessBase * (arch === "rhizome" ? 1.3 : arch === "bush" ? 1.05 : 2.0),
       cooldown: 0,
     });
 
@@ -761,7 +761,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: alphaStart.clone(),
-    thickness: alphaGenome.thicknessBase * 2.0,
+    thickness: alphaGenome.thicknessBase * (alphaGenome.archetype === "bush" ? 1.05 : 2.0),
     cooldown: initialCooldown,
   });
 
@@ -773,7 +773,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: betaStart.clone(),
-    thickness: betaGenome.thicknessBase * 2.0,
+    thickness: betaGenome.thicknessBase * (betaGenome.archetype === "bush" ? 1.05 : 2.0),
     cooldown: initialCooldown,
   });
 

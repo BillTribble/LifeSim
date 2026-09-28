@@ -120,11 +120,12 @@ export function performBranchPruning(
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];
     const arch = firstAgent.genome.archetype || "bush";
-    // Trees and rhizomes self-limit through the length-budgeted architecture model (SimulationTreeArchitecture)
+    // Trees, rhizomes, and bushes self-limit through their respective architecture models
     if (
       firstAgent.genome.archetype === "tree" ||
       firstAgent.genome.archetype === "rhizome" ||
-      firstAgent.genome.growthHabit === "rhizome_web"
+      firstAgent.genome.growthHabit === "rhizome_web" ||
+      firstAgent.genome.archetype === "bush"
     ) {
       continue;
     }

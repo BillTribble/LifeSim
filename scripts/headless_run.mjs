@@ -98,9 +98,13 @@ export async function run(opts) {
       if (m) myCodes.add(m[1]); else if (code && myCodes.size === 0) myCodes.add(code);
     });
     const renderEvery = Math.max(1, +(opts.renderEvery || 1));
-    result.render_every = renderEvery;
-    const extraLS = Object.fromEntries(String(opts.set || '').split(',').filter((s) => s.includes('='))
-      .map((s) => [s.slice(0, s.indexOf('=')), s.slice(s.indexOf('=') + 1)]));
+    let extraLS = {};
+    if (opts.storage) {
+      try { extraLS = JSON.parse(opts.storage); } catch (e) { clog(`[storage parse error] ${e}`); }
+    } else if (opts.set) {
+      extraLS = Object.fromEntries(String(opts.set || '').split(',').filter((s) => s.includes('='))
+        .map((s) => [s.slice(0, s.indexOf('=')), s.slice(s.indexOf('=') + 1)]));
+    }
     result.local_storage_overrides = extraLS;
     await page.evaluateOnNewDocument((schemaVer, spd, every, extra) => {
       try {

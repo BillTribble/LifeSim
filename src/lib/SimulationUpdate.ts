@@ -151,7 +151,7 @@ export function updateSimulation(engine: SimulationEngine) {
       // Scoped to newborn ORGANISMS: a per-tip age guard also stopped the normal merging of fresh
       // sibling tips everywhere and multiplied tip counts ~25x.
       if (a1.genome.name === a2.genome.name && getOrganismGrowthSteps(engine, a1.genome) < NEWBORN_MERGE_GUARD_STEPS) continue;
-      if (a1.genome.name === a2.genome.name && !isTreeModelAgent(a1)) {
+      if (a1.genome.name === a2.genome.name && !isTreeModelAgent(a1) && a1.genome.archetype !== "bush") {
         const dSq = a1.position.distanceToSquared(a2.position);
         if (dSq < 25) {
           const activeStrainsCount = strainCounts.size || 1;
