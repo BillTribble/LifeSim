@@ -3,6 +3,7 @@ import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
 import { isOverSizeBudget } from "./SimulationPartnerSearch";
 import { getMaxBranchesForArchetype } from "./SimulationPruning";
+import { getBushMorphScale } from "./SimulationMorphology";
 
 export const GOLDEN_ANGLE_RAD = 2.39996323; // 137.5 degrees
 
@@ -34,8 +35,9 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
     const sign = (agent as any).spiralSign ?? 1, axis = (agent as any).spiralAxis ?? new THREE.Vector3(0, 1, 0);
     agent.direction.applyAxisAngle(axis, sign * 0.042).normalize();
   }
+  const bushScale = getBushMorphScale(agent.genome);
   // Radial fan relative to root birth position
-  if (depth >= 1 && dist < 8.0) {
+  if (depth >= 1 && dist < 8.0 * bushScale) {
     const origin = agent.genome.birthPos || new THREE.Vector3(0, 0, 0);
     const radial = new THREE.Vector3(agent.position.x - origin.x, 0, agent.position.z - origin.z);
     if (radial.lengthSq() > 1e-4) radial.normalize(); else radial.set(1, 0, 0);
@@ -45,7 +47,8 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
 
 export function canBushTipTaper(agent: Agent): boolean {
   if (agent.genome.archetype !== "bush" || (agent.branchDepth || 0) === 0) return true;
-  return ((agent as any).branchDist ?? 0) >= 5.0;
+  const bushScale = getBushMorphScale(agent.genome);
+  return ((agent as any).branchDist ?? 0) >= 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
 }
 
 export function retireOldestBushSibling(engine: SimulationEngine, activeAgents: Agent[], strainName: string): boolean {
@@ -53,7 +56,9 @@ export function retireOldestBushSibling(engine: SimulationEngine, activeAgents: 
   for (let idx = 0; idx < activeAgents.length; idx++) {
     const a = activeAgents[idx];
     if (a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName && (a.branchDepth || 0) > 0) {
-      if (((a as any).branchDist ?? 0) >= 5.0 && a.age > maxAge) {
+      const bushScale = getBushMorphScale(a.genome);
+      const minRetireDist = 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
+      if (((a as any).branchDist ?? 0) >= minRetireDist && a.age > maxAge) {
         maxAge = a.age; oldest = a;
       }
     }
@@ -97,10 +102,11 @@ export function stepBushTendrilBranching(
   const currentDepth = agent.branchDepth || 0;
   const branchDist = (agent as any).branchDist ?? (agent.age * 0.6);
   const distSinceLastFork = (agent as any).distSinceLastFork ?? branchDist;
+  const bushScale = getBushMorphScale(agent.genome);
 
   // 1. Shrub Base Architecture: at depth 0, grow 5.5-unit trunk then burst into 3 diverging canes
   if (currentDepth === 0) {
-    if (distSinceLastFork < 5.5) return false;
+    if (distSinceLastFork < 5.5 * bushScale) return false;
     const baseAzimuth = Math.random() * Math.PI * 2;
     const caneSpread = THREE.MathUtils.degToRad(36 + Math.random() * 12);
     const caneThickness = agent.thickness * 0.64;
@@ -124,13 +130,13 @@ export function stepBushTendrilBranching(
   // 2. Lateral Stems & Tendrils: Distance-Driven Branch Intervals
   const branchingDial = Math.max(20, engine.bushBranching || 50);
   const scale = 50 / branchingDial;
-  const targetDist = (currentDepth === 1 ? 6.5 : 5.0) * scale * (0.85 + ((agent.id || 0) % 5) * 0.08);
+  const targetDist = (currentDepth === 1 ? 6.5 : 5.0) * bushScale * scale * (0.85 + ((agent.id || 0) % 5) * 0.08);
 
   const styleSetting = (engine as any).bushBranchStyle ||
     (typeof window !== "undefined" ? localStorage.getItem("bushBranchStyle") : null) || "hybrid";
 
   const reachedInterval = distSinceLastFork >= targetDist;
-  const reachedCorymbTrigger = currentDepth >= 1 && (branchDist >= 10.5 || (styleSetting === "corymb" && distSinceLastFork >= 5.0));
+  const reachedCorymbTrigger = currentDepth >= 1 && (branchDist >= 10.5 * bushScale || (styleSetting === "corymb" && distSinceLastFork >= 5.0 * bushScale));
 
   if (!reachedInterval && !reachedCorymbTrigger && !isUnderMinCreatures) return false;
 

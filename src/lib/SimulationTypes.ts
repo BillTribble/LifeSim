@@ -26,6 +26,20 @@ export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"]
 
 export const PULSE_TARGETS = ["none", "stem", "appendage", "all"] as const;
 
+export type MorphMode =
+  | "monolith"
+  | "big_branching"
+  | "candelabra"
+  | "spire"
+  | "umbrella"
+  | "filigree"
+  | "bush_compact"
+  | "bush_medium"
+  | "bush_giant"
+  | "rhizome_tuber"
+  | "rhizome_stolon"
+  | "rhizome_lace";
+
 export interface RecessiveGenes {
   archetype: Archetype;
   movementType: MovementType;
@@ -37,6 +51,10 @@ export interface RecessiveGenes {
   canopyZone: "wholeBody" | "terminal" | "basal";
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
   growthHabit?: string;
+  morphMode?: MorphMode;
+  morphScale?: number;
+  trunkGirthMod?: number;
+  branchOrderCap?: number;
 }
 
 export interface Genome {
@@ -74,6 +92,10 @@ export interface Genome {
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
   succulence: number;
   growthHabit?: string;
+  morphMode?: MorphMode;
+  morphScale?: number;
+  trunkGirthMod?: number;
+  branchOrderCap?: number;
 
   recessive?: RecessiveGenes;
   genomeHash?: number;
@@ -127,6 +149,7 @@ export interface Agent {
   treeRestTicks?: number; // ticks left before a resting keeper wakes for a new growth flush
   treeFlushes?: number; // how many growth flushes this tip has had (vigor slowly declines)
   isSeekerTwig?: boolean;
+  seekerFlushes?: number;
   // Feeler lifecycle (see SimulationFeelers.ts)
   feelerTargetStrain?: string; // root organism the feeler was aimed at when spawned (locked)
   feelerStep?: number; // per-step length, scaled from the parent's botanical step

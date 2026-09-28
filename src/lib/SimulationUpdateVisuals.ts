@@ -165,7 +165,8 @@ export function updateMeshesAndStemsGrowth(
       if (pB) {
         const val = pB.getX(i);
         if (val < 1.0) {
-          pB.setX(i, Math.min(1.0, val + (isLeaf ? engine.leafGrowthSpeed : 0.05) * engine.timeScale));
+          const leafStep = Math.max(0.02, (engine.leafGrowthSpeed || 0.0045) * Math.max(3.0, engine.timeScale));
+          pB.setX(i, Math.min(1.0, val + (isLeaf ? leafStep : 0.05 * engine.timeScale)));
           pB.needsUpdate = true;
         }
       }

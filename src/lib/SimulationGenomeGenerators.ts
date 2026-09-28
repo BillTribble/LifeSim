@@ -7,6 +7,7 @@ import {
   MOVEMENT_TYPES,
   Archetype,
 } from "./SimulationTypes";
+import { assignGenomeMorphology, inheritGenomeMorphology } from "./SimulationMorphology";
 
 export function getRandomWeightedArchetype(): Archetype {
   return ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
@@ -127,26 +128,35 @@ export function selectMendelianAlleles<T>(
 }
 
 export function clampArchetypeGenome(res: Genome): Genome {
+  if (!res.morphMode) {
+    assignGenomeMorphology(res);
+  }
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.2, 2.8);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.15, 0.6);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.992, 0.9998);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.04, 0.12);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.65, 3.6);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.025, 0.25);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.972, 0.994);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.03, 0.14);
     res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 1.5, 4.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.8, 1.6);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.4);
     res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.2, 0.65);
   } else if (res.archetype === "bush") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.9, 2.0);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.60, 3.4);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.05, 0.03, 0.16);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.980, 0.995);
     res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.20 + Math.random() * 0.12);
     res.branchTendency = Math.max(res.branchTendency || 0.5, 3.5 + Math.random() * 4.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 0.65);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.32, 0.90);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 3.2, 5.8);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.1, 0.05, 0.4);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.016, 0.040);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 2.0, 5.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.55, 1.2);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.4, 8.5);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.1, 0.02, 0.55);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.975, 0.994);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.012, 0.055);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 1.4, 6.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.45);
+    if (res.morphMode === "filigree") {
+      res.morphScale = THREE.MathUtils.clamp(res.morphScale ?? 0.55, 0.42, 0.68);
+    }
   } else if (res.archetype === "snake") {
     res.thicknessBase = Math.max(res.thicknessBase, 3.5 + Math.random() * 2.0);
     res.minThickness = Math.max(res.minThickness, 1.8);
@@ -272,7 +282,7 @@ export function breedGenomes(
       ((g1.minThickness + g2.minThickness) / 2) *
         (1 + (Math.random() - 0.5) * 0.2),
     ),
-    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay, 0.9995, 1.0),
+    thicknessDecay: THREE.MathUtils.clamp(thicknessDecay, 0.975, 0.995),
     stepSize: Math.max(
       0.5,
       ((g1.stepSize + g2.stepSize) / 2) * (1 + (Math.random() - 0.5) * 0.2),
@@ -342,7 +352,7 @@ export function breedGenomes(
       phyllotaxisMode: phylloInheritance.recessive,
     },
   };
-  
+  inheritGenomeMorphology(res, g1, g2);
   clampArchetypeGenome(res);
   return res;
 }

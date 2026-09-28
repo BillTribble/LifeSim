@@ -17,6 +17,8 @@ import {
 } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { getHybridCooldownTicks, setSpeciesCooldown } from "./SimulationSeekRamp";
+import { buildBoundaryGeometry } from "./SimulationBoundary";
+import { assignGenomeMorphology, pickMorphModeForArchetype } from "./SimulationMorphology";
 import {
   resetCamera,
   executeReset,
@@ -92,7 +94,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     wanderIntensity = 0.35 + Math.random() * 0.25;
   }
 
-  return {
+  const genome: Genome = {
     name: formatGenomeName(archetype),
     archetype: archetype,
     movementType: movementType,
@@ -135,6 +137,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
       phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
     },
   };
+  return assignGenomeMorphology(genome);
 }
 
 export function randomizeColors(engine: SimulationEngine): void {
@@ -208,69 +211,7 @@ export function updateBoundaryMesh(engine: SimulationEngine): void {
   }
   if (!engine.showBoundaryBox) return;
 
-  const b = engine.boundarySize;
-  const squash = engine.boundarySquash ?? 1.0;
-  const bY = b * squash;
-  let geo: THREE.BufferGeometry;
-  if (engine.boundaryShape === "sphere") {
-    // Generate clean, elegant meridian and parallel circle rings (no busy diagonal triangulation)
-    const points: THREE.Vector3[] = [];
-    const segments = 48;
-
-    // 1. Horizontal Equator Ring (XZ plane at y=0)
-    for (let i = 0; i < segments; i++) {
-      const theta1 = (i / segments) * Math.PI * 2;
-      const theta2 = ((i + 1) / segments) * Math.PI * 2;
-      points.push(
-        new THREE.Vector3(Math.cos(theta1) * b, 0, Math.sin(theta1) * b),
-        new THREE.Vector3(Math.cos(theta2) * b, 0, Math.sin(theta2) * b)
-      );
-    }
-
-    // 2. Vertical XY Meridian Ring
-    for (let i = 0; i < segments; i++) {
-      const theta1 = (i / segments) * Math.PI * 2;
-      const theta2 = ((i + 1) / segments) * Math.PI * 2;
-      points.push(
-        new THREE.Vector3(Math.cos(theta1) * b, Math.sin(theta1) * bY, 0),
-        new THREE.Vector3(Math.cos(theta2) * b, Math.sin(theta2) * bY, 0)
-      );
-    }
-
-    // 3. Vertical YZ Meridian Ring
-    for (let i = 0; i < segments; i++) {
-      const theta1 = (i / segments) * Math.PI * 2;
-      const theta2 = ((i + 1) / segments) * Math.PI * 2;
-      points.push(
-        new THREE.Vector3(0, Math.sin(theta1) * bY, Math.cos(theta1) * b),
-        new THREE.Vector3(0, Math.sin(theta2) * bY, Math.cos(theta2) * b)
-      );
-    }
-
-    // 4. Upper and Lower Parallel Rings (at ±45° latitude)
-    const latAngle = Math.PI / 4;
-    const latR = b * Math.cos(latAngle);
-    const latY = bY * Math.sin(latAngle);
-    for (let i = 0; i < segments; i++) {
-      const theta1 = (i / segments) * Math.PI * 2;
-      const theta2 = ((i + 1) / segments) * Math.PI * 2;
-      // Upper ring
-      points.push(
-        new THREE.Vector3(Math.cos(theta1) * latR, latY, Math.sin(theta1) * latR),
-        new THREE.Vector3(Math.cos(theta2) * latR, latY, Math.sin(theta2) * latR)
-      );
-      // Lower ring
-      points.push(
-        new THREE.Vector3(Math.cos(theta1) * latR, -latY, Math.sin(theta1) * latR),
-        new THREE.Vector3(Math.cos(theta2) * latR, -latY, Math.sin(theta2) * latR)
-      );
-    }
-
-    geo = new THREE.BufferGeometry().setFromPoints(points);
-  } else {
-    const boxGeo = new THREE.BoxGeometry(b * 2, bY * 2, b * 2);
-    geo = new THREE.EdgesGeometry(boxGeo);
-  }
+  const geo = buildBoundaryGeometry(engine);
 
   const mat = new THREE.LineBasicMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.5 });
   engine.boundaryMesh = new THREE.LineSegments(geo, mat);
@@ -433,20 +374,43 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
 }
 
 export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Archetype): Genome {
-  const archetypes: Archetype[] = ARCHETYPES;
-  const arch = forceArchetype || archetypes[Math.floor(Math.random() * archetypes.length)];
+  let arch: Archetype;
+  if (forceArchetype) {
+    arch = forceArchetype;
+  } else {
+    const candidateArchs: Archetype[] = ["tree", "bush", "rhizome"];
+    const livingStrainsByArch = new Map<Archetype, Set<string>>();
+    for (const ca of candidateArchs) livingStrainsByArch.set(ca, new Set<string>());
+
+    for (let i = 0; i < engine.agents.length; i++) {
+      const a = engine.agents[i];
+      if (a.active && !a.tapering && !a.isFeeler && a.genome) {
+        const aArch = a.genome.archetype;
+        const set = livingStrainsByArch.get(aArch);
+        if (set) {
+          set.add(a.genome.name);
+        }
+      }
+    }
+
+    let minCount = Infinity;
+    for (const ca of candidateArchs) {
+      const count = livingStrainsByArch.get(ca)!.size;
+      if (count < minCount) minCount = count;
+    }
+    const leastRepresented = candidateArchs.filter(
+      (ca) => livingStrainsByArch.get(ca)!.size === minCount,
+    );
+    const rng = (engine as any).prng ? (engine as any).prng() : Math.random();
+    arch = leastRepresented[Math.floor(rng * leastRepresented.length)];
+  }
   const familyNames = ["Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda"];
   const nameStr = `${familyNames[Math.floor(Math.random() * familyNames.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
   const genome = generateRandomGenome(engine, nameStr, arch);
   genome.appendage = getWeightedAppendage(engine.traitProbs);
-  const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
-  if (arch === "bush") {
-    genome.thicknessBase = (0.6 + Math.random() * 1.2 * variance) * 0.7;
-  } else if (arch === "tree") {
-    genome.thicknessBase = (3.5 + Math.random() * 3.0 * variance) * 0.7;
-  } else if (arch === "snake") {
-    genome.thicknessBase = (1.2 + Math.random() * 2.0 * variance) * 0.7;
-  }
+  assignGenomeMorphology(genome);
+  const variance = 1.0 + (engine.widthVariance - 0.5) * 0.4;
+  genome.thicknessBase *= variance;
   genome.color = new THREE.Color().setHSL(Math.random(), 0.9, 0.55);
   const conceptMode = (engine as any).botanicalConcept || "auto";
   const treeHabits = ["oak", "elm", "pine"];
@@ -564,27 +528,12 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.cylinderMesh.instanceMatrix.needsUpdate = true;
   engine.cylinderMesh.count = 0;
 
-  const getArchetypeThickness = (arch: Archetype) => {
-    const variance = 1.0 + (engine.widthVariance - 0.5) * 2.0;
-    if (arch === "bush") {
-      return (2.20 + Math.random() * 0.6 * variance) * 0.7;
-    } else if (arch === "tree") {
-      return (5.2 + Math.random() * 2.0 * variance) * 0.7;
-    } else if (arch === "snake") {
-      return (4.8 + Math.random() * 2.2 * variance) * 0.7;
-    } else if (arch === "rhizome") {
-      return (1.9 + Math.random() * 0.6 * variance) * 0.7;
-    } else {
-      return (2.2 + Math.random() * 1.0 * variance) * 0.7;
-    }
-  };
-
   if (engine.designerMode) {
     const arch: Archetype = engine.designerArchetype || "bush";
     const designerGenome = generateRandomGenome(engine, "Designer", arch);
     designerGenome.name = formatGenomeName(arch);
     designerGenome.appendage = getWeightedAppendage(engine.traitProbs);
-    designerGenome.thicknessBase = getArchetypeThickness(arch);
+    assignGenomeMorphology(designerGenome);
     designerGenome.color = new THREE.Color().setHSL(0.55, 0.9, 0.52);
     designerGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
     designerGenome.phyllotaxisMode = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
@@ -608,7 +557,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       active: true,
       age: 0,
       lastPosition: spawnPos.clone(),
-      thickness: designerGenome.thicknessBase * (arch === "rhizome" ? 1.3 : arch === "bush" ? 1.05 : 2.0),
+      thickness: designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
       cooldown: 0,
     });
 
@@ -677,8 +626,8 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
   }
 
-  alphaGenome.thicknessBase = getArchetypeThickness(alphaArchetype);
-  betaGenome.thicknessBase = getArchetypeThickness(betaArchetype);
+  assignGenomeMorphology(alphaGenome);
+  assignGenomeMorphology(betaGenome, pickMorphModeForArchetype(betaArchetype, alphaGenome.morphMode));
 
   alphaGenome.vernationType = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
   let betaVern = (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)];
@@ -761,7 +710,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: alphaStart.clone(),
-    thickness: alphaGenome.thicknessBase * (alphaGenome.archetype === "bush" ? 1.05 : 2.0),
+    thickness: alphaGenome.thicknessBase * (alphaGenome.archetype === "bush" ? 1.05 : 1.5),
     cooldown: initialCooldown,
   });
 
@@ -773,7 +722,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: betaStart.clone(),
-    thickness: betaGenome.thicknessBase * (betaGenome.archetype === "bush" ? 1.05 : 2.0),
+    thickness: betaGenome.thicknessBase * (betaGenome.archetype === "bush" ? 1.05 : 1.5),
     cooldown: initialCooldown,
   });
 

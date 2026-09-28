@@ -5,6 +5,7 @@ import { Agent, Archetype, Genome } from "./SimulationTypes";
 import { getMaxBranchesForArchetype } from "./SimulationPruning";
 import { isTreeModelAgent, applyTreeTropism } from "./SimulationTreeArchitecture";
 import { applyBushTendrilSteering } from "./SimulationBushTendrils";
+import { isBigBranchingMode, isFiligreeMode } from "./SimulationMorphology";
 
 export type BotanicalConcept =
   | "auto"
@@ -145,7 +146,7 @@ export function applyBotanicalConceptSteering(
           : habit === "rhizome_web"
             ? 0.085 + depth * 0.048
             : 0.05 + depth * 0.035;
-    const amp =
+    const baseAmp =
       (habit === "oak"
         ? 0.065 + Math.min(0.08, depth * 0.018)
         : habit === "pine"
@@ -153,6 +154,8 @@ export function applyBotanicalConceptSteering(
           : habit === "rhizome_web"
             ? 0.052 + Math.min(0.072, depth * 0.016)
             : 0.028 + depth * 0.01) * curviness;
+    const morphAmpMod = isBigBranchingMode(agent.genome) ? 0.22 : isFiligreeMode(agent.genome) ? 0.35 : 0.65;
+    const amp = baseAmp * morphAmpMod * (depth === 0 ? 0.25 : 1.0);
 
     const curlX =
       Math.sin(age * freq + idSeed) * Math.cos(age * freq * 0.61 - idSeed);
@@ -579,14 +582,16 @@ export function spawnAgentAppendages(
   genome: Genome,
   renderThickness: number,
 ): void {
-  if (agent.tapering || agent.isFeeler) return;
+  if ((agent.tapering && (agent.taperBudget || 0) > 6) || agent.isFeeler) return;
 
-  const evo = getEvolutionStepConfig((engine as any).evolutionStep);
   const depth = agent.branchDepth || 0;
-  if (depth < evo.appendageMinDepth && agent.age < 45) return;
-  if (depth === 0 && evo.round >= 6 && renderThickness > 0.95) return;
+  if (isBigBranchingMode(genome) && depth === 0 && agent.age < 15) return;
+  const evo = getEvolutionStepConfig((engine as any).evolutionStep);
+  if (depth === 0 && evo.appendageMinDepth > 0 && agent.age < 15) return;
+  if (depth === 0 && evo.round >= 6 && renderThickness > 0.95 && agent.age < 18) return;
 
-  const cappedAppThickness = Math.min(renderThickness, evo.maxAppThickness);
+  const filigree = isFiligreeMode(genome);
+  const cappedAppThickness = Math.min(renderThickness, evo.maxAppThickness) * (filigree ? 0.55 : 1.0);
   const isRhizome = genome.archetype === "rhizome" || genome.growthHabit === "rhizome_web";
   if (isRhizome && (depth === 0 || (depth === 1 && (agent.treeLen || 0) < 3.5))) return;
 
@@ -654,12 +659,14 @@ export function spawnAgentAppendages(
       agent.id,
     );
   } else if (genome.appendage === "leaves" || genome.appendage === "ferns") {
-    const baseInterval = genome.phyllotaxisMode === "whorled" ? 14 : 6;
-    const nodeInterval = Math.max(
+    const baseInterval = genome.phyllotaxisMode === "whorled" ? 7 : 4;
+    const densityFactor = Math.max(0.2, (engine.leafDensity || 0.35) / 0.35);
+    const baseNodeInterval = Math.max(
       2,
-      Math.round((baseInterval * Math.max(1.0, engine.leafScale)) / Math.max(0.2, engine.leafDensity)),
+      Math.min(7, Math.round((baseInterval * Math.max(0.85, engine.leafScale || 0.55)) / densityFactor)),
     );
-    if (agent.age % nodeInterval === 0 && Math.random() < engine.leafProbability) {
+    const nodeInterval = filigree ? Math.min(9, Math.round(baseNodeInterval * 1.35)) : baseNodeInterval;
+    if ((agent.age + (agent.id || 0)) % nodeInterval === 0 && Math.random() < engine.leafProbability) {
       const up = new THREE.Vector3(0, 1, 0);
       let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
       if (normal.lengthSq() < 0.001) normal.set(1, 0, 0);
@@ -704,7 +711,8 @@ export function spawnAgentAppendages(
       }
     }
   } else {
-    const appInterval = Math.max(2, Math.floor(4 / (engine.ornamentFrequency || 1.0)));
+    const baseAppInterval = Math.max(2, Math.floor(4 / (engine.ornamentFrequency || 1.0)));
+    const appInterval = filigree ? baseAppInterval * 2 : baseAppInterval;
     if (agent.age % appInterval === 0 && depth >= 1) {
       const up = new THREE.Vector3(0, 1, 0);
       let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();

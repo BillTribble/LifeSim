@@ -84,18 +84,18 @@ export function createLodState(): LodState {
 
 /**
  * Leaf blade. The leaf vertex shader sculpts the silhouette from position.x in
- * [-0.5, 0.5] and position.y in [0, 1], so every tier keeps that parameter space.
- * Tier 0 is the unchanged legacy mesh (32x48 box = 6,464 triangles) so fast
- * machines see no visual change. Tier 3 drops the thickness (single plane).
+ * [-0.5, 0.5], position.y in [0, 1], and sign(position.z) on front/back faces.
+ * Every tier stays a true 3D BoxGeometry so front/back 3D vein volume, tube
+ * leaves (sin(x*2pi)), and curved/twisted blades never collapse into 2D slivers.
+ * Tier 0 is the unchanged legacy mesh (32x48 box = 6,464 triangles).
  */
 function leafGeometry(tier: LodTier): THREE.BufferGeometry {
-  if (tier === 3) return new THREE.PlaneGeometry(1, 1, 2, 4).translate(0, 0.5, 0);
-  const [sx, sy] = ([[32, 48], [16, 24], [8, 12]] as const)[tier];
+  const [sx, sy] = ([[32, 48], [14, 20], [8, 12], [4, 7]] as const)[tier];
   return new THREE.BoxGeometry(1, 1, 0.05, sx, sy, 1).translate(0, 0.5, 0);
 }
 
 function fernGeometry(tier: LodTier): THREE.BufferGeometry {
-  const seg = ([[8, 16], [4, 8], [2, 4], [1, 2]] as const)[tier];
+  const seg = ([[8, 16], [6, 12], [4, 8], [3, 6]] as const)[tier];
   const geo = new THREE.PlaneGeometry(1.0, 2.2, seg[0], seg[1]);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -343,5 +343,5 @@ export function updateAdaptiveLOD(engine: SimulationEngine, frameDtMs: number): 
   return lod.tier;
 }
 
-/** Wind-animation cadence per tier: update every Nth leaf per frame (0 = paused). */
-export const WIND_STRIDE = [1, 2, 4, 0] as const;
+/** Wind-animation cadence per tier: update every Nth leaf per frame. */
+export const WIND_STRIDE = [1, 2, 4, 8] as const;

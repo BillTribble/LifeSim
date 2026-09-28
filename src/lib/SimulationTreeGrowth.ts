@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { createTreeShoot, isTreeModelAgent } from "./SimulationTreeArchitecture";
+import { isBigBranchingMode, isFiligreeMode } from "./SimulationMorphology";
 
 /**
  * Continuous tree growth (ecosystem mode).
@@ -80,13 +81,15 @@ function stateFor(engine: SimulationEngine, name: string): TreeGrowthState {
 export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   if (!isContinuousTreeGrowth(engine)) return false;
   const s = stateFor(engine, bud.genome.name);
-  const maxBank = MAX_BANKED_BUDS;
-  // Primary scaffold limbs / early river channels open immediately (capped to 6 initial tips)
-  // so the organism establishes its signature shape at the same pace as a tree.
-  if (((bud.branchDepth || 0) <= 1 && s.growing < 6) || (s.growing < 4 && s.buds.length === 0)) {
+  const isFiligree = isFiligreeMode(bud.genome || s.template?.genome);
+  const isMacro = isBigBranchingMode(bud.genome || s.template?.genome);
+  const initialTipsCap = isFiligree ? 8 : isMacro ? 4 : 6;
+  const initialMinCap = isMacro ? 2 : 4;
+  if (((bud.branchDepth || 0) <= 1 && s.growing < initialTipsCap) || (s.growing < initialMinCap && s.buds.length === 0)) {
     s.growing++;
     return false;
   }
+  const maxBank = MAX_BANKED_BUDS;
   if (s.buds.length >= maxBank) {
     // Keep structural buds: drop the finest (deepest) one, which may be the incoming bud
     let worst = -1;
@@ -108,6 +111,7 @@ export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
 /** Records a point of grown wood that future shoots can sprout from (ring buffer: recent-biased). */
 export function recordTreeNode(engine: SimulationEngine, agent: Agent) {
   if (!isContinuousTreeGrowth(engine)) return;
+  if ((agent.branchDepth || 0) === 0) return; // Do not record trunk nodes
   const s = stateFor(engine, agent.genome.name);
   s.template = agent;
   const node: TreeNode = {
@@ -133,13 +137,13 @@ function nearBoundary(engine: SimulationEngine, pos: THREE.Vector3): boolean {
 }
 
 /** Tournament pick favouring wood far from the tree's root, so the crown expands outward. */
-function pickNode(engine: SimulationEngine, s: TreeGrowthState): TreeNode | null {
+function pickNode(engine: SimulationEngine, s: TreeGrowthState, minDepth: number = 1): TreeNode | null {
   const root = s.template?.treeRoot;
   let best: TreeNode | null = null;
   let bestD = -1;
   for (let k = 0; k < 6; k++) {
     const n = s.nodes[Math.floor(Math.random() * s.nodes.length)];
-    if (nearBoundary(engine, n.pos)) continue;
+    if (!n || n.depth < minDepth || nearBoundary(engine, n.pos)) continue;
     const d = root ? n.pos.distanceToSquared(root) : 0;
     if (d > bestD) {
       best = n;
@@ -193,8 +197,10 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
     if (engine.suppressedStrains?.has(name)) continue;
 
     const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 0.65) * dt;
-    const maxTips = MAX_GROWING_TIPS;
-    const minTips = 3;
+    const isFiligree = isFiligreeMode(s.template?.genome);
+    const isMacro = isBigBranchingMode(s.template?.genome);
+    const maxTips = isFiligree ? 44 : isMacro ? 16 : MAX_GROWING_TIPS;
+    const minTips = isMacro ? 2 : 3;
 
     s.growing = growing.get(name) || 0;
     s.clock += tick;
@@ -202,7 +208,10 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
 
     if (s.buds.length > 0) {
       // Mostly FIFO (breadth-first crown) with a little shuffle
-      const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips ? 2 : 1;
+      const releaseLimit = isFiligree ? 3 : 2;
+      const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips
+        ? Math.min(releaseLimit, maxTips - s.growing)
+        : 1;
       for (let r = 0; r < toRelease && s.buds.length > 0; r++) {
         const idx = Math.floor(Math.random() * Math.min(3, s.buds.length));
         const bud = s.buds.splice(idx, 1)[0];
@@ -210,9 +219,28 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
         newAgents.push(bud);
         s.growing++;
       }
-      s.nextRelease = s.clock + BUD_RELEASE_MIN + Math.random() * BUD_RELEASE_RANGE;
+      const budInterval = isFiligree ? BUD_RELEASE_MIN * 0.65 : BUD_RELEASE_MIN;
+      s.nextRelease = s.clock + budInterval + Math.random() * BUD_RELEASE_RANGE;
     } else if (s.growing < minTips && s.template && s.nodes.length > 0) {
-      const node = pickNode(engine, s);
+      const mode = s.template.genome?.morphMode;
+      let maxShoots = 4;
+      let minDepth = 1;
+      if (mode === "monolith" || mode === "candelabra") {
+        maxShoots = 0;
+      } else if (mode === "big_branching" || mode === "rhizome_tuber") {
+        maxShoots = 2;
+        minDepth = 1;
+      } else if (mode === "filigree" || mode === "rhizome_lace") {
+        maxShoots = 8;
+        minDepth = 2;
+      } else {
+        maxShoots = 4;
+        minDepth = 1;
+      }
+
+      if (s.shoots >= maxShoots) continue;
+
+      const node = pickNode(engine, s, minDepth);
       const shootInterval = SHOOT_MIN + Math.random() * SHOOT_RANGE;
       if (!node) {
         s.nextRelease = s.clock + shootInterval;

@@ -86,3 +86,69 @@ export function clampInsideBounds(engine: SimulationEngine, p: THREE.Vector3, ma
   p.z = THREE.MathUtils.clamp(p.z, -bX, bX);
   return p;
 }
+
+/**
+ * Constructs the sphere (meridian/parallel rings) or box wireframe geometry for the world boundary.
+ */
+export function buildBoundaryGeometry(engine: SimulationEngine): THREE.BufferGeometry {
+  const b = engine.boundarySize;
+  const squash = engine.boundarySquash ?? 1.0;
+  const bY = b * squash;
+
+  if (engine.boundaryShape === "sphere") {
+    const points: THREE.Vector3[] = [];
+    const segments = 48;
+
+    // 1. Horizontal Equator Ring (XZ plane at y=0)
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * b, 0, Math.sin(theta1) * b),
+        new THREE.Vector3(Math.cos(theta2) * b, 0, Math.sin(theta2) * b)
+      );
+    }
+
+    // 2. Vertical XY Meridian Ring
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * b, Math.sin(theta1) * bY, 0),
+        new THREE.Vector3(Math.cos(theta2) * b, Math.sin(theta2) * bY, 0)
+      );
+    }
+
+    // 3. Vertical YZ Meridian Ring
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(0, Math.sin(theta1) * bY, Math.cos(theta1) * b),
+        new THREE.Vector3(0, Math.sin(theta2) * bY, Math.cos(theta2) * b)
+      );
+    }
+
+    // 4. Upper and Lower Parallel Rings (at ±45° latitude)
+    const latAngle = Math.PI / 4;
+    const latR = b * Math.cos(latAngle);
+    const latY = bY * Math.sin(latAngle);
+    for (let i = 0; i < segments; i++) {
+      const theta1 = (i / segments) * Math.PI * 2;
+      const theta2 = ((i + 1) / segments) * Math.PI * 2;
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * latR, latY, Math.sin(theta1) * latR),
+        new THREE.Vector3(Math.cos(theta2) * latR, latY, Math.sin(theta2) * latR)
+      );
+      points.push(
+        new THREE.Vector3(Math.cos(theta1) * latR, -latY, Math.sin(theta1) * latR),
+        new THREE.Vector3(Math.cos(theta2) * latR, -latY, Math.sin(theta2) * latR)
+      );
+    }
+
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }
+
+  const boxGeo = new THREE.BoxGeometry(b * 2, bY * 2, b * 2);
+  return new THREE.EdgesGeometry(boxGeo);
+}

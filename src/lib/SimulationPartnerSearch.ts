@@ -11,6 +11,7 @@ import {
   isSpeciesOnCooldown,
   MIN_NEXUS_DISPERSAL_DIST_SQ,
 } from "./SimulationSeekRamp";
+import { getOrganismBudgetMultiplier } from "./SimulationMorphology";
 
 /** Live, non-dying, non-feeler stem positions grouped by strain, with a bounding sphere per strain. */
 export interface StrainTissue {
@@ -79,13 +80,16 @@ export function getStrainTissueCount(engine: SimulationEngine, strainName: strin
 /** Global live-segment budget shared by maxCreatures organisms (per-organism clamp 1500..2500). */
 export const GLOBAL_SEGMENT_BUDGET = 28000;
 
-export function getOrganismSegmentBudget(engine: SimulationEngine): number {
-  return Math.min(2500, Math.max(1500, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 7)));
+export function getOrganismSegmentBudget(engine: SimulationEngine, strainName?: string): number {
+  const baseBudget = Math.min(2500, Math.max(1500, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 7)));
+  const genome = strainName ? engine.genomeMap?.get(strainName) : undefined;
+  const mult = getOrganismBudgetMultiplier(genome);
+  return Math.min(3200, Math.max(900, Math.round(baseBudget * mult)));
 }
 
 /** True when the organism's live tissue exceeds its soft size budget (it then stops branching). */
 export function isOverSizeBudget(engine: SimulationEngine, strainName: string): boolean {
-  return getStrainTissueCount(engine, strainName) > getOrganismSegmentBudget(engine);
+  return getStrainTissueCount(engine, strainName) > getOrganismSegmentBudget(engine, strainName);
 }
 
 /**

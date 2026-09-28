@@ -33,14 +33,16 @@ const logPlugin = () => ({
     };
     server.middlewares.use('/api/save-evolution-round', saveRoundHandler);
     server.middlewares.use('/LifeSim/api/save-evolution-round', saveRoundHandler);
-    server.middlewares.use('/api/log', (req, res) => {
+    const logHandler = (req, res) => {
       let body = '';
       req.on('data', chunk => { body += chunk.toString(); });
       req.on('end', () => {
         fs.appendFileSync('simulation.log', new Date().toISOString() + ' - ' + body + '\n');
         res.end('ok');
       });
-    });
+    };
+    server.middlewares.use('/api/log', logHandler);
+    server.middlewares.use('/LifeSim/api/log', logHandler);
 
     server.middlewares.use('/api/save-defaults', (req, res) => {
       if (req.method !== 'POST') {

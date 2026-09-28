@@ -154,7 +154,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              float lateralVal = 0.0;
              float shadowMask = 0.0;
 
-             if (vLeafUV.y > 0.0) {
+             if (vLeafUV.y > 0.0 && uLodLevel < 2.5) {
                  // Genetic variations per species/leaf instance
                  float veinDensity = 4.0 + floor(fract(vHash * 17.3) * 5.0); // 4 to 9 veins
                  float veinAngle = 0.2 + fract(vHash * 29.7) * 0.4;        // 0.2 to 0.6 slope
@@ -172,11 +172,13 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  float lateralValCrisp = step(distToVeinLine, latThickCrisp);
                  lateralVal = mix(lateralValSoft, lateralValCrisp, veinGlow);
 
-                 // Blend lateral shadows
-                 float shadowThickSoft = mix(0.022, 0.009, vLeafUV.y);
-                 float shadowMaskSoft = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValSoft);
-                 float shadowMaskCrisp = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValCrisp);
-                 shadowMask = mix(shadowMaskSoft, shadowMaskCrisp, veinGlow);
+                 // Blend lateral shadows (Tiers 0-1; skipped at Tier 2 to save fragment ALU)
+                 if (uLodLevel < 1.5) {
+                     float shadowThickSoft = mix(0.022, 0.009, vLeafUV.y);
+                     float shadowMaskSoft = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValSoft);
+                     float shadowMaskCrisp = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValCrisp);
+                     shadowMask = mix(shadowMaskSoft, shadowMaskCrisp, veinGlow);
+                 }
 
                  // Fade near margins so they don't run off harshly
                  float edgeFade = smoothstep(1.0, 0.8, abs(vLeafUV.x));
@@ -238,10 +240,17 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
+             ${isLeaf ? `
+             if (vGrowth < 0.25) {
+                 float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
+                 if (ditherIn > smoothstep(0.0, 0.25, vGrowth)) discard;
+             }
+             ` : `
              if (vGrowth < 1.0) {
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
                  if (ditherIn > vGrowth) discard;
              }
+             }`}
 
              if (vDecay > 0.0) {
                  float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -448,7 +457,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
            // Fast pop/rise with overshoot and settle
            if (U < 0.6) {
                float t = U / 0.6;
-               growScale = mix(0.05, 1.08, sin(t * 1.5708));
+               growScale = mix(0.32, 1.08, sin(t * 1.5708));
            } else {
                float t = (U - 0.6) / 0.4;
                growScale = mix(1.08, 1.0, smoothstep(0.0, 1.0, t));
@@ -458,7 +467,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        } else {
            // Conduplicate: butterfly wings
            // Grow steadily first, reaching full scale by U = 0.7
-           growScale = smoothstep(0.0, 0.7, U);
+           growScale = mix(0.28, 1.0, smoothstep(0.0, 0.7, U));
        }
 
        if (foldFactor > 0.01 || instanceVernation >= 1.5) {
@@ -503,27 +512,29 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        transformed.z += cup;
 
        // === 3.5 VEIN 3D RIDGE DISPLACEMENT ===
-       if (isBlade > 0.5 && veinStrength > 0.0 && uLodLevel < 0.5) {
-           // --- Midrib: wide, tapered central ridge ---
+       // Preserved across all LOD tiers so leaf 3D volume never collapses when LOD steps down.
+       if (isBlade > 0.5 && veinStrength > 0.0) {
+           // --- Midrib: wide, tapered central ridge (all tiers) ---
            float midribWidth = mix(0.12, 0.04, bladeT);
            float midribVal = smoothstep(midribWidth, midribWidth * 0.2, abs(position.x * 2.0));
            
-           // --- Lateral veins: angled branches ---
+           // --- Lateral veins: individual angled ridges at Tiers 0-1, smooth volume envelope at Tiers 2-3 ---
            float lateralVal = 0.0;
-           float veinDensity = 4.0 + floor(fract(instanceHash * 17.3) * 5.0);
-           float veinAngle = 0.2 + fract(instanceHash * 29.7) * 0.4;
-           
-           float vCoord = bladeT - veinAngle * abs(position.x * 2.0);
-           float cellCoord = fract(vCoord * veinDensity);
-           float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
-           
-           // Wide detection bands to reliably catch mesh vertices (32x48 grid)
-           float latThick = mix(0.035, 0.015, bladeT) * (1.0 - 0.3 * abs(position.x * 2.0));
-           lateralVal = smoothstep(latThick, latThick * 0.15, distToVeinLine);
-           
-           // Fade near edges and tip/base
-           lateralVal *= smoothstep(1.0, 0.8, abs(position.x * 2.0));
-           lateralVal *= smoothstep(1.0, 0.85, bladeT) * smoothstep(0.0, 0.1, bladeT);
+           if (uLodLevel < 1.5) {
+               float veinDensity = 4.0 + floor(fract(instanceHash * 17.3) * 5.0);
+               float veinAngle = 0.2 + fract(instanceHash * 29.7) * 0.4;
+               
+               float vCoord = bladeT - veinAngle * abs(position.x * 2.0);
+               float cellCoord = fract(vCoord * veinDensity);
+               float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
+               
+               float latThick = mix(0.035, 0.015, bladeT) * (1.0 - 0.3 * abs(position.x * 2.0));
+               lateralVal = smoothstep(latThick, latThick * 0.15, distToVeinLine);
+               lateralVal *= smoothstep(1.0, 0.8, abs(position.x * 2.0));
+               lateralVal *= smoothstep(1.0, 0.85, bladeT) * smoothstep(0.0, 0.1, bladeT);
+           } else {
+               lateralVal = 0.42 * smoothstep(1.0, 0.15, abs(position.x * 2.0)) * sin(bladeT * 3.14159);
+           }
            
            float finalVeinMask = max(midribVal, lateralVal);
            
@@ -586,7 +597,7 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        // Wavy Margin Wiggles: detailed ripples along the outer edges of the blade
        float rippleFreq = 10.0 + instanceHash * 6.0;
        float rippleWave = sin(bladeT * rippleFreq + instanceHash * 6.28) * 0.07 * abs(position.x);
-       transformed.z += rippleWave * U * isBlade * step(uLodLevel, 1.5);
+       transformed.z += rippleWave * U * isBlade * mix(1.0, 0.35, step(2.5, uLodLevel));
 
        // === STEM CURVING & RIGID BLADE ROTATION/TRANSLATION ===
        // Compute stem-deformed position

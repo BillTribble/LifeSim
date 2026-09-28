@@ -83,7 +83,7 @@ for (const [k, vars] of Object.entries(variantsByKey)) {
   if (legacy[k]) check(tris[3] < tris[0], `${k}: minimal tier strictly cheaper (${tris[0]} -> ${tris[3]}, -${Math.round((1 - tris[3] / tris[0]) * 100)}%)`);
 }
 const leafTris = variantsByKey.leaves.map(triangleCount);
-check(leafTris[1] <= 1696 && leafTris[2] <= 464 && leafTris[3] <= 16, `leaves: T1<=1696, T2<=464, T3<=16 (got ${leafTris.join("/")})`);
+check(leafTris[1] <= 1696 && leafTris[2] <= 464 && leafTris[3] <= 160, `leaves: T1<=1696, T2<=464, T3<=160 (got ${leafTris.join("/")})`);
 
 // ---------------------------------------------------------------------------
 console.log("\n[2] Complex creature scene: triangles submitted per tier");

@@ -234,7 +234,12 @@ export function updateMeshSegments(
   const fullMatrix = engine.dummy.matrix.clone();
 
   if (isAppendage) {
-    engine.dummy.scale.set(0, 0, 0);
+    if (genome.appendage === "leaves" || genome.appendage === "ferns") {
+      const initMult = engine.leafScale ?? 0.55;
+      engine.dummy.scale.set(scaleX * initMult, scaleY * initMult, scaleZ * initMult);
+    } else {
+      engine.dummy.scale.set(0, 0, 0);
+    }
     engine.dummy.updateMatrix();
   }
 
@@ -271,7 +276,7 @@ export function updateMeshSegments(
     packAAttr.setW(targetIndex, genomeHash);
     
     // Pack B: [growth, vernation, succulence, leafDivision]
-    packBAttr.setX(targetIndex, 0.01); // growth starts at 0.01 for dither fade-in
+    packBAttr.setX(targetIndex, isAppendage ? 0.22 : 0.01); // appendages start at 0.22 so buds are immediately visible
     
     let vernVal = 0.0;
     if (genome.vernationType === "convolute") vernVal = 1.0;
@@ -291,7 +296,7 @@ export function updateMeshSegments(
   // segments share the strain's death clock so the whole body fades together (RC-B1 / RC-B2).
   const strainDeathStart = getStrainDeathStart(engine, resolvedStrainName);
   const isStrainAlreadyDying = strainDeathStart !== undefined;
-  const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.35;
+  const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.022;
 
   if (targetMesh === engine.cylinderMesh) {
     const prevSeg = engine.segments[targetIndex];
