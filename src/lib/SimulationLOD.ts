@@ -34,6 +34,8 @@ export const SHARED_INSTANCE_ATTRIBUTES = [
   "instancePackB",
   "instanceAmbientReflect",
   "instanceLightDir",
+  "instanceRootAnchor",
+  "instanceBranchAnchor",
 ] as const;
 
 export interface LodState {
@@ -115,10 +117,10 @@ function fernGeometry(tier: LodTier): THREE.BufferGeometry {
 
 /** Stem segment. Tiers 0-1 keep end caps (visible on segmented creatures); 2-3 drop them. */
 export function stemGeometry(tier: LodTier): THREE.BufferGeometry {
-  const [radial, open] = ([[7, false], [6, false], [5, true], [4, true]] as const)[tier];
-  const geo = new THREE.CylinderGeometry(1, 1, 1, radial, 1, open);
+  const [radial, heightSegs, open] = ([[7, 4, false], [6, 2, false], [5, 1, true], [4, 1, true]] as const)[tier];
+  const geo = new THREE.CylinderGeometry(1, 1, 1, radial, heightSegs, open);
   geo.translate(0, 0.5, 0);
-  geo.rotateX(-Math.PI / 2);
+  geo.rotateX(Math.PI / 2);
   return geo;
 }
 
@@ -129,15 +131,15 @@ const pick = <T,>(tier: LodTier, table: readonly T[]): T => table[tier];
 export const APPENDAGE_BUILDERS: Record<string, Builder> = {
   leaves: leafGeometry,
   ferns: fernGeometry,
-  flowers: (t) => new THREE.ConeGeometry(0.5, 1, pick(t, [12, 8, 5, 3])).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
+  flowers: (t) => new THREE.ConeGeometry(0.5, 1, pick(t, [12, 8, 5, 3])).translate(0, 0.5, 0).rotateX(Math.PI / 2),
   lillyPads: (t) => {
     const [w, h] = pick(t, [[8, 8], [6, 5], [5, 3], [4, 2]] as const);
     return new THREE.SphereGeometry(0.5, w, h);
   },
   petals: () => new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
-  needles: () => new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
-  thorns: () => new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(-Math.PI / 2),
-  hair: (t) => new THREE.CylinderGeometry(0.04, 0.04, 1, pick(t, [5, 4, 3, 3]), 1, t >= 1).translate(0, 0.5, 0).rotateX(-Math.PI / 2),
+  needles: () => new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(Math.PI / 2),
+  thorns: () => new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(Math.PI / 2),
+  hair: (t) => new THREE.CylinderGeometry(0.04, 0.04, 1, pick(t, [5, 4, 3, 3]), 1, t >= 1).translate(0, 0.5, 0).rotateX(Math.PI / 2),
   curlyHair: (t) => {
     const [tub, rad] = pick(t, [[64, 8], [32, 4], [20, 3], [12, 2]] as const);
     return new THREE.TorusKnotGeometry(0.4, 0.08, tub, rad);

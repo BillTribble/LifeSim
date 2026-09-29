@@ -23,9 +23,17 @@ import {
 const NEWBORN_MERGE_GUARD_STEPS = 10;
 
 export function updateSimulation(engine: SimulationEngine) {
-  engine.time += engine.timeScale;
-  engine.unscaledTime += 1;
-  engine.frameCount++;
+  const isMotionZero =
+    (engine.overallMovement ?? 0.25) <= 0.0001 ||
+    ((engine.shimmer ?? 0.40) <= 0.0001 &&
+      (engine.wavy ?? 0.35) <= 0.0001 &&
+      (engine.branchMovement ?? 0.45) <= 0.0001);
+
+  if (!isMotionZero) {
+    engine.time += engine.timeScale;
+    engine.unscaledTime += 1;
+    engine.frameCount++;
+  }
 
   updateCameraAndThemeUniforms(engine);
 
@@ -39,6 +47,8 @@ export function updateSimulation(engine: SimulationEngine) {
   );
 
   updateMeshesAndStemsGrowth(engine, uniqueGenomes, pulsingGenomes);
+
+  if (isMotionZero) return;
 
   const speedFactor = engine.growthSpeed < 1.0 ? Math.pow(engine.growthSpeed, 2) : engine.growthSpeed;
   const effectiveDieback = (engine.diebackRate / 100.0) * speedFactor * engine.timeScale;
@@ -122,7 +132,21 @@ export function updateSimulation(engine: SimulationEngine) {
       activeAgents.push(engine.agents[i]);
     }
   }
-  engine.agents = activeAgents;
+  for (const a of activeAgents) {
+    if (!a.rootOrigin) {
+      a.rootOrigin = (a.treeRoot || a.lastPosition || a.position).clone();
+    }
+    if (!a.branchBasePos) {
+      a.branchBasePos = a.rootOrigin.clone();
+    }
+    if (a.id !== undefined) {
+      engine.agentAnchorMap.set(a.id, {
+        rootOrigin: a.rootOrigin,
+        branchBasePos: a.branchBasePos,
+        branchDepth: a.branchDepth || 0,
+      });
+    }
+  }
 
   performRatioCulling(engine, activeAgents);
 
@@ -185,6 +209,17 @@ export function updateSimulation(engine: SimulationEngine) {
     if (a.id === undefined) {
       a.id = engine.nextAgentId++;
     }
+    if (!a.rootOrigin) {
+      a.rootOrigin = (a.treeRoot || a.lastPosition || a.position).clone();
+    }
+    if (!a.branchBasePos) {
+      a.branchBasePos = a.rootOrigin.clone();
+    }
+    engine.agentAnchorMap.set(a.id, {
+      rootOrigin: a.rootOrigin,
+      branchBasePos: a.branchBasePos,
+      branchDepth: a.branchDepth || 0,
+    });
   });
   engine.agents.push(...newAgents);
 

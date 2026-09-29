@@ -67,6 +67,7 @@ export function reflectAtBoundary(engine: SimulationEngine, agent: Agent): boole
 
 /** Returns `p` clamped inside the world boundary with a small margin (box or ellipsoid). */
 export function clampInsideBounds(engine: SimulationEngine, p: THREE.Vector3, margin = 2): THREE.Vector3 {
+  if (!engine.boundarySize) return p;
   const bX = Math.max(1, engine.boundarySize - margin);
   const squash = engine.boundarySquash ?? 1.0;
   const bY = Math.max(1, Math.max(5.0, engine.boundarySize * squash) - margin);

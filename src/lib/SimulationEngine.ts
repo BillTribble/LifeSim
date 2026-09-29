@@ -86,6 +86,16 @@ export class SimulationEngine {
   unscaledTime: number = 0;
   frameCount: number = 0;
   timeScale: number = 1.0;
+  shimmer: number = 0.40;
+  wavy: number = 0.35;
+  branchMovement: number = 0.45;
+  overallMovement: number = 0.25;
+  movementLfoSpeed: number = 0.30;
+  movementLfoDepth: number = 0.40;
+  movementLfoPhase: number = 0.0;
+  windTime: number = 0;
+  appendageMaterial?: THREE.MeshPhysicalMaterial;
+  agentAnchorMap: Map<number, { rootOrigin: THREE.Vector3; branchBasePos: THREE.Vector3; branchDepth: number }> = new Map();
   hoveredStrainName: string | null = null;
   lastHoveredStrainName: string | null = null;
   glowTraitIntensity: number = 1.5;
@@ -476,7 +486,7 @@ export class SimulationEngine {
     thickness: number,
     isAppendage = false,
     agentId?: number,
-    isTerminal = false,
+    isTerminal: boolean | number = false,
   ) {
     updateMeshSegments(this, p1, p2, genome, thickness, isAppendage, agentId, isTerminal);
   }

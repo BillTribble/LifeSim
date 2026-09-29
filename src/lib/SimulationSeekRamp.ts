@@ -112,7 +112,12 @@ export const DESPERATION_EXTRA_STEPS = 250;
 function getLivingCountCached(engine: SimulationEngine): number {
   const c = (engine as any)._livingCountCache;
   if (c && c.frame === engine.frameCount && c.time === engine.time) return c.n;
-  const n = engine.getLivingOrganisms().size;
+  const n =
+    typeof engine.getLivingOrganisms === "function"
+      ? engine.getLivingOrganisms().size
+      : typeof engine.getLivingOrganismCount === "function"
+        ? engine.getLivingOrganismCount()
+        : 0;
   (engine as any)._livingCountCache = { frame: engine.frameCount, time: engine.time, n };
   return n;
 }

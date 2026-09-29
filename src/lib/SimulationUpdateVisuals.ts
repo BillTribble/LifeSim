@@ -2,28 +2,38 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
 import { WIND_STRIDE } from "./SimulationLOD";
+import { updateWindMaterialUniforms, computeLfoModulatedOverall } from "./SimulationWindMotion";
 
 // Scratch objects reused every frame (avoids per-instance heap allocations in the hot loop).
 const scratchQuat = new THREE.Quaternion();
 const scratchEuler = new THREE.Euler();
 
 export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
+  const isMotionZero = (engine.overallMovement ?? 0.25) <= 0.0001 ||
+    (((engine.shimmer ?? 0.40) <= 0.0001) && ((engine.wavy ?? 0.35) <= 0.0001) && ((engine.branchMovement ?? 0.45) <= 0.0001));
+
   // Kiosk Mode Interval & Smooth Fade Handling
   if (engine.kioskMode) {
-    if (!engine.lastKioskRealTime) engine.lastKioskRealTime = performance.now();
-    const targetRealSec = 7.0 * (100 / (engine.timeScale || 1.0));
-    if ((performance.now() - engine.lastKioskRealTime) / 1000 >= targetRealSec && !engine.kioskFadingOut) {
-      engine.kioskFadingOut = true;
-    }
-    if (engine.kioskFadingOut) {
-      engine.kioskFadeProgress = Math.min(1.0, (engine.kioskFadeProgress || 0) + 0.033);
-      if (engine.kioskFadeProgress >= 1.0) {
-        engine.lastKioskRealTime = performance.now();
-        engine.kioskFadingOut = false;
-        if (engine.onKioskTrigger) engine.onKioskTrigger();
+    if (isMotionZero) {
+      engine.lastKioskRealTime = performance.now();
+      engine.kioskFadingOut = false;
+      engine.kioskFadeProgress = 0;
+    } else {
+      if (!engine.lastKioskRealTime) engine.lastKioskRealTime = performance.now();
+      const targetRealSec = 7.0 * (100 / (engine.timeScale || 1.0));
+      if ((performance.now() - engine.lastKioskRealTime) / 1000 >= targetRealSec && !engine.kioskFadingOut) {
+        engine.kioskFadingOut = true;
       }
-    } else if (engine.kioskFadeProgress > 0) {
-      engine.kioskFadeProgress = Math.max(0.0, engine.kioskFadeProgress - 0.033);
+      if (engine.kioskFadingOut) {
+        engine.kioskFadeProgress = Math.min(1.0, (engine.kioskFadeProgress || 0) + 0.033);
+        if (engine.kioskFadeProgress >= 1.0) {
+          engine.lastKioskRealTime = performance.now();
+          engine.kioskFadingOut = false;
+          if (engine.onKioskTrigger) engine.onKioskTrigger();
+        }
+      } else if (engine.kioskFadeProgress > 0) {
+        engine.kioskFadeProgress = Math.max(0.0, engine.kioskFadeProgress - 0.033);
+      }
     }
   } else {
     engine.kioskFadeProgress = 0;
@@ -35,7 +45,7 @@ export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
   if (engine.controls && engine.camera) {
     const rx = engine.rotationSpeed ?? 0;
     const ry = engine.rotationSpeedY ?? 0;
-    if (rx !== 0 || ry !== 0) {
+    if (!isMotionZero && (rx !== 0 || ry !== 0)) {
       engine.controls.autoRotate = false;
       const target = engine.controls.target || new THREE.Vector3(0, 0, 0);
       const spherical = new THREE.Spherical().setFromVector3(
@@ -64,6 +74,7 @@ export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
   // Update theme uniforms
   const leafMat = engine.appendages.get("leaves")?.mesh.material as THREE.MeshPhysicalMaterial;
   const mats: THREE.MeshPhysicalMaterial[] = [engine.cylinderMesh.material as THREE.MeshPhysicalMaterial];
+  if (engine.appendageMaterial) mats.push(engine.appendageMaterial);
   if (engine.hybridMeshes.length > 0) mats.push(engine.hybridMeshes[0].material as THREE.MeshPhysicalMaterial);
   if (leafMat) mats.push(leafMat);
 
@@ -92,6 +103,7 @@ export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
     if (mat?.userData.veinStrength) mat.userData.veinStrength.value = engine.veinStrength;
     if (mat?.userData.veinGlow) mat.userData.veinGlow.value = engine.veinGlow;
   }
+  updateWindMaterialUniforms(engine);
 
   if (engine.lastMaxDOMs !== undefined && engine.lastMaxDOMs > engine.maxDOMs) {
     engine.lastMaxDOMs = engine.maxDOMs;
@@ -135,6 +147,14 @@ export function updateMeshesAndStemsGrowth(
   if (engine.lastRelativeLeafSizeDiff !== engine.relativeLeafSizeDiff) { appChanged = true; engine.lastRelativeLeafSizeDiff = engine.relativeLeafSizeDiff; }
   if (engine.lastStemCurviness !== engine.stemCurviness) { appChanged = true; engine.lastStemCurviness = engine.stemCurviness; }
   if ((engine as any).lastWindVelocity !== engine.windVelocity) { appChanged = true; (engine as any).lastWindVelocity = engine.windVelocity; }
+  if ((engine as any).lastShimmer !== engine.shimmer) { appChanged = true; (engine as any).lastShimmer = engine.shimmer; }
+  if ((engine as any).lastWavy !== engine.wavy) { appChanged = true; (engine as any).lastWavy = engine.wavy; }
+  if ((engine as any).lastBranchMovement !== engine.branchMovement) { appChanged = true; (engine as any).lastBranchMovement = engine.branchMovement; }
+  if ((engine as any).lastOverallMovement !== engine.overallMovement) { appChanged = true; (engine as any).lastOverallMovement = engine.overallMovement; }
+
+  const { effectiveOverall } = computeLfoModulatedOverall(engine);
+  const windFlutterMult = effectiveOverall * ((engine.shimmer ?? 0.40) * 0.65 + (engine.wavy ?? 0.35) * 0.35);
+  const motionActivity = Math.min(1.0, effectiveOverall * ((engine.shimmer ?? 0.40) + (engine.wavy ?? 0.35) + (engine.branchMovement ?? 0.45)));
 
   const growthDuration = 40;
   const updateMeshGrowth = (mesh: THREE.InstancedMesh, segments: any[]) => {
@@ -145,7 +165,7 @@ export function updateMeshesAndStemsGrowth(
     const isLeaf = mesh === engine.appendages.get("leaves")?.mesh;
     const pB = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
     if (isLeaf && !pB) throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
-    const leafWind = isLeaf && engine.windVelocity > 0;
+    const leafWind = isLeaf && engine.windVelocity > 0 && windFlutterMult > 0.0001;
     // View-only LOD: settled leaves re-pose for wind on a stride (1/2 at medium, 1/4 at low, paused at minimal).
     const windStride = WIND_STRIDE[engine.lod?.tier ?? 0];
 
@@ -162,7 +182,7 @@ export function updateMeshesAndStemsGrowth(
       const genome = uniqueGenomes.get(seg.strainName);
       let sizePulse = 1.0;
       let colPulse = 1.0;
-      if (pB) {
+      if (pB && motionActivity > 0.0001) {
         const val = pB.getX(i);
         if (val < 1.0) {
           const leafStep = Math.max(0.02, (engine.leafGrowthSpeed || 0.0045) * Math.max(3.0, engine.timeScale));
@@ -176,7 +196,7 @@ export function updateMeshesAndStemsGrowth(
         const tp = genome.pulseTarget;
         if (tp === "all" || (isStem && tp === "stem") || (!isStem && tp === "appendage")) {
           const rawSin = Math.sin(engine.unscaledTime * genome.pulseSpeed * (engine.globalPulseSpeed || 1.0) * 10.0);
-          const pVal = Math.pow(Math.max(0, rawSin), 2.5);
+          const pVal = Math.pow(Math.max(0, rawSin), 2.5) * motionActivity;
           colPulse = 1.0 + pVal * 0.25;
           if (isStem) sizePulse = 1.0 + pVal * 0.25;
         }
@@ -190,20 +210,18 @@ export function updateMeshesAndStemsGrowth(
         engine.dummy.matrix.decompose(engine.dummy.position, engine.dummy.quaternion, engine.dummy.scale);
 
         if (isHybrid) {
-          const rot = i * 2.5 + engine.unscaledTime * 0.005 * (engine.hybridSpinSpeed ?? 0.2);
+          const rot = i * 2.5 + engine.unscaledTime * 0.005 * (engine.hybridSpinSpeed ?? 0.2) * motionActivity;
           engine.dummy.quaternion.multiply(scratchQuat.setFromEuler(scratchEuler.set(rot, rot * 1.1, rot * 0.8)));
-        } else if (isLeaf && engine.windVelocity > 0) {
+        } else if (isLeaf && engine.windVelocity > 0 && windFlutterMult > 0.0001) {
           const t = engine.unscaledTime * 0.1 * engine.windVelocity;
           const po = i * 0.2;
-          const w1 = Math.sin(t + po) * 0.05 * engine.flutterIntensity;
-          const w2 = Math.cos(t * 0.7 + po) * 0.03 * engine.flutterIntensity;
+          const w1 = Math.sin(t + po) * 0.05 * engine.flutterIntensity * windFlutterMult;
+          const w2 = Math.cos(t * 0.7 + po) * 0.03 * engine.flutterIntensity * windFlutterMult;
           engine.dummy.quaternion.multiply(scratchQuat.setFromEuler(scratchEuler.set(w1, w2, w1 * 0.5)));
-          engine.dummy.position.x += w1 * 2.0;
-          engine.dummy.position.y += w2 * 1.5;
         }
 
         const isLeafApp = mesh === engine.appendages.get("leaves")?.mesh || mesh === engine.appendages.get("ferns")?.mesh;
-        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? (engine.hybridSize || 2.0) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
+        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? Math.min(2.2, Math.max(1.4, (engine.hybridSize || 2.0) * 0.85)) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
         engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulse);
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -225,7 +243,7 @@ export function updateMeshesAndStemsGrowth(
 
   // CRITICAL FIX (Primary Bug P0 — Stem Dither Fade-In):
   const stemPackBAttr = engine.cylinderMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
-  if (stemPackBAttr && engine.growingStems && engine.growingStems.size > 0) {
+  if (motionActivity > 0.0001 && stemPackBAttr && engine.growingStems && engine.growingStems.size > 0) {
     let updated = false;
     const step = Math.max(0.02, 0.05 * (engine.timeScale || 1.0));
     for (const idx of Array.from(engine.growingStems)) {
@@ -248,7 +266,7 @@ export function updateMeshesAndStemsGrowth(
   }
 
   // CRITICAL FIX (Bug #5 — Stem Colour Pulse Bounds):
-  if (pulsingGenomes.some((g) => g.pulseTarget === "stem" || g.pulseTarget === "all")) {
+  if (motionActivity > 0.0001 && pulsingGenomes.some((g) => g.pulseTarget === "stem" || g.pulseTarget === "all")) {
     const activeRange = Math.min(engine.pointCount, engine.maxDOMs);
     const scratchPulseColor = new THREE.Color();
     for (let i = 0; i < activeRange; i++) {
@@ -257,7 +275,8 @@ export function updateMeshesAndStemsGrowth(
         const genome = uniqueGenomes.get(seg.strainName);
         if (genome && (genome.pulseTarget === "stem" || genome.pulseTarget === "all")) {
           const rawSin = Math.sin(engine.unscaledTime * genome.pulseSpeed * (engine.globalPulseSpeed || 1.0) * 10.0);
-          scratchPulseColor.copy(genome.color).multiplyScalar(1.0 + Math.pow(Math.max(0, rawSin), 2.5) * 0.25);
+          const pVal = Math.pow(Math.max(0, rawSin), 2.5) * motionActivity;
+          scratchPulseColor.copy(genome.color).multiplyScalar(1.0 + pVal * 0.25);
           engine.cylinderMesh.setColorAt(i, scratchPulseColor);
         }
       }

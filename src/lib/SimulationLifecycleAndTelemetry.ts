@@ -108,7 +108,7 @@ export function spawnHybridArtifact(
 
   engine.dummy.position.copy(pos);
   engine.dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  engine.dummy.scale.set(engine.hybridSize, engine.hybridSize, engine.hybridSize);
+  engine.dummy.scale.set(1.15, 1.15, 1.15);
   engine.dummy.updateMatrix();
 
   const variant = Math.floor(Math.random() * engine.hybridMeshes.length);

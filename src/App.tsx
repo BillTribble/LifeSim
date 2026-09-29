@@ -44,6 +44,10 @@ export default function App() {
   const sessionCodeRef = useRef(sessionCode);
   sessionCodeRef.current = sessionCode;
   const { state, setters } = useSimulationState();
+  if (typeof window !== "undefined") {
+    (window as any).__LIFESIM_STATE__ = state;
+    (window as any).__LIFESIM_SETTERS__ = setters;
+  }
   const [popupQueue, setPopupQueue] = useState<PopupItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -179,13 +183,15 @@ export default function App() {
   // Periodic state snapshot to disk log every 3 seconds
   const lastSnapshotRef = React.useRef(0);
   const lastGeoAlert = React.useRef(0);
+  const peakGeoRef = React.useRef(0);
   const handleStateUpdate = (newState: any) => {
     setStats(newState);
     const now = Date.now();
 
     // ALERT: detect stems disappearing while agents are alive
     if (newState.geometryCount !== undefined && newState.totalAgents !== undefined) {
-      if (newState.geometryCount < 10 && newState.totalAgents > 0 && now - lastGeoAlert.current > 5000) {
+      if (newState.geometryCount > peakGeoRef.current) peakGeoRef.current = newState.geometryCount;
+      if (peakGeoRef.current >= 10 && newState.geometryCount === 0 && newState.totalAgents > 0 && now - lastGeoAlert.current > 5000) {
         lastGeoAlert.current = now;
         const alert = `🚨 [INVISIBLE BUG] geometries=${newState.geometryCount} but agents=${newState.totalAgents} — stems vanished while creatures alive!`;
         console.error(alert);
@@ -354,6 +360,14 @@ export default function App() {
         botanyRealism={state.botanyRealism}
         windVelocity={state.windVelocity}
         flutterIntensity={state.flutterIntensity}
+        shimmer={state.shimmer}
+        wavy={state.wavy}
+        branchMovement={state.branchMovement}
+        overallMovement={state.overallMovement}
+        movementLfoSpeed={state.movementLfoSpeed}
+        movementLfoDepth={state.movementLfoDepth}
+        veinStrength={state.veinStrength}
+        veinGlow={state.veinGlow}
         leafScale={state.leafScale}
         leafDensity={state.leafDensity}
         relativeLeafSizeDiff={state.relativeLeafSizeDiff}

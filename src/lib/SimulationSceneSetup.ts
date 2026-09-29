@@ -345,7 +345,7 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
     const limit = Math.min(engine.pointCount, engine.maxDOMs);
     for (let i = 0; i < limit; i++) {
       const seg = engine.segments[i];
-      if (seg && !seg.dyingStart) {
+      if (seg && !seg.dyingStart && !seg.isFeeler && !seg.strainName.startsWith("Feeler-")) {
         const m = seg.matrix.elements;
         anchors.push(new THREE.Vector3(m[12], m[13], m[14]));
       }
@@ -355,9 +355,9 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
   if (anchors.length === 0) {
     // Genuinely empty world — nothing to anchor to.
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 80,
-      (Math.random() - 0.5) * 30,
-      (Math.random() - 0.5) * 80,
+      (Math.random() - 0.5) * 40,
+      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 40,
     );
   }
 
@@ -368,6 +368,9 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
     Math.random() - 0.5,
   );
   if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
+  const b = (engine.boundarySize || 60) * 0.7;
+  if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
+  if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
   offset.normalize().multiplyScalar(6 + Math.random() * 6);
 
   return anchor.clone().add(offset);
@@ -434,6 +437,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   setSpeciesCooldown(engine, genome.name, genome, initialCooldown);
 
   const pos = pickEmergencePosition(engine);
+  genome.birthPos = pos.clone();
   const agent: Agent = {
     position: pos.clone(),
     lastPosition: pos.clone(),
@@ -447,6 +451,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   };
 
   engine.agents.push(agent);
+  engine.spawnHybridArtifact(pos, genome.color, genome.name, genome.name, agent.id, agent.id, genome.name);
   if (engine.sound) {
     engine.sound.onSpeciesBorn(genome, pos, engine.camera);
   }
@@ -548,9 +553,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     // Fixed spot at bottom of view above dials, growing upwards
     const spawnPos = new THREE.Vector3(0, 0, 0);
     const spawnDir = new THREE.Vector3(0, 1, 0);
+    const designerId = engine.nextAgentId++;
 
     engine.agents.push({
-      id: engine.nextAgentId++,
+      id: designerId,
       position: spawnPos.clone(),
       direction: spawnDir.clone(),
       genome: designerGenome,
@@ -560,6 +566,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       thickness: designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
       cooldown: 0,
     });
+    engine.spawnHybridArtifact(spawnPos, designerGenome.color, designerGenome.name, designerGenome.name, designerId, designerId, designerGenome.name);
 
     engine.matingCount = 0;
     engine.feelerCount = 0;
@@ -700,22 +707,29 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   betaGenome.createdAt = engine.time;
 
   const initialCooldown = getHybridCooldownTicks(engine);
-  const alphaStart = new THREE.Vector3(-40, 0, 0);
-  const betaStart = new THREE.Vector3(40, 0, 0);
+  const alphaStart = new THREE.Vector3(-20, 0, 0);
+  const betaStart = new THREE.Vector3(20, 0, 0);
+  alphaGenome.birthPos = alphaStart.clone();
+  betaGenome.birthPos = betaStart.clone();
+  engine.genomeMap.set(alphaGenome.name, alphaGenome);
+  engine.genomeMap.set(betaGenome.name, betaGenome);
+  const alphaId = engine.nextAgentId++;
+  const betaId = engine.nextAgentId++;
   engine.agents.push({
     position: alphaStart.clone(),
     direction: initialCreatureDirection(engine, alphaStart),
     genome: alphaGenome,
-    id: engine.nextAgentId++,
+    id: alphaId,
     active: true,
     age: 0,
     lastPosition: alphaStart.clone(),
     thickness: alphaGenome.thicknessBase * (alphaGenome.archetype === "bush" ? 1.05 : 1.5),
     cooldown: initialCooldown,
   });
+  engine.spawnHybridArtifact(alphaStart, alphaGenome.color, alphaGenome.name, alphaGenome.name, alphaId, alphaId, alphaGenome.name);
 
   engine.agents.push({
-    id: engine.nextAgentId++,
+    id: betaId,
     position: betaStart.clone(),
     direction: initialCreatureDirection(engine, betaStart),
     genome: betaGenome,
@@ -725,6 +739,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     thickness: betaGenome.thicknessBase * (betaGenome.archetype === "bush" ? 1.05 : 1.5),
     cooldown: initialCooldown,
   });
+  engine.spawnHybridArtifact(betaStart, betaGenome.color, betaGenome.name, betaGenome.name, betaId, betaId, betaGenome.name);
 
   initSpeciesLifecycle(engine, alphaGenome.name);
   initSpeciesLifecycle(engine, betaGenome.name);

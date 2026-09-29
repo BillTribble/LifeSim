@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   DEFAULTS,
   DEFAULT_PALETTE,
@@ -12,11 +12,24 @@ import {
   getStoredSoundMixer,
   checkSchemaVersion,
 } from "./SimulationDefaults";
+import {
+  useSimulationPersistence,
+  resetSimulationToDefaults,
+} from "./SimulationStatePersistence";
 
 export { DEFAULTS, DEFAULT_PALETTE, CURRENT_SCHEMA };
 
 export function useSimulationState() {
   checkSchemaVersion();
+  if (!localStorage.getItem("lifesim_wind_v3_ready")) {
+    localStorage.setItem("shimmer", String(DEFAULTS.shimmer));
+    localStorage.setItem("wavy", String(DEFAULTS.wavy));
+    localStorage.setItem("branchMovement", String(DEFAULTS.branchMovement));
+    localStorage.setItem("overallMovement", String(DEFAULTS.overallMovement));
+    localStorage.setItem("movementLfoSpeed", String(DEFAULTS.movementLfoSpeed));
+    localStorage.setItem("movementLfoDepth", String(DEFAULTS.movementLfoDepth));
+    localStorage.setItem("lifesim_wind_v3_ready", "true");
+  }
 
   const [snakeSpeed, setSnakeSpeed] = useState(() => getStoredFloat("snakeSpeed"));
   const [snakeStepSize, setSnakeStepSize] = useState(() => getStoredFloat("snakeStepSize"));
@@ -106,6 +119,12 @@ export function useSimulationState() {
   const [botanyRealism, setBotanyRealism] = useState(() => getStoredBool("botanyRealism"));
   const [windVelocity, setWindVelocity] = useState(() => getStoredFloat("windVelocity"));
   const [flutterIntensity, setFlutterIntensity] = useState(() => getStoredFloat("flutterIntensity"));
+  const [shimmer, setShimmer] = useState(() => getStoredFloat("shimmer", DEFAULTS.shimmer));
+  const [wavy, setWavy] = useState(() => getStoredFloat("wavy", DEFAULTS.wavy));
+  const [branchMovement, setBranchMovement] = useState(() => getStoredFloat("branchMovement", DEFAULTS.branchMovement));
+  const [overallMovement, setOverallMovement] = useState(() => getStoredFloat("overallMovement", DEFAULTS.overallMovement));
+  const [movementLfoSpeed, setMovementLfoSpeed] = useState(() => getStoredFloat("movementLfoSpeed", DEFAULTS.movementLfoSpeed));
+  const [movementLfoDepth, setMovementLfoDepth] = useState(() => getStoredFloat("movementLfoDepth", DEFAULTS.movementLfoDepth));
   const [leafScale, setLeafScale] = useState(() => getStoredFloat("leafScale"));
   const [leafDensity, setLeafDensity] = useState(() => getStoredFloat("leafDensity"));
   const [relativeLeafSizeDiff, setRelativeLeafSizeDiff] = useState(() => getStoredFloat("relativeLeafSizeDiff"));
@@ -147,135 +166,7 @@ export function useSimulationState() {
   const [soundReverbPreDelay, setSoundReverbPreDelay] = useState(() => getStoredFloat("soundReverbPreDelay", DEFAULTS.soundReverbPreDelay));
   const [soundStepCadence, setSoundStepCadence] = useState(() => getStoredFloat("soundStepCadence", DEFAULTS.soundStepCadence));
 
-  useEffect(() => {
-    localStorage.removeItem("soundEnabled");
-    localStorage.setItem("soundVolume", soundVolume.toString());
-    localStorage.setItem("soundSpace", soundSpace.toString());
-    localStorage.setItem("soundEnvironment", soundEnvironment);
-    localStorage.setItem("soundAutoCycle", soundAutoCycle.toString());
-    localStorage.setItem("soundSyncThemes", soundSyncThemes.toString());
-    localStorage.setItem("soundMovement", soundMovement.toString());
-    localStorage.setItem("soundWeather", soundWeather.toString());
-    localStorage.setItem("soundMixer", JSON.stringify(soundMixer));
-    localStorage.setItem("soundReverbDecay", soundReverbDecay.toString());
-    localStorage.setItem("soundReverbDamping", soundReverbDamping.toString());
-    localStorage.setItem("soundReverbPreDelay", soundReverbPreDelay.toString());
-    localStorage.setItem("soundStepCadence", soundStepCadence.toString());
-    localStorage.setItem("snakeSpeed", snakeSpeed.toString());
-    localStorage.setItem("snakeStepSize", snakeStepSize.toString());
-    localStorage.setItem("snakeWander", snakeWander.toString());
-    localStorage.setItem("bushSpeed", bushSpeed.toString());
-    localStorage.setItem("treeSpeed", treeSpeed.toString());
-    localStorage.setItem("rhizomeSpeed", rhizomeSpeed.toString());
-    localStorage.setItem("bushStepSize", bushStepSize.toString());
-    localStorage.setItem("treeStepSize", treeStepSize.toString());
-    localStorage.setItem("rhizomeStepSize", rhizomeStepSize.toString());
-    localStorage.setItem("bushBranching", bushBranching.toString());
-    localStorage.setItem("treeBranching", treeBranching.toString());
-    localStorage.setItem("treeBranchDelay", treeBranchDelay.toString());
-    localStorage.setItem("bushTaper", bushTaper.toString());
-    localStorage.setItem("treeTaper", treeTaper.toString());
-    localStorage.setItem("rhizomeTaper", rhizomeTaper.toString());
-    localStorage.setItem("snakeBranching", snakeBranching.toString());
-    localStorage.setItem("rhizomeBranching", rhizomeBranching.toString());
-    localStorage.setItem("bushMinBranches", bushMinBranches.toString());
-    localStorage.setItem("rhizomeMinBranches", rhizomeMinBranches.toString());
-    localStorage.setItem("treeMinBranches", treeMinBranches.toString());
-    localStorage.setItem("snakeMinBranches", snakeMinBranches.toString());
-    localStorage.setItem("widthVariance", widthVariance.toString());
-    localStorage.setItem("branchGrowthBoost", branchGrowthBoost.toString());
-    localStorage.setItem("colorMutationShift", colorMutationShift.toString());
-    localStorage.setItem("speed", timeScale.toString());
-    localStorage.setItem("timeScale", timeScale.toString());
-    localStorage.setItem("slowMotion", timeScale.toString());
-    localStorage.setItem("postMatingDieoff", postMatingDieoff.toString());
-    localStorage.setItem("themeMorphFreq", themeMorphFreq.toString());
-    localStorage.setItem("themeMorphSpeed", themeMorphSpeed.toString());
-    localStorage.setItem("rotationSpeed", rotationSpeed.toString());
-    localStorage.setItem("rotationSpeedY", rotationSpeedY.toString());
-    localStorage.setItem("magnetism", magnetism.toString());
-    localStorage.setItem("seekAmount", seekAmount.toString());
-    localStorage.setItem("proximity", proximity.toString());
-    localStorage.setItem("desperation", desperation.toString());
-    localStorage.setItem("despairAge", despairAge.toString());
-    localStorage.setItem("maxMatings", maxMatings.toString());
-    localStorage.setItem("startColorMode", startColorMode);
-    localStorage.setItem("flowerSize", flowerSize.toString());
-    localStorage.setItem("tideSpeed", tideSpeed.toString());
-    localStorage.setItem("tideColor", tideColor);
-    localStorage.setItem("bgColor", bgColor);
-    localStorage.setItem("tideThickness", tideThickness.toString());
-    localStorage.setItem("tideOpacity", tideOpacity.toString());
-    localStorage.setItem("tideSaturation", tideSaturation.toString());
-    localStorage.setItem("growthSpeed", growthSpeed.toString());
-    localStorage.setItem("widthGrowthEffect", widthGrowthEffect.toString());
-    localStorage.setItem("diebackRate", diebackRate.toString());
-    localStorage.setItem("allowBreeding", allowBreeding.toString());
-    localStorage.setItem("hybridCooldown", hybridCooldown.toString());
-    localStorage.setItem("hybridStickiness", hybridStickiness.toString());
-    localStorage.setItem("hybridSpinSpeed", hybridSpinSpeed.toString());
-    localStorage.setItem("branchTendencyVar", branchTendencyVar.toString());
-    localStorage.setItem("ornamentFrequency", ornamentFrequency.toString());
-    localStorage.setItem("branchingMultiplier", branchingMultiplier.toString());
-    localStorage.setItem("branchBigger", branchBigger.toString());
-    localStorage.setItem("branchSplitSizeProb", branchSplitSizeProb.toString());
-    localStorage.setItem("pruningStrength", pruningStrength.toString());
-    localStorage.setItem("maxBranchDepth", maxBranchDepth.toString());
-    localStorage.setItem("maxBranchesPerSpecies", maxBranchesPerSpecies.toString());
-    localStorage.setItem("maxDOMs", maxDOMs.toString());
-    localStorage.setItem("maxAgents", maxAgents.toString());
-    localStorage.setItem("maxCreatures", maxCreatures.toString());
-    localStorage.setItem("ecoFade", ecoFade.toString());
-    localStorage.setItem("minCreatures", minCreatures.toString());
-    localStorage.setItem("boundarySize", boundarySize.toString());
-    localStorage.setItem("boundarySquash", boundarySquash.toString());
-    localStorage.setItem("desiccationSpeed", desiccationSpeed.toString());
-    localStorage.setItem("hybridSize", hybridSize.toString());
-    localStorage.setItem("terminationProb", terminationProb.toString());
-    localStorage.setItem("termProbPostBranch", termProbPostBranch.toString());
-    localStorage.setItem("segmentGap", segmentGap.toString());
-    localStorage.setItem("taperDuration", taperDuration.toString());
-    localStorage.setItem("diebackAgeBias", diebackAgeBias.toString());
-    localStorage.setItem("kioskMode", kioskMode.toString());
-    localStorage.setItem("enableGlow", enableGlow.toString());
-    localStorage.setItem("glowSize", glowSize.toString());
-    localStorage.setItem("fogVisibility", fogVisibility.toString());
-    localStorage.setItem("botanyRealism", botanyRealism.toString());
-    localStorage.setItem("windVelocity", windVelocity.toString());
-    localStorage.setItem("flutterIntensity", flutterIntensity.toString());
-    localStorage.setItem("leafScale", leafScale.toString());
-    localStorage.setItem("leafDensity", leafDensity.toString());
-    localStorage.setItem("relativeLeafSizeDiff", relativeLeafSizeDiff.toString());
-    localStorage.setItem("leafGrowthSpeed", leafGrowthSpeed.toString());
-    localStorage.setItem("phyllotaxisAngle", phyllotaxisAngle.toString());
-    localStorage.setItem("leafProbability", leafProbability.toString());
-    localStorage.setItem("appendageSpawnRate", appendageSpawnRate.toString());
-    localStorage.setItem("glowProbability", glowProbability.toString());
-    localStorage.setItem("stemCurviness", stemCurviness.toString());
-    localStorage.setItem("veinStrength", veinStrength.toString());
-    localStorage.setItem("veinGlow", veinGlow.toString());
-    localStorage.setItem("fogColor", fogColor);
-    localStorage.setItem("maxLineWidth", maxLineWidth.toString());
-    localStorage.setItem("globalPulseSpeed", globalPulseSpeed.toString());
-    localStorage.setItem("multicolorAppProb", multicolorAppProb.toString());
-    localStorage.setItem("sameColorAppProb", sameColorAppProb.toString());
-    localStorage.setItem("maxSaturation", maxSaturation.toString());
-    localStorage.setItem("colorClamp", colorClamp.toString());
-    localStorage.setItem("feelerFade", feelerFade.toString());
-    localStorage.setItem("feelerDelay", feelerDelay.toString());
-    localStorage.setItem("gridHeight", gridHeight.toString());
-    localStorage.setItem("layerGap", layerGap.toString());
-    localStorage.setItem("floorHeight", floorHeight.toString());
-    localStorage.setItem("ceilingHeight", ceilingHeight.toString());
-    localStorage.setItem("cameraProjection", cameraProjection.toString());
-    localStorage.setItem("showBoundaryBox", showBoundaryBox ? "true" : "false");
-    localStorage.setItem("cullRate", cullRate.toString());
-    localStorage.setItem("glowTraitIntensity", glowTraitIntensity.toString());
-    localStorage.setItem("glowTraitDistance", glowTraitDistance.toString());
-    localStorage.setItem("glowTraitReflect", glowTraitReflect.toString());
-    localStorage.setItem("traitProbs", JSON.stringify(traitProbs));
-    localStorage.setItem("dialLimits", JSON.stringify(dialLimits));
-  }, [
+  const state = {
     soundEnabled,
     soundVolume,
     soundSpace,
@@ -289,16 +180,22 @@ export function useSimulationState() {
     soundReverbDamping,
     soundReverbPreDelay,
     soundStepCadence,
-    snakeSpeed,
-    snakeStepSize,
-    snakeWander,
-    bushSpeed,
-    treeSpeed,
+    kioskMode,
+    themeMorphSpeed,
+    themeMorphFreq,
+    theme,
+    timeScale,
+    postMatingDieoff,
     rhizomeSpeed,
+    treeSpeed,
+    bushSpeed,
     bushStepSize,
     treeStepSize,
     rhizomeStepSize,
     bushBranching,
+    widthVariance,
+    branchGrowthBoost,
+    colorMutationShift,
     treeBranching,
     treeBranchDelay,
     bushTaper,
@@ -310,13 +207,9 @@ export function useSimulationState() {
     rhizomeMinBranches,
     treeMinBranches,
     snakeMinBranches,
-    widthVariance,
-    branchGrowthBoost,
-    colorMutationShift,
-    timeScale,
-    postMatingDieoff,
-    themeMorphFreq,
-    themeMorphSpeed,
+    snakeWander,
+    snakeStepSize,
+    snakeSpeed,
     rotationSpeed,
     rotationSpeedY,
     magnetism,
@@ -357,12 +250,24 @@ export function useSimulationState() {
     boundarySize,
     boundarySquash,
     desiccationSpeed,
+    hybridSize,
+    terminationProb,
+    termProbPostBranch,
+    segmentGap,
+    taperDuration,
+    diebackAgeBias,
     enableGlow,
     glowSize,
     fogVisibility,
     botanyRealism,
     windVelocity,
     flutterIntensity,
+    shimmer,
+    wavy,
+    branchMovement,
+    overallMovement,
+    movementLfoSpeed,
+    movementLfoDepth,
     leafScale,
     leafDensity,
     relativeLeafSizeDiff,
@@ -375,420 +280,181 @@ export function useSimulationState() {
     veinStrength,
     veinGlow,
     traitProbs,
-    dialLimits,
-    hybridSize,
-    terminationProb,
-    termProbPostBranch,
-    segmentGap,
-    taperDuration,
-    diebackAgeBias,
     maxLineWidth,
     globalPulseSpeed,
     multicolorAppProb,
     sameColorAppProb,
     maxSaturation,
     colorClamp,
-    feelerFade,
-    feelerDelay,
-    cullRate,
-    glowTraitIntensity,
-    glowTraitDistance,
-    glowTraitReflect,
     gridHeight,
     layerGap,
     floorHeight,
     ceilingHeight,
     cameraProjection,
     showBoundaryBox,
-    kioskMode,
-  ]);
-
-  return {
-    state: {
-      soundEnabled,
-      soundVolume,
-      soundSpace,
-      soundEnvironment,
-      soundAutoCycle,
-      soundSyncThemes,
-      soundMovement,
-      soundWeather,
-      soundMixer,
-      soundReverbDecay,
-      soundReverbDamping,
-      soundReverbPreDelay,
-      soundStepCadence,
-      kioskMode,
-      themeMorphSpeed,
-      themeMorphFreq,
-      theme,
-      timeScale,
-      postMatingDieoff,
-      rhizomeSpeed,
-      treeSpeed,
-      bushSpeed,
-      bushStepSize,
-      treeStepSize,
-      rhizomeStepSize,
-      bushBranching,
-      widthVariance,
-      branchGrowthBoost,
-      colorMutationShift,
-      treeBranching,
-      treeBranchDelay,
-      bushTaper,
-      treeTaper,
-      rhizomeTaper,
-      snakeBranching,
-      rhizomeBranching,
-      bushMinBranches,
-      rhizomeMinBranches,
-      treeMinBranches,
-      snakeMinBranches,
-      snakeWander,
-      snakeStepSize,
-      snakeSpeed,
-      rotationSpeed,
-      rotationSpeedY,
-      magnetism,
-      seekAmount,
-      proximity,
-      desperation,
-      despairAge,
-      maxMatings,
-      startColorMode,
-      flowerSize,
-      tideSpeed,
-      tideColor,
-      bgColor,
-      fogColor,
-      tideThickness,
-      tideOpacity,
-      tideSaturation,
-      growthSpeed,
-      widthGrowthEffect,
-      diebackRate,
-      allowBreeding,
-      hybridCooldown,
-      hybridStickiness,
-      hybridSpinSpeed,
-      branchTendencyVar,
-      ornamentFrequency,
-      branchingMultiplier,
-      branchBigger,
-      branchSplitSizeProb,
-      pruningStrength,
-      maxBranchDepth,
-      maxBranchesPerSpecies,
-      maxDOMs,
-      maxAgents,
-      maxCreatures,
-      ecoFade,
-      minCreatures,
-      boundarySize,
-      boundarySquash,
-      desiccationSpeed,
-      hybridSize,
-      terminationProb,
-      termProbPostBranch,
-      segmentGap,
-      taperDuration,
-      diebackAgeBias,
-      enableGlow,
-      glowSize,
-      fogVisibility,
-      botanyRealism,
-      windVelocity,
-      flutterIntensity,
-      leafScale,
-      leafDensity,
-      relativeLeafSizeDiff,
-      leafGrowthSpeed,
-      phyllotaxisAngle,
-      leafProbability,
-      appendageSpawnRate,
-      glowProbability,
-      stemCurviness,
-      veinStrength,
-      veinGlow,
-      traitProbs,
-      maxLineWidth,
-      globalPulseSpeed,
-      multicolorAppProb,
-      sameColorAppProb,
-      maxSaturation,
-      colorClamp,
-      gridHeight,
-      layerGap,
-      floorHeight,
-      ceilingHeight,
-      cameraProjection,
-      showBoundaryBox,
-      feelerFade,
-      feelerDelay,
-      cullRate,
-      glowTraitIntensity,
-      glowTraitDistance,
-      glowTraitReflect,
-      dialLimits,
-      version: DEFAULTS.version || "0.3.1",
-    },
-    setters: {
-      setSoundEnabled,
-      setSoundVolume,
-      setSoundSpace,
-      setSoundEnvironment,
-      setSoundAutoCycle,
-      setSoundSyncThemes,
-      setSoundMovement,
-      setSoundWeather,
-      setSoundMixer,
-      setSoundReverbDecay,
-      setSoundReverbDamping,
-      setSoundReverbPreDelay,
-      setSoundStepCadence,
-      setThemeMorphSpeed,
-      setThemeMorphFreq,
-      setTheme,
-      setTimeScale,
-      setRhizomeSpeed,
-      setTreeSpeed,
-      setBushSpeed,
-      setBushStepSize,
-      setTreeStepSize,
-      setRhizomeStepSize,
-      setBushBranching,
-      setWidthVariance,
-      setBranchGrowthBoost,
-      setColorMutationShift,
-      setTreeBranching,
-      setTreeBranchDelay,
-      setBushTaper,
-      setTreeTaper,
-      setRhizomeTaper,
-      setSnakeBranching,
-      setRhizomeBranching,
-      setSnakeWander,
-      setSnakeStepSize,
-      setSnakeSpeed,
-      setRotationSpeed,
-      setRotationSpeedY,
-      setMagnetism,
-      setSeekAmount,
-      setProximity,
-      setDesperation,
-      setDespairAge,
-      setMaxMatings,
-      setStartColorMode,
-      setFlowerSize: (v: number) => { setFlowerSize(v); setLeafScale(v); },
-      setTideSpeed,
-      setTideColor,
-      setBgColor,
-      setFogColor,
-      setTideThickness,
-      setTideOpacity,
-      setTideSaturation,
-      setGrowthSpeed,
-      setWidthGrowthEffect,
-      setDiebackRate,
-      setAllowBreeding,
-      setHybridCooldown,
-      setHybridStickiness,
-      setBranchTendencyVar,
-      setOrnamentFrequency,
-      setBranchingMultiplier,
-      setBranchBigger,
-      setBranchSplitSizeProb,
-      setPruningStrength,
-      setMaxBranchDepth,
-      setMaxBranchesPerSpecies,
-      setBushMinBranches,
-      setRhizomeMinBranches,
-      setTreeMinBranches,
-      setSnakeMinBranches,
-      setMaxDOMs,
-      setMaxAgents,
-      setMaxCreatures,
-      setEcoFade,
-      setMinCreatures,
-      setBoundarySize,
-      setBoundarySquash,
-      setDesiccationSpeed,
-      setHybridSize,
-      setHybridSpinSpeed,
-      setTerminationProb,
-      setTermProbPostBranch,
-      setSegmentGap,
-      setTaperDuration,
-      setDiebackAgeBias,
-      setEnableGlow,
-      setGlowSize,
-      setFogVisibility,
-      setBotanyRealism,
-      setWindVelocity,
-      setFlutterIntensity,
-      setLeafScale,
-      setLeafDensity,
-      setRelativeLeafSizeDiff,
-      setStemCurviness,
-      setVeinStrength,
-      setVeinGlow,
-      setLeafGrowthSpeed,
-      setPhyllotaxisAngle,
-      setLeafProbability,
-      setAppendageSpawnRate,
-      setGlowProbability,
-      setTraitProbs,
-      setMaxLineWidth,
-      setGlobalPulseSpeed,
-      setMulticolorAppProb,
-      setSameColorAppProb,
-      setPostMatingDieoff,
-      setMaxSaturation,
-      setColorClamp: (v: number) => { setColorClamp(v); setMaxSaturation(v); },
-      setGridHeight,
-      setLayerGap,
-      setFloorHeight,
-      setCeilingHeight,
-      setCameraProjection,
-      setShowBoundaryBox: (val: boolean) => { setShowBoundaryBox(val); localStorage.setItem("showBoundaryBox", val ? "true" : "false"); },
-      setFeelerFade,
-      setFeelerDelay,
-      setCullRate,
-      setGlowTraitIntensity,
-      setGlowTraitDistance,
-      setGlowTraitReflect,
-      setKioskMode,
-      setDialLimits,
-      resetToDefaults: () => {
-        try { localStorage.clear(); } catch (e) { console.warn("Could not clear localStorage", e); }
-        setKioskMode(DEFAULTS.kioskMode);
-        setSoundEnabled(DEFAULTS.soundEnabled);
-        setSoundVolume(DEFAULTS.soundVolume);
-        setSoundSpace(DEFAULTS.soundSpace);
-        setSoundEnvironment(DEFAULTS.soundEnvironment);
-        setSoundAutoCycle(DEFAULTS.soundAutoCycle);
-        setSoundSyncThemes(DEFAULTS.soundSyncThemes);
-        setSoundMovement(DEFAULTS.soundMovement);
-        setSoundWeather(DEFAULTS.soundWeather);
-        setSoundMixer(DEFAULTS.soundMixer);
-        setSoundReverbDecay(DEFAULTS.soundReverbDecay);
-        setSoundReverbDamping(DEFAULTS.soundReverbDamping);
-        setSoundReverbPreDelay(DEFAULTS.soundReverbPreDelay);
-        setSoundStepCadence(DEFAULTS.soundStepCadence);
-        setThemeMorphSpeed(DEFAULTS.themeMorphSpeed);
-        setThemeMorphFreq(DEFAULTS.themeMorphFreq);
-        setTheme(DEFAULTS.theme);
-        setTimeScale(DEFAULTS.timeScale);
-        setPostMatingDieoff(DEFAULTS.postMatingDieoff);
-        setRhizomeSpeed(DEFAULTS.rhizomeSpeed);
-        setTreeSpeed(DEFAULTS.treeSpeed);
-        setBushSpeed(DEFAULTS.bushSpeed);
-        setBushStepSize(DEFAULTS.bushStepSize);
-        setTreeStepSize(DEFAULTS.treeStepSize);
-        setRhizomeStepSize(DEFAULTS.rhizomeStepSize);
-        setBushBranching(DEFAULTS.bushBranching);
-        setWidthVariance(DEFAULTS.widthVariance);
-        setBranchGrowthBoost(DEFAULTS.branchGrowthBoost);
-        setColorMutationShift(DEFAULTS.colorMutationShift);
-        setTreeBranching(DEFAULTS.treeBranching);
-        setTreeBranchDelay(DEFAULTS.treeBranchDelay);
-        setBushTaper(DEFAULTS.bushTaper);
-        setTreeTaper(DEFAULTS.treeTaper);
-        setRhizomeTaper(DEFAULTS.rhizomeTaper);
-        setSnakeBranching(DEFAULTS.snakeBranching);
-        setRhizomeBranching(DEFAULTS.rhizomeBranching);
-        setBushMinBranches(DEFAULTS.bushMinBranches);
-        setRhizomeMinBranches(DEFAULTS.rhizomeMinBranches);
-        setTreeMinBranches(DEFAULTS.treeMinBranches);
-        setSnakeMinBranches(DEFAULTS.snakeMinBranches);
-        setSnakeWander(DEFAULTS.snakeWander);
-        setSnakeStepSize(DEFAULTS.snakeStepSize);
-        setSnakeSpeed(DEFAULTS.snakeSpeed);
-        setRotationSpeed(DEFAULTS.rotationSpeed);
-        setRotationSpeedY(DEFAULTS.rotationSpeedY);
-        setMagnetism(DEFAULTS.magnetism);
-        setSeekAmount(DEFAULTS.seekAmount);
-        setProximity(DEFAULTS.proximity);
-        setDesperation(DEFAULTS.desperation);
-        setDespairAge(DEFAULTS.despairAge);
-        setMaxMatings(DEFAULTS.maxMatings);
-        setStartColorMode(DEFAULTS.startColorMode);
-        setFlowerSize(DEFAULTS.flowerSize);
-        setTideSpeed(DEFAULTS.tideSpeed);
-        setTideColor(DEFAULTS.tideColor);
-        setBgColor(DEFAULTS.bgColor);
-        setFogColor(DEFAULTS.fogColor);
-        setTideThickness(DEFAULTS.tideThickness);
-        setTideOpacity(DEFAULTS.tideOpacity);
-        setTideSaturation(DEFAULTS.tideSaturation);
-        setGrowthSpeed(DEFAULTS.growthSpeed);
-        setWidthGrowthEffect(DEFAULTS.widthGrowthEffect);
-        setDiebackRate(DEFAULTS.diebackRate);
-        setAllowBreeding(DEFAULTS.allowBreeding);
-        setGridHeight(DEFAULTS.gridHeight);
-        setLayerGap(DEFAULTS.layerGap);
-        setFloorHeight(DEFAULTS.floorHeight);
-        setCeilingHeight(DEFAULTS.ceilingHeight);
-        setCameraProjection(DEFAULTS.cameraProjection);
-        setShowBoundaryBox(DEFAULTS.showBoundaryBox);
-        setMaxSaturation(DEFAULTS.maxSaturation);
-        setColorClamp(DEFAULTS.colorClamp);
-        setHybridCooldown(DEFAULTS.hybridCooldown);
-        setHybridStickiness(DEFAULTS.hybridStickiness);
-        setHybridSpinSpeed(DEFAULTS.hybridSpinSpeed);
-        setBranchTendencyVar(DEFAULTS.branchTendencyVar);
-        setOrnamentFrequency(DEFAULTS.ornamentFrequency);
-        setBranchingMultiplier(DEFAULTS.branchingMultiplier);
-        setBranchBigger(DEFAULTS.branchBigger);
-        setBranchSplitSizeProb(DEFAULTS.branchSplitSizeProb);
-        setPruningStrength(DEFAULTS.pruningStrength);
-        setMaxBranchDepth(DEFAULTS.maxBranchDepth);
-        setMaxBranchesPerSpecies(DEFAULTS.maxBranchesPerSpecies);
-        setMaxDOMs(DEFAULTS.maxDOMs);
-        setMaxAgents(DEFAULTS.maxAgents);
-        setMaxCreatures(DEFAULTS.maxCreatures);
-        setEcoFade(DEFAULTS.ecoFade);
-        setMinCreatures(DEFAULTS.minCreatures);
-        setBoundarySize(DEFAULTS.boundarySize);
-        setBoundarySquash(DEFAULTS.boundarySquash);
-        setDesiccationSpeed(DEFAULTS.desiccationSpeed);
-        setHybridSize(DEFAULTS.hybridSize);
-        setTerminationProb(DEFAULTS.terminationProb);
-        setTermProbPostBranch(DEFAULTS.termProbPostBranch);
-        setSegmentGap(DEFAULTS.segmentGap);
-        setTaperDuration(DEFAULTS.taperDuration);
-        setDiebackAgeBias(DEFAULTS.diebackAgeBias);
-        setEnableGlow(DEFAULTS.enableGlow);
-        setGlowSize(DEFAULTS.glowSize);
-        setFogVisibility(DEFAULTS.fogVisibility);
-        setBotanyRealism(DEFAULTS.botanyRealism);
-        setWindVelocity(DEFAULTS.windVelocity);
-        setFlutterIntensity(DEFAULTS.flutterIntensity);
-        setLeafScale(DEFAULTS.leafScale);
-        setLeafDensity(DEFAULTS.leafDensity);
-        setRelativeLeafSizeDiff(DEFAULTS.relativeLeafSizeDiff);
-        setStemCurviness(DEFAULTS.stemCurviness);
-        setVeinStrength(DEFAULTS.veinStrength);
-        setVeinGlow(DEFAULTS.veinGlow);
-        setLeafGrowthSpeed(DEFAULTS.leafGrowthSpeed);
-        setPhyllotaxisAngle(DEFAULTS.phyllotaxisAngle);
-        setLeafProbability(DEFAULTS.leafProbability);
-        setAppendageSpawnRate(DEFAULTS.appendageSpawnRate);
-        setGlowProbability(DEFAULTS.glowProbability);
-        setTraitProbs(DEFAULTS.traitProbs);
-        setMaxLineWidth(DEFAULTS.maxLineWidth);
-        setGlobalPulseSpeed(DEFAULTS.globalPulseSpeed);
-        setMulticolorAppProb(DEFAULTS.multicolorAppProb);
-        setSameColorAppProb(DEFAULTS.sameColorAppProb);
-        setFeelerFade(DEFAULTS.feelerFade);
-        setFeelerDelay(DEFAULTS.feelerDelay);
-        setCullRate(DEFAULTS.cullRate);
-        setGlowTraitIntensity(DEFAULTS.glowTraitIntensity);
-        setGlowTraitDistance(DEFAULTS.glowTraitDistance);
-        setGlowTraitReflect(DEFAULTS.glowTraitReflect);
-        setDialLimits(DEFAULTS.dialLimits);
-      },
-    },
+    feelerFade,
+    feelerDelay,
+    cullRate,
+    glowTraitIntensity,
+    glowTraitDistance,
+    glowTraitReflect,
+    dialLimits,
+    version: DEFAULTS.version || "0.3.1",
   };
+
+  useSimulationPersistence(state);
+
+  const setters: Record<string, any> = {
+    setSoundEnabled,
+    setSoundVolume,
+    setSoundSpace,
+    setSoundEnvironment,
+    setSoundAutoCycle,
+    setSoundSyncThemes,
+    setSoundMovement,
+    setSoundWeather,
+    setSoundMixer,
+    setSoundReverbDecay,
+    setSoundReverbDamping,
+    setSoundReverbPreDelay,
+    setSoundStepCadence,
+    setThemeMorphSpeed,
+    setThemeMorphFreq,
+    setTheme,
+    setTimeScale,
+    setRhizomeSpeed,
+    setTreeSpeed,
+    setBushSpeed,
+    setBushStepSize,
+    setTreeStepSize,
+    setRhizomeStepSize,
+    setBushBranching,
+    setWidthVariance,
+    setBranchGrowthBoost,
+    setColorMutationShift,
+    setTreeBranching,
+    setTreeBranchDelay,
+    setBushTaper,
+    setTreeTaper,
+    setRhizomeTaper,
+    setSnakeBranching,
+    setRhizomeBranching,
+    setSnakeWander,
+    setSnakeStepSize,
+    setSnakeSpeed,
+    setRotationSpeed,
+    setRotationSpeedY,
+    setMagnetism,
+    setSeekAmount,
+    setProximity,
+    setDesperation,
+    setDespairAge,
+    setMaxMatings,
+    setStartColorMode,
+    setFlowerSize: (v: number) => { setFlowerSize(v); setLeafScale(v); },
+    setTideSpeed,
+    setTideColor,
+    setBgColor,
+    setFogColor,
+    setTideThickness,
+    setTideOpacity,
+    setTideSaturation,
+    setGrowthSpeed,
+    setWidthGrowthEffect,
+    setDiebackRate,
+    setAllowBreeding,
+    setHybridCooldown,
+    setHybridStickiness,
+    setBranchTendencyVar,
+    setOrnamentFrequency,
+    setBranchingMultiplier,
+    setBranchBigger,
+    setBranchSplitSizeProb,
+    setPruningStrength,
+    setMaxBranchDepth,
+    setMaxBranchesPerSpecies,
+    setBushMinBranches,
+    setRhizomeMinBranches,
+    setTreeMinBranches,
+    setSnakeMinBranches,
+    setMaxDOMs,
+    setMaxAgents,
+    setMaxCreatures,
+    setEcoFade,
+    setMinCreatures,
+    setBoundarySize,
+    setBoundarySquash,
+    setDesiccationSpeed,
+    setHybridSize,
+    setHybridSpinSpeed,
+    setTerminationProb,
+    setTermProbPostBranch,
+    setSegmentGap,
+    setTaperDuration,
+    setDiebackAgeBias,
+    setEnableGlow,
+    setGlowSize,
+    setFogVisibility,
+    setBotanyRealism,
+    setWindVelocity,
+    setFlutterIntensity,
+    setShimmer: (v: number) => {
+      setShimmer(v);
+      if (v > 0.001 && overallMovement <= 0.001) setOverallMovement(DEFAULTS.overallMovement);
+    },
+    setWavy: (v: number) => {
+      setWavy(v);
+      if (v > 0.001 && overallMovement <= 0.001) setOverallMovement(DEFAULTS.overallMovement);
+    },
+    setBranchMovement: (v: number) => {
+      setBranchMovement(v);
+      if (v > 0.001 && overallMovement <= 0.001) setOverallMovement(DEFAULTS.overallMovement);
+    },
+    setOverallMovement: (v: number) => {
+      setOverallMovement(v);
+      if (v > 0.001 && shimmer <= 0.001 && wavy <= 0.001 && branchMovement <= 0.001) {
+        setShimmer(DEFAULTS.shimmer);
+        setWavy(DEFAULTS.wavy);
+        setBranchMovement(DEFAULTS.branchMovement);
+      }
+    },
+    setMovementLfoSpeed,
+    setMovementLfoDepth,
+    setLeafScale,
+    setLeafDensity,
+    setRelativeLeafSizeDiff,
+    setStemCurviness,
+    setVeinStrength,
+    setVeinGlow,
+    setLeafGrowthSpeed,
+    setPhyllotaxisAngle,
+    setLeafProbability,
+    setAppendageSpawnRate,
+    setGlowProbability,
+    setTraitProbs,
+    setMaxLineWidth,
+    setGlobalPulseSpeed,
+    setMulticolorAppProb,
+    setSameColorAppProb,
+    setPostMatingDieoff,
+    setMaxSaturation,
+    setColorClamp: (v: number) => { setColorClamp(v); setMaxSaturation(v); },
+    setGridHeight,
+    setLayerGap,
+    setFloorHeight,
+    setCeilingHeight,
+    setCameraProjection,
+    setShowBoundaryBox: (val: boolean) => { setShowBoundaryBox(val); localStorage.setItem("showBoundaryBox", val ? "true" : "false"); },
+    setFeelerFade,
+    setFeelerDelay,
+    setCullRate,
+    setGlowTraitIntensity,
+    setGlowTraitDistance,
+    setGlowTraitReflect,
+    setKioskMode,
+    setDialLimits,
+    resetToDefaults: () => resetSimulationToDefaults(setters),
+  };
+
+  return { state, setters };
 }

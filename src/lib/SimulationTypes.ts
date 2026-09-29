@@ -158,7 +158,9 @@ export interface Agent {
   feelerNearestPos?: THREE.Vector3; // nearest target tissue found by the last full scan
   feelerStepOverride?: number; // clamp for the final step onto the target
   feelerEnded?: boolean; // [FEELER_END] already logged + segments dissolved
-  lastStepSize?: number; // last effective growth step length (used to scale feelers)
+  rootOrigin?: THREE.Vector3;
+  branchBasePos?: THREE.Vector3;
+  lastStepSize?: number;
 }
 
 export interface Segment {
@@ -180,6 +182,9 @@ export interface Segment {
   randomFactor?: number;
   countsForBiomass?: boolean;
   isFeeler?: boolean;
+  rootOrigin?: THREE.Vector3;
+  branchBasePos?: THREE.Vector3;
+  branchDepth?: number;
 }
 
 export interface SpeciesLifecycleState {

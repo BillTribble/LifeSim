@@ -31,9 +31,10 @@ export interface StrainTissue {
  */
 export function getStrainTissueIndex(engine: SimulationEngine): Map<string, StrainTissue> {
   const cache = (engine as any)._tissueIndex;
-  if (cache && cache.frame === engine.frameCount) return cache.map;
+  if (engine.frameCount !== undefined && cache && cache.frame === engine.frameCount) return cache.map;
   const map = new Map<string, StrainTissue>();
-  const limit = Math.min(engine.pointCount, engine.maxDOMs);
+  const segLen = engine.segments ? engine.segments.length : 0;
+  const limit = Math.min(engine.pointCount ?? segLen, engine.maxDOMs ?? segLen);
   for (let i = 0; i < limit; i++) {
     const seg = engine.segments[i];
     if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName.startsWith("Feeler-")) continue;
@@ -101,6 +102,7 @@ export function isOrganismMature(engine: SimulationEngine, genome: any): boolean
   const ageTicks = genome.createdAt !== undefined ? engine.time - genome.createdAt : engine.time;
   if (ageTicks < getFertilityMinTicks(engine)) return false;
   if (getOrganismGrowthSteps(engine, genome) < FERTILITY_MIN_GROWTH_STEPS) return false;
+  if (engine.pointCount === undefined) return true;
   return getStrainTissueCount(engine, genome.name) >= FERTILITY_MIN_SEGMENTS;
 }
 

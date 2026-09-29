@@ -539,3 +539,133 @@ Distance of atmospheric fog fade."
     </div>
   );
 }
+
+export function WindMotionSection({ searchQuery, state, setters }: HUDSectionProps) {
+  if (
+    !hasMatch(searchQuery, [
+      "SHIMMER",
+      "WAVY",
+      "BRANCH_MOVE",
+      "BRANCH",
+      "MOVEMENT",
+      "OVERALL",
+      "WIND",
+      "FLUID",
+      "SWAY",
+      "BREEZE",
+      "BASE",
+      "LFO",
+      "LFO_SPEED",
+      "LFO_DEPTH",
+      "SPEED",
+      "DEPTH",
+      "OSCILLATOR",
+    ])
+  ) {
+    return null;
+  }
+  return (
+    <div className="flex gap-3 shrink-0 snap-start">
+      <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content]">
+        <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">
+          WIND &amp; MOTION
+        </span>
+        <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["shimmer", "shimmering", "leaf shimmer", "tremble", "micro flutter", "sunlight", "foliage", "wind"]}
+            tooltip={"SHIMMER\nSubtle high-frequency trembling and sunlight shimmer on outer twigs and leaves in mild wind."}
+            label="SHIMMER"
+            min={0.0}
+            max={2.0}
+            step={0.01}
+            value={state.shimmer}
+            onChange={setters.setShimmer}
+            color="#34d399"
+          />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["wavy", "waviness", "wave", "undulation", "ripple", "wind wave", "fluid wave"]}
+            tooltip={"WAVY\nContinuous traveling spatial wave undulation across creature stems, tendrils, and foliage."}
+            label="WAVY"
+            min={0.0}
+            max={2.0}
+            step={0.01}
+            value={state.wavy}
+            onChange={setters.setWavy}
+            color="#34d399"
+          />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["branch movement", "branch move", "branch sway", "fluid branch", "base vertex", "base vertices", "bough", "limb", "cantilever"]}
+            tooltip={"BRANCH MOVEMENT\nFluid hierarchical sway of branches pivoting naturally from their base vertices in mild wind."}
+            label="BRANCH_MOVE"
+            min={0.0}
+            max={2.0}
+            step={0.01}
+            value={state.branchMovement}
+            onChange={setters.setBranchMovement}
+            color="#34d399"
+          />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["overall movement", "movement level", "master movement", "ambient wind", "motion level", "breeze", "wind"]}
+            tooltip={"OVERALL MOVEMENT LEVEL\nMaster ambient wind intensity scaling shimmer, waviness, and fluid branch movement at all times."}
+            label="MOVEMENT"
+            min={0.0}
+            max={2.0}
+            step={0.01}
+            value={state.overallMovement}
+            onChange={setters.setOverallMovement}
+            color="#34d399"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 border border-[#D2B48C]/20 p-2 rounded bg-black/20 shrink-0 min-w-[max-content]">
+        <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">
+          LFO (MOVEMENT)
+        </span>
+        <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["lfo", "lfo speed", "lfo rate", "wind lfo", "movement lfo", "gust speed", "swell", "oscillator"]}
+            tooltip={"MOVEMENT LFO SPEED\nOscillation rate of the Low-Frequency Oscillator linked to the overall MOVEMENT level (0 = steady, higher = faster breeze swells and lulls)."}
+            label="LFO_SPEED"
+            min={0.0}
+            max={2.0}
+            step={0.01}
+            value={state.movementLfoSpeed}
+            onChange={setters.setMovementLfoSpeed}
+            color="#34d399"
+          />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["lfo", "lfo depth", "lfo amount", "wind lfo", "movement lfo", "gust depth", "modulation", "oscillator"]}
+            tooltip={"MOVEMENT LFO DEPTH\nModulation depth of the LFO linked to the overall MOVEMENT level (0 = constant movement, 1.0 = full breathing swells from near-stillness to peak breeze)."}
+            label="LFO_DEPTH"
+            min={0.0}
+            max={1.0}
+            step={0.01}
+            value={state.movementLfoDepth}
+            onChange={setters.setMovementLfoDepth}
+            color="#34d399"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+

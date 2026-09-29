@@ -119,18 +119,18 @@ export function assignGenomeMorphology(genome: Genome, forceMode?: MorphMode): G
     genome.stepSize = 0.50 + rand * 0.22; genome.bifurcationRate = 0.032 + rand * 0.016; genome.branchTendency = 3.8 + rand * 1.8;
     genome.wanderIntensity = 0.04 + rand * 0.05; genome.growthHabit = "oak";
   } else if (mode === "bush_compact") {
-    genome.morphScale = 0.42 + rand * 0.24; genome.trunkGirthMod = 0.65 + rand * 0.20; genome.branchOrderCap = 4;
-    genome.thicknessBase = 0.72 + rand * 0.32; genome.minThickness = 0.04 + rand * 0.03; genome.thicknessDecay = 0.985;
-    genome.stepSize = 0.36 + rand * 0.10; genome.bifurcationRate = 0.22 + rand * 0.10; genome.branchTendency = 4.0 + rand * 2.5;
+    genome.morphScale = 0.55 + rand * 0.25; genome.trunkGirthMod = 0.80 + rand * 0.20; genome.branchOrderCap = 4;
+    genome.thicknessBase = 1.15 + rand * 0.35; genome.minThickness = 0.08 + rand * 0.04; genome.thicknessDecay = 0.988;
+    genome.stepSize = 0.42 + rand * 0.12; genome.bifurcationRate = 0.22 + rand * 0.10; genome.branchTendency = 4.0 + rand * 2.5;
     genome.wanderIntensity = 0.40 + rand * 0.25;
   } else if (mode === "bush_medium") {
-    genome.morphScale = 0.85 + rand * 0.35; genome.trunkGirthMod = 0.95 + rand * 0.25; genome.branchOrderCap = 5;
-    genome.thicknessBase = 1.35 + rand * 0.45; genome.minThickness = 0.05 + rand * 0.04; genome.thicknessDecay = 0.988;
-    genome.stepSize = 0.48 + rand * 0.14; genome.bifurcationRate = 0.24 + rand * 0.10; genome.branchTendency = 4.5 + rand * 3.0;
+    genome.morphScale = 0.90 + rand * 0.35; genome.trunkGirthMod = 1.00 + rand * 0.25; genome.branchOrderCap = 5;
+    genome.thicknessBase = 1.55 + rand * 0.45; genome.minThickness = 0.09 + rand * 0.04; genome.thicknessDecay = 0.990;
+    genome.stepSize = 0.50 + rand * 0.14; genome.bifurcationRate = 0.24 + rand * 0.10; genome.branchTendency = 4.5 + rand * 3.0;
     genome.wanderIntensity = 0.45 + rand * 0.25;
   } else if (mode === "bush_giant") {
     genome.morphScale = 1.48 + rand * 0.72; genome.trunkGirthMod = 1.35 + rand * 0.45; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.15 + rand * 0.95; genome.minThickness = 0.07 + rand * 0.05; genome.thicknessDecay = 0.991;
+    genome.thicknessBase = 2.15 + rand * 0.95; genome.minThickness = 0.10 + rand * 0.05; genome.thicknessDecay = 0.991;
     genome.stepSize = 0.62 + rand * 0.20; genome.bifurcationRate = 0.22 + rand * 0.10; genome.branchTendency = 4.5 + rand * 3.0;
     genome.wanderIntensity = 0.42 + rand * 0.25;
   } else if (mode === "rhizome_tuber") {

@@ -257,11 +257,8 @@ export function handleBreedingAndFeelers(
           if (midPoint.distanceToSquared(agent.position) > breedReach) {
             midPoint.copy(agent.position);
           }
-          // Seed dispersal: newborns start 10-20 units away along childDir, clamped inside the world
-          const spawnPoint = clampInsideBounds(
-            engine,
-            midPoint.clone().addScaledVector(childDir, 10 + Math.random() * 10),
-          );
+          // Spawn newborn directly at the contact nexus so it grows out of its base hybrid artifact
+          const spawnPoint = clampInsideBounds(engine, midPoint.clone());
 
           const cd = Math.max(
             minGrowthTicks,
@@ -284,7 +281,7 @@ export function handleBreedingAndFeelers(
             parent2Genome,
             childGenome.name,
             childGenome,
-            midPoint,
+            spawnPoint,
           );
 
           newAgents.push({
@@ -365,12 +362,16 @@ export function handleBreedingAndFeelers(
             }
           }
 
-          engine.spawnHybridArtifact(midPoint, childGenome.color, host1Strain, host2Strain, agent.id, nearestPartner.id, childGenome.name);
-          engine.sound?.onMatingSuccess(midPoint, childGenome, engine.camera);
+          engine.spawnHybridArtifact(spawnPoint, childGenome.color, host1Strain, host2Strain, agent.id, nearestPartner.id, childGenome.name);
+          engine.sound?.onMatingSuccess(spawnPoint, childGenome, engine.camera);
           engine.totalHybridCount = (engine.totalHybridCount || 0) + 1;
           const isFeelerMating = !!(agent.isFeeler || nearestPartner.isFeeler);
+          const nearestParentDist = Math.min(
+            spawnPoint.distanceTo(contactPoint),
+            spawnPoint.distanceTo(agent.position),
+          );
           engine.onLog(
-            `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${host1Strain} × ${host2Strain} (Mating: ${host1Strain}=${mCount1}/${maxM}, ${host2Strain}=${mCount2}/${maxM}) via=${isFeelerMating ? "feeler" : "body"}`,
+            `💖 Offspring ${childGenome.name} [${childGenome.archetype.toUpperCase()}] spawned from ${host1Strain} × ${host2Strain} at (${spawnPoint.x.toFixed(1)}, ${spawnPoint.y.toFixed(1)}, ${spawnPoint.z.toFixed(1)}) — nearest living neighbour ${nearestParentDist.toFixed(1)}. (Mating: ${host1Strain}=${mCount1}/${maxM}, ${host2Strain}=${mCount2}/${maxM}) via=${isFeelerMating ? "feeler" : "body"}`,
           );
 
           (childGenome as any)._isFeelerMating = isFeelerMating;

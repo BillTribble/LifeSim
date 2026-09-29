@@ -45,6 +45,22 @@ export function extrudePointedTerminalCap(
   );
 }
 
+export function extrudeRootNubCap(
+  engine: SimulationEngine,
+  agent: Agent,
+  genome: any,
+  baseThickness: number,
+) {
+  if (agent.isFeeler) return;
+  const nubThick = Math.max(0.18, baseThickness);
+  const dir = agent.direction.clone().normalize();
+  if (dir.lengthSq() < 0.001) dir.set(0, 1, 0);
+  const backLen = Math.max(1.1, nubThick * 1.65);
+  const backTip = agent.lastPosition.clone().addScaledVector(dir, -backLen);
+  const g = agent.realGenome || genome;
+  engine.addLineSegment(agent.lastPosition, backTip, g, nubThick, false, agent.id, 3.0);
+}
+
 export function processAgents(
   engine: SimulationEngine,
   activeAgents: Agent[],
@@ -185,51 +201,55 @@ export function processAgents(
           (a) => a.active && !a.tapering && a.isSeekerTwig && a.genome.name === genome.name,
         ).length;
         const activeTipCount = strainCounts.get(genome.name) || 1;
-        const isKeeper = activeTipCount <= 1;
+        const isKeeper = activeTipCount <= 3;
         if (genome.archetype === "bush") {
           if (isKeeper) {
-            agent.treeDormant = true;
+            agent.isSeekerTwig = true;
+            if (((agent as any).branchSteps || 0) >= 32) {
+              (agent as any).branchSteps = 0;
+              (agent as any).branchDist = 0;
+              (agent as any).distSinceLastFork = 0;
+              agent.branchDepth = Math.max(1, Math.min(3, agent.branchDepth || 2));
+              agent.thickness = Math.max(0.07, (genome.minThickness || 0.06) * 1.4);
+            }
           } else if (agent.isSeekerTwig) {
-            if (((agent as any).branchSteps || 0) >= 28 || agent.age > 36) {
+            if (((agent as any).branchSteps || 0) >= 36 || agent.age > 54) {
               agent.tapering = true;
               agent.taperBudget = 0;
             }
-          } else if (activeSeekers < 2 && (agent.branchDepth || 0) >= 2 && (agent.seekerFlushes || 0) < 1) {
+          } else if (activeSeekers < 3 && (agent.branchDepth || 0) >= 1) {
             agent.isSeekerTwig = true;
-            agent.seekerFlushes = 1;
+            agent.seekerFlushes = (agent.seekerFlushes || 0) + 1;
             (agent as any).branchSteps = 0;
-            agent.thickness = Math.min(agent.thickness, Math.max(0.04, (genome.minThickness || 0.05) * 1.3));
-          } else if (canBushTipTaper(agent) || activeSeekers >= 2) {
+            agent.thickness = Math.min(agent.thickness, Math.max(0.06, (genome.minThickness || 0.05) * 1.35));
+          } else if (canBushTipTaper(agent) || activeSeekers >= 3) {
             agent.tapering = true;
             agent.taperBudget = 0;
           }
         } else {
+          const isRhizomeTwig = genome.archetype === "rhizome" || habit === "rhizome_web";
+          const minSeekerT = isRhizomeTwig ? Math.max(0.12, (genome.minThickness || 0.12) * 1.15) : Math.max(0.05, (genome.minThickness || 0.05) * 1.3);
           if (agent.isSeekerTwig) {
-            if ((agent.treeLen || 0) >= (agent.treeBudget || 10)) {
-              if (isKeeper) agent.treeDormant = true;
-              else { agent.tapering = true; agent.taperBudget = 0; }
+            if ((agent.treeLen || 0) >= (agent.treeBudget || 12)) {
+              if (isKeeper) {
+                agent.treeLen = 0;
+                agent.treeBudget = 10 + Math.random() * 8;
+                agent.thickness = Math.max(minSeekerT, agent.thickness * 0.92);
+              } else {
+                agent.tapering = true;
+                agent.taperBudget = 0;
+              }
             }
-          } else if ((agent.seekerFlushes || 0) >= 1 || isBigBranchingMode(genome) || activeSeekers >= 2) {
-            if (isKeeper) agent.treeDormant = true;
-            else { agent.tapering = true; agent.taperBudget = 0; }
+          } else if (activeSeekers >= 3 && !isKeeper) {
+            agent.tapering = true;
+            agent.taperBudget = 0;
           } else {
-            agent.seekerFlushes = 1;
+            agent.seekerFlushes = (agent.seekerFlushes || 0) + 1;
             agent.isSeekerTwig = true;
             agent.treeLen = 0;
-            agent.treeBudget = Math.max(agent.treeBudget || 10, 10);
-            const isRhizomeTwig = genome.archetype === "rhizome" || habit === "rhizome_web";
-            const minSeekerT = isRhizomeTwig ? Math.max(0.12, (genome.minThickness || 0.12) * 1.15) : Math.max(0.04, (genome.minThickness || 0.05) * 1.3);
-            agent.thickness = isRhizomeTwig ? Math.max(minSeekerT, Math.min(agent.thickness, minSeekerT * 1.25)) : Math.min(agent.thickness, minSeekerT);
+            agent.treeBudget = Math.max(agent.treeBudget || 12, 12);
+            agent.thickness = isRhizomeTwig ? Math.max(minSeekerT, Math.min(agent.thickness, minSeekerT * 1.25)) : Math.max(minSeekerT, Math.min(agent.thickness, minSeekerT * 1.3));
           }
-        }
-        if (agent.treeDormant) {
-          agent.age++;
-          if (!engine.designerMode) {
-            handleBreedingAndFeelers(agent, i, activeAgents, newAgents, bredThisFrame, engine, nonTaperingStrains);
-            const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
-            checkLifespanDeath(engine, agent, activeAgents, livingOrganismCount, maxM);
-          }
-          continue;
         }
       }
 
@@ -515,6 +535,7 @@ export function processAgents(
         };
 
         if (agent.tapering) {
+          agent.taperBudget = (agent.taperBudget || 0) + 1;
           const taperDecay = Math.max(0.62, 0.78 - (agent.taperBudget || 0) * 0.03);
           agent.thickness *= taperDecay;
           const maxTaperSteps = isBigBranchingMode(genome) ? 3 : treeModel ? 5 : 14;
@@ -559,20 +580,23 @@ export function processAgents(
             const floorThickness =
               branchDepth === 0
                 ? Math.max(0.18, genome.thicknessBase * 0.14)
-                : Math.max(0.04, genome.thicknessBase * 0.03);
+                : Math.max(0.06, genome.thicknessBase * 0.045);
             if (agent.thickness < floorThickness) {
               agent.thickness = floorThickness;
             }
-            if (branchDepth >= (engine.maxBranchDepth ?? 5) && agent.age > 90) {
+            if (branchDepth >= (engine.maxBranchDepth ?? 5) && agent.age > 75) {
               agent.branchDepth = Math.max(1, (engine.maxBranchDepth ?? 5) - 2);
+              (agent as any).branchSteps = 0;
+              (agent as any).branchDist = 0;
+              (agent as any).distSinceLastFork = 0;
             }
           } else if (arch !== "snake") {
             const maxDepth = Math.max(5, engine.maxBranchDepth ?? 5);
             const branchAgeLimit =
-              (branchDepth === 0 ? 280 : Math.max(45, 165 - branchDepth * 26)) /
+              (branchDepth === 0 ? 280 : Math.max(55, 175 - branchDepth * 26)) /
               Math.max(0.25, archTaper);
             const termChance =
-              (engine.terminationProb || 0.05) * 0.018 * (1.0 + branchDepth * 0.5) * archTaper;
+              (engine.terminationProb || 0.05) * 0.014 * (1.0 + branchDepth * 0.5) * archTaper;
             const minTwigThreshold = 0.055;
             const canTaper = canBushTipTaper(agent);
             if (
@@ -596,14 +620,21 @@ export function processAgents(
           ? Math.min(agent.thickness, genome.thicknessBase * 1.15 * Math.max(1, getBushMorphScale(genome) * 0.65))
           : Math.max(engine.maxLineWidth, genome.thicknessBase * (genome.trunkGirthMod ?? 1.5) * 1.2),
       );
+      const isRootTrunk = !agent.isFeeler && !agent.parentId && (agent.branchDepth || 0) === 0;
       const ageScale = treeModel
         ? getTreeRenderScale(agent)
         : agent.isFeeler
           ? 1.0
-          : agent.age >= 25
-            ? 1.0
-            : 0.55 + 0.45 * (agent.age / 25);
+          : isRootTrunk
+            ? (agent.age >= 12 ? 1.0 : 1.08 - 0.08 * ((agent.age - 1) / 11))
+            : agent.age >= 25
+              ? 1.0
+              : 0.72 + 0.28 * (agent.age / 25);
       const renderThickness = Math.max(0.001, agent.thickness * ageScale);
+
+      if (isRootTrunk && agent.age === 1) {
+        extrudeRootNubCap(engine, agent, genome, renderThickness);
+      }
 
       // All feelers draw visible trail segments (tagged with _isFeeler + parentStrainName)
       engine.addLineSegment(
@@ -642,7 +673,8 @@ export function processAgents(
         ).length;
         const isUnderMinCreatures = livingNonFeelerCount < engine.minCreatures;
         if (genome.archetype === "bush") {
-          if (!isOverSizeBudget(engine, genome.name)) {
+          const activeBushTips = strainCounts.get(genome.name) || 1;
+          if (!isOverSizeBudget(engine, genome.name) || activeBushTips <= 4) {
             stepBushTendrilBranching(
               engine,
               agent,

@@ -1,4 +1,11 @@
 import * as THREE from "three";
+import {
+  initWindMaterialUniforms,
+  bindWindUniformsToShader,
+  WIND_VERTEX_DECLARATIONS,
+  WIND_FRAGMENT_DECLARATIONS,
+  WIND_FRAGMENT_SHIMMER,
+} from "./SimulationWindMotion";
 export {
   getRandomWeightedArchetype,
   getWeightedAppendage,
@@ -11,7 +18,8 @@ export {
   mutateBranchGenome,
 } from "./SimulationGenomeGenerators";
 
-export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false) {
+export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false, isAppendage = false) {
+  initWindMaterialUniforms(material, isLeaf || isAppendage);
   material.userData.theme1 = { value: 0 };
   material.userData.theme2 = { value: 0 };
   material.userData.themeMix = { value: 0.0 };
@@ -21,6 +29,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
   material.userData.themeColor2_B = { value: new THREE.Color() };
 
   material.onBeforeCompile = (shader) => {
+    bindWindUniformsToShader(shader, material);
     shader.uniforms.theme1 = material.userData.theme1;
     shader.uniforms.theme2 = material.userData.theme2;
     shader.uniforms.themeMix = material.userData.themeMix;
@@ -39,8 +48,9 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
              vLeafUV = vec3(position.x * 2.0, leafBladeT, position.y);
     ` : '';
 
-    // Expose Attributes
+    // Expose Attributes & Wind Motion
     shader.vertexShader = `
+            ${WIND_VERTEX_DECLARATIONS}
             attribute vec4 instancePackA;
             attribute vec4 instancePackB;
             attribute vec3 instanceAmbientReflect;
@@ -58,6 +68,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
         `.replace(
       "#include <color_vertex>",
       `#include <color_vertex>
+             vShimmerPhase = dot(instanceRootAnchor.xyz, vec3(0.13, 0.29, 0.17)) + instancePackA.w * 19.3;
              vGlow = instancePackA.x;
              vGlowTrait = instancePackA.y;
              vDecay = instancePackA.z;
@@ -76,15 +87,36 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
       `#include <begin_vertex>
              ${!isLeaf ? `
              float terminalFlag = instancePackB.w;
-             if (terminalFlag > 1.5) {
+             if (terminalFlag > 2.5) {
+               float u = clamp(abs(transformed.z), 0.0, 1.0);
+               float nubFactor = sqrt(max(0.0, 1.0 - u * u));
+               transformed.x *= nubFactor;
+               transformed.y *= nubFactor;
+             } else if (terminalFlag > 1.5) {
                float taperFactor = clamp(1.0 - abs(transformed.z), 0.0, 1.0);
                transformed.x *= taperFactor;
                transformed.y *= taperFactor;
              }` : ''}`
+    ).replace(
+      "#include <project_vertex>",
+      `vec4 mvPosition = vec4( transformed, 1.0 );
+      #ifdef USE_BATCHING
+        mvPosition = batchingMatrix * mvPosition;
+      #endif
+      #ifdef USE_INSTANCING
+        vec3 attachWorldPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+        mvPosition = instanceMatrix * mvPosition;
+      #else
+        vec3 attachWorldPos = mvPosition.xyz;
+      #endif
+      mvPosition.xyz += computeNaturalWindDisplacement(mvPosition.xyz, mvPosition.xyz - attachWorldPos, attachWorldPos, instancePackA.w);
+      mvPosition = modelViewMatrix * mvPosition;
+      gl_Position = projectionMatrix * mvPosition;`
     );
 
     // Inject Custom Discard & Glow Logic
     shader.fragmentShader = `
+            ${WIND_FRAGMENT_DECLARATIONS}
             uniform int theme1;
             uniform int theme2;
             uniform float themeMix;
@@ -250,7 +282,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
                  if (ditherIn > vGrowth) discard;
              }
-             }`}
+             `}
 
              if (vDecay > 0.0) {
                  float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -280,6 +312,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
                  diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4);
              }
+             ${WIND_FRAGMENT_SHIMMER}
              `
     ).replace(
       "#include <opaque_fragment>",

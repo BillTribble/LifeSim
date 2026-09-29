@@ -199,14 +199,9 @@ export function ensureTreeAgentInit(engine: SimulationEngine, agent: Agent) {
 
 export function getTreeRenderScale(agent: Agent): number {
   if ((agent.branchDepth || 0) !== 0 || !agent.treeBudget) return 1;
-  const flareLen = Math.min(5, agent.treeBudget * 0.2);
-  const u = (agent.treeLen || 0) / flareLen;
-  const habit = agent.genome?.morphMode && (agent.genome.morphMode in PROFILES)
-    ? (agent.genome.morphMode as TreeHabit)
-    : (agent.genome?.growthHabit as TreeHabit) || "oak";
-  const p = PROFILES[habit] || PROFILES.oak;
-  const flareBoost = p.flareBoost ?? 0.25;
-  return u >= 1 ? 1 : 1 + flareBoost * (1 - u) * (1 - u);
+  const nubLen = Math.min(4.5, Math.max(2.2, agent.treeBudget * 0.18));
+  const u = THREE.MathUtils.clamp((agent.treeLen || 0) / nubLen, 0, 1);
+  return 1.08 - 0.08 * Math.sin(u * Math.PI * 0.5);
 }
 
 function spawnChild(
@@ -264,6 +259,8 @@ function makeTreeAgent(
     treeRoot: parent.treeRoot ? parent.treeRoot.clone() : parent.position.clone(),
     treeAxis: parent.treeAxis,
     treeBaseThick: thickness,
+    rootOrigin: (parent.rootOrigin || parent.treeRoot || parent.position).clone(),
+    branchBasePos: (depth === 0 ? pos : (parent.branchBasePos || pos)).clone(),
   };
 }
 
@@ -370,23 +367,22 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   d.normalize();
 }
 
-const REST_MIN_TICKS = 90;
-const REST_RANGE_TICKS = 180;
-const REST_GROWTH_PER_FLUSH = 0.15;
-const FLUSH_VIGOR_DECAY = 0.9;
-const FLUSH_VIGOR_FLOOR = 0.45;
+const REST_MIN_TICKS = 24;
+const REST_RANGE_TICKS = 36;
+const REST_GROWTH_PER_FLUSH = 0.08;
+const FLUSH_VIGOR_DECAY = 0.94;
+const FLUSH_VIGOR_FLOOR = 0.55;
 
 function enterTreeRest(agent: Agent) {
   agent.treeDormant = true;
   const flushes = agent.treeFlushes || 0;
   agent.treeRestTicks = Math.round(
-    (REST_MIN_TICKS + Math.random() * REST_RANGE_TICKS) * (1 + flushes * REST_GROWTH_PER_FLUSH),
+    (REST_MIN_TICKS + Math.random() * REST_RANGE_TICKS) * (1 + Math.min(4, flushes) * REST_GROWTH_PER_FLUSH),
   );
 }
 
 export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   if (!agent.treeDormant || agent.tapering || agent.isFeeler) return false;
-  if (isContinuousTreeGrowth(engine)) return false;
   if (agent.treeRestTicks === undefined) enterTreeRest(agent);
   agent.treeRestTicks = (agent.treeRestTicks || 0) - 1;
   if (agent.treeRestTicks > 0) return false;

@@ -24,7 +24,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.camera.updateProjectionMatrix();
     
     try {
-      engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true });
+      engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
       engine.renderer.setSize(width, height);
       engine.renderer.setPixelRatio(typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 2) : 1);
       engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
@@ -215,11 +215,20 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       const lightDirAttr = new THREE.InstancedBufferAttribute(lightDirArray, 3);
       ambientReflectAttr.setUsage(THREE.DynamicDrawUsage);
       lightDirAttr.setUsage(THREE.DynamicDrawUsage);
+
+      const rootAnchorArray = new Float32Array(count * 4).fill(0.0);
+      const branchAnchorArray = new Float32Array(count * 4).fill(0.0);
+      const rootAnchorAttr = new THREE.InstancedBufferAttribute(rootAnchorArray, 4);
+      const branchAnchorAttr = new THREE.InstancedBufferAttribute(branchAnchorArray, 4);
+      rootAnchorAttr.setUsage(THREE.DynamicDrawUsage);
+      branchAnchorAttr.setUsage(THREE.DynamicDrawUsage);
       
       mesh.geometry.setAttribute('instancePackA', packAAttr);
       mesh.geometry.setAttribute('instancePackB', packBAttr);
       mesh.geometry.setAttribute('instanceAmbientReflect', ambientReflectAttr);
       mesh.geometry.setAttribute('instanceLightDir', lightDirAttr);
+      mesh.geometry.setAttribute('instanceRootAnchor', rootAnchorAttr);
+      mesh.geometry.setAttribute('instanceBranchAnchor', branchAnchorAttr);
     };
 
     engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);
@@ -237,6 +246,18 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       reflectivity: 1.0
     }));
 
+    const appendageMaterial = setupShaderMaterial(new THREE.MeshPhysicalMaterial({
+      transparent: false,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      color: 0xffffff,
+      roughness: 0.6,
+      metalness: 0.3,
+      clearcoat: 0.5,
+      reflectivity: 1.0
+    }), false, true);
+    engine.appendageMaterial = appendageMaterial;
+
     // Per-tier geometry lives in SimulationLOD.ts (view-only LOD). Order preserved from the legacy config.
     const appendageKeys = [
       "flowers", "lillyPads", "leaves", "ferns", "petals", "needles", "thorns", "hair",
@@ -246,7 +267,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     const appendageCount = Math.floor(MAX_POINTS / 4);
     for (const key of appendageKeys) {
         const variants = buildVariants(APPENDAGE_BUILDERS[key]);
-        const useMat = (key === 'leaves' || key === 'ferns') ? leafMaterial : material;
+        const useMat = (key === 'leaves' || key === 'ferns') ? leafMaterial : appendageMaterial;
         const mesh = new THREE.InstancedMesh(variants[0], useMat, appendageCount);
         initMeshAttributes(mesh, appendageCount);
         registerLodMesh(engine, mesh, variants);

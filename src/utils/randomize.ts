@@ -26,6 +26,12 @@ export const triggerRandomize = (
   if (setters.setMaxSaturation) setters.setMaxSaturation(rRange(0.0, 1.0));
   if (setters.setMaxLineWidth) setters.setMaxLineWidth(rRange(1.0, 20.0));
 
+  // Natural mild wind & motion
+  if (setters.setShimmer) setters.setShimmer(rRange(0.45, 1.1));
+  if (setters.setWavy) setters.setWavy(rRange(0.45, 1.1));
+  if (setters.setBranchMovement) setters.setBranchMovement(rRange(0.45, 1.1));
+  if (setters.setOverallMovement) setters.setOverallMovement(rRange(0.45, 1.1));
+
   // Hybrids & Branching
   if (setters.setHybridCooldown) setters.setHybridCooldown(rRange(10, 2000));
   if (setters.setHybridStickiness) setters.setHybridStickiness(rRange(1, 50));

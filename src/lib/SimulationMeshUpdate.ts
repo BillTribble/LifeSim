@@ -11,7 +11,7 @@ export function updateMeshSegments(
   thickness: number,
   isAppendage = false,
   agentId?: number,
-  isTerminal = false,
+  isTerminal: boolean | number = false,
 ) {
   const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
   let targetIndexStem = 0;
@@ -72,14 +72,19 @@ export function updateMeshSegments(
   let scaleX = Math.max(0.001, thickness);
   let scaleY = Math.max(0.001, thickness);
   let scaleZ = distance;
+  const stemAnchor = !isAppendage && agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
+  const distFromRoot = stemAnchor?.rootOrigin ? p1.distanceTo(stemAnchor.rootOrigin) : 999;
+  const isRootNubSeg = typeof isTerminal === "number" && isTerminal > 2.5;
+  const ribbonBlend = isRootNubSeg ? 0.0 : THREE.MathUtils.clamp(distFromRoot / 8.0, 0.0, 1.0);
 
   if (!isAppendage) {
     if (genome.geometryType === "ribbon") {
-      scaleX = thickness * 2.2;
-      scaleY = Math.max(0.6, thickness * 0.8);
+      scaleX = thickness * (1.0 + 1.2 * ribbonBlend);
+      scaleY = THREE.MathUtils.lerp(thickness, Math.max(0.6, thickness * 0.8), ribbonBlend);
       scaleZ = distance * 1.02;
-    } else if (genome.geometryType === "segmented") {
-      const gap = engine.segmentGap !== undefined ? engine.segmentGap : 0.12;
+    } else if (genome.geometryType === "segmented" && !isTerminal) {
+      const rawGap = engine.segmentGap !== undefined ? engine.segmentGap : 0.12;
+      const gap = rawGap * THREE.MathUtils.clamp((distFromRoot - 2.5) / 4.0, 0.0, 1.0);
       scaleZ = distance * Math.max(0.05, 1.0 - gap);
     } else {
       scaleZ = distance * 1.02;
@@ -243,8 +248,8 @@ export function updateMeshSegments(
     engine.dummy.updateMatrix();
   }
 
-  if (genome.geometryType === "ribbon" && !isAppendage) {
-    engine.dummy.rotateZ(engine.time * 0.02 + p1.length() * 0.05);
+  if (genome.geometryType === "ribbon" && !isAppendage && ribbonBlend > 0.01) {
+    engine.dummy.rotateZ((engine.time * 0.02 + p1.length() * 0.05) * ribbonBlend);
     engine.dummy.updateMatrix();
   }
 
@@ -284,7 +289,10 @@ export function updateMeshSegments(
     
     packBAttr.setY(targetIndex, vernVal);
     packBAttr.setZ(targetIndex, genome.succulence ?? 0.5);
-    packBAttr.setW(targetIndex, isTerminal ? 2.0 : (genome.leafDivision ?? 0.5));
+    packBAttr.setW(
+      targetIndex,
+      typeof isTerminal === "number" ? isTerminal : isTerminal ? 2.0 : (genome.leafDivision ?? 0.5),
+    );
     
     packAAttr.needsUpdate = true;
     packBAttr.needsUpdate = true;
@@ -315,6 +323,26 @@ export function updateMeshSegments(
     if (agentId !== undefined && engine.lastAgentStemIndex) {
       engine.lastAgentStemIndex.set(agentId, targetIndex);
     }
+
+    const anchor = agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
+    const rootOrigin = anchor?.rootOrigin ? anchor.rootOrigin.clone() : p1.clone();
+    const branchBasePos = anchor?.branchBasePos ? anchor.branchBasePos.clone() : rootOrigin.clone();
+    const branchDepth = anchor?.branchDepth ?? 0;
+
+    const rootAnchorAttr = targetMesh.geometry.getAttribute("instanceRootAnchor") as THREE.InstancedBufferAttribute;
+    const branchAnchorAttr = targetMesh.geometry.getAttribute("instanceBranchAnchor") as THREE.InstancedBufferAttribute;
+    if (rootAnchorAttr && branchAnchorAttr) {
+      let strainPhase = 0.0;
+      for (let i = 0; i < resolvedStrainName.length; i++) {
+        strainPhase = (strainPhase * 31 + resolvedStrainName.charCodeAt(i)) % 1000;
+      }
+      strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
+      rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
+      branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
+      rootAnchorAttr.needsUpdate = true;
+      branchAnchorAttr.needsUpdate = true;
+    }
+
     engine.segments[targetIndex] = {
       index: targetIndex,
       timestamp: engine.time,
@@ -325,6 +353,9 @@ export function updateMeshSegments(
       countsForBiomass: shouldCountBiomass,
       isFeeler: isFeelerSeg,
       dyingStart: strainDeathStart,
+      rootOrigin,
+      branchBasePos,
+      branchDepth,
     };
     if (!reusedFreeSlot) {
       engine.pointCount++;
@@ -341,6 +372,27 @@ export function updateMeshSegments(
         agentId !== undefined && engine.lastAgentStemIndex && engine.lastAgentStemIndex.has(agentId)
           ? engine.lastAgentStemIndex.get(agentId)!
           : (engine.lastStemIndex ?? ((engine.pointCount > 0 ? engine.pointCount - 1 : 0) % engine.maxDOMs));
+
+      const parentSeg = engine.segments[lastStemIdx];
+      const anchor = agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
+      const rootOrigin = parentSeg?.rootOrigin ? parentSeg.rootOrigin.clone() : (anchor?.rootOrigin ? anchor.rootOrigin.clone() : p1.clone());
+      const branchBasePos = parentSeg?.branchBasePos ? parentSeg.branchBasePos.clone() : (anchor?.branchBasePos ? anchor.branchBasePos.clone() : rootOrigin.clone());
+      const branchDepth = parentSeg?.branchDepth ?? anchor?.branchDepth ?? 0;
+
+      const rootAnchorAttr = targetMesh.geometry.getAttribute("instanceRootAnchor") as THREE.InstancedBufferAttribute;
+      const branchAnchorAttr = targetMesh.geometry.getAttribute("instanceBranchAnchor") as THREE.InstancedBufferAttribute;
+      if (rootAnchorAttr && branchAnchorAttr) {
+        let strainPhase = 0.0;
+        for (let i = 0; i < resolvedStrainName.length; i++) {
+          strainPhase = (strainPhase * 31 + resolvedStrainName.charCodeAt(i)) % 1000;
+        }
+        strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
+        rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
+        branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
+        rootAnchorAttr.needsUpdate = true;
+        branchAnchorAttr.needsUpdate = true;
+      }
+
       config.segments[targetIndex] = {
         index: targetIndex,
         timestamp: engine.time,
@@ -352,6 +404,9 @@ export function updateMeshSegments(
         parentTimestamp: engine.segments[lastStemIdx]?.timestamp ?? engine.time,
         randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,
         countsForBiomass: false,
+        rootOrigin,
+        branchBasePos,
+        branchDepth,
       };
     }
   }

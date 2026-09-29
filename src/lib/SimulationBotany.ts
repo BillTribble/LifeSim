@@ -446,6 +446,8 @@ export function executeBotanicalBranching(
         parentAgent: agent,
         parentId: agent.id,
         branchDepth: 1,
+        rootOrigin: (agent.rootOrigin || agent.position).clone(),
+        branchBasePos: agent.position.clone(),
       });
     }
     // Leader thins slightly after throwing a whorl
@@ -490,6 +492,8 @@ export function executeBotanicalBranching(
           parentAgent: agent,
           parentId: agent.id,
           branchDepth: 1,
+          rootOrigin: (agent.rootOrigin || agent.position).clone(),
+          branchBasePos: agent.position.clone(),
         });
       }
     }
@@ -565,6 +569,8 @@ export function executeBotanicalBranching(
     parentAgent: agent,
     parentId: agent.id,
     branchDepth: currentDepth + 1,
+    rootOrigin: (agent.rootOrigin || agent.position).clone(),
+    branchBasePos: (currentDepth === 0 ? agent.position : (agent.branchBasePos || agent.position)).clone(),
   });
 
   if (engine.sound) {

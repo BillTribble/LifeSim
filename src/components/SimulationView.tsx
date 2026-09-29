@@ -112,6 +112,12 @@ export interface SimulationViewProps {
   botanyRealism?: boolean;
   windVelocity?: number;
   flutterIntensity?: number;
+  shimmer?: number;
+  wavy?: number;
+  branchMovement?: number;
+  overallMovement?: number;
+  movementLfoSpeed?: number;
+  movementLfoDepth?: number;
   leafScale?: number;
   leafDensity?: number;
   relativeLeafSizeDiff?: number;
@@ -159,6 +165,12 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     "glowTraitDistance",
     "glowTraitReflect",
     "kioskMode",
+    "shimmer",
+    "wavy",
+    "branchMovement",
+    "overallMovement",
+    "movementLfoSpeed",
+    "movementLfoDepth",
   ];
 
   const methodMap: Record<string, string> = {

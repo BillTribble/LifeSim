@@ -38,7 +38,7 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
   const bushScale = getBushMorphScale(agent.genome);
   // Radial fan relative to root birth position
   if (depth >= 1 && dist < 8.0 * bushScale) {
-    const origin = agent.genome.birthPos || new THREE.Vector3(0, 0, 0);
+    const origin = agent.rootOrigin || agent.genome.birthPos || new THREE.Vector3(0, 0, 0);
     const radial = new THREE.Vector3(agent.position.x - origin.x, 0, agent.position.z - origin.z);
     if (radial.lengthSq() > 1e-4) radial.normalize(); else radial.set(1, 0, 0);
     agent.direction.add(radial.multiplyScalar(0.045).add(new THREE.Vector3(0, 0.065, 0))).normalize();
@@ -85,6 +85,8 @@ function spawnBushChild(
     direction: dir, genome: parent.genome, active: true, age: 0,
     thickness, targetThickness: thickness, cooldown: 0, id: engine.nextAgentId++,
     parentAgent: parent, parentId: parent.id, branchDepth: depth, isSeekerTwig: parent.isSeekerTwig,
+    rootOrigin: (parent.rootOrigin || parent.position).clone(),
+    branchBasePos: ((parent.branchDepth || 0) === 0 ? parent.position : (parent.branchBasePos || parent.position)).clone(),
   };
   initBushBranchTracking(child, parent);
   newAgents.push(child);
@@ -103,13 +105,14 @@ export function stepBushTendrilBranching(
   const branchDist = (agent as any).branchDist ?? (agent.age * 0.6);
   const distSinceLastFork = (agent as any).distSinceLastFork ?? branchDist;
   const bushScale = getBushMorphScale(agent.genome);
+  const minBushThick = Math.max(0.085, agent.genome.minThickness || 0.08);
 
   // 1. Shrub Base Architecture: at depth 0, grow 5.5-unit trunk then burst into 3 diverging canes
   if (currentDepth === 0) {
     if (distSinceLastFork < 5.5 * bushScale) return false;
     const baseAzimuth = Math.random() * Math.PI * 2;
     const caneSpread = THREE.MathUtils.degToRad(36 + Math.random() * 12);
-    const caneThickness = agent.thickness * 0.64;
+    const caneThickness = Math.max(minBushThick * 2.2, agent.thickness * 0.78);
 
     for (let c = 0; c < 3; c++) {
       const az = baseAzimuth + (c * Math.PI * 2) / 3 + (Math.random() - 0.5) * 0.2;
@@ -169,7 +172,7 @@ export function stepBushTendrilBranching(
     const is3Way = currentDepth <= 2 && Math.random() < 0.45;
     if (overBudget && is3Way) retireOldestBushSibling(engine, activeAgents, agent.genome.name);
     const forkAngle = THREE.MathUtils.degToRad(38 + Math.random() * 8);
-    const dThick = Math.max(0.045, agent.thickness * 0.68);
+    const dThick = Math.max(minBushThick, agent.thickness * 0.76);
     const corymbDepth = Math.max(2, Math.min(currentDepth + 1, 4));
 
     if (is3Way) {
@@ -196,11 +199,11 @@ export function stepBushTendrilBranching(
   if (motif === "pinnate") {
     if (overBudget) retireOldestBushSibling(engine, activeAgents, agent.genome.name);
     const pinAngle = THREE.MathUtils.degToRad(44 + Math.random() * 6);
-    const pinThick = Math.max(0.045, agent.thickness * 0.54);
+    const pinThick = Math.max(minBushThick, agent.thickness * 0.70);
     const dirLeft = agent.direction.clone().applyAxisAngle(forkAxis, pinAngle).normalize();
     const dirRight = agent.direction.clone().applyAxisAngle(forkAxis, -pinAngle).normalize();
 
-    agent.thickness = Math.max(0.05, agent.thickness * 0.72);
+    agent.thickness = Math.max(minBushThick * 1.15, agent.thickness * 0.84);
     (agent as any).distSinceLastFork = (agent as any).stepsSinceLastFork = 0;
 
     for (const d of [dirLeft, dirRight]) {
@@ -212,11 +215,11 @@ export function stepBushTendrilBranching(
   // Motif 1: Sympodial Bramble Zig-Zag
   const forkAngle = THREE.MathUtils.degToRad(46 + Math.random() * 12);
   const parentDeflect = THREE.MathUtils.degToRad(28 + Math.random() * 10);
-  const childThick = Math.max(0.045, agent.thickness * 0.62);
+  const childThick = Math.max(minBushThick, agent.thickness * 0.74);
   const childDir = agent.direction.clone().applyAxisAngle(forkAxis, forkAngle).normalize();
 
   agent.direction.applyAxisAngle(forkAxis, -parentDeflect).normalize();
-  agent.thickness = Math.max(0.05, agent.thickness * 0.74);
+  agent.thickness = Math.max(minBushThick * 1.15, agent.thickness * 0.85);
   (agent as any).distSinceLastFork = (agent as any).stepsSinceLastFork = 0;
 
   spawnBushChild(engine, agent, childDir, childThick, childDepth, newAgents, strainCounts);
