@@ -118,6 +118,7 @@ export interface SimulationViewProps {
   overallMovement?: number;
   movementLfoSpeed?: number;
   movementLfoDepth?: number;
+  movementLfoRandom?: number;
   leafScale?: number;
   leafDensity?: number;
   relativeLeafSizeDiff?: number;
@@ -171,6 +172,7 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     "overallMovement",
     "movementLfoSpeed",
     "movementLfoDepth",
+    "movementLfoRandom",
   ];
 
   const methodMap: Record<string, string> = {

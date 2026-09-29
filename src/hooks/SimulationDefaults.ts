@@ -106,8 +106,9 @@ export const DEFAULTS: Record<string, any> = {
   "wavy": 0.35,
   "branchMovement": 0.45,
   "overallMovement": 0.25,
-  "movementLfoSpeed": 0.30,
-  "movementLfoDepth": 0.40,
+  "movementLfoSpeed": 0.35,
+  "movementLfoDepth": 0.65,
+  "movementLfoRandom": 50,
   "leafScale": 0.7000000000000001,
   "leafDensity": 0.35,
   "relativeLeafSizeDiff": 0.2,
@@ -120,21 +121,11 @@ export const DEFAULTS: Record<string, any> = {
   "veinStrength": 15,
   "veinGlow": 0.5,
   "traitProbs": {
-    "flowers": 0.42483663147298767,
-    "lillyPads": 0.16708755472208758,
-    "leaves": 0.7003725661029078,
-    "petals": 0.5356676959497505,
-    "needles": 0.6898871791335874,
-    "thorns": 0.7091606521301734,
-    "hair": 0.37826946368040903,
-    "curlyHair": 0.20150716789434986,
-    "crystals": 0.07844527398422141,
-    "spores": 0.6425276988836475,
-    "scales": 0.21991986199215008,
-    "spirals": 0.5803550271456143,
-    "ferns": 0.8115992010803454,
-    "sparkles": 0.03282020788648088,
-    "buds": 0.7955022774897168
+    "flowers": 0.42483663147298767, "lillyPads": 0.16708755472208758, "leaves": 0.7003725661029078,
+    "petals": 0.5356676959497505, "needles": 0.6898871791335874, "thorns": 0.7091606521301734,
+    "hair": 0.37826946368040903, "curlyHair": 0.20150716789434986, "crystals": 0.07844527398422141,
+    "spores": 0.6425276988836475, "scales": 0.21991986199215008, "spirals": 0.5803550271456143,
+    "ferns": 0.8115992010803454, "sparkles": 0.03282020788648088, "buds": 0.7955022774897168
   },
   "maxLineWidth": 3.7097804127659506,
   "globalPulseSpeed": 0.22800937123499115,
@@ -169,7 +160,8 @@ export const DEFAULTS: Record<string, any> = {
     "BRANCH_MOVE": { "min": 0, "max": 2 },
     "MOVEMENT": { "min": 0, "max": 2 },
     "LFO_SPEED": { "min": 0, "max": 2 },
-    "LFO_DEPTH": { "min": 0, "max": 1 }
+    "LFO_DEPTH": { "min": 0, "max": 2 },
+    "LFO_RAND": { "min": 0, "max": 100 }
   },
   "version": "0.3",
   "appendageSize": 1,
@@ -185,12 +177,7 @@ export const DEFAULTS: Record<string, any> = {
   "fadeSpeed": 4.289796350823339,
   "pulseSpeed": 0.22800937123499115,
   "saturation": 0.3503112579376193,
-  "cameraPosition": {
-    "x": -6.617111014782072,
-    "y": 18.921075000000005,
-    "z": 137.26059245762428,
-    "zoom": 1
-  }
+  "cameraPosition": { "x": -6.617111014782072, "y": 18.921075000000005, "z": 137.26059245762428, "zoom": 1 }
 };
 
 export const DEFAULT_PALETTE: string[] = [

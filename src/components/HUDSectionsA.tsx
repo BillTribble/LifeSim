@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import { SmartDial } from "./SmartDial";
+import { LfoActionMeter } from "./LfoActionMeter";
 import {
   BOTANICAL_CONCEPTS,
   BotanicalConcept,
@@ -557,6 +558,9 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
       "LFO",
       "LFO_SPEED",
       "LFO_DEPTH",
+      "LFO_RAND",
+      "RANDOM",
+      "METER",
       "SPEED",
       "DEPTH",
       "OSCILLATOR",
@@ -634,13 +638,13 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
         <span className="text-[8px] text-[#D2B48C]/70 tracking-widest text-center border-b border-[#D2B48C]/20 pb-1">
           LFO (MOVEMENT)
         </span>
-        <div className="flex gap-1 flex-wrap justify-center max-w-[280px] sm:max-w-none">
+        <div className="flex gap-1.5 flex-wrap items-center justify-center max-w-[320px] sm:max-w-none">
           <SmartDial
             searchQuery={searchQuery}
             state={state}
             setters={setters}
             keywords={["lfo", "lfo speed", "lfo rate", "wind lfo", "movement lfo", "gust speed", "swell", "oscillator"]}
-            tooltip={"MOVEMENT LFO SPEED\nOscillation rate of the Low-Frequency Oscillator linked to the overall MOVEMENT level (0 = steady, higher = faster breeze swells and lulls)."}
+            tooltip={"MOVEMENT LFO SPEED\nBase oscillation rate of the Low-Frequency Oscillator linked to the overall MOVEMENT level (0 = steady, higher = faster wind gusts and lulls)."}
             label="LFO_SPEED"
             min={0.0}
             max={2.0}
@@ -654,15 +658,31 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             state={state}
             setters={setters}
             keywords={["lfo", "lfo depth", "lfo amount", "wind lfo", "movement lfo", "gust depth", "modulation", "oscillator"]}
-            tooltip={"MOVEMENT LFO DEPTH\nModulation depth of the LFO linked to the overall MOVEMENT level (0 = constant movement, 1.0 = full breathing swells from near-stillness to peak breeze)."}
+            tooltip={"MOVEMENT LFO DEPTH\nLarge bipolar (+ / -) modulation depth added to the overall MOVEMENT level (0 = constant movement, higher = powerful wind surges and calm lulls)."}
             label="LFO_DEPTH"
             min={0.0}
-            max={1.0}
+            max={2.0}
             step={0.01}
             value={state.movementLfoDepth}
             onChange={setters.setMovementLfoDepth}
             color="#34d399"
           />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["lfo", "lfo random", "lfo rand", "random %", "irregular wind", "cycle length", "wind random", "gust random"]}
+            tooltip={"MOVEMENT LFO RANDOM %\nRandomizes the LFO cycle length each time it repeats (0% = uniform repeating cycles, 100% = irregular wind with widely varying gust & lull lengths)."}
+            label="LFO_RAND"
+            min={0}
+            max={100}
+            step={1}
+            value={state.movementLfoRandom ?? 50}
+            onChange={setters.setMovementLfoRandom}
+            formatValue={(v: number) => `${Math.round(v)}%`}
+            color="#34d399"
+          />
+          <LfoActionMeter state={state} />
         </div>
       </div>
     </div>

@@ -258,28 +258,85 @@ export function evaluateNaturalWindOffset(
   return branchDisp.add(wavyDisp).add(canopyShimmer);
 }
 
+export function pickNextLfoCycleLengthMult(
+  randomPct: number,
+  rng: () => number = Math.random,
+): number {
+  const clampedPct = Math.max(0, Math.min(100, randomPct ?? 0));
+  const randNorm = clampedPct / 100.0;
+  if (randNorm <= 0.0001) return 1.0;
+  // Asymmetric organic wind spread: at 100% random, cycle length varies from ~0.26x (rapid gust) to ~3.8x (long drawn-out breeze/lull)
+  const u = rng() * 2.0 - 1.0; // [-1, +1]
+  return Math.pow(3.8, u * randNorm);
+}
+
 export function computeLfoModulatedOverall(engine: {
   overallMovement?: number;
   movementLfoSpeed?: number;
   movementLfoDepth?: number;
+  movementLfoRandom?: number;
   movementLfoPhase?: number;
-}): { effectiveOverall: number; lfoMult: number } {
+  movementLfoCycleMult?: number;
+}): {
+  effectiveOverall: number;
+  lfoMult: number;
+  lfoBipolar: number;
+  lfoDelta: number;
+  lfoMeterNorm: number;
+  cycleLengthMult: number;
+} {
   const overall = engine.overallMovement ?? 0.25;
-  if (overall <= 0.0001) return { effectiveOverall: 0.0, lfoMult: 1.0 };
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.30;
-  const lfoDepth = engine.movementLfoDepth ?? 0.40;
+  const cycleLengthMult = engine.movementLfoCycleMult ?? 1.0;
+  if (overall <= 0.0001) {
+    return {
+      effectiveOverall: 0.0,
+      lfoMult: 1.0,
+      lfoBipolar: 0.0,
+      lfoDelta: 0.0,
+      lfoMeterNorm: 0.0,
+      cycleLengthMult,
+    };
+  }
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
+  const lfoDepth = engine.movementLfoDepth ?? 0.65;
   if (lfoSpeed <= 0.0001 || lfoDepth <= 0.0001) {
-    return { effectiveOverall: overall, lfoMult: 1.0 };
+    return {
+      effectiveOverall: overall,
+      lfoMult: 1.0,
+      lfoBipolar: 0.0,
+      lfoDelta: 0.0,
+      lfoMeterNorm: 0.0,
+      cycleLengthMult,
+    };
   }
   const phase = engine.movementLfoPhase ?? 0.0;
-  // Organic dual-sine breathing wave in [0, 1]
-  const rawWave = 0.78 * Math.sin(phase) + 0.22 * Math.sin(phase * 1.618 + 0.9);
-  const normWave = Math.max(0.0, Math.min(1.0, 0.5 + 0.5 * rawWave));
-  // At depth=1.0, swings from 8% of overallMovement (calm lull) up to 140% of overallMovement (gust swell)
-  const minMult = 1.0 - lfoDepth * 0.92;
-  const maxMult = 1.0 + lfoDepth * 0.40;
-  const lfoMult = minMult + (maxMult - minMult) * normWave;
-  return { effectiveOverall: overall * lfoMult, lfoMult };
+  // Bipolar wave in [-1, +1] that is strictly 0 at phase=0 and phase=2*PI so cycle-length changes on repeat are C0-continuous
+  const shapedSin = (Math.sin(phase) + 0.15 * Math.sin(phase * 2.0)) / 1.069;
+  const lfoBipolar = Math.max(-1.0, Math.min(1.0, shapedSin));
+
+  // Large additive +- swing applied to overall movement level
+  const lfoSwing = lfoDepth * 1.60 + overall * lfoDepth * 0.50;
+  const lfoDelta = lfoBipolar * lfoSwing;
+
+  // On + half-cycle, add full lfoSwing directly to overallMovement;
+  // on - half-cycle, subtract up to lfoSwing (scaling smoothly down to near-stillness if lfoSwing >= overall)
+  const negPull = Math.min(overall * 0.96, lfoSwing);
+  const effectiveOverall =
+    lfoBipolar >= 0.0
+      ? overall + lfoBipolar * lfoSwing
+      : Math.max(0.0, overall + lfoBipolar * negPull);
+
+  const lfoMult = overall > 0.0001 ? effectiveOverall / overall : 1.0;
+  const lfoMeterNorm = Math.max(-1.0, Math.min(1.0, lfoBipolar * Math.min(1.0, lfoDepth / 0.85)));
+
+  return {
+    effectiveOverall,
+    lfoMult,
+    lfoBipolar,
+    lfoDelta,
+    lfoMeterNorm,
+    cycleLengthMult,
+  };
 }
 
 export function updateWindMaterialUniforms(engine: SimulationEngine) {
@@ -289,10 +346,28 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
   const overallMovement = engine.overallMovement ?? 0.25;
   const anyActive = overallMovement > 0.0001 && (shimmer > 0.0001 || wavy > 0.0001 || branchMovement > 0.0001);
 
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.30;
-  const lfoDepth = engine.movementLfoDepth ?? 0.40;
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
+  const lfoDepth = engine.movementLfoDepth ?? 0.65;
+  const lfoRandom = engine.movementLfoRandom ?? 50;
+
+  if (!engine.movementLfoCycleMult || engine.movementLfoCycleMult <= 0) {
+    engine.movementLfoCycleMult = 1.0;
+  }
+  if (lfoRandom <= 0.0001) {
+    engine.movementLfoCycleMult = 1.0;
+  }
+
   if (anyActive && lfoSpeed > 0.0001 && lfoDepth > 0.0001) {
-    engine.movementLfoPhase = (engine.movementLfoPhase || 0) + (0.004 + lfoSpeed * 0.045);
+    const baseStep = 0.005 + lfoSpeed * 0.055;
+    const cycleMult = engine.movementLfoCycleMult || 1.0;
+    const nextPhase = (engine.movementLfoPhase || 0) + baseStep / cycleMult;
+    const TWO_PI = Math.PI * 2.0;
+    if (nextPhase >= TWO_PI) {
+      engine.movementLfoPhase = nextPhase % TWO_PI;
+      engine.movementLfoCycleMult = pickNextLfoCycleLengthMult(lfoRandom);
+    } else {
+      engine.movementLfoPhase = nextPhase;
+    }
   }
 
   const { effectiveOverall } = computeLfoModulatedOverall(engine);
@@ -301,7 +376,7 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     engine.windTime = 0.0;
   }
   if (anyActive) {
-    engine.windTime += 0.024 * (0.35 + 0.75 * Math.min(2.0, effectiveOverall));
+    engine.windTime += 0.024 * (0.20 + 0.90 * Math.min(3.5, effectiveOverall));
   }
 
   const mats: (THREE.MeshPhysicalMaterial | undefined)[] = [

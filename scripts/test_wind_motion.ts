@@ -4,6 +4,7 @@ import {
   evaluateWindDisplacementCPU,
   setupNaturalWindMaterial,
   computeLfoModulatedOverall,
+  pickNextLfoCycleLengthMult,
 } from "../src/lib/SimulationWindMotion";
 
 function assert(condition: boolean, msg: string) {
@@ -23,8 +24,9 @@ assert(DEFAULTS.shimmer === 0.40, `Expected shimmer 0.40, got ${DEFAULTS.shimmer
 assert(DEFAULTS.wavy === 0.35, `Expected wavy 0.35, got ${DEFAULTS.wavy}`);
 assert(DEFAULTS.branchMovement === 0.45, `Expected branchMovement 0.45, got ${DEFAULTS.branchMovement}`);
 assert(DEFAULTS.overallMovement === 0.25, `Expected overallMovement 0.25, got ${DEFAULTS.overallMovement}`);
-assert(DEFAULTS.movementLfoSpeed === 0.30, `Expected movementLfoSpeed 0.30, got ${DEFAULTS.movementLfoSpeed}`);
-assert(DEFAULTS.movementLfoDepth === 0.40, `Expected movementLfoDepth 0.40, got ${DEFAULTS.movementLfoDepth}`);
+assert(DEFAULTS.movementLfoSpeed === 0.35, `Expected movementLfoSpeed 0.35, got ${DEFAULTS.movementLfoSpeed}`);
+assert(DEFAULTS.movementLfoDepth === 0.65, `Expected movementLfoDepth 0.65, got ${DEFAULTS.movementLfoDepth}`);
+assert(DEFAULTS.movementLfoRandom === 50, `Expected movementLfoRandom 50, got ${DEFAULTS.movementLfoRandom}`);
 
 const limits = DEFAULTS.dialLimits;
 assert(limits.SHIMMER?.min === 0 && limits.SHIMMER?.max === 2, "SHIMMER limits should be 0..2");
@@ -32,7 +34,8 @@ assert(limits.WAVY?.min === 0 && limits.WAVY?.max === 2, "WAVY limits should be 
 assert(limits.BRANCH_MOVE?.min === 0 && limits.BRANCH_MOVE?.max === 2, "BRANCH_MOVE limits should be 0..2");
 assert(limits.MOVEMENT?.min === 0 && limits.MOVEMENT?.max === 2, "MOVEMENT limits should be 0..2");
 assert(limits.LFO_SPEED?.min === 0 && limits.LFO_SPEED?.max === 2, "LFO_SPEED limits should be 0..2");
-assert(limits.LFO_DEPTH?.min === 0 && limits.LFO_DEPTH?.max === 1, "LFO_DEPTH limits should be 0..1");
+assert(limits.LFO_DEPTH?.min === 0 && limits.LFO_DEPTH?.max === 2, "LFO_DEPTH limits should be 0..2");
+assert(limits.LFO_RAND?.min === 0 && limits.LFO_RAND?.max === 100, "LFO_RAND limits should be 0..100");
 console.log("   Test 1 Passed: Defaults & Ranges verified.");
 
 // ==========================================
@@ -147,12 +150,10 @@ const branch1 = evaluateWindDisplacementCPU(evalPt, root, branchBase, 1.0, 0.0, 
 assert(branch0 === 0 && branch1 > 0, `BranchMovement dial must increase displacement energy from 0: ${branch0} -> ${branch1}`);
 
 // 5d. OverallMovement scaling & power curve
-// In linear range (>= 1.0), doubling overallMovement from 1.0 to 2.0 doubles displacement exactly
 const combinedA = evaluateWindDisplacementCPU(evalPt, root, branchBase, 1.0, 0.0, 1.0, { shimmer: 1.0, wavy: 1.0, branchMovement: 1.0, overallMovement: 1.0 }).length();
 const combinedB = evaluateWindDisplacementCPU(evalPt, root, branchBase, 1.0, 0.0, 1.0, { shimmer: 1.0, wavy: 1.0, branchMovement: 1.0, overallMovement: 2.0 }).length();
 assert(Math.abs(combinedB / combinedA - 2.0) < 0.01, `OverallMovement in linear range [1, 2] must scale displacement proportionally: ${combinedA} * 2 ≈ ${combinedB}`);
 
-// At low end (< 1.0), effOverall is sublinear (x^1.45) for finer gentle breeze control
 const combinedLow = evaluateWindDisplacementCPU(evalPt, root, branchBase, 1.0, 0.0, 1.0, { shimmer: 1.0, wavy: 1.0, branchMovement: 1.0, overallMovement: 0.25 }).length();
 const expectedLowRatio = Math.pow(0.25, 1.45);
 assert(Math.abs(combinedLow / combinedA - expectedLowRatio) < 0.01, `Low overallMovement (0.25) must scale by pow(0.25, 1.45): ratio ${combinedLow / combinedA} ≈ ${expectedLowRatio}`);
@@ -202,37 +203,54 @@ for (const mat of testMats) {
 console.log("   Test 6 Passed: Shader hook and compilation verification complete.");
 
 // ==========================================
-// Test 7: LFO Modulation of Overall Movement
+// Test 7: Powerful Bipolar (+-) LFO Modulation & Random % Cycle Length
 // ==========================================
-console.log("-> Test 7: LFO Modulation of Overall Movement");
+console.log("-> Test 7: Powerful Bipolar (+-) LFO Modulation & Random % Cycle Length");
 // 7a. Zero overall movement yields zero effective
 const lfoZero = computeLfoModulatedOverall({ overallMovement: 0.0, movementLfoSpeed: 1.0, movementLfoDepth: 1.0 });
-assert(lfoZero.effectiveOverall === 0.0 && lfoZero.lfoMult === 1.0, "Zero overallMovement must yield 0 effective");
+assert(lfoZero.effectiveOverall === 0.0 && lfoZero.lfoDelta === 0.0, "Zero overallMovement must yield 0 effective");
 
 // 7b. Zero speed or depth yields identity
 const lfoZeroSpeed = computeLfoModulatedOverall({ overallMovement: 0.5, movementLfoSpeed: 0.0, movementLfoDepth: 0.5 });
-assert(lfoZeroSpeed.effectiveOverall === 0.5 && lfoZeroSpeed.lfoMult === 1.0, "Zero speed must yield identity");
+assert(lfoZeroSpeed.effectiveOverall === 0.5 && lfoZeroSpeed.lfoDelta === 0.0, "Zero speed must yield identity");
 const lfoZeroDepth = computeLfoModulatedOverall({ overallMovement: 0.5, movementLfoSpeed: 0.5, movementLfoDepth: 0.0 });
-assert(lfoZeroDepth.effectiveOverall === 0.5 && lfoZeroDepth.lfoMult === 1.0, "Zero depth must yield identity");
+assert(lfoZeroDepth.effectiveOverall === 0.5 && lfoZeroDepth.lfoDelta === 0.0, "Zero depth must yield identity");
 
-// 7c. Active modulation oscillates smoothly within depth bounds
+// 7c. Large bipolar +- swing across full 2*PI cycle
 const overallVal = 0.25;
-const depthVal = 0.40;
-const speedVal = 0.30;
-const minExpected = overallVal * (1.0 - depthVal * 0.92);
-const maxExpected = overallVal * (1.0 + depthVal * 0.40);
+const depthVal = 0.65;
+const speedVal = 0.35;
+let minEffective = Infinity;
+let maxEffective = -Infinity;
+let minDelta = Infinity;
+let maxDelta = -Infinity;
 
-for (let p = 0; p < Math.PI * 4; p += 0.2) {
+for (let p = 0; p <= Math.PI * 2; p += 0.05) {
   const res = computeLfoModulatedOverall({
     overallMovement: overallVal,
     movementLfoSpeed: speedVal,
     movementLfoDepth: depthVal,
     movementLfoPhase: p,
   });
-  assert(res.effectiveOverall >= minExpected - 1e-6 && res.effectiveOverall <= maxExpected + 1e-6,
-    `LFO output ${res.effectiveOverall} out of expected range [${minExpected}, ${maxExpected}] at phase ${p}`);
+  if (res.effectiveOverall < minEffective) minEffective = res.effectiveOverall;
+  if (res.effectiveOverall > maxEffective) maxEffective = res.effectiveOverall;
+  if (res.lfoDelta < minDelta) minDelta = res.lfoDelta;
+  if (res.lfoDelta > maxDelta) maxDelta = res.lfoDelta;
 }
-console.log(`   Test 7 Passed: LFO modulation verified across full phase cycle (bounds: [${minExpected.toFixed(4)}, ${maxExpected.toFixed(4)}]).`);
+
+assert(maxDelta > 1.0, `Expected large positive LFO delta (> +1.0) at default depth=0.65, got ${maxDelta}`);
+assert(minDelta < -1.0, `Expected large negative LFO delta (< -1.0) at default depth=0.65, got ${minDelta}`);
+assert(maxEffective > 1.25, `Expected peak effectiveOverall > 1.25 from base 0.25, got ${maxEffective}`);
+assert(minEffective < 0.05, `Expected trough effectiveOverall < 0.05 in calm lull, got ${minEffective}`);
+
+// 7d. Random % cycle length multiplier selection on repeat
+assert(pickNextLfoCycleLengthMult(0, () => 0.9) === 1.0, "0% random must always yield cycle length mult 1.0");
+const shortCycle = pickNextLfoCycleLengthMult(100, () => 0.0);
+const longCycle = pickNextLfoCycleLengthMult(100, () => 1.0);
+assert(shortCycle < 0.35 && longCycle > 3.0, `100% random must span wide cycle lengths: short=${shortCycle}, long=${longCycle}`);
+
+console.log(`   Test 7 Passed: Bipolar LFO delta=[${minDelta.toFixed(2)}, +${maxDelta.toFixed(2)}], effectiveOverall=[${minEffective.toFixed(3)}, ${maxEffective.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x].`);
 
 console.log("ALL WIND MOTION & HIERARCHICAL BRANCH TESTS PASSED");
 process.exit(0);
+

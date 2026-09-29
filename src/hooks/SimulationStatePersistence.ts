@@ -105,6 +105,7 @@ export function useSimulationPersistence(state: Record<string, any>) {
       localStorage.setItem("overallMovement", state.overallMovement.toString());
       localStorage.setItem("movementLfoSpeed", state.movementLfoSpeed.toString());
       localStorage.setItem("movementLfoDepth", state.movementLfoDepth.toString());
+      localStorage.setItem("movementLfoRandom", state.movementLfoRandom.toString());
       localStorage.setItem("leafScale", state.leafScale.toString());
       localStorage.setItem("leafDensity", state.leafDensity.toString());
       localStorage.setItem("relativeLeafSizeDiff", state.relativeLeafSizeDiff.toString());
@@ -163,6 +164,7 @@ export function useSimulationPersistence(state: Record<string, any>) {
     state.boundarySquash, state.desiccationSpeed, state.enableGlow, state.glowSize,
     state.fogVisibility, state.botanyRealism, state.windVelocity, state.flutterIntensity,
     state.shimmer, state.wavy, state.branchMovement, state.overallMovement,
+    state.movementLfoSpeed, state.movementLfoDepth, state.movementLfoRandom,
     state.leafScale, state.leafDensity, state.relativeLeafSizeDiff, state.leafGrowthSpeed,
     state.phyllotaxisAngle, state.leafProbability, state.appendageSpawnRate, state.glowProbability,
     state.stemCurviness, state.veinStrength, state.veinGlow, state.traitProbs, state.dialLimits,
@@ -291,6 +293,7 @@ export function resetSimulationToDefaults(setters: Record<string, any>) {
   setters.setOverallMovement(DEFAULTS.overallMovement);
   setters.setMovementLfoSpeed(DEFAULTS.movementLfoSpeed);
   setters.setMovementLfoDepth(DEFAULTS.movementLfoDepth);
+  setters.setMovementLfoRandom(DEFAULTS.movementLfoRandom);
   setters.setLeafScale(DEFAULTS.leafScale);
   setters.setLeafDensity(DEFAULTS.leafDensity);
   setters.setRelativeLeafSizeDiff(DEFAULTS.relativeLeafSizeDiff);

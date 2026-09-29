@@ -366,6 +366,7 @@ export default function App() {
         overallMovement={state.overallMovement}
         movementLfoSpeed={state.movementLfoSpeed}
         movementLfoDepth={state.movementLfoDepth}
+        movementLfoRandom={state.movementLfoRandom}
         veinStrength={state.veinStrength}
         veinGlow={state.veinGlow}
         leafScale={state.leafScale}
