@@ -108,7 +108,7 @@ export function spawnHybridArtifact(
 
   engine.dummy.position.copy(pos);
   engine.dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  engine.dummy.scale.set(1.15, 1.15, 1.15);
+  engine.dummy.scale.set(engine.hybridSize, engine.hybridSize, engine.hybridSize);
   engine.dummy.updateMatrix();
 
   const variant = Math.floor(Math.random() * engine.hybridMeshes.length);
@@ -119,6 +119,16 @@ export function spawnHybridArtifact(
   if (packAAttr) {
     packAAttr.setZ(currentCount, 0.0);
     packAAttr.needsUpdate = true;
+  }
+  const rootAnchorAttr = mesh.geometry.getAttribute("instanceRootAnchor") as THREE.InstancedBufferAttribute;
+  if (rootAnchorAttr) {
+    rootAnchorAttr.setXYZW(currentCount, pos.x, pos.y, pos.z, 0.0);
+    rootAnchorAttr.needsUpdate = true;
+  }
+  const branchAnchorAttr = mesh.geometry.getAttribute("instanceBranchAnchor") as THREE.InstancedBufferAttribute;
+  if (branchAnchorAttr) {
+    branchAnchorAttr.setXYZW(currentCount, pos.x, pos.y, pos.z, 0.0);
+    branchAnchorAttr.needsUpdate = true;
   }
 
   engine.hybridSegments[currentCount] = {
@@ -310,8 +320,8 @@ export function getTrackedPositions(engine: SimulationEngine): any {
     const y = (-v.y * 0.5 + 0.5) * engine.height;
     return { x, y, isBehind: v.z > 1 };
   };
-  const alphaPos = new THREE.Vector3(-40, 0, 0);
-  const betaPos = new THREE.Vector3(40, 0, 0);
+  const alphaPos = new THREE.Vector3(-20, 0, 0);
+  const betaPos = new THREE.Vector3(20, 0, 0);
 
   return {
     org1: projectPos(alphaPos),

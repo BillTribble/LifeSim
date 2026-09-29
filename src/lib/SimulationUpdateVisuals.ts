@@ -221,7 +221,7 @@ export function updateMeshesAndStemsGrowth(
         }
 
         const isLeafApp = mesh === engine.appendages.get("leaves")?.mesh || mesh === engine.appendages.get("ferns")?.mesh;
-        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? Math.min(2.2, Math.max(1.4, (engine.hybridSize || 2.0) * 0.85)) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
+        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? (engine.hybridSize || 2.0) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
         engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulse);
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -366,7 +366,7 @@ export function updateHybridConnectionMesh(engine: SimulationEngine) {
 
   const positions: number[] = [];
   const colors: number[] = [];
-  const activeHybrids: { pos: THREE.Vector3; time: number; alpha: number; color?: THREE.Color }[] = [];
+  const activeHybrids: { pos: THREE.Vector3; time: number; alpha: number; color?: THREE.Color; isInitialOrigin?: boolean }[] = [];
 
   for (let i = 0; i < 2000; i++) {
     const seg = engine.hybridSegments[i];
@@ -382,13 +382,15 @@ export function updateHybridConnectionMesh(engine: SimulationEngine) {
       }
       const pos = new THREE.Vector3();
       pos.setFromMatrixPosition(seg.matrix);
-      activeHybrids.push({ pos, time: seg.timestamp, alpha, color: seg.color });
+      const isInitialOrigin = seg.index < 2 && seg.strainName === seg.strainBName;
+      activeHybrids.push({ pos, time: seg.timestamp, alpha, color: seg.color, isInitialOrigin });
     }
   }
 
   activeHybrids.sort((a, b) => a.time - b.time);
 
   for (let i = 0; i < activeHybrids.length - 1; i++) {
+    if (activeHybrids[i].isInitialOrigin && activeHybrids[i + 1].isInitialOrigin) continue;
     const lineAlpha = Math.min(activeHybrids[i].alpha, activeHybrids[i + 1].alpha);
     const c1 = activeHybrids[i].color ? activeHybrids[i].color!.clone().lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color(1, 1, 1);
     const c2 = activeHybrids[i + 1].color ? activeHybrids[i + 1].color!.clone().lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color(1, 1, 1);

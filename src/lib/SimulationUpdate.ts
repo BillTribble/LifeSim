@@ -106,8 +106,9 @@ export function updateSimulation(engine: SimulationEngine) {
   const activeChildStrains = new Set<string>();
   for (let i = 0; i < engine.agents.length; i++) {
     const a = engine.agents[i];
-    if (a.active && !a.isFeeler) {
+    if (a.active) {
       activeChildStrains.add(a.genome.name);
+      if (a.realGenome) activeChildStrains.add(a.realGenome.name);
     }
   }
 
@@ -117,9 +118,10 @@ export function updateSimulation(engine: SimulationEngine) {
       const childStrain = seg.childStrainName || (seg.strainName !== "hybrid" ? seg.strainName : undefined);
       if (childStrain) {
         const childDeathStart = getStrainDeathStart(engine, childStrain);
+        const hasBiomass = (engine.biomassMap.get(childStrain) || 0) > 0;
         if (childDeathStart !== undefined) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx, childDeathStart);
-        } else if (!activeChildStrains.has(childStrain)) {
+        } else if (!activeChildStrains.has(childStrain) && !hasBiomass && engine.time - seg.timestamp > 60) {
           engine.markDying(engine.hybridSegments, engine.dyingHybrids, idx);
         }
       }
