@@ -18,8 +18,21 @@ export {
   mutateBranchGenome,
 } from "./SimulationGenomeGenerators";
 
-export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf = false, isAppendage = false) {
+export function setupShaderMaterial(
+  material: THREE.MeshPhysicalMaterial,
+  isLeaf = false,
+  isAppendage = false,
+  enableWind = true,
+) {
   initWindMaterialUniforms(material, isLeaf || isAppendage);
+  if (!enableWind) {
+    material.userData.uShimmer.value = 0.0;
+    material.userData.uWavy.value = 0.0;
+    material.userData.uBranchMovement.value = 0.0;
+    material.userData.uOverallMovement.value = 0.0;
+    material.userData.uWindVelocity.value = 0.0;
+    material.userData.uFlutterIntensity.value = 0.0;
+  }
   material.userData.theme1 = { value: 0 };
   material.userData.theme2 = { value: 0 };
   material.userData.themeMix = { value: 0.0 };
@@ -109,7 +122,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
       #else
         vec3 attachWorldPos = mvPosition.xyz;
       #endif
-      mvPosition.xyz += computeNaturalWindDisplacement(mvPosition.xyz, mvPosition.xyz - attachWorldPos, attachWorldPos, instancePackA.w);
+      ${enableWind ? 'mvPosition.xyz += computeNaturalWindDisplacement(mvPosition.xyz, mvPosition.xyz - attachWorldPos, attachWorldPos, instancePackA.w);' : ''}
       mvPosition = modelViewMatrix * mvPosition;
       gl_Position = projectionMatrix * mvPosition;`
     );
@@ -312,7 +325,7 @@ export function setupShaderMaterial(material: THREE.MeshPhysicalMaterial, isLeaf
                  float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
                  diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4);
              }
-             ${WIND_FRAGMENT_SHIMMER}
+             ${enableWind ? WIND_FRAGMENT_SHIMMER : ''}
              `
     ).replace(
       "#include <opaque_fragment>",

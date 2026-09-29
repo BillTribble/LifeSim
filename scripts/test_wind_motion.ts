@@ -6,7 +6,9 @@ import {
   computeLfoModulatedOverall,
   pickNextLfoCycleLengthMult,
   pickNextLfoCycleRandomRoll,
+  updateWindMaterialUniforms,
 } from "../src/lib/SimulationWindMotion";
+import { setupShaderMaterial } from "../src/lib/SimulationGenetics";
 
 function assert(condition: boolean, msg: string) {
   if (!condition) {
@@ -268,5 +270,73 @@ assert(Math.abs(maxRandRes.cycleGustMult - 1.85) < 1e-6, `100% random with 1.0 r
 
 console.log(`   Test 7 Passed: Positive-only LFO delta=[+${minDelta.toFixed(3)}, +${maxDelta.toFixed(2)}], effectiveOverall=[${minEffective.toFixed(3)}, ${maxEffective.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x], gust mult range=[1.00x..1.85x].`);
 
+// ==========================================
+// Test 8: Hybridisation Artifacts Unaffected by Wind
+// ==========================================
+console.log("-> Test 8: Hybridisation Artifacts Unaffected by Wind");
+const hybridMat = setupShaderMaterial(
+  new THREE.MeshPhysicalMaterial({ color: 0xffffff, wireframe: true }),
+  false,
+  false,
+  false,
+);
+assert(hybridMat.userData.uOverallMovement.value === 0.0, "Hybrid material uOverallMovement must initialize to 0");
+assert(hybridMat.userData.uShimmer.value === 0.0, "Hybrid material uShimmer must initialize to 0");
+assert(hybridMat.userData.uWavy.value === 0.0, "Hybrid material uWavy must initialize to 0");
+assert(hybridMat.userData.uBranchMovement.value === 0.0, "Hybrid material uBranchMovement must initialize to 0");
+
+const mockHybridShader: any = {
+  uniforms: {},
+  vertexShader: `
+    #include <common>
+    #include <color_vertex>
+    #include <begin_vertex>
+    #include <project_vertex>
+    void main() {}
+  `,
+  fragmentShader: `
+    #include <common>
+    #include <color_fragment>
+    #include <normal_fragment_maps>
+    vec4 diffuseColor = vec4( diffuse, opacity );
+    #include <opaque_fragment>
+    void main() {}
+  `,
+};
+hybridMat.onBeforeCompile(mockHybridShader, {} as any);
+assert(
+  !mockHybridShader.vertexShader.includes("mvPosition.xyz += computeNaturalWindDisplacement"),
+  "Hybrid vertex shader must NOT apply computeNaturalWindDisplacement",
+);
+assert(
+  !mockHybridShader.fragmentShader.includes("shimmerPulse"),
+  "Hybrid fragment shader must NOT apply wind shimmerPulse",
+);
+
+const mockStemMat = setupShaderMaterial(new THREE.MeshPhysicalMaterial(), false, false, true);
+const mockEngine: any = {
+  shimmer: 1.5,
+  wavy: 1.5,
+  branchMovement: 1.5,
+  overallMovement: 1.5,
+  movementLfoSpeed: 1.0,
+  movementLfoDepth: 1.0,
+  movementLfoRandom: 80,
+  windVelocity: 1.2,
+  flutterIntensity: 1.2,
+  cylinderMesh: { material: mockStemMat },
+  appendages: new Map(),
+  hybridMeshes: [{ material: hybridMat }],
+};
+updateWindMaterialUniforms(mockEngine);
+assert(mockStemMat.userData.uOverallMovement.value > 1.0, "Stem material must receive active wind uniforms");
+assert(hybridMat.userData.uOverallMovement.value === 0.0, "Hybrid material uOverallMovement must remain 0 after updateWindMaterialUniforms");
+assert(hybridMat.userData.uShimmer.value === 0.0, "Hybrid material uShimmer must remain 0 after updateWindMaterialUniforms");
+assert(hybridMat.userData.uWavy.value === 0.0, "Hybrid material uWavy must remain 0 after updateWindMaterialUniforms");
+assert(hybridMat.userData.uBranchMovement.value === 0.0, "Hybrid material uBranchMovement must remain 0 after updateWindMaterialUniforms");
+console.log("   Test 8 Passed: Hybridisation artifacts are completely unaffected by wind.");
+
 console.log("ALL WIND MOTION & HIERARCHICAL BRANCH TESTS PASSED");
 process.exit(0);
+
+

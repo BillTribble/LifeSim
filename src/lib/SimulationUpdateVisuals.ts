@@ -210,7 +210,7 @@ export function updateMeshesAndStemsGrowth(
         engine.dummy.matrix.decompose(engine.dummy.position, engine.dummy.quaternion, engine.dummy.scale);
 
         if (isHybrid) {
-          const rot = i * 2.5 + engine.unscaledTime * 0.005 * (engine.hybridSpinSpeed ?? 0.2) * motionActivity;
+          const rot = i * 2.5 + engine.unscaledTime * 0.005 * (engine.hybridSpinSpeed ?? 0.2);
           engine.dummy.quaternion.multiply(scratchQuat.setFromEuler(scratchEuler.set(rot, rot * 1.1, rot * 0.8)));
         } else if (isLeaf && engine.windVelocity > 0 && windFlutterMult > 0.0001) {
           const t = engine.unscaledTime * 0.1 * engine.windVelocity;

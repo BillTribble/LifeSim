@@ -275,7 +275,12 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
         engine.appendages.set(key, { mesh, segments: [], dyingSet: new Set(), count: 0 });
     }
 
-    const hybridMat = setupShaderMaterial(new THREE.MeshPhysicalMaterial({ color: 0xffffff, wireframe: true, transparent: false, depthWrite: true }));
+    const hybridMat = setupShaderMaterial(
+      new THREE.MeshPhysicalMaterial({ color: 0xffffff, wireframe: true, transparent: false, depthWrite: true }),
+      false,
+      false,
+      false,
+    );
     
     function createStellatedGeometry(baseGeometry: THREE.BufferGeometry, spikeHeight: number) {
         const geo = baseGeometry.clone().toNonIndexed();

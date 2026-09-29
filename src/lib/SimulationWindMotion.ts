@@ -415,9 +415,6 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     engine.appendageMaterial,
     engine.appendages.get("leaves")?.mesh?.material as THREE.MeshPhysicalMaterial,
   ];
-  if (engine.hybridMeshes?.length > 0) {
-    mats.push(engine.hybridMeshes[0]?.material as THREE.MeshPhysicalMaterial);
-  }
 
   for (const mat of mats) {
     if (!mat || !mat.userData?.uWindTime) continue;
@@ -428,6 +425,19 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     mat.userData.uOverallMovement.value = effectiveOverall;
     mat.userData.uWindVelocity.value = engine.windVelocity ?? 0.20;
     mat.userData.uFlutterIntensity.value = engine.flutterIntensity ?? 0.50;
+  }
+
+  // Hybridisation artifacts must never be affected by wind
+  if (engine.hybridMeshes?.length > 0) {
+    const hybridMat = engine.hybridMeshes[0]?.material as THREE.MeshPhysicalMaterial | undefined;
+    if (hybridMat?.userData?.uOverallMovement) {
+      hybridMat.userData.uOverallMovement.value = 0.0;
+      hybridMat.userData.uShimmer.value = 0.0;
+      hybridMat.userData.uWavy.value = 0.0;
+      hybridMat.userData.uBranchMovement.value = 0.0;
+      hybridMat.userData.uWindVelocity.value = 0.0;
+      hybridMat.userData.uFlutterIntensity.value = 0.0;
+    }
   }
 }
 
