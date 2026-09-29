@@ -95,6 +95,8 @@ export class SimulationEngine {
   movementLfoRandom: number = 50;
   movementLfoPhase: number = 0.0;
   movementLfoCycleMult: number = 1.0;
+  movementLfoCycleRand: number = 0.65;
+  movementLfoCycleCount: number = 0;
   windTime: number = 0;
   appendageMaterial?: THREE.MeshPhysicalMaterial;
   agentAnchorMap: Map<number, { rootOrigin: THREE.Vector3; branchBasePos: THREE.Vector3; branchDepth: number }> = new Map();

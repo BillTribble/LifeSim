@@ -658,7 +658,7 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             state={state}
             setters={setters}
             keywords={["lfo", "lfo depth", "lfo amount", "wind lfo", "movement lfo", "gust depth", "modulation", "oscillator"]}
-            tooltip={"MOVEMENT LFO DEPTH\nLarge bipolar (+ / -) modulation depth added to the overall MOVEMENT level (0 = constant movement, higher = powerful wind surges and calm lulls)."}
+            tooltip={"MOVEMENT LFO DEPTH\nPositive-only (+) wind surge modulation added to overall MOVEMENT level (0 = constant movement, higher = powerful wind gusts reaching above base level)."}
             label="LFO_DEPTH"
             min={0.0}
             max={2.0}
@@ -672,7 +672,7 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             state={state}
             setters={setters}
             keywords={["lfo", "lfo random", "lfo rand", "random %", "irregular wind", "cycle length", "wind random", "gust random"]}
-            tooltip={"MOVEMENT LFO RANDOM %\nRandomizes the LFO cycle length each time it repeats (0% = uniform repeating cycles, 100% = irregular wind with widely varying gust & lull lengths)."}
+            tooltip={"MOVEMENT LFO RANDOM %\nRandomizes cycle duration and rolls per-cycle random gust boost (0% = uniform repeating cycles, 100% = organic varying gust lengths and surge spikes)."}
             label="LFO_RAND"
             min={0}
             max={100}

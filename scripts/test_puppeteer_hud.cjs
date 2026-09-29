@@ -58,7 +58,8 @@ const puppeteer = require('puppeteer-core');
     const hasLfoSpeed = content.includes('LFO_SPEED');
     const hasLfoDepth = content.includes('LFO_DEPTH');
     const hasLfoRand = content.includes('LFO_RAND');
-    const hasLfoMeter = content.includes('lfo-action-meter') && content.includes('LFO ±');
+    const hasLfoMeter = content.includes('lfo-action-meter') && (content.includes('LFO +') || content.includes('LFO &#43;'));
+    const hasRandMeter = content.includes('lfo-random-meter') && (content.includes('CYC RAND') || content.includes('RAND'));
 
     console.log('HUD Wind & Motion Elements Check:');
     console.log(' - Section header "WIND & MOTION":', hasWindMotion);
@@ -70,7 +71,8 @@ const puppeteer = require('puppeteer-core');
     console.log(' - Dial "LFO_SPEED":', hasLfoSpeed);
     console.log(' - Dial "LFO_DEPTH":', hasLfoDepth);
     console.log(' - Dial "LFO_RAND":', hasLfoRand);
-    console.log(' - Vertical Meter "LFO ±":', hasLfoMeter);
+    console.log(' - Vertical Meter "LFO +":', hasLfoMeter);
+    console.log(' - Vertical Meter "CYC RAND":', hasRandMeter);
 
     // Check for runtime exceptions or WebGL shader errors
     const shaderOrRuntimeErrors = errors.filter(e => 
@@ -86,7 +88,7 @@ const puppeteer = require('puppeteer-core');
       process.exit(1);
     }
 
-    if (!hasWindMotion || !hasShimmer || !hasWavy || !hasBranchMove || !hasMovement || !hasLfoHeader || !hasLfoSpeed || !hasLfoDepth || !hasLfoRand || !hasLfoMeter) {
+    if (!hasWindMotion || !hasShimmer || !hasWavy || !hasBranchMove || !hasMovement || !hasLfoHeader || !hasLfoSpeed || !hasLfoDepth || !hasLfoRand || !hasLfoMeter || !hasRandMeter) {
       console.error('Failed: One or more wind motion / LFO elements missing in rendered HTML!');
       process.exit(1);
     }

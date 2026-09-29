@@ -5,6 +5,7 @@ import {
   setupNaturalWindMaterial,
   computeLfoModulatedOverall,
   pickNextLfoCycleLengthMult,
+  pickNextLfoCycleRandomRoll,
 } from "../src/lib/SimulationWindMotion";
 
 function assert(condition: boolean, msg: string) {
@@ -203,9 +204,9 @@ for (const mat of testMats) {
 console.log("   Test 6 Passed: Shader hook and compilation verification complete.");
 
 // ==========================================
-// Test 7: Powerful Bipolar (+-) LFO Modulation & Random % Cycle Length
+// Test 7: Powerful Positive-Only (+0..) LFO Modulation & Per-Cycle Random Influence
 // ==========================================
-console.log("-> Test 7: Powerful Bipolar (+-) LFO Modulation & Random % Cycle Length");
+console.log("-> Test 7: Powerful Positive-Only (+0..) LFO Modulation & Per-Cycle Random Influence");
 // 7a. Zero overall movement yields zero effective
 const lfoZero = computeLfoModulatedOverall({ overallMovement: 0.0, movementLfoSpeed: 1.0, movementLfoDepth: 1.0 });
 assert(lfoZero.effectiveOverall === 0.0 && lfoZero.lfoDelta === 0.0, "Zero overallMovement must yield 0 effective");
@@ -216,7 +217,7 @@ assert(lfoZeroSpeed.effectiveOverall === 0.5 && lfoZeroSpeed.lfoDelta === 0.0, "
 const lfoZeroDepth = computeLfoModulatedOverall({ overallMovement: 0.5, movementLfoSpeed: 0.5, movementLfoDepth: 0.0 });
 assert(lfoZeroDepth.effectiveOverall === 0.5 && lfoZeroDepth.lfoDelta === 0.0, "Zero depth must yield identity");
 
-// 7c. Large bipolar +- swing across full 2*PI cycle
+// 7c. Positive-only swing across full 2*PI cycle (always more wind, never less!)
 const overallVal = 0.25;
 const depthVal = 0.65;
 const speedVal = 0.35;
@@ -231,6 +232,7 @@ for (let p = 0; p <= Math.PI * 2; p += 0.05) {
     movementLfoSpeed: speedVal,
     movementLfoDepth: depthVal,
     movementLfoPhase: p,
+    movementLfoRandom: 50,
   });
   if (res.effectiveOverall < minEffective) minEffective = res.effectiveOverall;
   if (res.effectiveOverall > maxEffective) maxEffective = res.effectiveOverall;
@@ -238,19 +240,33 @@ for (let p = 0; p <= Math.PI * 2; p += 0.05) {
   if (res.lfoDelta > maxDelta) maxDelta = res.lfoDelta;
 }
 
+assert(minDelta >= -1e-6, `Expected positive-only LFO delta (minDelta >= 0.0), got ${minDelta}`);
+assert(minEffective >= overallVal - 1e-6, `Expected minEffective >= base overall (${overallVal}), got ${minEffective}`);
 assert(maxDelta > 1.0, `Expected large positive LFO delta (> +1.0) at default depth=0.65, got ${maxDelta}`);
-assert(minDelta < -1.0, `Expected large negative LFO delta (< -1.0) at default depth=0.65, got ${minDelta}`);
 assert(maxEffective > 1.25, `Expected peak effectiveOverall > 1.25 from base 0.25, got ${maxEffective}`);
-assert(minEffective < 0.05, `Expected trough effectiveOverall < 0.05 in calm lull, got ${minEffective}`);
 
-// 7d. Random % cycle length multiplier selection on repeat
+// 7d. Random % cycle length multiplier & cycle random roll
 assert(pickNextLfoCycleLengthMult(0, () => 0.9) === 1.0, "0% random must always yield cycle length mult 1.0");
+assert(pickNextLfoCycleRandomRoll(0, () => 0.9) === 0.0, "0% random must yield 0.0 random roll");
+
 const shortCycle = pickNextLfoCycleLengthMult(100, () => 0.0);
 const longCycle = pickNextLfoCycleLengthMult(100, () => 1.0);
 assert(shortCycle < 0.35 && longCycle > 3.0, `100% random must span wide cycle lengths: short=${shortCycle}, long=${longCycle}`);
 
-console.log(`   Test 7 Passed: Bipolar LFO delta=[${minDelta.toFixed(2)}, +${maxDelta.toFixed(2)}], effectiveOverall=[${minEffective.toFixed(3)}, ${maxEffective.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x].`);
+const minRoll = pickNextLfoCycleRandomRoll(100, () => 0.0);
+const maxRoll = pickNextLfoCycleRandomRoll(100, () => 1.0);
+assert(minRoll >= 0.08 && minRoll < 0.10, `Expected minRoll ~0.08, got ${minRoll}`);
+assert(maxRoll === 1.0, `Expected maxRoll 1.0, got ${maxRoll}`);
+
+// 7e. Cycle random influence and meter normalization
+const zeroRandRes = computeLfoModulatedOverall({ overallMovement: 0.25, movementLfoRandom: 0 });
+assert(zeroRandRes.cycleRandomInfluence === 0.0 && zeroRandRes.cycleGustMult === 1.0, "0% random must yield 1.0x gust mult");
+
+const maxRandRes = computeLfoModulatedOverall({ overallMovement: 0.25, movementLfoRandom: 100, movementLfoCycleRand: 1.0 });
+assert(Math.abs(maxRandRes.cycleRandomInfluence - 1.0) < 1e-6, `100% random with 1.0 roll must yield 1.0 influence, got ${maxRandRes.cycleRandomInfluence}`);
+assert(Math.abs(maxRandRes.cycleGustMult - 1.85) < 1e-6, `100% random with 1.0 roll must yield 1.85x gust mult, got ${maxRandRes.cycleGustMult}`);
+
+console.log(`   Test 7 Passed: Positive-only LFO delta=[+${minDelta.toFixed(3)}, +${maxDelta.toFixed(2)}], effectiveOverall=[${minEffective.toFixed(3)}, ${maxEffective.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x], gust mult range=[1.00x..1.85x].`);
 
 console.log("ALL WIND MOTION & HIERARCHICAL BRANCH TESTS PASSED");
 process.exit(0);
-

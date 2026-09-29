@@ -270,6 +270,15 @@ export function pickNextLfoCycleLengthMult(
   return Math.pow(3.8, u * randNorm);
 }
 
+export function pickNextLfoCycleRandomRoll(
+  randomPct: number,
+  rng: () => number = Math.random,
+): number {
+  const clampedPct = Math.max(0, Math.min(100, randomPct ?? 0));
+  if (clampedPct <= 0.0001) return 0.0;
+  return 0.08 + 0.92 * rng();
+}
+
 export function computeLfoModulatedOverall(engine: {
   overallMovement?: number;
   movementLfoSpeed?: number;
@@ -277,24 +286,39 @@ export function computeLfoModulatedOverall(engine: {
   movementLfoRandom?: number;
   movementLfoPhase?: number;
   movementLfoCycleMult?: number;
+  movementLfoCycleRand?: number;
 }): {
   effectiveOverall: number;
   lfoMult: number;
+  lfoUnipolar: number;
   lfoBipolar: number;
   lfoDelta: number;
   lfoMeterNorm: number;
   cycleLengthMult: number;
+  cycleRandomInfluence: number;
+  cycleGustMult: number;
+  cycleRandomMeterNorm: number;
 } {
   const overall = engine.overallMovement ?? 0.25;
   const cycleLengthMult = engine.movementLfoCycleMult ?? 1.0;
+  const randNorm = Math.max(0, Math.min(100, engine.movementLfoRandom ?? 50)) / 100.0;
+  const rawCycleRand = randNorm <= 0.0001 ? 0.0 : (engine.movementLfoCycleRand ?? 0.65);
+  const cycleRandomInfluence = Math.max(0.0, Math.min(1.0, rawCycleRand * randNorm));
+  const cycleGustMult = 1.0 + cycleRandomInfluence * 0.85;
+  const cycleRandomMeterNorm = cycleRandomInfluence;
+
   if (overall <= 0.0001) {
     return {
       effectiveOverall: 0.0,
       lfoMult: 1.0,
+      lfoUnipolar: 0.0,
       lfoBipolar: 0.0,
       lfoDelta: 0.0,
       lfoMeterNorm: 0.0,
       cycleLengthMult,
+      cycleRandomInfluence,
+      cycleGustMult,
+      cycleRandomMeterNorm,
     };
   }
   const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
@@ -303,39 +327,41 @@ export function computeLfoModulatedOverall(engine: {
     return {
       effectiveOverall: overall,
       lfoMult: 1.0,
+      lfoUnipolar: 0.0,
       lfoBipolar: 0.0,
       lfoDelta: 0.0,
       lfoMeterNorm: 0.0,
       cycleLengthMult,
+      cycleRandomInfluence,
+      cycleGustMult,
+      cycleRandomMeterNorm,
     };
   }
   const phase = engine.movementLfoPhase ?? 0.0;
-  // Bipolar wave in [-1, +1] that is strictly 0 at phase=0 and phase=2*PI so cycle-length changes on repeat are C0-continuous
-  const shapedSin = (Math.sin(phase) + 0.15 * Math.sin(phase * 2.0)) / 1.069;
-  const lfoBipolar = Math.max(-1.0, Math.min(1.0, shapedSin));
+  const skewedPhase = phase + 0.18 * Math.sin(phase);
+  const lfoUnipolar = Math.max(0.0, Math.min(1.0, 0.5 * (1.0 - Math.cos(skewedPhase))));
 
-  // Large additive +- swing applied to overall movement level
-  const lfoSwing = lfoDepth * 1.60 + overall * lfoDepth * 0.50;
-  const lfoDelta = lfoBipolar * lfoSwing;
-
-  // On + half-cycle, add full lfoSwing directly to overallMovement;
-  // on - half-cycle, subtract up to lfoSwing (scaling smoothly down to near-stillness if lfoSwing >= overall)
-  const negPull = Math.min(overall * 0.96, lfoSwing);
-  const effectiveOverall =
-    lfoBipolar >= 0.0
-      ? overall + lfoBipolar * lfoSwing
-      : Math.max(0.0, overall + lfoBipolar * negPull);
-
+  const baseSwing = lfoDepth * 1.60 + overall * lfoDepth * 0.50;
+  const lfoSwing = baseSwing * cycleGustMult;
+  const lfoDelta = lfoUnipolar * lfoSwing; // strictly >= 0 (POSITIVE ONLY - more wind!)
+  const effectiveOverall = overall + lfoDelta; // strictly >= overall
   const lfoMult = overall > 0.0001 ? effectiveOverall / overall : 1.0;
-  const lfoMeterNorm = Math.max(-1.0, Math.min(1.0, lfoBipolar * Math.min(1.0, lfoDepth / 0.85)));
+  const lfoMeterNorm = Math.max(
+    0.0,
+    Math.min(1.0, lfoUnipolar * Math.min(1.0, (lfoDepth / 0.85) * (0.75 + 0.25 * cycleGustMult)))
+  );
 
   return {
     effectiveOverall,
     lfoMult,
-    lfoBipolar,
+    lfoUnipolar,
+    lfoBipolar: lfoUnipolar,
     lfoDelta,
     lfoMeterNorm,
     cycleLengthMult,
+    cycleRandomInfluence,
+    cycleGustMult,
+    cycleRandomMeterNorm,
   };
 }
 
@@ -350,10 +376,13 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
   const lfoDepth = engine.movementLfoDepth ?? 0.65;
   const lfoRandom = engine.movementLfoRandom ?? 50;
 
-  if (!engine.movementLfoCycleMult || engine.movementLfoCycleMult <= 0) {
-    engine.movementLfoCycleMult = 1.0;
-  }
   if (lfoRandom <= 0.0001) {
+    engine.movementLfoCycleMult = 1.0;
+    engine.movementLfoCycleRand = 0.0;
+  } else if (!engine.movementLfoCycleRand || engine.movementLfoCycleRand <= 0) {
+    engine.movementLfoCycleMult = pickNextLfoCycleLengthMult(lfoRandom);
+    engine.movementLfoCycleRand = pickNextLfoCycleRandomRoll(lfoRandom);
+  } else if (!engine.movementLfoCycleMult || engine.movementLfoCycleMult <= 0) {
     engine.movementLfoCycleMult = 1.0;
   }
 
@@ -365,6 +394,8 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     if (nextPhase >= TWO_PI) {
       engine.movementLfoPhase = nextPhase % TWO_PI;
       engine.movementLfoCycleMult = pickNextLfoCycleLengthMult(lfoRandom);
+      engine.movementLfoCycleRand = pickNextLfoCycleRandomRoll(lfoRandom);
+      engine.movementLfoCycleCount = (engine.movementLfoCycleCount || 0) + 1;
     } else {
       engine.movementLfoPhase = nextPhase;
     }
