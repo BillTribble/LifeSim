@@ -33,7 +33,19 @@ interface PopupNotificationProps {
 }
 
 export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupNotificationProps) {
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   if (!queue || queue.length === 0) return null;
+
+  const isMobile = viewportWidth < 640;
 
   // Determine targetPos and side for each item
   const mappedItems = queue.map((item) => {
@@ -85,6 +97,7 @@ export function PopupNotification({ queue, trackedPositions, onDismiss }: PopupN
             onDismiss={onDismiss}
             stackIndex={stackIndex}
             side={side}
+            isMobile={isMobile}
           />
         );
       })}
@@ -99,9 +112,10 @@ interface PopupCardItemProps {
   onDismiss: (id: string) => void;
   stackIndex: number;
   side: "left" | "right";
+  isMobile: boolean;
 }
 
-function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCardItemProps) {
+function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side, isMobile }: PopupCardItemProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -160,7 +174,37 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
   let cx = targetPos?.x ?? 0;
   let cy = targetPos?.y ?? 0;
 
-  if (isValidTarget) {
+  if (isMobile) {
+    const W = window.innerWidth;
+    const marginX = 68;
+
+    if (isValidTarget) {
+      cx = targetPos!.x;
+      cy = targetPos!.y;
+
+      if (side === "left") {
+        const halfWayLeft = cx * 0.5;
+        cardX = Math.max(marginX, Math.min(cx - 48, halfWayLeft));
+      } else {
+        const halfWayRight = cx + (W - cx) * 0.5;
+        cardX = Math.min(W - marginX, Math.max(cx + 48, halfWayRight));
+      }
+
+      const targetY = cy + 64 + stackIndex * 24;
+      const marginYTop = 80;
+      const marginYBottom = 48;
+      cardY = Math.max(marginYTop, Math.min(window.innerHeight - marginYBottom, targetY));
+    } else {
+      cx = side === "left" ? W * 0.3 : W * 0.7;
+      cy = window.innerHeight * 0.45;
+
+      const baseCardY = window.innerHeight - 80;
+      cardY = baseCardY - stackIndex * 24;
+      cardX = side === "left"
+        ? Math.max(marginX, W * 0.25)
+        : Math.min(W - marginX, W * 0.75);
+    }
+  } else if (isValidTarget) {
     cx = targetPos!.x;
     cy = targetPos!.y;
 
@@ -196,14 +240,15 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
       : Math.min(window.innerWidth - 160, window.innerWidth * 0.80);
   }
 
-  // Anchor line point on top/edge of card
-  const anchorPointX = cardX < cx ? cardX + 100 : cardX - 100;
-  const anchorPointY = cardY - 25;
+  // Anchor line point on top/edge of card (or directly above small title text on mobile)
+  const anchorPointX = isMobile ? cardX : cardX < cx ? cardX + 100 : cardX - 100;
+  const anchorPointY = isMobile ? cardY - 9 : cardY - 25;
+  const showLine = isValidTarget || (isMobile && !targetPos?.isBehind);
 
   return (
     <>
       {/* Clean Vector Line Indicator with Smooth Fade */}
-      {isValidTarget && (
+      {showLine && (
         <svg
           style={{ zIndex: zIndex - 1 }}
           className={`fixed inset-0 w-full h-full pointer-events-none overflow-visible transition-all duration-500 ease-in-out ${
@@ -231,40 +276,59 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side }: PopupCa
           <circle cx={cx} cy={cy} r="8" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity={stackOpacity * 0.6} />
           <circle cx={cx} cy={cy} r="4" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
 
-          {/* Anchor Dot at Card */}
-          <circle cx={anchorPointX} cy={anchorPointY} r="3" fill={strokeColor} />
+          {/* Anchor Dot at Card / Title */}
+          <circle cx={anchorPointX} cy={anchorPointY} r={isMobile ? "2.5" : "3"} fill={strokeColor} />
         </svg>
       )}
 
-      {/* Pop-up Window Card with Cascading Stack Shift and Scale */}
-      <div
-        style={{
-          left: `${cardX}px`,
-          top: `${cardY}px`,
-          zIndex,
-          transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
-          opacity: visible ? stackOpacity : 0,
-          transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
-        }}
-        className="fixed w-[270px] sm:w-[300px] pointer-events-auto"
-      >
+      {isMobile ? (
+        /* Mobile Viewport: Minimal transparent title only (no panel) */
         <div
-          className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
-          style={{ borderColor: `${strokeColor}70` }}
+          style={{
+            left: `${cardX}px`,
+            top: `${cardY}px`,
+            zIndex,
+            transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
+            opacity: visible ? stackOpacity : 0,
+            transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
+          }}
+          className="fixed bg-transparent pointer-events-none"
         >
-          {/* Close Button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-2 right-2 p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors z-10"
-            title="Dismiss notification"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Content based on type */}
-          {currentContent(item, getHexColor)}
+          <div className="bg-transparent text-[10px] font-mono font-medium text-white whitespace-nowrap tracking-wide">
+            {item.title}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Desktop Pop-up Window Card with Cascading Stack Shift and Scale */
+        <div
+          style={{
+            left: `${cardX}px`,
+            top: `${cardY}px`,
+            zIndex,
+            transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
+            opacity: visible ? stackOpacity : 0,
+            transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
+          }}
+          className="fixed w-[270px] sm:w-[300px] pointer-events-auto"
+        >
+          <div
+            className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
+            style={{ borderColor: `${strokeColor}70` }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={handleClose}
+              className="absolute top-2 right-2 p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors z-10"
+              title="Dismiss notification"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Content based on type */}
+            {currentContent(item, getHexColor)}
+          </div>
+        </div>
+      )}
     </>
   );
 }
