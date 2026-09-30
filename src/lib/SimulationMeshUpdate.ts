@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
 import { getStrainDeathStart } from "./SimulationEngineHelpers";
+import { tryCoalesceStemSegment, markInstanceIndexDirty, markActiveInstancesDirty } from "./SimulationVertexTrimmer";
 
 export function updateMeshSegments(
   engine: SimulationEngine,
@@ -13,6 +14,18 @@ export function updateMeshSegments(
   agentId?: number,
   isTerminal: boolean | number = false,
 ) {
+  const isFeelerSeg = Boolean((genome as any)._isFeeler || genome.name.startsWith("Feeler-"));
+  const resolvedStrainName = (genome as any).parentStrainName || genome.name;
+  const strainDeathStart = getStrainDeathStart(engine, resolvedStrainName);
+  const isStrainAlreadyDying = strainDeathStart !== undefined;
+  const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.022;
+
+  if (!isAppendage) {
+    if (tryCoalesceStemSegment(engine, p1, p2, genome, thickness, agentId, isTerminal, shouldCountBiomass, resolvedStrainName)) {
+      return;
+    }
+  }
+
   const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
   let targetIndexStem = 0;
   let reusedFreeSlot = false;
@@ -294,23 +307,16 @@ export function updateMeshSegments(
       typeof isTerminal === "number" ? isTerminal : isTerminal ? 2.0 : (genome.leafDivision ?? 0.5),
     );
     
-    packAAttr.needsUpdate = true;
-    packBAttr.needsUpdate = true;
+    markInstanceIndexDirty(packAAttr, targetIndex);
+    markInstanceIndexDirty(packBAttr, targetIndex);
   }
-
-  const isFeelerSeg = Boolean((genome as any)._isFeeler || genome.name.startsWith("Feeler-"));
-  const resolvedStrainName = (genome as any).parentStrainName || genome.name;
-  // Lifecycle phase END_OF_LIFE counts as dying even after the strain left dyingStrains, and late
-  // segments share the strain's death clock so the whole body fades together (RC-B1 / RC-B2).
-  const strainDeathStart = getStrainDeathStart(engine, resolvedStrainName);
-  const isStrainAlreadyDying = strainDeathStart !== undefined;
-  const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.022;
 
   if (targetMesh === engine.cylinderMesh) {
     const prevSeg = engine.segments[targetIndex];
     if (prevSeg && prevSeg.countsForBiomass) {
       const prevCount = engine.biomassMap.get(prevSeg.strainName) || 0;
-      if (prevCount > 1) engine.biomassMap.set(prevSeg.strainName, prevCount - 1);
+      const weight = prevSeg.biomassWeight ?? 1;
+      if (prevCount > weight) engine.biomassMap.set(prevSeg.strainName, prevCount - weight);
       else engine.biomassMap.delete(prevSeg.strainName);
     }
     if (isStrainAlreadyDying) {
@@ -339,8 +345,8 @@ export function updateMeshSegments(
       strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
       rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
       branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
-      rootAnchorAttr.needsUpdate = true;
-      branchAnchorAttr.needsUpdate = true;
+      markInstanceIndexDirty(rootAnchorAttr, targetIndex);
+      markInstanceIndexDirty(branchAnchorAttr, targetIndex);
     }
 
     engine.segments[targetIndex] = {
@@ -356,6 +362,10 @@ export function updateMeshSegments(
       rootOrigin,
       branchBasePos,
       branchDepth,
+      startPos: p1.clone(),
+      endPos: p2.clone(),
+      biomassWeight: 1,
+      isTerminal,
     };
     if (!reusedFreeSlot) {
       engine.pointCount++;
@@ -389,8 +399,8 @@ export function updateMeshSegments(
         strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
         rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
         branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
-        rootAnchorAttr.needsUpdate = true;
-        branchAnchorAttr.needsUpdate = true;
+        markInstanceIndexDirty(rootAnchorAttr, targetIndex);
+        markInstanceIndexDirty(branchAnchorAttr, targetIndex);
       }
 
       config.segments[targetIndex] = {
@@ -411,8 +421,8 @@ export function updateMeshSegments(
     }
   }
 
-  targetMesh.instanceMatrix.needsUpdate = true;
-  if (targetMesh.instanceColor) targetMesh.instanceColor.needsUpdate = true;
+  markInstanceIndexDirty(targetMesh.instanceMatrix, targetIndex);
+  if (targetMesh.instanceColor) markInstanceIndexDirty(targetMesh.instanceColor, targetIndex);
   if (shouldCountBiomass) {
     engine.biomassMap.set(
       genome.name,
@@ -489,8 +499,8 @@ export function processDyingSegments(
     }
   }
   if (changed) {
-    mesh.instanceMatrix.needsUpdate = true;
+    markActiveInstancesDirty(mesh.instanceMatrix, mesh.count);
     const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
-    if (packAAttr) packAAttr.needsUpdate = true;
+    if (packAAttr) markActiveInstancesDirty(packAAttr, mesh.count);
   }
 }

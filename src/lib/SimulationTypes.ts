@@ -20,6 +20,7 @@ export const APPENDAGES = [
 ] as const;
 export type Archetype = "bush" | "tree" | "snake" | "rhizome";
 export const ARCHETYPES: Archetype[] = ["bush", "tree", "rhizome"];
+export type LodTier = 0 | 1 | 2 | 3;
 
 export type MovementType = "wiggle" | "spiral" | "orthogonal";
 export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"];
@@ -185,6 +186,10 @@ export interface Segment {
   rootOrigin?: THREE.Vector3;
   branchBasePos?: THREE.Vector3;
   branchDepth?: number;
+  startPos?: THREE.Vector3;
+  endPos?: THREE.Vector3;
+  biomassWeight?: number;
+  isTerminal?: boolean | number;
 }
 
 export interface SpeciesLifecycleState {

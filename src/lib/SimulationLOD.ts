@@ -1,5 +1,15 @@
 import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
+import {
+  createTrimmedLeafBoxGeometry,
+  createWeldedStemGeometry,
+  createWeldedConeGeometry,
+  weldNonIndexedGeometry,
+  DESKTOP_LOD_TRI_BUDGET,
+  MOBILE_LOD_TRI_BUDGET,
+  isMobileDevice,
+  enforceVertexBudget,
+} from "./SimulationVertexTrimmer";
 
 /**
  * View-only Level of Detail (LOD) for LifeSim.
@@ -27,7 +37,7 @@ export const LOD_DOWN_COOLDOWN = 20;
 /** Net count of raw slow frames required before a downgrade (a single hitch never downgrades). */
 export const LOD_SLOW_FRAMES = 10;
 /** Tier-0-equivalent triangle budgets that force a minimum tier regardless of FPS. */
-export const LOD_TRI_BUDGET = [6_000_000, 15_000_000, 40_000_000];
+export const LOD_TRI_BUDGET = DESKTOP_LOD_TRI_BUDGET;
 
 export const SHARED_INSTANCE_ATTRIBUTES = [
   "instancePackA",
@@ -53,6 +63,8 @@ export interface LodState {
   activeTrianglesTier0: number;
   /** Per-mesh geometry variants, index = tier. */
   variants: Map<THREE.InstancedMesh, THREE.BufferGeometry[]>;
+  /** Separate hybrid mesh variants, keeps lod.variants at exactly 16 meshes. */
+  hybridVariants: Map<THREE.InstancedMesh, THREE.BufferGeometry[]>;
 }
 
 /** Optional `?lod=auto|0|1|2|3` URL override (handy for comparing tiers). */
@@ -63,12 +75,15 @@ function initialModeFromUrl(): LodMode {
 }
 
 export function createLodState(): LodState {
+  const isMobile = isMobileDevice();
+  const initMode = initialModeFromUrl();
+  const initTier: LodTier = isMobile && initMode === "auto" ? 2 : 0;
   return {
-    mode: initialModeFromUrl(),
-    tier: 0,
-    fpsTier: 0,
-    emaFrameMs: 16.7,
-    fps: 60,
+    mode: initMode,
+    tier: initTier,
+    fpsTier: initTier,
+    emaFrameMs: isMobile ? 33.3 : 16.7,
+    fps: isMobile ? 30 : 60,
     fastStreak: 0,
     slowStreak: 0,
     framesSinceChange: 0,
@@ -77,6 +92,7 @@ export function createLodState(): LodState {
     activeTriangles: 0,
     activeTrianglesTier0: 0,
     variants: new Map(),
+    hybridVariants: new Map(),
   };
 }
 
@@ -84,20 +100,13 @@ export function createLodState(): LodState {
 // Geometry builders (one variant per tier)
 // ---------------------------------------------------------------------------
 
-/**
- * Leaf blade. The leaf vertex shader sculpts the silhouette from position.x in
- * [-0.5, 0.5], position.y in [0, 1], and sign(position.z) on front/back faces.
- * Every tier stays a true 3D BoxGeometry so front/back 3D vein volume, tube
- * leaves (sin(x*2pi)), and curved/twisted blades never collapse into 2D slivers.
- * Tier 0 is the unchanged legacy mesh (32x48 box = 6,464 triangles).
- */
 function leafGeometry(tier: LodTier): THREE.BufferGeometry {
-  const [sx, sy] = ([[32, 48], [14, 20], [8, 12], [4, 7]] as const)[tier];
-  return new THREE.BoxGeometry(1, 1, 0.05, sx, sy, 1).translate(0, 0.5, 0);
+  const [sx, sy] = ([[16, 24], [10, 14], [6, 8], [3, 5]] as const)[tier];
+  return createTrimmedLeafBoxGeometry(sx, sy, 0.05);
 }
 
 function fernGeometry(tier: LodTier): THREE.BufferGeometry {
-  const seg = ([[8, 16], [6, 12], [4, 8], [3, 6]] as const)[tier];
+  const seg = ([[6, 12], [4, 8], [3, 6], [2, 4]] as const)[tier];
   const geo = new THREE.PlaneGeometry(1.0, 2.2, seg[0], seg[1]);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -117,11 +126,8 @@ function fernGeometry(tier: LodTier): THREE.BufferGeometry {
 
 /** Stem segment. Tiers 0-1 keep end caps (visible on segmented creatures); 2-3 drop them. */
 export function stemGeometry(tier: LodTier): THREE.BufferGeometry {
-  const [radial, heightSegs, open] = ([[7, 4, false], [6, 2, false], [5, 1, true], [4, 1, true]] as const)[tier];
-  const geo = new THREE.CylinderGeometry(1, 1, 1, radial, heightSegs, open);
-  geo.translate(0, 0.5, 0);
-  geo.rotateX(Math.PI / 2);
-  return geo;
+  const [radial, heightSegs, withCaps] = ([[6, 2, true], [5, 1, false], [4, 1, false], [3, 1, false]] as const)[tier];
+  return createWeldedStemGeometry(radial, heightSegs, withCaps);
 }
 
 type Builder = (tier: LodTier) => THREE.BufferGeometry;
@@ -131,33 +137,39 @@ const pick = <T,>(tier: LodTier, table: readonly T[]): T => table[tier];
 export const APPENDAGE_BUILDERS: Record<string, Builder> = {
   leaves: leafGeometry,
   ferns: fernGeometry,
-  flowers: (t) => new THREE.ConeGeometry(0.5, 1, pick(t, [12, 8, 5, 3])).translate(0, 0.5, 0).rotateX(Math.PI / 2),
+  flowers: (t) => createWeldedConeGeometry(0.5, 1, pick(t, [8, 6, 4, 3]), 0.5),
   lillyPads: (t) => {
-    const [w, h] = pick(t, [[8, 8], [6, 5], [5, 3], [4, 2]] as const);
+    const [w, h] = pick(t, [[6, 6], [5, 4], [4, 3], [3, 2]] as const);
     return new THREE.SphereGeometry(0.5, w, h);
   },
-  petals: () => new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
-  needles: () => new THREE.ConeGeometry(0.1, 1, 4).translate(0, 0.5, 0).rotateX(Math.PI / 2),
-  thorns: () => new THREE.ConeGeometry(0.3, 0.6, 4).translate(0, 0.3, 0).rotateX(Math.PI / 2),
-  hair: (t) => new THREE.CylinderGeometry(0.04, 0.04, 1, pick(t, [5, 4, 3, 3]), 1, t >= 1).translate(0, 0.5, 0).rotateX(Math.PI / 2),
+  petals: (t) =>
+    t <= 1
+      ? weldNonIndexedGeometry(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0))
+      : weldNonIndexedGeometry(new THREE.OctahedronGeometry(0.5, 0).translate(0, 0.5, 0)),
+  needles: (t) => createWeldedConeGeometry(0.1, 1, pick(t, [4, 4, 3, 3]), 0.5),
+  thorns: (t) => createWeldedConeGeometry(0.3, 0.6, pick(t, [4, 4, 3, 3]), 0.3),
+  hair: (t) => createWeldedStemGeometry(pick(t, [4, 3, 3, 3]), 1, false).scale(0.04, 0.04, 1),
   curlyHair: (t) => {
-    const [tub, rad] = pick(t, [[64, 8], [32, 4], [20, 3], [12, 2]] as const);
+    const [tub, rad] = pick(t, [[32, 5], [20, 4], [12, 3], [8, 2]] as const);
     return new THREE.TorusKnotGeometry(0.4, 0.08, tub, rad);
   },
-  crystals: () => new THREE.OctahedronGeometry(0.6),
+  crystals: () => weldNonIndexedGeometry(new THREE.OctahedronGeometry(0.6)),
   spores: (t) =>
-    t === 0 ? new THREE.DodecahedronGeometry(0.5)
-      : t === 1 ? new THREE.IcosahedronGeometry(0.5, 0)
-        : t === 2 ? new THREE.OctahedronGeometry(0.5, 0)
-          : new THREE.TetrahedronGeometry(0.55, 0),
+    t === 0
+      ? weldNonIndexedGeometry(new THREE.DodecahedronGeometry(0.5))
+      : t === 1
+        ? weldNonIndexedGeometry(new THREE.IcosahedronGeometry(0.5, 0))
+        : t === 2
+          ? weldNonIndexedGeometry(new THREE.OctahedronGeometry(0.5, 0))
+          : weldNonIndexedGeometry(new THREE.TetrahedronGeometry(0.55, 0)),
   scales: () => new THREE.PlaneGeometry(0.8, 0.8),
   spirals: (t) => {
-    const [rad, tub] = pick(t, [[8, 16], [6, 10], [4, 8], [3, 4]] as const);
+    const [rad, tub] = pick(t, [[6, 12], [4, 8], [3, 6], [3, 3]] as const);
     return new THREE.TorusGeometry(0.5, 0.15, rad, tub);
   },
-  sparkles: () => new THREE.OctahedronGeometry(0.35, 0).scale(0.9, 1.4, 0.9),
+  sparkles: () => weldNonIndexedGeometry(new THREE.OctahedronGeometry(0.35, 0).scale(0.9, 1.4, 0.9)),
   buds: (t) => {
-    const [w, h] = pick(t, [[8, 8], [6, 5], [5, 3], [4, 2]] as const);
+    const [w, h] = pick(t, [[6, 6], [5, 4], [4, 3], [3, 2]] as const);
     return new THREE.SphereGeometry(0.4, w, h).scale(0.8, 1.25, 0.8).translate(0, 0.4, 0);
   },
 };
@@ -221,10 +233,20 @@ export function applyLodTier(engine: SimulationEngine, tier: LodTier) {
     const g = variants[tier];
     if (mesh.geometry !== g) mesh.geometry = g;
   }
+  if (lod.hybridVariants) {
+    for (const [mesh, variants] of lod.hybridVariants) {
+      const g = variants[tier];
+      if (mesh.geometry !== g) mesh.geometry = g;
+    }
+  }
   const leafMat = engine.appendages.get("leaves")?.mesh.material as THREE.Material | undefined;
   if (leafMat?.userData?.uLodLevel) leafMat.userData.uLodLevel.value = tier;
   const fernMat = engine.appendages.get("ferns")?.mesh.material as THREE.Material | undefined;
   if (fernMat?.userData?.uLodLevel) fernMat.userData.uLodLevel.value = tier;
+  if (engine.isMobile && engine.renderer?.setPixelRatio && typeof window !== "undefined") {
+    engine.renderer.setPixelRatio(tier >= 3 ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.25));
+  }
+  enforceVertexBudget(engine, tier);
 }
 
 // ---------------------------------------------------------------------------
@@ -264,11 +286,12 @@ export function requestLodMode(mode: LodMode) {
   requestedMode = mode;
 }
 
-function complexityTier(tris0: number): LodTier {
-  if (tris0 > LOD_TRI_BUDGET[2]) return 3;
-  if (tris0 > LOD_TRI_BUDGET[1]) return 2;
-  if (tris0 > LOD_TRI_BUDGET[0]) return 1;
-  return 0;
+function complexityTier(tris0: number, isMobile = false): LodTier {
+  const budget = isMobile ? MOBILE_LOD_TRI_BUDGET : DESKTOP_LOD_TRI_BUDGET;
+  if (tris0 > budget[2]) return 3;
+  if (tris0 > budget[1]) return 2;
+  if (tris0 > budget[0]) return 1;
+  return isMobile ? 1 : 0;
 }
 
 /**
@@ -339,7 +362,8 @@ export function updateAdaptiveLOD(engine: SimulationEngine, frameDtMs: number): 
   }
   if (lod.framesSinceUpgrade > 1200) lod.upgradeFramesRequired = LOD_BASE_UPGRADE_FRAMES;
 
-  const target = Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0)) as LodTier;
+  const rawTarget = Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0, engine.isMobile)) as LodTier;
+  const target = (engine.isMobile ? Math.max(1, rawTarget) : rawTarget) as LodTier;
   if (target !== lod.tier) applyLodTier(engine, target);
   lod.activeTriangles = getSceneGeometryStats(engine).triangles;
   return lod.tier;

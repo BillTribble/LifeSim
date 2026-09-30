@@ -3,6 +3,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
 import { WIND_STRIDE } from "./SimulationLOD";
 import { updateWindMaterialUniforms, computeLfoModulatedOverall } from "./SimulationWindMotion";
+import { markActiveInstancesDirty } from "./SimulationVertexTrimmer";
 
 // Scratch objects reused every frame (avoids per-instance heap allocations in the hot loop).
 const scratchQuat = new THREE.Quaternion();
@@ -187,7 +188,7 @@ export function updateMeshesAndStemsGrowth(
         if (val < 1.0) {
           const leafStep = Math.max(0.02, (engine.leafGrowthSpeed || 0.0045) * Math.max(3.0, engine.timeScale));
           pB.setX(i, Math.min(1.0, val + (isLeaf ? leafStep : 0.05 * engine.timeScale)));
-          pB.needsUpdate = true;
+          markActiveInstancesDirty(pB, mesh.count);
         }
       }
 
@@ -233,8 +234,8 @@ export function updateMeshesAndStemsGrowth(
       }
     }
     if (changed) {
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      markActiveInstancesDirty(mesh.instanceMatrix, mesh.count);
+      if (mesh.instanceColor) markActiveInstancesDirty(mesh.instanceColor, mesh.count);
     }
   };
 
@@ -262,7 +263,7 @@ export function updateMeshesAndStemsGrowth(
         engine.growingStems.delete(idx);
       }
     }
-    if (updated) stemPackBAttr.needsUpdate = true;
+    if (updated) markActiveInstancesDirty(stemPackBAttr, Math.min(engine.pointCount, engine.maxDOMs));
   }
 
   // CRITICAL FIX (Bug #5 — Stem Colour Pulse Bounds):
@@ -281,7 +282,7 @@ export function updateMeshesAndStemsGrowth(
         }
       }
     }
-    engine.cylinderMesh.instanceColor!.needsUpdate = true;
+    if (engine.cylinderMesh.instanceColor) markActiveInstancesDirty(engine.cylinderMesh.instanceColor, activeRange);
   }
 
   // Hovered strain glow update
@@ -294,7 +295,7 @@ export function updateMeshesAndStemsGrowth(
         const seg = engine.segments[i];
         if (seg) packAAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
       }
-      packAAttr.needsUpdate = true;
+      markActiveInstancesDirty(packAAttr, activeRange);
     }
     for (const app of engine.appendages.values()) {
       const appPackAAttr = app.mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
@@ -304,7 +305,7 @@ export function updateMeshesAndStemsGrowth(
           const seg = app.segments[i];
           if (seg) appPackAAttr.setX(i, seg.strainName === engine.hoveredStrainName ? 0.8 : (engine.enableGlow ? engine.glowSize : 0.0));
         }
-        appPackAAttr.needsUpdate = true;
+        markActiveInstancesDirty(appPackAAttr, appLim);
       }
     }
   }
@@ -354,8 +355,8 @@ export function updateMeshesAndStemsGrowth(
         }
       }
       if (anyUpdated) {
-        ambientAttr.needsUpdate = true;
-        lightDirAttr.needsUpdate = true;
+        markActiveInstancesDirty(ambientAttr, activePoints);
+        markActiveInstancesDirty(lightDirAttr, activePoints);
       }
     }
   }

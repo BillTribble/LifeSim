@@ -21,12 +21,67 @@ export function measureScreenFillSilhouette(engine: SimulationEngine): ScreenFil
   const h = 72;
   const totalPixels = w * h;
 
-  if (!engine.silhouetteTarget) {
-    engine.silhouetteTarget = new THREE.WebGLRenderTarget(w, h, {
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      format: THREE.RGBAFormat,
+  // FAST-PATH: Mobile or low-LOD tiers skip offscreen GPU readback entirely (0 readRenderTargetPixels calls).
+  // Approximates silhouette coverage analytically from active biomass distribution.
+  const skipGPUReadback = Boolean(engine.isMobile || (engine.lod && (engine.lod.tier >= 2 || engine.lod.emaFrameMs > 22)));
+  if (skipGPUReadback) {
+    let totalBiomass = 0;
+    const speciesBreakdown: {
+      name: string;
+      archetype: string;
+      fillPct: number;
+      pixels: number;
+      biomass: number;
+    }[] = [];
+
+    engine.biomassMap.forEach((biomass, name) => {
+      if (biomass > 0 && !name.startsWith("Feeler-")) {
+        totalBiomass += biomass;
+        const genome = engine.genomeMap.get(name);
+        speciesBreakdown.push({
+          name,
+          archetype: genome?.archetype || "unknown",
+          fillPct: 0,
+          pixels: 0,
+          biomass,
+        });
+      }
     });
+
+    const activeCapacity = Math.max(100, Math.min(engine.pointCount || 1, engine.maxDOMs || 1000));
+    // Asymptotic coverage approximation capped at 75% screen fill
+    const estimatedFillRatio = Math.min(0.75, (totalBiomass / activeCapacity) * 0.55);
+    const totalOccupied = Math.round(estimatedFillRatio * totalPixels);
+    const totalFillPct = estimatedFillRatio * 100;
+
+    for (const sp of speciesBreakdown) {
+      const frac = totalBiomass > 0 ? sp.biomass / totalBiomass : 0;
+      sp.pixels = Math.round(totalOccupied * frac);
+      sp.fillPct = (sp.pixels / totalPixels) * 100;
+    }
+
+    return {
+      totalFillPct,
+      totalOccupiedPixels: totalOccupied,
+      totalPixels,
+      speciesBreakdown,
+    };
+  }
+
+  if (!engine.renderer || !engine.scene || !engine.camera) return null;
+
+  if (!engine.silhouetteTarget) {
+    const savedRandom = Math.random;
+    try {
+      Math.random = () => 0.5;
+      engine.silhouetteTarget = new THREE.WebGLRenderTarget(w, h, {
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        format: THREE.RGBAFormat,
+      });
+    } finally {
+      Math.random = savedRandom;
+    }
     engine.silhouettePixelBuffer = new Uint8Array(w * h * 4);
   }
 
