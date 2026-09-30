@@ -597,8 +597,8 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             searchQuery={searchQuery}
             state={state}
             setters={setters}
-            keywords={["wavy", "waviness", "wave", "undulation", "ripple", "wind wave", "fluid wave"]}
-            tooltip={"WAVY\nContinuous traveling spatial wave undulation across creature stems, tendrils, and foliage."}
+            keywords={["wavy", "waviness", "wave", "undulation", "ripple", "wind wave", "fluid wave", "wind bend"]}
+            tooltip={"WAVY\nNatural cantilever bending of stems, outer boughs, and foliage in the wind."}
             label="WAVY"
             min={0.0}
             max={2.0}
@@ -611,8 +611,8 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             searchQuery={searchQuery}
             state={state}
             setters={setters}
-            keywords={["branch movement", "branch move", "branch sway", "fluid branch", "base vertex", "base vertices", "bough", "limb", "cantilever"]}
-            tooltip={"BRANCH MOVEMENT\nFluid hierarchical sway of branches pivoting naturally from their base vertices in mild wind."}
+            keywords={["branch movement", "branch move", "branch sway", "waving branches", "spawn point", "base vertex", "base vertices", "bough", "limb", "cantilever"]}
+            tooltip={"BRANCH MOVEMENT\nTerrestrial waving of branches pivoting coherently from their spawn point on the trunk or shrub base."}
             label="BRANCH_MOVE"
             min={0.0}
             max={2.0}
@@ -676,12 +676,12 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             state={state}
             setters={setters}
             keywords={["lfo", "lfo peak", "peak width", "peak length", "squashed peak", "narrow sine", "wind lfo", "movement lfo", "duty cycle"]}
-            tooltip={"MOVEMENT LFO PEAK WIDTH\nControls how narrow/squashed the curved sine wave peak is relative to the cycle (0.33 = peak is 1/3 as long as a full sine wave with a flat baseline lull, ramping up rapidly then dropping back down; 1.00 = full sine wave)."}
+            tooltip={"MOVEMENT LFO PEAK WIDTH\nControls how narrow/squashed the curved sine wave peak is relative to the cycle (0.48 = narrow curved sine peak with a flat baseline lull, ramping up rapidly then dropping back down; 1.00 = full sine wave)."}
             label="LFO_PEAK"
             min={0.05}
             max={1.0}
             step={0.01}
-            value={state.movementLfoPeak ?? 0.33}
+            value={state.movementLfoPeak ?? 0.48}
             onChange={setters.setMovementLfoPeak}
             color="#34d399"
           />
@@ -695,7 +695,7 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             min={0}
             max={100}
             step={1}
-            value={state.movementLfoRandom ?? 50}
+            value={state.movementLfoRandom ?? 73}
             onChange={setters.setMovementLfoRandom}
             formatValue={(v: number) => `${Math.round(v)}%`}
             color="#34d399"
