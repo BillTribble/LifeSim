@@ -200,7 +200,9 @@ export function processAgents(
         const activeSeekers = activeAgents.filter(
           (a) => a.active && !a.tapering && a.isSeekerTwig && a.genome.name === genome.name,
         ).length;
-        const activeTipCount = strainCounts.get(genome.name) || 1;
+        const activeTipCount =
+          activeAgents.filter((a) => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name).length +
+          newAgents.filter((a) => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name).length;
         const isKeeper = activeTipCount <= 3;
         if (genome.archetype === "bush") {
           if (isKeeper) {
@@ -222,7 +224,7 @@ export function processAgents(
             agent.seekerFlushes = (agent.seekerFlushes || 0) + 1;
             (agent as any).branchSteps = 0;
             agent.thickness = Math.min(agent.thickness, Math.max(0.06, (genome.minThickness || 0.05) * 1.35));
-          } else if (canBushTipTaper(agent) || activeSeekers >= 3) {
+          } else if (!isKeeper && (canBushTipTaper(agent) || activeSeekers >= 3)) {
             agent.tapering = true;
             agent.taperBudget = 0;
           }
@@ -634,6 +636,16 @@ export function processAgents(
 
       if (isRootTrunk && agent.age === 1) {
         extrudeRootNubCap(engine, agent, genome, renderThickness);
+      }
+
+      if (agent.id !== undefined) {
+        if (!agent.rootOrigin) agent.rootOrigin = (agent.treeRoot || agent.lastPosition || agent.position).clone();
+        if (!agent.branchBasePos) agent.branchBasePos = agent.rootOrigin.clone();
+        engine.agentAnchorMap.set(agent.id, {
+          rootOrigin: agent.rootOrigin,
+          branchBasePos: agent.branchBasePos,
+          branchDepth: agent.branchDepth || 0,
+        });
       }
 
       // All feelers draw visible trail segments (tagged with _isFeeler + parentStrainName)

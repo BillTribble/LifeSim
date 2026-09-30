@@ -260,7 +260,7 @@ function makeTreeAgent(
     treeAxis: parent.treeAxis,
     treeBaseThick: thickness,
     rootOrigin: (parent.rootOrigin || parent.treeRoot || parent.position).clone(),
-    branchBasePos: (depth === 0 ? pos : (parent.branchBasePos || pos)).clone(),
+    branchBasePos: (depth <= 1 ? pos : (parent.branchBasePos || pos)).clone(),
   };
 }
 
@@ -272,6 +272,7 @@ export function createTreeShoot(
   woodDepth: number,
   woodThickness: number,
   vigor: number,
+  nodeBranchBasePos?: THREE.Vector3,
 ): Agent {
   const p = profileFor(engine, template);
   const habit = getTreeHabit(engine, template);
@@ -300,7 +301,9 @@ export function createTreeShoot(
     dir.addScaledVector(A, 0.15).normalize();
   }
   const spacing = p.lateralSpacing * spacingScale(engine, template);
-  return makeTreeAgent(engine, template, pos, dir, thickness, budget, depth, spacing);
+  const shoot = makeTreeAgent(engine, template, pos, dir, thickness, budget, depth, spacing);
+  shoot.branchBasePos = (woodDepth <= 0 ? pos : (nodeBranchBasePos || pos)).clone();
+  return shoot;
 }
 
 function shouldBecomeKeeper(engine: SimulationEngine, agent: Agent, newAgents: Agent[]): boolean {
@@ -397,9 +400,13 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.85 + Math.random() * 0.3);
   const spacing = p.lateralSpacing * spacingScale(engine, agent);
 
+  const wasTrunk = (agent.branchDepth || 0) === 0;
   agent.treeDormant = false;
   agent.treeRestTicks = undefined;
   agent.branchDepth = depth;
+  if (wasTrunk && depth >= 1) {
+    agent.branchBasePos = agent.position.clone();
+  }
   agent.treeLen = 0;
   agent.treeBudget = budget;
   agent.treeNextBud = p.noMidBranchLaterals ? Infinity : budget * spacing * (0.45 + Math.random() * 0.5);
@@ -537,6 +544,7 @@ export function stepTreeArchitecture(
           agent.direction.copy(dir);
           agent.thickness = limbT;
           agent.branchDepth = 1;
+          agent.branchBasePos = agent.position.clone();
           agent.isCanopy = true;
           agent.treeLen = 0;
           agent.treeBudget = limbBudget;
@@ -560,6 +568,7 @@ export function stepTreeArchitecture(
         agent.direction.copy(dir);
         agent.thickness = limbT;
         agent.branchDepth = 1;
+        agent.branchBasePos = agent.position.clone();
         agent.isCanopy = true;
         agent.treeLen = 0;
         agent.treeBudget = limbBudget;

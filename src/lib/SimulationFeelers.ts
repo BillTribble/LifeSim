@@ -8,6 +8,7 @@ import {
 } from "./SimulationSeekRamp";
 import { isStrainDying } from "./SimulationEngineHelpers";
 import { FEELER_REACH_GROWTH_STEPS, getStepsSinceLastMating } from "./SimulationDrought";
+import { getEffectiveMaxMatings } from "./SimulationPartnerSearch";
 
 /**
  * Feelers: temporary sensory extensions of an organism. They inherit the root organism's genome
@@ -154,7 +155,7 @@ export function getFeelerMaxReach(engine: SimulationEngine, genome?: any): numbe
       : 2;
   const underMin = living <= (engine.minCreatures ?? 4);
   const t = genome ? Math.min(1, getStepsSinceLastMating(engine, genome) / FEELER_REACH_GROWTH_STEPS) : 0;
-  const mult = underMin ? 1.85 : 0.85 + 0.8 * t;
+  const mult = underMin ? 1.85 : 1.25 + 0.65 * t;
   return mult * b;
 }
 
@@ -180,7 +181,7 @@ export function spawnFeeler(
   const rootGenome = resolveRootOrganismGenome(agent, engine);
   const feelerGenome = createFeelerGenome(agent, engine);
   const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 1.1) * FEELER_STEP_SCALE, 0.85, 1.6);
-  const maxLen = Math.min(1.3 * targetDist + 4 * step, getFeelerMaxReach(engine, rootGenome));
+  const maxLen = Math.min(1.6 * targetDist + 10 * step, getFeelerMaxReach(engine, rootGenome));
   newAgents.push({
     position: agent.position.clone(),
     lastPosition: agent.position.clone(),
@@ -193,6 +194,9 @@ export function spawnFeeler(
     isFeeler: true,
     realGenome: rootGenome,
     parentAgent: agent,
+    branchDepth: Math.max(1, agent.branchDepth || 1),
+    rootOrigin: (agent.rootOrigin || agent.position).clone(),
+    branchBasePos: ((agent.branchDepth || 0) === 0 ? agent.position : (agent.branchBasePos || agent.position)).clone(),
     feelerTargetStrain: targetStrain,
     feelerStep: step,
     feelerTravel: 0,
@@ -253,12 +257,13 @@ export function updateFeelerSeeking(
   const myStrainName = rootGenome.name;
   const evalGenome = agent.isFeeler && agent.realGenome ? agent.realGenome : rootGenome;
   const lifecycleMap = engine.speciesLifecycleMap as any;
-  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  const myMCount = lifecycleMap?.get(myStrainName)?.matingCount || 0;
+  const myMaxM = getEffectiveMaxMatings(engine, myMCount);
   const dissolve = { dissolve: true };
 
   if (!engine.allowBreeding) return endFeeler(engine, agent, "parentDying", { ...dissolve, detail: "breedingOff" });
   if (isStrainDying(engine, myStrainName)) return endFeeler(engine, agent, "parentDying", dissolve);
-  if ((lifecycleMap?.get(myStrainName)?.matingCount || 0) >= maxM) {
+  if (myMCount >= myMaxM) {
     return endFeeler(engine, agent, "parentDying", { ...dissolve, detail: "exhausted" });
   }
   if (isSpeciesOnCooldown(engine, myStrainName, evalGenome)) {
@@ -275,11 +280,12 @@ export function updateFeelerSeeking(
 
   const target = agent.feelerTargetStrain;
   const targetGenome = target ? engine.genomeMap.get(target) : undefined;
+  const targetMCount = target ? lifecycleMap?.get(target)?.matingCount || 0 : 0;
+  const targetMaxM = getEffectiveMaxMatings(engine, targetMCount);
   if (
     !target ||
     isStrainDying(engine, target) ||
-    (lifecycleMap?.get(target)?.matingCount || 0) >= maxM ||
-    isSpeciesOnCooldown(engine, target, targetGenome) ||
+    targetMCount >= targetMaxM ||
     !areStrainsCompatibleForMating(engine, myStrainName, evalGenome, target, targetGenome)
   ) {
     return endFeeler(engine, agent, "targetLost", dissolve);

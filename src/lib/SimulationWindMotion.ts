@@ -53,68 +53,65 @@ vec3 computeNaturalWindDisplacement(vec3 worldPos, vec3 bladeWorldOffset, vec3 a
   float effOverall = (uOverallMovement < 1.0) ? pow(max(uOverallMovement, 0.0), 1.45) : uOverallMovement;
   vec3 structPos = (uIsAppendage >= 0.5) ? attachWorldPos : worldPos;
 
-  // Layer 1: Fluid Hierarchical Branch Movement (pivoting from rootOrigin and branchBasePos)
   vec3 rootPos = instanceRootAnchor.xyz;
   float strainPhase = instanceRootAnchor.w;
   vec3 r0 = structPos - rootPos;
   float d0 = length(r0);
-  float d0Norm = clamp(d0 / 14.0, 0.0, 2.5);
-  float bend0 = (d0Norm * d0Norm) / (1.0 + 0.35 * d0Norm);
-  float phase0 = uWindTime * 2.1 + strainPhase - d0 * 0.18;
-  float gust0 = uWindTime * 0.95 + strainPhase * 1.7 - d0 * 0.10;
-  vec3 dir0 = d0 > 0.001 ? (r0 / d0) : vec3(0.0, 1.0, 0.0);
-  vec3 swayDir0 = vec3(
-    sin(phase0) * 0.75 + sin(gust0) * 0.35,
-    0.38 * cos(phase0 * 1.25) + 0.22 * sin(gust0 * 0.9),
-    cos(phase0 * 0.85) * 0.75 + cos(gust0 * 1.1) * 0.35
-  );
-  swayDir0 -= dir0 * dot(swayDir0, dir0);
-  float swayLen0 = length(swayDir0);
-  if (swayLen0 > 0.001) swayDir0 /= swayLen0;
-  vec3 sway0 = swayDir0 * (bend0 * 1.15);
-  sway0 -= dir0 * (dot(sway0, sway0) / (2.0 * max(d0, 4.0)));
 
-  // Secondary lateral branch sway pivoting from branchBasePos (instanceBranchAnchor.xyz)
-  // Strictly 0 at d1=0 so child branches stay 100% welded to their parent stem at the fork!
+  // Layer 1: Terrestrial Waving Branches (pivoting coherently from branch spawn point branchBasePos)
+  // Primary trunks (isLateral == 0) remain stationary under uBranchMovement.
+  // Lateral branches (isLateral == 1) pivot as coherent woody limbs around their spawn point
+  // with zero spatial traveling S-wave phase lag along the branch.
   vec3 branchBase = instanceBranchAnchor.xyz;
   float isLateral = step(0.05, instanceBranchAnchor.w);
   vec3 r1 = structPos - branchBase;
   float d1 = length(r1);
-  float d1Norm = clamp(d1 / 7.5, 0.0, 2.5);
-  float bend1 = isLateral * ((d1Norm * d1Norm) / (1.0 + 0.32 * d1Norm));
-  float branchSeed = dot(branchBase, vec3(0.19, 0.43, 0.31));
-  float phase1 = uWindTime * 3.1 + branchSeed - d1 * 0.32;
-  vec3 dir1 = d1 > 0.001 ? (r1 / d1) : vec3(0.0, 1.0, 0.0);
-  vec3 swayDir1 = vec3(cos(phase1 * 1.1), 0.45 * sin(phase1 * 0.9), sin(phase1));
-  swayDir1 -= dir1 * dot(swayDir1, dir1);
-  float swayLen1 = length(swayDir1);
-  if (swayLen1 > 0.001) swayDir1 /= swayLen1;
-  vec3 sway1 = swayDir1 * (bend1 * 0.95);
-  sway1 -= dir1 * (dot(sway1, sway1) / (2.0 * max(d1, 3.0)));
-  vec3 branchDisp = (sway0 + sway1) * (uBranchMovement * effOverall);
+  float collarEase = d1 / (d1 + 0.85);
+  float effScale = isLateral * collarEase / (1.0 + 0.012 * d1);
+  vec3 r1Eff = r1 * effScale;
 
-  // Layer 2: Continuous Traveling Wavy Undulation (S-curve ripples along stems & foliage)
-  float wavyEnv = smoothstep(0.0, 3.0, d0);
-  float wPhase1 = uWindTime * 3.8 - d0 * 0.32 + dot(structPos, vec3(0.26, 0.22, 0.24)) + strainPhase;
-  float wPhase2 = uWindTime * 5.6 - d0 * 0.48 + dot(structPos, vec3(-0.35, 0.31, -0.28));
-  float wPhase3 = uWindTime * 7.5 + dot(structPos, vec3(0.52, -0.44, 0.46));
+  float branchSeed = dot(branchBase - rootPos, vec3(0.065, 0.045, 0.055)) + strainPhase;
+  float branchId = dot(branchBase, vec3(0.17, 0.31, 0.23)) + strainPhase * 0.7;
+  float wPhase = uWindTime * 2.15 + branchSeed;
+  float gPhase = uWindTime * 0.95 + branchSeed * 0.65 + 0.8;
+
+  // Dominant back-and-forth waving oscillation (vertical bobbing + leeward/windward arc)
+  float primaryWave = sin(wPhase) * 0.74 + sin(gPhase) * 0.36;
+  // Subtle secondary cross-breeze (~25% amplitude) to avoid both a 1D rail and 360-deg aquatic swirl
+  float secondarySway = cos(wPhase * 0.82 + 0.5) * 0.22 + cos(gPhase * 1.15) * 0.12;
+
+  vec3 axisPrimary = normalize(vec3(cos(branchId), 0.28 * sin(branchId * 0.7), sin(branchId)));
+  vec3 axisSecondary = normalize(vec3(-sin(branchId), 0.85, cos(branchId) * 0.45));
+
+  vec3 omega = axisPrimary * (primaryWave * 0.22) + axisSecondary * (secondarySway * 0.22);
+  vec3 sway1 = cross(omega, r1Eff);
+  // Radial arc-length preservation around branchBase so waving branches never stretch
+  sway1 -= r1 * (dot(sway1, sway1) / (2.0 * max(d1 * d1, 4.0)));
+  vec3 branchDisp = sway1 * (uBranchMovement * effOverall);
+
+  // Layer 2: Natural Cantilever Bending in the Wind (stiff woody lower trunk, supple outer canopy flex)
+  float wavyEnv = smoothstep(0.0, 10.0, d0) * (0.42 + 0.58 * smoothstep(0.0, 18.0, d0));
+  float wPhase1 = uWindTime * 2.4 - d0 * 0.075 + dot(structPos, vec3(0.06, 0.04, 0.05)) + strainPhase;
+  float wPhase2 = uWindTime * 3.6 - d0 * 0.11 + dot(structPos, vec3(-0.08, 0.06, -0.07));
+  float wGust = sin(wPhase1) * 0.68 + sin(wPhase2) * 0.32;
+  float wCross = cos(wPhase1 * 0.85 + 0.7) * 0.28 + sin(wPhase2 * 0.95) * 0.16;
   vec3 wavyWave = vec3(
-    sin(wPhase1) * 0.55 + sin(wPhase2) * 0.30 + cos(wPhase3) * 0.15,
-    cos(wPhase1 * 0.9) * 0.42 + sin(wPhase2 * 1.1) * 0.28,
-    cos(wPhase1 * 1.1) * 0.52 + cos(wPhase2 * 0.85) * 0.30
+    wGust * 0.82 + wCross * 0.25,
+    -abs(wGust) * 0.26 + sin(wPhase2 * 0.9) * 0.14,
+    wGust * 0.58 - wCross * 0.35
   );
-  vec3 wavyDisp = wavyWave * (wavyEnv * uWavy * (1.0 + uWindVelocity * 0.3) * effOverall * 0.75);
+  vec3 wavyDisp = wavyWave * (wavyEnv * uWavy * (1.0 + uWindVelocity * 0.3) * effOverall * 0.85);
 
   float tipDist = clamp(length(bladeWorldOffset), 0.0, 5.0);
   if (uIsAppendage >= 0.5) {
-    float localWPhase = uWindTime * 6.0 + hashVal * 19.0 + dot(bladeWorldOffset, vec3(1.2, 1.5, 1.2));
-    vec3 localBladeWave = vec3(sin(localWPhase), cos(localWPhase * 1.15) * 0.7, cos(localWPhase * 0.85)) *
+    float localWPhase = uWindTime * 4.2 + hashVal * 19.0 + dot(bladeWorldOffset, vec3(0.55, 0.70, 0.55));
+    vec3 localBladeWave = vec3(sin(localWPhase), cos(localWPhase * 1.1) * 0.65, cos(localWPhase * 0.85)) *
       (tipDist * uWavy * (1.0 + uWindVelocity * 0.3) * effOverall * 0.22);
     wavyDisp += localBladeWave;
   }
 
   // Layer 3: High-Frequency Canopy Shimmer & Leaf Tremble
-  float canopyReach = smoothstep(1.5, 9.0, d0);
+  float canopyReach = smoothstep(2.0, 10.0, d0);
   float sPhase = uWindTime * 15.0 + strainPhase * 3.0 + dot(structPos, vec3(0.95, 1.25, 1.05));
   float sPhase2 = uWindTime * 21.0 + dot(structPos, vec3(-1.35, 1.05, 1.20));
   vec3 canopyShimmer = vec3(
@@ -171,72 +168,73 @@ export function evaluateNaturalWindOffset(
   const strainPhase = rootAnchor.w;
   const r0 = new THREE.Vector3().subVectors(structPos, rootPos);
   const d0 = r0.length();
-  const d0Norm = Math.max(0.0, Math.min(2.5, d0 / 14.0));
-  const bend0 = (d0Norm * d0Norm) / (1.0 + 0.35 * d0Norm);
-  const phase0 = windTime * 2.1 + strainPhase - d0 * 0.18;
-  const gust0 = windTime * 0.95 + strainPhase * 1.7 - d0 * 0.10;
-  const dir0 = d0 > 0.001 ? r0.clone().divideScalar(d0) : new THREE.Vector3(0, 1, 0);
-  let swayDir0 = new THREE.Vector3(
-    Math.sin(phase0) * 0.75 + Math.sin(gust0) * 0.35,
-    0.38 * Math.cos(phase0 * 1.25) + 0.22 * Math.sin(gust0 * 0.9),
-    Math.cos(phase0 * 0.85) * 0.75 + Math.cos(gust0 * 1.1) * 0.35,
-  );
-  swayDir0.sub(dir0.clone().multiplyScalar(swayDir0.dot(dir0)));
-  const swayLen0 = swayDir0.length();
-  if (swayLen0 > 0.001) swayDir0.divideScalar(swayLen0);
-  const sway0 = swayDir0.multiplyScalar(bend0 * 1.15);
-  sway0.sub(dir0.clone().multiplyScalar(sway0.lengthSq() / (2.0 * Math.max(d0, 4.0))));
 
+  // Layer 1: Terrestrial Waving Branches (pivoting coherently from branch spawn point branchBasePos)
   const branchBase = new THREE.Vector3(branchAnchor.x, branchAnchor.y, branchAnchor.z);
   const isLateral = branchAnchor.w >= 0.05 ? 1.0 : 0.0;
   const r1 = new THREE.Vector3().subVectors(structPos, branchBase);
   const d1 = r1.length();
-  const d1Norm = Math.max(0.0, Math.min(2.5, d1 / 7.5));
-  const bend1 = isLateral * ((d1Norm * d1Norm) / (1.0 + 0.32 * d1Norm));
-  const branchSeed = branchBase.dot(new THREE.Vector3(0.19, 0.43, 0.31));
-  const phase1 = windTime * 3.1 + branchSeed - d1 * 0.32;
-  const dir1 = d1 > 0.001 ? r1.clone().divideScalar(d1) : new THREE.Vector3(0, 1, 0);
-  let swayDir1 = new THREE.Vector3(Math.cos(phase1 * 1.1), 0.45 * Math.sin(phase1 * 0.9), Math.sin(phase1));
-  swayDir1.sub(dir1.clone().multiplyScalar(swayDir1.dot(dir1)));
-  const swayLen1 = swayDir1.length();
-  if (swayLen1 > 0.001) swayDir1.divideScalar(swayLen1);
-  const sway1 = swayDir1.multiplyScalar(bend1 * 0.95);
-  sway1.sub(dir1.clone().multiplyScalar(sway1.lengthSq() / (2.0 * Math.max(d1, 3.0))));
-  const branchDisp = sway0.add(sway1).multiplyScalar(config.branchMovement * effOverall);
+  const collarEase = d1 / (d1 + 0.85);
+  const effScale = (isLateral * collarEase) / (1.0 + 0.012 * d1);
+  const r1Eff = r1.clone().multiplyScalar(effScale);
 
-  const smoothWavy = (x: number) => {
-    const t = Math.max(0, Math.min(1, x / 3.0));
+  const branchOffset = new THREE.Vector3().subVectors(branchBase, rootPos);
+  const branchSeed = branchOffset.dot(new THREE.Vector3(0.065, 0.045, 0.055)) + strainPhase;
+  const branchId = branchBase.dot(new THREE.Vector3(0.17, 0.31, 0.23)) + strainPhase * 0.7;
+  const wPhase = windTime * 2.15 + branchSeed;
+  const gPhase = windTime * 0.95 + branchSeed * 0.65 + 0.8;
+
+  const primaryWave = Math.sin(wPhase) * 0.74 + Math.sin(gPhase) * 0.36;
+  const secondarySway = Math.cos(wPhase * 0.82 + 0.5) * 0.22 + Math.cos(gPhase * 1.15) * 0.12;
+
+  const axisPrimary = new THREE.Vector3(
+    Math.cos(branchId),
+    0.28 * Math.sin(branchId * 0.7),
+    Math.sin(branchId),
+  ).normalize();
+  const axisSecondary = new THREE.Vector3(
+    -Math.sin(branchId),
+    0.85,
+    Math.cos(branchId) * 0.45,
+  ).normalize();
+
+  const omega = axisPrimary
+    .multiplyScalar(primaryWave * 0.22)
+    .add(axisSecondary.multiplyScalar(secondarySway * 0.22));
+  const sway1 = new THREE.Vector3().crossVectors(omega, r1Eff);
+  sway1.sub(r1.clone().multiplyScalar(sway1.lengthSq() / (2.0 * Math.max(d1 * d1, 4.0))));
+  const branchDisp = sway1.multiplyScalar(config.branchMovement * effOverall);
+
+  const smoothstep = (edge0: number, edge1: number, x: number) => {
+    const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
     return t * t * (3 - 2 * t);
   };
-  const wavyEnv = smoothWavy(d0);
-  const wPhase1 = windTime * 3.8 - d0 * 0.32 + structPos.dot(new THREE.Vector3(0.26, 0.22, 0.24)) + strainPhase;
-  const wPhase2 = windTime * 5.6 - d0 * 0.48 + structPos.dot(new THREE.Vector3(-0.35, 0.31, -0.28));
-  const wPhase3 = windTime * 7.5 + structPos.dot(new THREE.Vector3(0.52, -0.44, 0.46));
+  const wavyEnv = smoothstep(0.0, 10.0, d0) * (0.42 + 0.58 * smoothstep(0.0, 18.0, d0));
+  const wPhase1 = windTime * 2.4 - d0 * 0.075 + structPos.dot(new THREE.Vector3(0.06, 0.04, 0.05)) + strainPhase;
+  const wPhase2 = windTime * 3.6 - d0 * 0.11 + structPos.dot(new THREE.Vector3(-0.08, 0.06, -0.07));
+  const wGust = Math.sin(wPhase1) * 0.68 + Math.sin(wPhase2) * 0.32;
+  const wCross = Math.cos(wPhase1 * 0.85 + 0.7) * 0.28 + Math.sin(wPhase2 * 0.95) * 0.16;
   const wavyWave = new THREE.Vector3(
-    Math.sin(wPhase1) * 0.55 + Math.sin(wPhase2) * 0.30 + Math.cos(wPhase3) * 0.15,
-    Math.cos(wPhase1 * 0.9) * 0.42 + Math.sin(wPhase2 * 1.1) * 0.28,
-    Math.cos(wPhase1 * 1.1) * 0.52 + Math.cos(wPhase2 * 0.85) * 0.30,
+    wGust * 0.82 + wCross * 0.25,
+    -Math.abs(wGust) * 0.26 + Math.sin(wPhase2 * 0.9) * 0.14,
+    wGust * 0.58 - wCross * 0.35,
   );
   const windVel = config.windVelocity ?? 0.2;
   const flutterInt = config.flutterIntensity ?? 0.5;
-  const wavyDisp = wavyWave.multiplyScalar(wavyEnv * config.wavy * (1.0 + windVel * 0.3) * effOverall * 0.75);
+  const wavyDisp = wavyWave.multiplyScalar(wavyEnv * config.wavy * (1.0 + windVel * 0.3) * effOverall * 0.85);
 
   const tipDist = Math.max(0.0, Math.min(5.0, rawLocalPos.length()));
   if (isAppendage) {
-    const localWPhase = windTime * 6.0 + hashVal * 19.0 + rawLocalPos.dot(new THREE.Vector3(1.2, 1.5, 1.2));
+    const localWPhase = windTime * 4.2 + hashVal * 19.0 + rawLocalPos.dot(new THREE.Vector3(0.55, 0.70, 0.55));
     const localBladeWave = new THREE.Vector3(
       Math.sin(localWPhase),
-      Math.cos(localWPhase * 1.15) * 0.7,
+      Math.cos(localWPhase * 1.1) * 0.65,
       Math.cos(localWPhase * 0.85),
     ).multiplyScalar(tipDist * config.wavy * (1.0 + windVel * 0.3) * effOverall * 0.22);
     wavyDisp.add(localBladeWave);
   }
 
-  const smoothCanopy = (x: number) => {
-    const t = Math.max(0, Math.min(1, (x - 1.5) / 7.5));
-    return t * t * (3 - 2 * t);
-  };
-  const canopyReach = smoothCanopy(d0);
+  const canopyReach = smoothstep(2.0, 10.0, d0);
   const sPhase = windTime * 15.0 + strainPhase * 3.0 + structPos.dot(new THREE.Vector3(0.95, 1.25, 1.05));
   const sPhase2 = windTime * 21.0 + structPos.dot(new THREE.Vector3(-1.35, 1.05, 1.20));
   const canopyShimmer = new THREE.Vector3(
@@ -300,9 +298,9 @@ export function computeLfoModulatedOverall(engine: {
   cycleGustMult: number;
   cycleRandomMeterNorm: number;
 } {
-  const overall = engine.overallMovement ?? 0.25;
+  const overall = engine.overallMovement ?? 0.40;
   const cycleLengthMult = engine.movementLfoCycleMult ?? 1.0;
-  const randNorm = Math.max(0, Math.min(100, engine.movementLfoRandom ?? 50)) / 100.0;
+  const randNorm = Math.max(0, Math.min(100, engine.movementLfoRandom ?? 73)) / 100.0;
   const rawCycleRand = randNorm <= 0.0001 ? 0.0 : (engine.movementLfoCycleRand ?? 0.65);
   const cycleRandomInfluence = Math.max(0.0, Math.min(1.0, rawCycleRand * randNorm));
   const cycleGustMult = 1.0 + cycleRandomInfluence * 0.85;
@@ -322,7 +320,7 @@ export function computeLfoModulatedOverall(engine: {
       cycleRandomMeterNorm,
     };
   }
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.28;
   const lfoDepth = engine.movementLfoDepth ?? 0.07;
   if (lfoSpeed <= 0.0001 || lfoDepth <= 0.0001) {
     return {
@@ -338,7 +336,7 @@ export function computeLfoModulatedOverall(engine: {
       cycleRandomMeterNorm,
     };
   }
-  const peakWidth = Math.max(0.05, Math.min(1.0, engine.movementLfoPeak ?? 0.33));
+  const peakWidth = Math.max(0.05, Math.min(1.0, engine.movementLfoPeak ?? 0.48));
   const TWO_PI = Math.PI * 2.0;
   const rawPhase = engine.movementLfoPhase ?? 0.0;
   const normPhase = (((rawPhase % TWO_PI) + TWO_PI) % TWO_PI) / TWO_PI; // [0, 1)
@@ -382,12 +380,12 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
   const shimmer = engine.shimmer ?? 0.34;
   const wavy = engine.wavy ?? 0.40;
   const branchMovement = engine.branchMovement ?? 0.31;
-  const overallMovement = engine.overallMovement ?? 0.25;
+  const overallMovement = engine.overallMovement ?? 0.40;
   const anyActive = overallMovement > 0.0001 && (shimmer > 0.0001 || wavy > 0.0001 || branchMovement > 0.0001);
 
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.28;
   const lfoDepth = engine.movementLfoDepth ?? 0.07;
-  const lfoRandom = engine.movementLfoRandom ?? 50;
+  const lfoRandom = engine.movementLfoRandom ?? 73;
 
   if (lfoRandom <= 0.0001) {
     engine.movementLfoCycleMult = 1.0;

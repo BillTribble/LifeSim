@@ -26,11 +26,14 @@ console.log("-> Test 1: Defaults & Ranges");
 assert(DEFAULTS.shimmer === 0.34, `Expected shimmer 0.34, got ${DEFAULTS.shimmer}`);
 assert(DEFAULTS.wavy === 0.40, `Expected wavy 0.40, got ${DEFAULTS.wavy}`);
 assert(DEFAULTS.branchMovement === 0.31, `Expected branchMovement 0.31, got ${DEFAULTS.branchMovement}`);
-assert(DEFAULTS.overallMovement === 0.25, `Expected overallMovement 0.25, got ${DEFAULTS.overallMovement}`);
-assert(DEFAULTS.movementLfoSpeed === 0.35, `Expected movementLfoSpeed 0.35, got ${DEFAULTS.movementLfoSpeed}`);
+assert(DEFAULTS.overallMovement === 0.40, `Expected overallMovement 0.40, got ${DEFAULTS.overallMovement}`);
+assert(DEFAULTS.movementLfoSpeed === 0.28, `Expected movementLfoSpeed 0.28, got ${DEFAULTS.movementLfoSpeed}`);
 assert(DEFAULTS.movementLfoDepth === 0.07, `Expected movementLfoDepth 0.07, got ${DEFAULTS.movementLfoDepth}`);
-assert(DEFAULTS.movementLfoPeak === 0.33, `Expected movementLfoPeak 0.33, got ${DEFAULTS.movementLfoPeak}`);
-assert(DEFAULTS.movementLfoRandom === 50, `Expected movementLfoRandom 50, got ${DEFAULTS.movementLfoRandom}`);
+assert(DEFAULTS.movementLfoPeak === 0.48, `Expected movementLfoPeak 0.48, got ${DEFAULTS.movementLfoPeak}`);
+assert(DEFAULTS.movementLfoRandom === 73, `Expected movementLfoRandom 73, got ${DEFAULTS.movementLfoRandom}`);
+assert(DEFAULTS.minCreatures === 7, `Expected minCreatures 7, got ${DEFAULTS.minCreatures}`);
+assert(DEFAULTS.maxCreatures === 12, `Expected maxCreatures 12, got ${DEFAULTS.maxCreatures}`);
+assert(DEFAULTS.showBoundaryBox === true, `Expected showBoundaryBox true, got ${DEFAULTS.showBoundaryBox}`);
 
 const limits = DEFAULTS.dialLimits;
 assert(limits.SHIMMER?.min === 0 && limits.SHIMMER?.max === 2, "SHIMMER limits should be 0..2");
@@ -71,9 +74,9 @@ for (const pos of samplePositions) {
 console.log("   Test 2 Passed: Zero displacement when overallMovement === 0.");
 
 // ==========================================
-// Test 3: Base-Vertex Zero Detachment Invariant
+// Test 3: Base-Vertex Zero Detachment & Trunk Immobility Invariant
 // ==========================================
-console.log("-> Test 3: Base-Vertex Zero Detachment Invariant");
+console.log("-> Test 3: Base-Vertex Zero Detachment & Trunk Immobility Invariant");
 const time = 2.5;
 const configMove = { shimmer: 0, wavy: 0, branchMovement: 2.0, overallMovement: 2.0 };
 
@@ -81,29 +84,36 @@ const configMove = { shimmer: 0, wavy: 0, branchMovement: 2.0, overallMovement: 
 const rootDisp = evaluateWindDisplacementCPU(root, root, branchBase, 0.0, 0.0, time, configMove);
 assert(rootDisp.length() === 0, `Root displacement must be 0, got ${rootDisp.length()}`);
 
-// 3b. At worldPos == branchBasePos with isLateral = 1 vs isLateral = 0 (parent trunk sway)
+// 3b. Trunk immobility under branchMovement alone: ANY point along the trunk (isLateral = 0) must have 0 displacement
+for (const trunkY of [5, 10, 20, 35]) {
+  const trunkPt = new THREE.Vector3(0, trunkY, 0);
+  const trunkDisp = evaluateWindDisplacementCPU(trunkPt, root, root, 0.0, 0.3, time, configMove);
+  assert(
+    trunkDisp.length() === 0,
+    `Trunk (isLateral=0) at y=${trunkY} must not move under branchMovement alone, got ${trunkDisp.length()}`,
+  );
+}
+
+// 3c. At worldPos == branchBasePos with isLateral = 1 vs isLateral = 0 (parent trunk)
 const parentTrunkSway = evaluateWindDisplacementCPU(branchBase, root, branchBase, 0.0, 0.0, time, configMove);
 const lateralBranchBaseSway = evaluateWindDisplacementCPU(branchBase, root, branchBase, 1.0, 0.0, time, configMove);
 
 const detachment = new THREE.Vector3().subVectors(lateralBranchBaseSway, parentTrunkSway).length();
 assert(detachment < 1e-6, `Detachment between lateral branch base vertex and parent trunk at branchBasePos must be < 1e-6, got ${detachment}`);
-console.log(`   Test 3 Passed: Zero detachment invariant verified (detachment=${detachment}).`);
+console.log(`   Test 3 Passed: Zero detachment & trunk immobility invariant verified (detachment=${detachment}).`);
 
 // ==========================================
-// Test 4: Monotonic Cantilever Sway & Phase Lag along a Branch
+// Test 4: Coherent Spawn-Point Waving & Monotonic Lever-Arm Amplitude (No Seaweed S-Waves)
 // ==========================================
-console.log("-> Test 4: Monotonic Cantilever Sway & Phase Lag along a Branch");
+console.log("-> Test 4: Coherent Spawn-Point Waving & Monotonic Lever-Arm Amplitude (No Seaweed S-Waves)");
 const branchDir = new THREE.Vector3(1, 1, 0).normalize();
-const distances = [0, 5, 10, 15, 20];
+const distances = [0, 2, 5, 10, 15, 20];
 const branchConfig = { shimmer: 0, wavy: 0, branchMovement: 1.0, overallMovement: 1.0 };
 
 const amplitudes: number[] = [];
-const peakTimes: number[] = [];
 
 for (const d of distances) {
   const pt = branchBase.clone().add(branchDir.clone().multiplyScalar(d));
-  let maxAmp = 0;
-  let tAtMax = 0;
   let sumSq = 0;
   const steps = 100;
   for (let s = 0; s < steps; s++) {
@@ -111,27 +121,47 @@ for (const d of distances) {
     const disp = evaluateWindDisplacementCPU(pt, root, branchBase, 1.0, 0.0, t, branchConfig);
     const mag = disp.length();
     sumSq += mag * mag;
-    if (mag > maxAmp) {
-      maxAmp = mag;
-      tAtMax = t;
-    }
   }
   const rms = Math.sqrt(sumSq / steps);
   amplitudes.push(rms);
-  peakTimes.push(tAtMax);
 }
 
-// Verify monotonic increase of amplitude with distance d
+// Verify strict monotonic increase of amplitude with distance d from spawn point
+assert(amplitudes[0] === 0, `Amplitude at branch spawn point (d=0) must be 0, got ${amplitudes[0]}`);
 for (let i = 1; i < distances.length; i++) {
   assert(
-    amplitudes[i] >= amplitudes[i - 1],
-    `Amplitude must increase monotonically with distance: at d=${distances[i]} (${amplitudes[i]}) vs d=${distances[i-1]} (${amplitudes[i-1]})`
+    amplitudes[i] > amplitudes[i - 1],
+    `Amplitude must increase strictly monotonically with distance from spawn point: at d=${distances[i]} (${amplitudes[i]}) vs d=${distances[i-1]} (${amplitudes[i-1]})`
   );
 }
 
-// Verify whip propagation phase lag (phase changes with distance d)
-assert(amplitudes[distances.length - 1] > amplitudes[0], "Tip amplitude must be greater than base amplitude");
-console.log(`   Test 4 Passed: Monotonic cantilever sway verified (RMS: ${amplitudes.map(a => a.toFixed(4)).join(", ")}).`);
+// Verify coherent rigid-limb rotation (zero S-curve sign flips along the branch):
+// At every time step where the branch is displaced, transverse displacements at d=2, 5, 10, 15, 20
+// must all point in the exact same direction (cosine similarity > 0.9999).
+let minCosSim = 1.0;
+for (let s = 0; s < 60; s++) {
+  const t = s * 0.17;
+  const refPt = branchBase.clone().add(branchDir.clone().multiplyScalar(2));
+  const refDisp = evaluateWindDisplacementCPU(refPt, root, branchBase, 1.0, 0.25, t, branchConfig);
+  const refTrans = refDisp.clone().sub(branchDir.clone().multiplyScalar(refDisp.dot(branchDir)));
+  if (refTrans.length() < 1e-4) continue;
+  refTrans.normalize();
+
+  for (const d of [5, 10, 15, 20]) {
+    const pt = branchBase.clone().add(branchDir.clone().multiplyScalar(d));
+    const disp = evaluateWindDisplacementCPU(pt, root, branchBase, 1.0, 0.25, t, branchConfig);
+    const trans = disp.clone().sub(branchDir.clone().multiplyScalar(disp.dot(branchDir)));
+    if (trans.length() < 1e-4) continue;
+    trans.normalize();
+    const cosSim = refTrans.dot(trans);
+    if (cosSim < minCosSim) minCosSim = cosSim;
+  }
+}
+assert(
+  minCosSim > 0.9999,
+  `Expected coherent spawn-point waving with transverse cosine similarity > 0.9999 across entire branch (no seaweed S-waves), got ${minCosSim}`,
+);
+console.log(`   Test 4 Passed: Coherent spawn-point waving verified (minCosSim=${minCosSim.toFixed(6)}, RMS: ${amplitudes.map(a => a.toFixed(4)).join(", ")}).`);
 
 // ==========================================
 // Test 5: Independent Layer Modulation by the 4 Dials
@@ -425,7 +455,112 @@ assert(hybridMat.userData.uWavy.value === 0.0, "Hybrid material uWavy must remai
 assert(hybridMat.userData.uBranchMovement.value === 0.0, "Hybrid material uBranchMovement must remain 0 after updateWindMaterialUniforms");
 console.log("   Test 8 Passed: Hybridisation artifacts are completely unaffected by wind.");
 
+// ==========================================
+// Test 9: Tree & Bush Spawn-Point Anchor Assignment (branchBasePos != rootOrigin)
+// ==========================================
+console.log("-> Test 9: Tree & Bush Spawn-Point Anchor Assignment");
+import { stepTreeArchitecture, createTreeShoot } from "../src/lib/SimulationTreeArchitecture";
+import { stepBushTendrilBranching } from "../src/lib/SimulationBushTendrils";
+
+const mockTreeEngine: any = {
+  nextAgentId: 100,
+  designerMode: true,
+  agents: [],
+  biomassMap: new Map(),
+  maxDOMs: 32000,
+  boundarySize: 120,
+  onLog: () => {},
+};
+
+const treeRootPos = new THREE.Vector3(0, 0, 0);
+const trunkForkPos = new THREE.Vector3(0, 18, 0);
+const treeAgent: any = {
+  id: 1,
+  position: trunkForkPos.clone(),
+  lastPosition: trunkForkPos.clone(),
+  direction: new THREE.Vector3(0, 1, 0),
+  genome: { name: "TestOak", archetype: "tree", morphScale: 1.0, minThickness: 0.08 },
+  active: true,
+  age: 30,
+  thickness: 1.2,
+  branchDepth: 0,
+  treeRoot: treeRootPos.clone(),
+  rootOrigin: treeRootPos.clone(),
+  branchBasePos: treeRootPos.clone(),
+  treeLen: 18.0,
+  treeBudget: 18.0,
+  treeNextBud: Infinity,
+};
+const spawnedTreeChildren: any[] = [];
+stepTreeArchitecture(mockTreeEngine, treeAgent, spawnedTreeChildren, 1, 0.5);
+
+assert(treeAgent.branchDepth === 1, `Expected crown division k=0 to set branchDepth=1, got ${treeAgent.branchDepth}`);
+assert(
+  treeAgent.branchBasePos.distanceTo(trunkForkPos) < 1e-5,
+  `Expected k=0 crown limb branchBasePos to equal trunkForkPos ${trunkForkPos.toArray()}, got ${treeAgent.branchBasePos.toArray()}`,
+);
+assert(spawnedTreeChildren.length >= 1, "Expected crown division to spawn sibling limbs");
+for (const child of spawnedTreeChildren) {
+  assert(
+    child.branchBasePos.distanceTo(trunkForkPos) < 1e-5,
+    `Expected spawned depth=1 limb branchBasePos to equal trunkForkPos ${trunkForkPos.toArray()}, got ${child.branchBasePos.toArray()}`,
+  );
+}
+
+// Verify depth=2 sub-branch inherits its parent bough's branchBasePos
+const boughTipPos = new THREE.Vector3(8, 25, 4);
+const shootDepth2 = createTreeShoot(
+  mockTreeEngine,
+  treeAgent,
+  boughTipPos,
+  new THREE.Vector3(1, 1, 0).normalize(),
+  1,
+  0.5,
+  1.0,
+  trunkForkPos,
+);
+assert(
+  shootDepth2.branchBasePos.distanceTo(trunkForkPos) < 1e-5,
+  `Expected depth>=2 shoot to inherit bough spawn point ${trunkForkPos.toArray()}, got ${shootDepth2.branchBasePos.toArray()}`,
+);
+
+// Verify Bush shrub-base cane burst sets branchBasePos to the cane fork point on all 3 canes
+const bushRootPos = new THREE.Vector3(-20, 0, 0);
+const bushForkPos = new THREE.Vector3(-20, 6, 0);
+const bushAgent: any = {
+  id: 50,
+  position: bushForkPos.clone(),
+  lastPosition: bushForkPos.clone(),
+  direction: new THREE.Vector3(0, 1, 0),
+  genome: { name: "TestBush", archetype: "bush", morphScale: 1.0, minThickness: 0.08 },
+  active: true,
+  age: 12,
+  thickness: 0.9,
+  branchDepth: 0,
+  rootOrigin: bushRootPos.clone(),
+  branchBasePos: bushRootPos.clone(),
+  branchDist: 6.0,
+  distSinceLastFork: 6.0,
+};
+const spawnedBushCanes: any[] = [];
+const bushCounts = new Map<string, number>([["TestBush", 1]]);
+const didBurst = stepBushTendrilBranching(mockTreeEngine, bushAgent, [bushAgent], spawnedBushCanes, bushCounts, false);
+assert(didBurst, "Expected bush trunk at dist=6.0 to burst into 3 canes");
+assert(
+  bushAgent.branchBasePos.distanceTo(bushForkPos) < 1e-5,
+  `Expected c=0 bush cane branchBasePos to equal bushForkPos ${bushForkPos.toArray()}, got ${bushAgent.branchBasePos.toArray()}`,
+);
+assert(spawnedBushCanes.length === 2, `Expected 2 sibling bush canes, got ${spawnedBushCanes.length}`);
+for (const cane of spawnedBushCanes) {
+  assert(
+    cane.branchBasePos.distanceTo(bushForkPos) < 1e-5,
+    `Expected sibling bush cane branchBasePos to equal bushForkPos ${bushForkPos.toArray()}, got ${cane.branchBasePos.toArray()}`,
+  );
+}
+console.log("   Test 9 Passed: Tree & Bush spawn-point anchor assignment verified.");
+
 console.log("ALL WIND MOTION & HIERARCHICAL BRANCH TESTS PASSED");
 process.exit(0);
+
 
 

@@ -51,18 +51,28 @@ export function canBushTipTaper(agent: Agent): boolean {
   return ((agent as any).branchDist ?? 0) >= 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
 }
 
-export function retireOldestBushSibling(engine: SimulationEngine, activeAgents: Agent[], strainName: string): boolean {
+export function retireOldestBushSibling(
+  engine: SimulationEngine,
+  activeAgents: Agent[],
+  strainName: string,
+  excludeAgent?: Agent,
+): boolean {
+  let nonTaperingCount = 0;
   let oldest: Agent | null = null, maxAge = -1;
   for (let idx = 0; idx < activeAgents.length; idx++) {
     const a = activeAgents[idx];
-    if (a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName && (a.branchDepth || 0) > 0) {
-      const bushScale = getBushMorphScale(a.genome);
-      const minRetireDist = 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
-      if (((a as any).branchDist ?? 0) >= minRetireDist && a.age > maxAge) {
-        maxAge = a.age; oldest = a;
+    if (a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName) {
+      nonTaperingCount++;
+      if (a !== excludeAgent && (a.branchDepth || 0) > 0) {
+        const bushScale = getBushMorphScale(a.genome);
+        const minRetireDist = 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
+        if (((a as any).branchDist ?? 0) >= minRetireDist && a.age > maxAge) {
+          maxAge = a.age; oldest = a;
+        }
       }
     }
   }
+  if (nonTaperingCount <= 3) return false;
   if (oldest) {
     oldest.tapering = true; oldest.taperBudget = 0; return true;
   }
@@ -86,7 +96,7 @@ function spawnBushChild(
     thickness, targetThickness: thickness, cooldown: 0, id: engine.nextAgentId++,
     parentAgent: parent, parentId: parent.id, branchDepth: depth, isSeekerTwig: parent.isSeekerTwig,
     rootOrigin: (parent.rootOrigin || parent.position).clone(),
-    branchBasePos: ((parent.branchDepth || 0) === 0 ? parent.position : (parent.branchBasePos || parent.position)).clone(),
+    branchBasePos: (depth <= 1 ? parent.position : (parent.branchBasePos || parent.position)).clone(),
   };
   initBushBranchTracking(child, parent);
   newAgents.push(child);
@@ -122,6 +132,7 @@ export function stepBushTendrilBranching(
 
       if (c === 0) {
         agent.direction.copy(caneDir); agent.thickness = caneThickness; agent.branchDepth = 1;
+        agent.branchBasePos = agent.position.clone();
         initBushBranchTracking(agent, agent);
       } else {
         spawnBushChild(engine, agent, caneDir, caneThickness, 1, newAgents, strainCounts);
@@ -148,7 +159,7 @@ export function stepBushTendrilBranching(
   const overBudget = isOverSizeBudget(engine, agent.genome.name) || myStrainCount >= maxBranches;
 
   if (overBudget) {
-    const retired = retireOldestBushSibling(engine, activeAgents, agent.genome.name);
+    const retired = retireOldestBushSibling(engine, activeAgents, agent.genome.name, agent);
     if (!retired && myStrainCount >= maxBranches * 1.25) return false;
   }
 
@@ -170,7 +181,7 @@ export function stepBushTendrilBranching(
 
   if (motif === "corymb") {
     const is3Way = currentDepth <= 2 && Math.random() < 0.45;
-    if (overBudget && is3Way) retireOldestBushSibling(engine, activeAgents, agent.genome.name);
+    if (overBudget && is3Way) retireOldestBushSibling(engine, activeAgents, agent.genome.name, agent);
     const forkAngle = THREE.MathUtils.degToRad(38 + Math.random() * 8);
     const dThick = Math.max(minBushThick, agent.thickness * 0.76);
     const corymbDepth = Math.max(2, Math.min(currentDepth + 1, 4));
@@ -197,7 +208,7 @@ export function stepBushTendrilBranching(
   }
 
   if (motif === "pinnate") {
-    if (overBudget) retireOldestBushSibling(engine, activeAgents, agent.genome.name);
+    if (overBudget) retireOldestBushSibling(engine, activeAgents, agent.genome.name, agent);
     const pinAngle = THREE.MathUtils.degToRad(44 + Math.random() * 6);
     const pinThick = Math.max(minBushThick, agent.thickness * 0.70);
     const dirLeft = agent.direction.clone().applyAxisAngle(forkAxis, pinAngle).normalize();

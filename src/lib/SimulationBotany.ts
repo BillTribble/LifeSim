@@ -475,6 +475,7 @@ export function executeBotanicalBranching(
         agent.direction.copy(boughDir);
         agent.thickness = boughRadius;
         agent.branchDepth = 1;
+        agent.branchBasePos = agent.position.clone();
         agent.isCanopy = true;
       } else {
         newAgents.push({
@@ -601,11 +602,14 @@ export function spawnAgentAppendages(
   const isRhizome = genome.archetype === "rhizome" || genome.growthHabit === "rhizome_web";
   if (isRhizome && (depth === 0 || (depth === 1 && (agent.treeLen || 0) < 3.5))) return;
 
+  const lodTier = engine.lod?.tier ?? 0;
+  const lodAppMult = engine.isMobile ? [0.7, 0.55, 0.4, 0.25][lodTier] : 1.0;
+
   const isHairApp =
     genome.appendage === "hair" ||
     genome.appendage === "curlyHair" ||
     genome.appendage === "spirals";
-  const hairProb = (isRhizome ? 0.22 : 0.45) * engine.ornamentFrequency;
+  const hairProb = (isRhizome ? 0.22 : 0.45) * engine.ornamentFrequency * lodAppMult;
 
   if (isHairApp && Math.random() < hairProb) {
     const rad = Math.random() * Math.PI * 2;
@@ -639,7 +643,7 @@ export function spawnAgentAppendages(
     (genome.appendage === "thorns" ||
       genome.appendage === "crystals" ||
       genome.appendage === "sparkles") &&
-    Math.random() < 0.4 * engine.ornamentFrequency
+    Math.random() < 0.4 * engine.ornamentFrequency * lodAppMult
   ) {
     const rad = Math.random() * Math.PI * 2;
     const ax1 = new THREE.Vector3()
@@ -672,7 +676,7 @@ export function spawnAgentAppendages(
       Math.min(7, Math.round((baseInterval * Math.max(0.85, engine.leafScale || 0.55)) / densityFactor)),
     );
     const nodeInterval = filigree ? Math.min(9, Math.round(baseNodeInterval * 1.35)) : baseNodeInterval;
-    if ((agent.age + (agent.id || 0)) % nodeInterval === 0 && Math.random() < engine.leafProbability) {
+    if ((agent.age + (agent.id || 0)) % nodeInterval === 0 && Math.random() < engine.leafProbability * lodAppMult) {
       const up = new THREE.Vector3(0, 1, 0);
       let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
       if (normal.lengthSq() < 0.001) normal.set(1, 0, 0);
@@ -709,7 +713,7 @@ export function spawnAgentAppendages(
         spawnLeaf(normal.clone().applyAxisAngle(agent.direction, theta).normalize());
         spawnLeaf(normal.clone().applyAxisAngle(agent.direction, theta + Math.PI).normalize());
       } else {
-        const numLeaves = 4;
+        const numLeaves = engine.isMobile && lodTier >= 2 ? 2 : 4;
         for (let i = 0; i < numLeaves; i++) {
           const theta = (i * 2 * Math.PI) / numLeaves;
           spawnLeaf(normal.clone().applyAxisAngle(agent.direction, theta).normalize());
@@ -719,7 +723,7 @@ export function spawnAgentAppendages(
   } else {
     const baseAppInterval = Math.max(2, Math.floor(4 / (engine.ornamentFrequency || 1.0)));
     const appInterval = filigree ? baseAppInterval * 2 : baseAppInterval;
-    if (agent.age % appInterval === 0 && depth >= 1) {
+    if (agent.age % appInterval === 0 && depth >= 1 && (lodAppMult >= 0.95 || Math.random() < lodAppMult)) {
       const up = new THREE.Vector3(0, 1, 0);
       let normal = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
       if (normal.lengthSq() < 0.001) normal.set(1, 0, 0);

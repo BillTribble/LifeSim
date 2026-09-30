@@ -21,6 +21,7 @@ interface TreeNode {
   dir: THREE.Vector3;
   depth: number;
   thickness: number;
+  branchBasePos: THREE.Vector3;
 }
 
 interface TreeGrowthState {
@@ -114,11 +115,13 @@ export function recordTreeNode(engine: SimulationEngine, agent: Agent) {
   if ((agent.branchDepth || 0) === 0 && (agent.treeLen || 0) < 3.0) return;
   const s = stateFor(engine, agent.genome.name);
   s.template = agent;
+  const rawDepth = agent.branchDepth || 0;
   const node: TreeNode = {
     pos: agent.position.clone(),
     dir: agent.direction.clone(),
-    depth: Math.max(1, agent.branchDepth || 1),
+    depth: Math.max(1, rawDepth),
     thickness: agent.thickness,
+    branchBasePos: (rawDepth === 0 ? agent.position : (agent.branchBasePos || agent.position)).clone(),
   };
   if (s.nodes.length < MAX_NODES) {
     s.nodes.push(node);
@@ -233,7 +236,7 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
         continue;
       }
       const vigor = Math.max(SHOOT_VIGOR_FLOOR, Math.pow(SHOOT_VIGOR_DECAY, s.shoots));
-      newAgents.push(createTreeShoot(engine, s.template, node.pos, node.dir, node.depth, node.thickness, vigor));
+      newAgents.push(createTreeShoot(engine, s.template, node.pos, node.dir, node.depth, node.thickness, vigor, node.branchBasePos));
       s.shoots++;
       s.growing++;
       s.nextRelease = s.clock + shootInterval;
