@@ -558,11 +558,15 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
       "LFO",
       "LFO_SPEED",
       "LFO_DEPTH",
+      "LFO_PEAK",
       "LFO_RAND",
       "RANDOM",
       "METER",
       "SPEED",
       "DEPTH",
+      "PEAK",
+      "PEAK WIDTH",
+      "SQUASHED",
       "OSCILLATOR",
     ])
   ) {
@@ -665,6 +669,20 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             step={0.01}
             value={state.movementLfoDepth}
             onChange={setters.setMovementLfoDepth}
+            color="#34d399"
+          />
+          <SmartDial
+            searchQuery={searchQuery}
+            state={state}
+            setters={setters}
+            keywords={["lfo", "lfo peak", "peak width", "peak length", "squashed peak", "narrow sine", "wind lfo", "movement lfo", "duty cycle"]}
+            tooltip={"MOVEMENT LFO PEAK WIDTH\nControls how narrow/squashed the curved sine wave peak is relative to the cycle (0.33 = peak is 1/3 as long as a full sine wave with a flat baseline lull, ramping up rapidly then dropping back down; 1.00 = full sine wave)."}
+            label="LFO_PEAK"
+            min={0.05}
+            max={1.0}
+            step={0.01}
+            value={state.movementLfoPeak ?? 0.33}
+            onChange={setters.setMovementLfoPeak}
             color="#34d399"
           />
           <SmartDial

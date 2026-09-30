@@ -86,12 +86,13 @@ export class SimulationEngine {
   unscaledTime: number = 0;
   frameCount: number = 0;
   timeScale: number = 1.0;
-  shimmer: number = 0.40;
-  wavy: number = 0.35;
-  branchMovement: number = 0.45;
+  shimmer: number = 0.34;
+  wavy: number = 0.40;
+  branchMovement: number = 0.31;
   overallMovement: number = 0.25;
   movementLfoSpeed: number = 0.35;
-  movementLfoDepth: number = 0.65;
+  movementLfoDepth: number = 0.07;
+  public movementLfoPeak: number = 0.33;
   movementLfoRandom: number = 50;
   movementLfoPhase: number = 0.0;
   movementLfoCycleMult: number = 1.0;

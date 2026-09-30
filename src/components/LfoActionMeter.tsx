@@ -39,7 +39,8 @@ export function LfoActionMeter({ state }: LfoActionMeterProps) {
       } = computeLfoModulatedOverall({
         overallMovement: source.overallMovement ?? stateRef.current?.overallMovement ?? 0.25,
         movementLfoSpeed: source.movementLfoSpeed ?? stateRef.current?.movementLfoSpeed ?? 0.35,
-        movementLfoDepth: source.movementLfoDepth ?? stateRef.current?.movementLfoDepth ?? 0.65,
+        movementLfoDepth: source.movementLfoDepth ?? stateRef.current?.movementLfoDepth ?? 0.07,
+        movementLfoPeak: source.movementLfoPeak ?? stateRef.current?.movementLfoPeak ?? 0.33,
         movementLfoRandom: source.movementLfoRandom ?? stateRef.current?.movementLfoRandom ?? 50,
         movementLfoPhase: source.movementLfoPhase ?? 0.0,
         movementLfoCycleMult: source.movementLfoCycleMult ?? 1.0,
@@ -140,7 +141,8 @@ export function LfoActionMeter({ state }: LfoActionMeterProps) {
             {`LFO + ACTION METER
 Live unipolar (+) wind surge modulation added to overall MOVEMENT.
 Top (+): Peak wind gust surge.
-Bottom (0): Base movement level (strictly positive additions).
+Bottom (0): Flat baseline lull (strictly positive additions).
+LFO_PEAK shapes the wave into a narrow squashed curved sine peak (default 1/3 width) with a flat baseline lull between gusts.
 
 CYC RAND METER
 Current cycle's random influence rolled from LFO_RAND %.

@@ -283,6 +283,7 @@ export function computeLfoModulatedOverall(engine: {
   overallMovement?: number;
   movementLfoSpeed?: number;
   movementLfoDepth?: number;
+  movementLfoPeak?: number;
   movementLfoRandom?: number;
   movementLfoPhase?: number;
   movementLfoCycleMult?: number;
@@ -322,7 +323,7 @@ export function computeLfoModulatedOverall(engine: {
     };
   }
   const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
-  const lfoDepth = engine.movementLfoDepth ?? 0.65;
+  const lfoDepth = engine.movementLfoDepth ?? 0.07;
   if (lfoSpeed <= 0.0001 || lfoDepth <= 0.0001) {
     return {
       effectiveOverall: overall,
@@ -337,9 +338,21 @@ export function computeLfoModulatedOverall(engine: {
       cycleRandomMeterNorm,
     };
   }
-  const phase = engine.movementLfoPhase ?? 0.0;
-  const skewedPhase = phase + 0.18 * Math.sin(phase);
-  const lfoUnipolar = Math.max(0.0, Math.min(1.0, 0.5 * (1.0 - Math.cos(skewedPhase))));
+  const peakWidth = Math.max(0.05, Math.min(1.0, engine.movementLfoPeak ?? 0.33));
+  const TWO_PI = Math.PI * 2.0;
+  const rawPhase = engine.movementLfoPhase ?? 0.0;
+  const normPhase = (((rawPhase % TWO_PI) + TWO_PI) % TWO_PI) / TWO_PI; // [0, 1)
+  const flatHalf = 0.5 * (1.0 - peakWidth);
+  const peakStart = flatHalf;
+  const peakEnd = 1.0 - flatHalf;
+  let lfoUnipolar = 0.0;
+  if (normPhase > peakStart && normPhase < peakEnd && peakWidth > 0.0001) {
+    const localU = (normPhase - peakStart) / peakWidth; // [0, 1] across the squashed peak
+    const localTheta = localU * TWO_PI; // [0, 2*PI]
+    // Rapid ramp-up (~first 1/3 of peak window, ~1s) followed by smooth curved sine drop-down
+    const skewedTheta = localTheta + 0.38 * Math.sin(localTheta);
+    lfoUnipolar = Math.max(0.0, Math.min(1.0, 0.5 * (1.0 - Math.cos(skewedTheta))));
+  }
 
   const baseSwing = lfoDepth * 1.60 + overall * lfoDepth * 0.50;
   const lfoSwing = baseSwing * cycleGustMult;
@@ -366,14 +379,14 @@ export function computeLfoModulatedOverall(engine: {
 }
 
 export function updateWindMaterialUniforms(engine: SimulationEngine) {
-  const shimmer = engine.shimmer ?? 0.40;
-  const wavy = engine.wavy ?? 0.35;
-  const branchMovement = engine.branchMovement ?? 0.45;
+  const shimmer = engine.shimmer ?? 0.34;
+  const wavy = engine.wavy ?? 0.40;
+  const branchMovement = engine.branchMovement ?? 0.31;
   const overallMovement = engine.overallMovement ?? 0.25;
   const anyActive = overallMovement > 0.0001 && (shimmer > 0.0001 || wavy > 0.0001 || branchMovement > 0.0001);
 
   const lfoSpeed = engine.movementLfoSpeed ?? 0.35;
-  const lfoDepth = engine.movementLfoDepth ?? 0.65;
+  const lfoDepth = engine.movementLfoDepth ?? 0.07;
   const lfoRandom = engine.movementLfoRandom ?? 50;
 
   if (lfoRandom <= 0.0001) {
@@ -387,7 +400,7 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
   }
 
   if (anyActive && lfoSpeed > 0.0001 && lfoDepth > 0.0001) {
-    const baseStep = 0.005 + lfoSpeed * 0.055;
+    const baseStep = 0.004 + lfoSpeed * 0.036;
     const cycleMult = engine.movementLfoCycleMult || 1.0;
     const nextPhase = (engine.movementLfoPhase || 0) + baseStep / cycleMult;
     const TWO_PI = Math.PI * 2.0;

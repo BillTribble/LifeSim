@@ -23,12 +23,13 @@ console.log("Starting Wind Motion & Hierarchical Branching Automated Tests...");
 // Test 1: Defaults & Ranges
 // ==========================================
 console.log("-> Test 1: Defaults & Ranges");
-assert(DEFAULTS.shimmer === 0.40, `Expected shimmer 0.40, got ${DEFAULTS.shimmer}`);
-assert(DEFAULTS.wavy === 0.35, `Expected wavy 0.35, got ${DEFAULTS.wavy}`);
-assert(DEFAULTS.branchMovement === 0.45, `Expected branchMovement 0.45, got ${DEFAULTS.branchMovement}`);
+assert(DEFAULTS.shimmer === 0.34, `Expected shimmer 0.34, got ${DEFAULTS.shimmer}`);
+assert(DEFAULTS.wavy === 0.40, `Expected wavy 0.40, got ${DEFAULTS.wavy}`);
+assert(DEFAULTS.branchMovement === 0.31, `Expected branchMovement 0.31, got ${DEFAULTS.branchMovement}`);
 assert(DEFAULTS.overallMovement === 0.25, `Expected overallMovement 0.25, got ${DEFAULTS.overallMovement}`);
 assert(DEFAULTS.movementLfoSpeed === 0.35, `Expected movementLfoSpeed 0.35, got ${DEFAULTS.movementLfoSpeed}`);
-assert(DEFAULTS.movementLfoDepth === 0.65, `Expected movementLfoDepth 0.65, got ${DEFAULTS.movementLfoDepth}`);
+assert(DEFAULTS.movementLfoDepth === 0.07, `Expected movementLfoDepth 0.07, got ${DEFAULTS.movementLfoDepth}`);
+assert(DEFAULTS.movementLfoPeak === 0.33, `Expected movementLfoPeak 0.33, got ${DEFAULTS.movementLfoPeak}`);
 assert(DEFAULTS.movementLfoRandom === 50, `Expected movementLfoRandom 50, got ${DEFAULTS.movementLfoRandom}`);
 
 const limits = DEFAULTS.dialLimits;
@@ -38,6 +39,7 @@ assert(limits.BRANCH_MOVE?.min === 0 && limits.BRANCH_MOVE?.max === 2, "BRANCH_M
 assert(limits.MOVEMENT?.min === 0 && limits.MOVEMENT?.max === 2, "MOVEMENT limits should be 0..2");
 assert(limits.LFO_SPEED?.min === 0 && limits.LFO_SPEED?.max === 2, "LFO_SPEED limits should be 0..2");
 assert(limits.LFO_DEPTH?.min === 0 && limits.LFO_DEPTH?.max === 2, "LFO_DEPTH limits should be 0..2");
+assert(limits.LFO_PEAK?.min === 0.05 && limits.LFO_PEAK?.max === 1.0, "LFO_PEAK limits should be 0.05..1.0");
 assert(limits.LFO_RAND?.min === 0 && limits.LFO_RAND?.max === 100, "LFO_RAND limits should be 0..100");
 console.log("   Test 1 Passed: Defaults & Ranges verified.");
 
@@ -221,31 +223,118 @@ assert(lfoZeroDepth.effectiveOverall === 0.5 && lfoZeroDepth.lfoDelta === 0.0, "
 
 // 7c. Positive-only swing across full 2*PI cycle (always more wind, never less!)
 const overallVal = 0.25;
-const depthVal = 0.65;
 const speedVal = 0.35;
-let minEffective = Infinity;
-let maxEffective = -Infinity;
-let minDelta = Infinity;
-let maxDelta = -Infinity;
+
+// 7c-i. Check new default depth = 0.07
+let minDeltaNew = Infinity;
+let maxDeltaNew = -Infinity;
+let minEffectiveNew = Infinity;
+let maxEffectiveNew = -Infinity;
 
 for (let p = 0; p <= Math.PI * 2; p += 0.05) {
   const res = computeLfoModulatedOverall({
     overallMovement: overallVal,
     movementLfoSpeed: speedVal,
-    movementLfoDepth: depthVal,
+    movementLfoDepth: 0.07,
     movementLfoPhase: p,
     movementLfoRandom: 50,
   });
-  if (res.effectiveOverall < minEffective) minEffective = res.effectiveOverall;
-  if (res.effectiveOverall > maxEffective) maxEffective = res.effectiveOverall;
-  if (res.lfoDelta < minDelta) minDelta = res.lfoDelta;
-  if (res.lfoDelta > maxDelta) maxDelta = res.lfoDelta;
+  if (res.effectiveOverall < minEffectiveNew) minEffectiveNew = res.effectiveOverall;
+  if (res.effectiveOverall > maxEffectiveNew) maxEffectiveNew = res.effectiveOverall;
+  if (res.lfoDelta < minDeltaNew) minDeltaNew = res.lfoDelta;
+  if (res.lfoDelta > maxDeltaNew) maxDeltaNew = res.lfoDelta;
 }
 
-assert(minDelta >= -1e-6, `Expected positive-only LFO delta (minDelta >= 0.0), got ${minDelta}`);
-assert(minEffective >= overallVal - 1e-6, `Expected minEffective >= base overall (${overallVal}), got ${minEffective}`);
-assert(maxDelta > 1.0, `Expected large positive LFO delta (> +1.0) at default depth=0.65, got ${maxDelta}`);
-assert(maxEffective > 1.25, `Expected peak effectiveOverall > 1.25 from base 0.25, got ${maxEffective}`);
+assert(minDeltaNew >= -1e-6, `Expected positive-only LFO delta at depth=0.07 (minDelta >= 0.0), got ${minDeltaNew}`);
+assert(minEffectiveNew >= overallVal - 1e-6, `Expected minEffective >= base overall (${overallVal}), got ${minEffectiveNew}`);
+assert(maxDeltaNew > 0.10, `Expected positive LFO delta > 0.10 at depth=0.07, got ${maxDeltaNew}`);
+
+// 7c-ii. Check high depth = 0.65
+let minDeltaHigh = Infinity;
+let maxDeltaHigh = -Infinity;
+let minEffectiveHigh = Infinity;
+let maxEffectiveHigh = -Infinity;
+
+for (let p = 0; p <= Math.PI * 2; p += 0.05) {
+  const res = computeLfoModulatedOverall({
+    overallMovement: overallVal,
+    movementLfoSpeed: speedVal,
+    movementLfoDepth: 0.65,
+    movementLfoPhase: p,
+    movementLfoRandom: 50,
+  });
+  if (res.effectiveOverall < minEffectiveHigh) minEffectiveHigh = res.effectiveOverall;
+  if (res.effectiveOverall > maxEffectiveHigh) maxEffectiveHigh = res.effectiveOverall;
+  if (res.lfoDelta < minDeltaHigh) minDeltaHigh = res.lfoDelta;
+  if (res.lfoDelta > maxDeltaHigh) maxDeltaHigh = res.lfoDelta;
+}
+
+assert(minDeltaHigh >= -1e-6, `Expected positive-only LFO delta at depth=0.65 (minDelta >= 0.0), got ${minDeltaHigh}`);
+assert(maxDeltaHigh > 1.0, `Expected large positive LFO delta (> +1.0) at depth=0.65, got ${maxDeltaHigh}`);
+assert(maxEffectiveHigh > 1.25, `Expected peak effectiveOverall > 1.25 from base 0.25 at depth=0.65, got ${maxEffectiveHigh}`);
+
+// 7c-ii. Squashed curved sine peak window & flat baseline lull
+const numSamples = 1000;
+let flatSamples = 0;
+let peakSamples = 0;
+let maxUnipolar = 0;
+let peakNormPhase = 0;
+
+for (let i = 0; i < numSamples; i++) {
+  const normP = i / numSamples;
+  const p = normP * Math.PI * 2.0;
+  const res = computeLfoModulatedOverall({
+    overallMovement: 0.5,
+    movementLfoSpeed: 0.35,
+    movementLfoDepth: 1.0,
+    movementLfoPeak: 0.33,
+    movementLfoPhase: p,
+    movementLfoRandom: 0,
+  });
+  if (res.lfoUnipolar === 0 && res.lfoDelta === 0) {
+    flatSamples++;
+  } else {
+    peakSamples++;
+    if (res.lfoUnipolar > maxUnipolar) {
+      maxUnipolar = res.lfoUnipolar;
+      peakNormPhase = normP;
+    }
+  }
+}
+
+const flatFraction = flatSamples / numSamples;
+assert(flatFraction >= 0.65 && flatFraction <= 0.69, `Expected ~2/3 flat baseline lull (~67%), got ${(flatFraction * 100).toFixed(1)}%`);
+assert(maxUnipolar > 0.99, `Squashed peak should reach > 0.99 unipolar, got ${maxUnipolar}`);
+assert(peakNormPhase >= 0.49 && peakNormPhase <= 0.51, `Peak should center at normPhase=0.50, got ${peakNormPhase}`);
+
+// Check rapid ramp-up: reaches >85% of peak within the first 1/3 of the peak window
+const oneThirdPeakPhase = (0.335 + 0.33 * 0.33) * Math.PI * 2.0;
+const oneThirdRes = computeLfoModulatedOverall({
+  overallMovement: 0.5,
+  movementLfoSpeed: 0.35,
+  movementLfoDepth: 1.0,
+  movementLfoPeak: 0.33,
+  movementLfoPhase: oneThirdPeakPhase,
+  movementLfoRandom: 0,
+});
+assert(oneThirdRes.lfoUnipolar > 0.85, `Rapid ramp-up should reach > 85% of peak in first 1/3 of peak window, got ${oneThirdRes.lfoUnipolar}`);
+
+// When movementLfoPeak = 1.0, peak spans the full cycle (no flat baseline)
+let fullCycleFlatSamples = 0;
+for (let i = 1; i < numSamples - 1; i++) {
+  const normP = i / numSamples;
+  const p = normP * Math.PI * 2.0;
+  const res = computeLfoModulatedOverall({
+    overallMovement: 0.5,
+    movementLfoSpeed: 0.35,
+    movementLfoDepth: 1.0,
+    movementLfoPeak: 1.0,
+    movementLfoPhase: p,
+    movementLfoRandom: 0,
+  });
+  if (res.lfoUnipolar === 0) fullCycleFlatSamples++;
+}
+assert(fullCycleFlatSamples === 0, `movementLfoPeak=1.0 should have active modulation throughout full cycle, got ${fullCycleFlatSamples} flat samples`);
 
 // 7d. Random % cycle length multiplier & cycle random roll
 assert(pickNextLfoCycleLengthMult(0, () => 0.9) === 1.0, "0% random must always yield cycle length mult 1.0");
@@ -268,7 +357,7 @@ const maxRandRes = computeLfoModulatedOverall({ overallMovement: 0.25, movementL
 assert(Math.abs(maxRandRes.cycleRandomInfluence - 1.0) < 1e-6, `100% random with 1.0 roll must yield 1.0 influence, got ${maxRandRes.cycleRandomInfluence}`);
 assert(Math.abs(maxRandRes.cycleGustMult - 1.85) < 1e-6, `100% random with 1.0 roll must yield 1.85x gust mult, got ${maxRandRes.cycleGustMult}`);
 
-console.log(`   Test 7 Passed: Positive-only LFO delta=[+${minDelta.toFixed(3)}, +${maxDelta.toFixed(2)}], effectiveOverall=[${minEffective.toFixed(3)}, ${maxEffective.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x], gust mult range=[1.00x..1.85x].`);
+console.log(`   Test 7 Passed: Positive-only LFO delta=[+${minDeltaNew.toFixed(3)}, +${maxDeltaNew.toFixed(2)}], effectiveOverall=[${minEffectiveNew.toFixed(3)}, ${maxEffectiveNew.toFixed(3)}], random cycle mult=[${shortCycle.toFixed(2)}x..${longCycle.toFixed(2)}x], gust mult range=[1.00x..1.85x].`);
 
 // ==========================================
 // Test 8: Hybridisation Artifacts Unaffected by Wind

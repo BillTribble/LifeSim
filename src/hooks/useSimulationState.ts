@@ -21,16 +21,17 @@ export { DEFAULTS, DEFAULT_PALETTE, CURRENT_SCHEMA };
 
 export function useSimulationState() {
   checkSchemaVersion();
-  if (!localStorage.getItem("lifesim_wind_v4_ready")) {
+  if (!localStorage.getItem("lifesim_wind_v6_ready")) {
     localStorage.setItem("shimmer", String(DEFAULTS.shimmer));
     localStorage.setItem("wavy", String(DEFAULTS.wavy));
     localStorage.setItem("branchMovement", String(DEFAULTS.branchMovement));
     localStorage.setItem("overallMovement", String(DEFAULTS.overallMovement));
     localStorage.setItem("movementLfoSpeed", String(DEFAULTS.movementLfoSpeed));
     localStorage.setItem("movementLfoDepth", String(DEFAULTS.movementLfoDepth));
+    localStorage.setItem("movementLfoPeak", String(DEFAULTS.movementLfoPeak));
     localStorage.setItem("movementLfoRandom", String(DEFAULTS.movementLfoRandom));
     localStorage.removeItem("dialLimits");
-    localStorage.setItem("lifesim_wind_v4_ready", "true");
+    localStorage.setItem("lifesim_wind_v6_ready", "true");
   }
 
   const [snakeSpeed, setSnakeSpeed] = useState(() => getStoredFloat("snakeSpeed"));
@@ -127,6 +128,7 @@ export function useSimulationState() {
   const [overallMovement, setOverallMovement] = useState(() => getStoredFloat("overallMovement", DEFAULTS.overallMovement));
   const [movementLfoSpeed, setMovementLfoSpeed] = useState(() => getStoredFloat("movementLfoSpeed", DEFAULTS.movementLfoSpeed));
   const [movementLfoDepth, setMovementLfoDepth] = useState(() => getStoredFloat("movementLfoDepth", DEFAULTS.movementLfoDepth));
+  const [movementLfoPeak, setMovementLfoPeak] = useState(() => getStoredFloat("movementLfoPeak", DEFAULTS.movementLfoPeak));
   const [movementLfoRandom, setMovementLfoRandom] = useState(() => getStoredFloat("movementLfoRandom", DEFAULTS.movementLfoRandom));
   const [leafScale, setLeafScale] = useState(() => getStoredFloat("leafScale"));
   const [leafDensity, setLeafDensity] = useState(() => getStoredFloat("leafDensity"));
@@ -271,6 +273,7 @@ export function useSimulationState() {
     overallMovement,
     movementLfoSpeed,
     movementLfoDepth,
+    movementLfoPeak,
     movementLfoRandom,
     leafScale,
     leafDensity,
@@ -424,6 +427,7 @@ export function useSimulationState() {
     },
     setMovementLfoSpeed,
     setMovementLfoDepth,
+    setMovementLfoPeak,
     setMovementLfoRandom,
     setLeafScale,
     setLeafDensity,

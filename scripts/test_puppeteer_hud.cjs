@@ -57,6 +57,7 @@ const puppeteer = require('puppeteer-core');
     const hasLfoHeader = content.includes('LFO (MOVEMENT)');
     const hasLfoSpeed = content.includes('LFO_SPEED');
     const hasLfoDepth = content.includes('LFO_DEPTH');
+    const hasLfoPeak = content.includes('LFO_PEAK');
     const hasLfoRand = content.includes('LFO_RAND');
     const hasLfoMeter = content.includes('lfo-action-meter') && (content.includes('LFO +') || content.includes('LFO &#43;'));
     const hasRandMeter = content.includes('lfo-random-meter') && (content.includes('CYC RAND') || content.includes('RAND'));
@@ -70,6 +71,7 @@ const puppeteer = require('puppeteer-core');
     console.log(' - Section header "LFO (MOVEMENT)":', hasLfoHeader);
     console.log(' - Dial "LFO_SPEED":', hasLfoSpeed);
     console.log(' - Dial "LFO_DEPTH":', hasLfoDepth);
+    console.log(' - Dial "LFO_PEAK":', hasLfoPeak);
     console.log(' - Dial "LFO_RAND":', hasLfoRand);
     console.log(' - Vertical Meter "LFO +":', hasLfoMeter);
     console.log(' - Vertical Meter "CYC RAND":', hasRandMeter);
@@ -88,7 +90,7 @@ const puppeteer = require('puppeteer-core');
       process.exit(1);
     }
 
-    if (!hasWindMotion || !hasShimmer || !hasWavy || !hasBranchMove || !hasMovement || !hasLfoHeader || !hasLfoSpeed || !hasLfoDepth || !hasLfoRand || !hasLfoMeter || !hasRandMeter) {
+    if (!hasWindMotion || !hasShimmer || !hasWavy || !hasBranchMove || !hasMovement || !hasLfoHeader || !hasLfoSpeed || !hasLfoDepth || !hasLfoPeak || !hasLfoRand || !hasLfoMeter || !hasRandMeter) {
       console.error('Failed: One or more wind motion / LFO elements missing in rendered HTML!');
       process.exit(1);
     }
