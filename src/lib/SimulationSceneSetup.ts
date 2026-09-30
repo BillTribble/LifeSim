@@ -17,7 +17,10 @@ import {
 } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { getHybridCooldownTicks, setSpeciesCooldown } from "./SimulationSeekRamp";
-import { buildBoundaryGeometry } from "./SimulationBoundary";
+import {
+  buildBoundaryGeometry,
+  applyResponsiveBoundaryCameraDistance,
+} from "./SimulationBoundary";
 import { assignGenomeMorphology, pickMorphModeForArchetype } from "./SimulationMorphology";
 import {
   resetCamera,
@@ -228,43 +231,17 @@ export function setupBoundarySquash(engine: SimulationEngine, val: number): void
 export function setupCameraProjection(engine: SimulationEngine, val: number): void {
   if (engine.cameraProjection === val) return;
   engine.cameraProjection = val;
-  if (engine.camera && engine.controls) {
-    const baseFOV = 45.0;
-    const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, val));
-    const distFactor = Math.tan((baseFOV * Math.PI) / 360) / Math.tan((targetFOV * Math.PI) / 360);
-    const dir = new THREE.Vector3().subVectors(engine.camera.position, engine.controls.target).normalize();
-    const baseDist = 137.42;
-    const newDist = baseDist * distFactor;
-    engine.camera.fov = targetFOV;
-    engine.camera.position.copy(engine.controls.target).addScaledVector(dir, newDist);
-    engine.camera.updateProjectionMatrix();
-
-    if (engine.scene && engine.scene.fog && engine.scene.fog instanceof THREE.Fog) {
-      engine.scene.fog.near = 120 * distFactor;
-      engine.scene.fog.far = (engine.fogVisibility || 800) * distFactor;
-    }
-    if (engine.ambientLight) {
-      engine.ambientLight.intensity = THREE.MathUtils.lerp(2.2, 1.2, val);
-    }
-    engine.controls.update();
+  if (engine.ambientLight) {
+    engine.ambientLight.intensity = THREE.MathUtils.lerp(2.2, 1.2, val);
   }
+  applyResponsiveBoundaryCameraDistance(engine);
 }
 
 export function setupBoundarySize(engine: SimulationEngine, val: number): void {
   if (engine.boundarySize === val) return;
   engine.boundarySize = val;
   engine.updateBoundaryMesh();
-  if (engine.camera && engine.controls) {
-    const dir = new THREE.Vector3().subVectors(engine.camera.position, engine.controls.target).normalize();
-    const baseFOV = 45.0;
-    const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, engine.cameraProjection));
-    const distFactor = Math.tan((baseFOV * Math.PI) / 360) / Math.tan((targetFOV * Math.PI) / 360);
-    const baseDist = val * 2.7484;
-    const newDist = baseDist * distFactor;
-    engine.camera.position.copy(engine.controls.target).addScaledVector(dir, newDist);
-    engine.camera.updateProjectionMatrix();
-    engine.controls.update();
-  }
+  applyResponsiveBoundaryCameraDistance(engine);
 }
 
 export function setupSceneBackground(engine: SimulationEngine, c: string): void {
@@ -294,8 +271,12 @@ export function setupFogColor(engine: SimulationEngine, c: string): void {
 export function setupFogVisibility(engine: SimulationEngine, val: number): void {
   engine.fogVisibility = val;
   if (engine.scene.fog) {
-    (engine.scene.fog as THREE.Fog).far = val;
-    (engine.scene.fog as THREE.Fog).near = Math.max(10, val / 4);
+    const dist = engine.camera && engine.controls
+      ? engine.camera.position.distanceTo(engine.controls.target)
+      : 137.42;
+    const fogScale = Math.max(1.0, dist / 137.42);
+    (engine.scene.fog as THREE.Fog).far = val * fogScale;
+    (engine.scene.fog as THREE.Fog).near = Math.max(10, val / 4) * fogScale;
   }
 }
 

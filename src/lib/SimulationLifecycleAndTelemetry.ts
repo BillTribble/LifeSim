@@ -2,12 +2,17 @@ import * as THREE from "three";
 import { SpeciesLifecycleState } from "./SimulationTypes";
 import { NOTE_NAMES } from "./SimulationSound";
 import { measureScreenFillSilhouette, ScreenFillData } from "./SimulationSilhouette";
+import {
+  getResponsiveBoundaryCameraDistance,
+  applyResponsiveBoundaryCameraDistance,
+  randomizeBoundaryShape,
+} from "./SimulationBoundary";
 import type { SimulationEngine } from "./SimulationEngine";
 
 export function resetCamera(engine: SimulationEngine): void {
   if (engine.camera && engine.controls) {
     const creatureCenterY = engine.designerMode ? 15.0 : (engine.creatureCenterY || 18.921075);
-    const camZ = engine.designerMode ? -95.0 : 137.42;
+    const camZ = engine.designerMode ? -95.0 : getResponsiveBoundaryCameraDistance(engine);
     const wasAutoRotate = engine.controls.autoRotate;
     engine.controls.autoRotate = false;
 
@@ -25,7 +30,7 @@ export function resetCamera(engine: SimulationEngine): void {
     engine.controls.update();
 
     engine.controls.autoRotate = wasAutoRotate;
-    engine.setCameraProjection(engine.cameraProjection);
+    applyResponsiveBoundaryCameraDistance(engine);
   }
 }
 
@@ -35,6 +40,7 @@ export function executeReset(engine: SimulationEngine): void {
   engine.lastKioskRealTime = performance.now();
   engine.kioskFadeProgress = 0;
   engine.kioskFadingOut = false;
+  randomizeBoundaryShape(engine);
   engine.resetCamera();
   engine.initAgents();
 }

@@ -3,7 +3,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SimulationEngine } from './SimulationEngine';
 import { MAX_POINTS } from './SimulationTypes';
 import { setupShaderMaterial, setupLeafShaderMaterial } from './SimulationGenetics';
-import { APPENDAGE_BUILDERS, buildVariants, registerLodMesh, stemGeometry } from './SimulationLOD';
+import { APPENDAGE_BUILDERS, buildVariants, registerLodMesh, stemGeometry, SHARED_INSTANCE_ATTRIBUTES } from './SimulationLOD';
+import { weldNonIndexedGeometry } from './SimulationVertexTrimmer';
+import { getResponsiveBoundaryCameraDistance } from './SimulationBoundary';
 
 export function setupSimulationScene(engine: SimulationEngine, width: number, height: number) {
     engine.width = width;
@@ -14,10 +16,10 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.scene.background = new THREE.Color(initialBgHex);
     engine.scene.fog = new THREE.Fog(initialBgHex, 120, 771.53);
     
-    const aspect = width / height;
+    const aspect = width / Math.max(1, height);
     const initCamX = 0;
     const initCamY = creatureCenterY;
-    const initCamZ = -137.42;
+    const initCamZ = -getResponsiveBoundaryCameraDistance(engine);
 
     engine.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
     engine.camera.position.set(initCamX, initCamY, initCamZ);
@@ -25,11 +27,11 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     
     try {
       engine.renderer = new THREE.WebGLRenderer({ canvas: engine.canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
-      engine.renderer.setSize(width, height);
-      engine.renderer.setPixelRatio(typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, 2) : 1);
+      const baseDpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+      engine.renderer.setPixelRatio(engine.isMobile ? Math.min(baseDpr, 1.25) : Math.min(baseDpr, 2));
       engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
       engine.controls.target.set(0, creatureCenterY, 0);
-      engine.camera.position.set(0, creatureCenterY, -137.42);
+      engine.camera.position.set(0, creatureCenterY, initCamZ);
       engine.camera.up.set(0, 1, 0);
       engine.camera.lookAt(engine.controls.target);
       engine.controls.enableDamping = true;
@@ -231,8 +233,9 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       mesh.geometry.setAttribute('instanceBranchAnchor', branchAnchorAttr);
     };
 
-    engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, MAX_POINTS);
-    initMeshAttributes(engine.cylinderMesh, MAX_POINTS);
+    const maxPts = engine.maxPoints || MAX_POINTS;
+    engine.cylinderMesh = new THREE.InstancedMesh(cylinderGeo, material, maxPts);
+    initMeshAttributes(engine.cylinderMesh, maxPts);
     registerLodMesh(engine, engine.cylinderMesh, stemVariants);
 
     const leafMaterial = setupLeafShaderMaterial(new THREE.MeshPhysicalMaterial({
@@ -264,7 +267,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       "curlyHair", "crystals", "spores", "scales", "spirals", "sparkles", "buds",
     ];
 
-    const appendageCount = Math.floor(MAX_POINTS / 4);
+    const appendageCount = Math.floor(maxPts / 4);
     for (const key of appendageKeys) {
         const variants = buildVariants(APPENDAGE_BUILDERS[key]);
         const useMat = (key === 'leaves' || key === 'ferns') ? leafMaterial : appendageMaterial;
@@ -308,7 +311,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
         const stellatedGeo = new THREE.BufferGeometry();
         stellatedGeo.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
         stellatedGeo.computeVertexNormals();
-        return stellatedGeo;
+        return weldNonIndexedGeometry(stellatedGeo);
     }
     
     const hybridGeos = [
@@ -334,6 +337,28 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
         mesh.count = 0;
         return mesh;
     });
+
+    if (engine.lod && engine.hybridMeshes.length >= 5) {
+      const hybridVariants: THREE.BufferGeometry[][] = [
+        [hybridGeos[0], hybridGeos[0], hybridGeos[0], hybridGeos[0]],
+        [hybridGeos[1], hybridGeos[1], hybridGeos[0], hybridGeos[0]],
+        [hybridGeos[2], hybridGeos[1], hybridGeos[0], hybridGeos[0]],
+        [hybridGeos[3], hybridGeos[2], hybridGeos[1], hybridGeos[0]],
+        [hybridGeos[4], hybridGeos[1], hybridGeos[0], hybridGeos[0]],
+      ];
+      engine.hybridMeshes.forEach((mesh, idx) => {
+        const vars = hybridVariants[idx];
+        for (const g of vars) {
+          if (g !== mesh.geometry) {
+            for (const attrName of SHARED_INSTANCE_ATTRIBUTES) {
+              const attr = mesh.geometry.getAttribute(attrName);
+              if (attr && !g.hasAttribute(attrName)) g.setAttribute(attrName, attr);
+            }
+          }
+        }
+        engine.lod?.hybridVariants.set(mesh, vars);
+      });
+    }
 
     const connectionGeo = new THREE.BufferGeometry();
     connectionGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60000), 3));

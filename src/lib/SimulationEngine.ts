@@ -40,7 +40,11 @@ import {
 } from "./SimulationSceneSetup";
 import { SimulationSound, SoundEnvironmentId } from "./SimulationSound";
 import { LodState, createLodState, updateAdaptiveLOD } from "./SimulationLOD";
+import { isMobileDevice, MOBILE_MAX_POINTS, MOBILE_DEFAULT_MAX_DOMS } from "./SimulationVertexTrimmer";
+import { applyResponsiveBoundaryCameraDistance, isMobileViewport } from "./SimulationBoundary";
 export class SimulationEngine {
+  isMobile: boolean = isMobileDevice();
+  maxPoints: number = isMobileDevice() ? MOBILE_MAX_POINTS : MAX_POINTS;
   scene: THREE.Scene = new THREE.Scene();
   camera!: THREE.PerspectiveCamera;
   renderer!: THREE.WebGLRenderer;
@@ -89,11 +93,11 @@ export class SimulationEngine {
   shimmer: number = 0.34;
   wavy: number = 0.40;
   branchMovement: number = 0.31;
-  overallMovement: number = 0.25;
-  movementLfoSpeed: number = 0.35;
+  overallMovement: number = 0.40;
+  movementLfoSpeed: number = 0.28;
   movementLfoDepth: number = 0.07;
-  public movementLfoPeak: number = 0.33;
-  movementLfoRandom: number = 50;
+  public movementLfoPeak: number = 0.48;
+  movementLfoRandom: number = 73;
   movementLfoPhase: number = 0.0;
   movementLfoCycleMult: number = 1.0;
   movementLfoCycleRand: number = 0.65;
@@ -170,7 +174,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.65;
+  leafScale: number = 0.7;
   leafDensity: number = 0.35;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
@@ -185,19 +189,19 @@ export class SimulationEngine {
   pruningStrength: number = 0.8;
   maxBranchDepth: number = 4;
   maxBranchesPerSpecies: number = 24;
-  maxDOMs: number = 32000;
-  lastMaxDOMs: number = 32000;
+  maxDOMs: number = isMobileDevice() ? MOBILE_DEFAULT_MAX_DOMS : 32000;
+  lastMaxDOMs: number = isMobileDevice() ? MOBILE_DEFAULT_MAX_DOMS : 32000;
   freeStemIndices: number[] = [];
   growingStems: Set<number> = new Set();
   lastStemIndex: number = 0;
   lastAgentStemIndex: Map<number, number> = new Map();
-  minCreatures: number = 4;
+  minCreatures: number = 7;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
-  boundarySize: number = 120;
+  boundarySize: number = 60;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxCreatures: number = 7;
+  maxCreatures: number = 12;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;
@@ -288,6 +292,7 @@ export class SimulationEngine {
     this.width = width;
     this.height = height;
     setupSimulationScene(this, width, height);
+    this.updateBoundaryMesh();
     // initAgents() is NOT called here — it is called explicitly in SimulationView
     // after all user settings have been applied to the engine.
   }
@@ -299,13 +304,13 @@ export class SimulationEngine {
   }
   cameraZoom: number = 1.15;
   cameraHeight: number = 75;
-  gridHeight: number = 80;
-  layerGap: number = 80;
-  floorHeight: number = 0;
-  ceilingHeight: number = 0;
+  gridHeight: number = 166;
+  layerGap: number = 166;
+  floorHeight: number = 6;
+  ceilingHeight: number = -38;
   cameraProjection: number = 1.0;
   ambientLight?: THREE.AmbientLight;
-  showBoundaryBox: boolean = false;
+  showBoundaryBox: boolean = true;
   boundaryMesh?: THREE.LineSegments;
   fadeProgress: number = 0;
   fadeState: "idle" | "out" | "in" = "idle";
@@ -360,7 +365,7 @@ export class SimulationEngine {
   setBoundarySize(val: number) { setupBoundarySize(this, val); }
   setBoundarySquash(val: number) { setupBoundarySquash(this, val); }
   setTideSpeed(val: number) { this.tideSpeed = val; }
-  setMaxDOMs(val: number) { this.maxDOMs = Math.min(val, MAX_POINTS); }
+  setMaxDOMs(val: number) { this.maxDOMs = Math.min(val, this.maxPoints); }
   setProbGlow(val: number) { this.probGlow = val; }
   setDesiccationSpeed(val: number) { this.desiccationSpeed = val; }
   setTimeScale(val: number) { this.timeScale = val; }
@@ -478,10 +483,12 @@ export class SimulationEngine {
     }
   }
   resize(width: number, height: number) {
+    if (width <= 0 || height <= 0) return;
     this.width = width;
     this.height = height;
+    this.isMobile = isMobileViewport(width);
     this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    applyResponsiveBoundaryCameraDistance(this);
     this.renderer.setSize(width, height);
   }
   addLineSegment(

@@ -405,10 +405,17 @@ export function SimulationView(props: SimulationViewProps) {
       }
     };
 
+    handleResize();
     window.addEventListener("resize", handleResize);
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => handleResize());
+      resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
       if (engineRef.current) {
         engineRef.current.stop();
         engineRef.current.renderer.dispose();
