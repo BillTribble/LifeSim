@@ -26,8 +26,8 @@ export const DEFAULTS: Record<string, any> = {
   "theme": 0,
   "timeScale": 1,
   "postMatingDieoff": true,
-  "rhizomeSpeed": 0.65,
-  "treeSpeed": 0.65,
+  "rhizomeSpeed": 0.8,
+  "treeSpeed": 0.8,
   "bushSpeed": 1.1,
   "bushStepSize": 0.8500000000000001,
   "treeStepSize": 0.6000000000000001,
@@ -67,7 +67,7 @@ export const DEFAULTS: Record<string, any> = {
   "tideThickness": 456.24642604695646,
   "tideOpacity": 0.25621486859877396,
   "tideSaturation": 0.5579982505111011,
-  "growthSpeed": 0.11,
+  "growthSpeed": 0.24,
   "widthGrowthEffect": 0,
   "diebackRate": 1.3182568226156233,
   "allowBreeding": true,
@@ -84,9 +84,9 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 51,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 7,
+  "maxCreatures": 12,
   "ecoFade": 0.02946475338922394,
-  "minCreatures": 4,
+  "minCreatures": 7,
   "boundarySize": 60,
   "boundarySquash": 1,
   "desiccationSpeed": 4.289796350823339,
@@ -105,12 +105,12 @@ export const DEFAULTS: Record<string, any> = {
   "shimmer": 0.34,
   "wavy": 0.40,
   "branchMovement": 0.31,
-  "overallMovement": 0.25,
-  "movementLfoSpeed": 0.35,
+  "overallMovement": 0.40,
+  "movementLfoSpeed": 0.28,
   "movementLfoDepth": 0.07,
-  "movementLfoPeak": 0.33,
-  "movementLfoRandom": 50,
-  "leafScale": 0.7000000000000001,
+  "movementLfoPeak": 0.48,
+  "movementLfoRandom": 73,
+  "leafScale": 0.7,
   "leafDensity": 0.35,
   "relativeLeafSizeDiff": 0.2,
   "leafGrowthSpeed": 0.0045,
@@ -139,9 +139,9 @@ export const DEFAULTS: Record<string, any> = {
   "floorHeight": 6,
   "ceilingHeight": -38,
   "cameraProjection": 1,
-  "showBoundaryBox": false,
-  "feelerFade": 10,
-  "feelerDelay": 6,
+  "showBoundaryBox": true,
+  "feelerFade": 8,
+  "feelerDelay": 3.5,
   "cullRate": 48.87,
   "glowTraitIntensity": 1.5,
   "glowTraitDistance": 50,
@@ -175,7 +175,7 @@ export const DEFAULTS: Record<string, any> = {
   "rotationVelocityY": 0,
   "swarmCohesion": 0.15,
   "detectionRange": 24,
-  "extrusionSpeed": 0.11,
+  "extrusionSpeed": 0.24,
   "fadeSpeed": 4.289796350823339,
   "pulseSpeed": 0.22800937123499115,
   "saturation": 0.3503112579376193,
@@ -187,7 +187,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-09-28-v1.1";
+export const CURRENT_SCHEMA = "2026-09-30-v1.3";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
@@ -218,9 +218,12 @@ export function getStoredFloat(key: string, fallback?: number): number {
     if (!isNaN(val)) {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
-      if (key === "minCreatures" && (val === 11 || val === 3 || val === 14)) return DEFAULTS.minCreatures;
-      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19)) return DEFAULTS.maxCreatures;
+      if (key === "minCreatures" && (val === 11 || val === 3 || val === 14 || val === 4)) return DEFAULTS.minCreatures;
+      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19 || val === 7)) return DEFAULTS.maxCreatures;
       if (key === "rotationSpeed" && val === 0.2) return DEFAULTS.rotationSpeed;
+      if ((key === "growthSpeed" || key === "extrusionSpeed") && Math.abs(val - 0.11) < 1e-6) return DEFAULTS.growthSpeed;
+      if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];
+      if (key === "feelerDelay" && val === 6) return DEFAULTS.feelerDelay;
       // Ecology-health migrations: legacy stored values that would defeat the clumping fixes
       if (key === "proximity" && val > 100) return DEFAULTS.proximity; // legacy 362 / 484 = whole world
       if (key === "maxMatings" && val === 6) return DEFAULTS.maxMatings; // old default

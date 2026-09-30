@@ -12,17 +12,17 @@ import type { SimulationEngine } from "./SimulationEngine";
  */
 
 /** No birth anywhere for this many growth steps = global drought (organisms become desperate). */
-export const DROUGHT_STEPS = 300;
+export const DROUGHT_STEPS = 75;
 /** Drought this long relaxes the parent/offspring and full-sibling mating block (contact still required). */
-export const INBREEDING_RELAX_DROUGHT_STEPS = 600;
+export const INBREEDING_RELAX_DROUGHT_STEPS = 110;
 /** Ratio culling spares an organism for this many growth steps after its birth or last mating. */
-export const RATIO_CULL_GRACE_STEPS = 300;
+export const RATIO_CULL_GRACE_STEPS = 180;
 /** A pair that already mated may mate again after this many growth steps. */
-export const REPEAT_PARTNER_COOLDOWN_STEPS = 450;
-/** Feeler reach grows from 0.4x to 0.6x world radius over this many steps without mating. */
-export const FEELER_REACH_GROWTH_STEPS = 600;
+export const REPEAT_PARTNER_COOLDOWN_STEPS = 80;
+/** Feeler reach grows from base to max world radius over this many steps without mating. */
+export const FEELER_REACH_GROWTH_STEPS = 160;
 
-const growth = (engine: SimulationEngine) => Math.max(1e-4, engine.growthSpeed || 0.11);
+const growth = (engine: SimulationEngine) => Math.max(1e-4, engine.growthSpeed || 0.24);
 
 /** Growth steps since the last birth anywhere (since the ecosystem started if none yet). */
 export function getStepsSinceLastBirth(engine: SimulationEngine): number {

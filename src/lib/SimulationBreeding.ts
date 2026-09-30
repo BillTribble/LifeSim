@@ -3,6 +3,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { breedGenomes } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
+import { inatService } from "./SimulationINatService";
 import {
   getFertilityMinTicks,
   getHybridCooldownTicks,
@@ -24,13 +25,13 @@ import {
   resolveRootOrganismGenome,
   spawnFeeler,
 } from "./SimulationFeelers";
-import { findNearestPartner, isOrganismMature } from "./SimulationPartnerSearch";
+import { findNearestPartner, getEffectiveMaxMatings, isOrganismMature } from "./SimulationPartnerSearch";
 import { clampInsideBounds } from "./SimulationBoundary";
 
 /** Max per-step lean of a tip toward a partner (seekAmount maps into 0.03..0.10). */
 const SEEK_LERP_MAX = 0.1;
 /** A tip must have grown this many steps before it can emit a feeler. */
-const FEELER_MIN_TIP_AGE_STEPS = 20;
+const FEELER_MIN_TIP_AGE_STEPS = 12;
 import { canEnterDeleting, isNextCullVictim, selectCullVictim } from "./SimulationCulling";
 export { canEnterDeleting } from "./SimulationCulling";
 
@@ -82,8 +83,8 @@ export function handleBreedingAndFeelers(
           (a.parentAgent && a.parentAgent.genome.name === evalGenome.name) ||
           a.genome.name === evalGenome.name),
     );
-  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
   const mCount = (engine as any).speciesLifecycleMap?.get(evalGenome.name)?.matingCount || agent.matingCount || 0;
+  const effectiveMaxM = getEffectiveMaxMatings(engine, mCount);
 
   const minGrowthTicks = getFertilityMinTicks(engine);
   const seekRamp = getSeekRamp(engine, agent, strainAge);
@@ -92,7 +93,7 @@ export function handleBreedingAndFeelers(
     !agent.tapering || (!agent.isFeeler && agent.thickness > 0.1 && mCount === 0);
   const isFertile =
     isViableBody &&
-    mCount < maxM &&
+    mCount < effectiveMaxM &&
     !speciesCooldownActive &&
     agent.cooldown <= 0 &&
     strainAge >= minGrowthTicks &&
@@ -102,7 +103,7 @@ export function handleBreedingAndFeelers(
     isFertile && !bredThisFrame.has(agent);
 
   if (canBreed) {
-    const found = findNearestPartner(engine, agent, i, activeAgents, bredThisFrame, evalGenome, maxM);
+    const found = findNearestPartner(engine, agent, i, activeAgents, bredThisFrame, evalGenome, effectiveMaxM);
     const bestPartner: any = found.bestPartner;
     const bestPartnerFertile = found.bestPartnerFertile;
     const nearestDistSq = found.nearestDistSq;
@@ -137,16 +138,18 @@ export function handleBreedingAndFeelers(
         }
       }
 
-      const feelerDelayTicks = ((engine as any).feelerDelay ?? 6.0) * 60;
-      const feelerProb = (engine as any).feelerProb ?? 0.45;
+      const broodMult = inatService.getBroodinessMultiplier();
+      const broodReachBoost = inatService.getSeekReachBoost();
+      const feelerDelayTicks = (((engine as any).feelerDelay ?? 3.5) * 60) / broodMult;
+      const feelerProb = ((engine as any).feelerProb ?? 0.45) * broodMult;
       const isPastDelay =
         strainAge >= feelerDelayTicks &&
         agent.age >= FEELER_MIN_TIP_AGE_STEPS; // agent.age is in growth steps, not ticks
-      const feelerThrottleTicks = Math.max(360, getHybridCooldownTicks(engine));
+      const feelerThrottleTicks = Math.max(120, getHybridCooldownTicks(engine) / broodMult);
       const isThrottled =
         engine.time - ((evalGenome as any).lastFeelerSpawnTime ?? -Infinity) <
         feelerThrottleTicks;
-      const feelerReach = getFeelerMaxReach(engine, evalGenome);
+      const feelerReach = getFeelerMaxReach(engine, evalGenome) * broodReachBoost;
       const canSpawnFeeler =
         engine.allowBreeding &&
         canBreed &&
@@ -161,9 +164,9 @@ export function handleBreedingAndFeelers(
         // Don't emit a feeler that is doomed from the start (its organism is the next cull victim)
         !isNextCullVictim(engine, activeAgents, nonTaperingStrains, evalGenome.name);
       if (canSpawnFeeler) {
-        const baseSpawnChance = isDesperate
-          ? Math.max(0.08 * reachMultiplier, 0.025 * feelerProb)
-          : 0.025 * feelerProb;
+        const baseSpawnChance = (isDesperate
+          ? Math.max(0.14 * reachMultiplier, 0.055 * feelerProb)
+          : 0.055 * feelerProb) * broodMult;
         // Roll runs once per growth step, which already scales with timeScale (no extra factor)
         if (distSq < feelerReach * feelerReach && isPastDelay && Math.random() < baseSpawnChance) {
           spawnFeeler(
@@ -189,16 +192,25 @@ export function handleBreedingAndFeelers(
       }
       if (canBreed && bestPartnerFertile && engine.allowBreeding && distSq < breedReach && !throttled) {
         const nearestPartner = bestPartner;
+        const parent1Genome = resolveRootOrganismGenome(agent, engine);
+        const parent2Genome = resolveRootOrganismGenome(nearestPartner, engine);
         let allowBreeding = true;
         if (nonTaperingStrains.size >= engine.maxCreatures) {
-          const parentAName = resolveRootOrganismGenome(agent, engine).name;
-          const parentBName = resolveRootOrganismGenome(nearestPartner, engine).name;
+          const parentAName = parent1Genome.name;
+          const parentBName = parent2Genome.name;
+          const lcMap = (engine as any).speciesLifecycleMap;
+          const excludeFirstTimeParents = new Set<string>();
+          if ((lcMap?.get(parentAName)?.matingCount || 0) === 0) excludeFirstTimeParents.add(parentAName);
+          if ((lcMap?.get(parentBName)?.matingCount || 0) === 0) excludeFirstTimeParents.add(parentBName);
 
-          const victimSpeciesName = selectCullVictim(engine, activeAgents, new Set([parentAName, parentBName]));
+          const victimSpeciesName =
+            selectCullVictim(engine, activeAgents, excludeFirstTimeParents) ||
+            selectCullVictim(engine, activeAgents, new Set(), "preferBredSmallest", true);
 
           if (victimSpeciesName) {
             const livingOrganisms = engine.getLivingOrganismCount();
             if (livingOrganisms - 1 >= engine.minCreatures) {
+              (engine as any)._lastSenescenceDeathTime = engine.time;
               engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
               nonTaperingStrains.delete(victimSpeciesName);
               engine.onLog(`Breeding recorded. Culling oldest species: ${victimSpeciesName}. (policy=preferBredSmallest)`);
@@ -218,8 +230,6 @@ export function handleBreedingAndFeelers(
 
         if (allowBreeding) {
           recordBirth(engine);
-          const parent1Genome = resolveRootOrganismGenome(agent, engine);
-          const parent2Genome = resolveRootOrganismGenome(nearestPartner, engine);
 
           const childGenome = breedGenomes(
             parent1Genome,
@@ -232,6 +242,7 @@ export function handleBreedingAndFeelers(
           );
           childGenome.createdAt = engine.time;
           childGenome.name = ensureUniqueStrainName(engine, childGenome.name);
+          (childGenome as any).inatCatalyst = inatService.getLatestSighting();
           if (typeof engine.initSpeciesLifecycle === "function") {
             engine.initSpeciesLifecycle(childGenome.name);
           }
@@ -389,15 +400,6 @@ export function handleBreedingAndFeelers(
 
           bredThisFrame.add(agent);
           bredThisFrame.add(nearestPartner);
-
-          if (engine.postMatingDieoff !== false) {
-            if (mCount1 >= maxM && canEnterDeleting(engine, activeAgents, 1)) {
-              engine.killSpecies(host1Strain, `mating completed ${maxM}x`);
-            }
-            if (mCount2 >= maxM && canEnterDeleting(engine, activeAgents, 1)) {
-              engine.killSpecies(host2Strain, `mating completed ${maxM}x`);
-            }
-          }
 
           if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: false, detail: "self" });
           if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: false, detail: "self" });

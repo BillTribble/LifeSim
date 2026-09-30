@@ -94,6 +94,35 @@ export function isOverSizeBudget(engine: SimulationEngine, strainName: string): 
 }
 
 /**
+ * Effective mating cap for a living organism: honors `engine.maxMatings`, but if the colony is
+ * still below `maxCreatures` or fewer than 3 living organisms have remaining matings, extends the
+ * cap by 1 so surviving organisms never become permanently sterile and freeze the ecosystem.
+ */
+export function getEffectiveMaxMatings(engine: SimulationEngine, strainMCount: number): number {
+  const maxM = engine.maxMatings !== undefined ? Math.max(1, engine.maxMatings) : 1;
+  if (strainMCount < maxM) return maxM;
+  const livingSet =
+    typeof engine.getLivingOrganisms === "function" ? engine.getLivingOrganisms() : undefined;
+  const livingCount = livingSet
+    ? livingSet.size
+    : typeof engine.getLivingOrganismCount === "function"
+      ? engine.getLivingOrganismCount()
+      : 2;
+  if (livingCount < (engine.maxCreatures || 7)) {
+    return Math.max(maxM, strainMCount + 1);
+  }
+  const lifecycle = (engine as any).speciesLifecycleMap;
+  if (livingSet && lifecycle) {
+    let fertilePool = 0;
+    for (const s of livingSet) {
+      if ((lifecycle.get(s)?.matingCount || 0) < maxM) fertilePool++;
+    }
+    if (fertilePool < 3) return Math.max(maxM, strainMCount + 1);
+  }
+  return maxM;
+}
+
+/**
  * True once an organism may mate: past the hybridCooldown delay, at least
  * FERTILITY_MIN_GROWTH_STEPS of growth, and at least FERTILITY_MIN_SEGMENTS of live tissue.
  */
@@ -166,8 +195,9 @@ export function findNearestPartner(
     if (lockedTarget && pg.name !== lockedTarget) continue;
 
     const partnerMCount = lifecycle?.get(pg.name)?.matingCount || partner.matingCount || 0;
+    const partnerMaxM = Math.max(maxM, getEffectiveMaxMatings(engine, partnerMCount));
     const partnerViable = !partner.tapering || (partner.thickness > 0.1 && partnerMCount === 0);
-    if (!partnerViable || partnerMCount >= maxM || bredThisFrame.has(partner)) continue;
+    if (!partnerViable || partnerMCount >= partnerMaxM || bredThisFrame.has(partner)) continue;
     if (!areStrainsCompatibleForMating(engine, evalGenome.name, evalGenome, pg.name, pg)) continue;
 
     const partnerStrainAge = pg.createdAt !== undefined ? engine.time - pg.createdAt : engine.time;
