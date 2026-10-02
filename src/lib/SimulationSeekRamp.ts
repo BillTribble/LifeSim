@@ -61,12 +61,12 @@ export function getArchetypeSpeed(engine: SimulationEngine, archetype?: string):
 /** Nominal growth steps an organism has taken: ageTicks x growthSpeed x archetype speed. */
 export function getOrganismGrowthSteps(engine: SimulationEngine, genome: any): number {
   const ageTicks = genome?.createdAt !== undefined ? engine.time - genome.createdAt : engine.time;
-  return Math.max(0, ageTicks) * (engine.growthSpeed || 0.24) * getArchetypeSpeed(engine, genome?.archetype);
+  return Math.max(0, ageTicks) * (engine.growthSpeed || 0.06) * getArchetypeSpeed(engine, genome?.archetype);
 }
 
 /** Converts growth steps to engine ticks for an organism of this archetype. */
 export function growthStepsToTicks(engine: SimulationEngine, steps: number, archetype?: string): number {
-  return steps / Math.max(1e-4, (engine.growthSpeed || 0.24) * getArchetypeSpeed(engine, archetype));
+  return steps / Math.max(1e-4, (engine.growthSpeed || 0.06) * getArchetypeSpeed(engine, archetype));
 }
 
 /** Post-mating cooldown in ticks: at least hybridCooldown, and at least POST_MATING_COOLDOWN_STEPS of growth. */
@@ -78,19 +78,24 @@ export function getPostMatingCooldownTicks(engine: SimulationEngine, genome: any
 }
 
 /** Birth interval (growth steps) at/below minCreatures and at maxCreatures; interpolated between. */
-export const BIRTH_INTERVAL_MIN_STEPS = 14;
-export const BIRTH_INTERVAL_MAX_STEPS = 65;
+export const BIRTH_INTERVAL_MIN_STEPS = 10;
+export const BIRTH_INTERVAL_MAX_STEPS = 42;
 
 /**
- * Global birth throttle, population-dependent: a sparse world refills quickly, and a full world
- * maintains a steady ~6-10s cadence of new births and turnover at speed=1.
+ * Global birth throttle, population-dependent: a sparse world refills steadily, and a full world
+ * maintains a gentle ambient cadence of new births and turnover at speed=1.
  */
 export function getBirthIntervalTicks(engine: SimulationEngine): number {
-  const minC = engine.minCreatures ?? 4;
-  const maxC = Math.max(minC + 1, engine.maxCreatures || 7);
-  const frac = Math.min(1, Math.max(0, (getLivingCountCached(engine) - minC) / (maxC - minC)));
-  const steps = BIRTH_INTERVAL_MIN_STEPS + (BIRTH_INTERVAL_MAX_STEPS - BIRTH_INTERVAL_MIN_STEPS) * Math.pow(frac, 1.2);
-  return steps / Math.max(1e-4, engine.growthSpeed || 0.24);
+  const isSoft = !!(engine as any)._isSoftwareRaster;
+  const minC = isSoft ? Math.min(3, engine.minCreatures ?? 9) : (engine.minCreatures ?? 9);
+  const maxC = isSoft ? Math.max(minC + 1, Math.min(4, engine.maxCreatures || 15)) : Math.max(minC + 1, engine.maxCreatures || 15);
+  const living = getLivingCountCached(engine);
+  const frac = Math.min(1, Math.max(0, (living - minC) / (maxC - minC)));
+  const minSteps = minC > 8 && living < minC
+    ? Math.max(4, Math.round(BIRTH_INTERVAL_MIN_STEPS * (6 / minC)))
+    : BIRTH_INTERVAL_MIN_STEPS;
+  const steps = minSteps + (BIRTH_INTERVAL_MAX_STEPS - minSteps) * Math.pow(frac, 1.2);
+  return steps / Math.max(1e-4, engine.growthSpeed || 0.06);
 }
 
 export function isBirthThrottled(engine: SimulationEngine): boolean {

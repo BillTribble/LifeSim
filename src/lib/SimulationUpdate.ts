@@ -8,6 +8,7 @@ import {
   performCapacityCulling,
 } from "./SimulationEcology";
 import { performBranchPruning } from "./SimulationPruning";
+import { pruneAndCompactGeometry } from "./SimulationTrianglePruner";
 import { isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { emitStateUpdate } from "./SimulationSceneSetup";
 import { emitHealthTelemetry, sweepGhostStrains } from "./SimulationHealth";
@@ -164,49 +165,23 @@ export function updateSimulation(engine: SimulationEngine) {
     }
   }
 
-  for (let i = 0; i < activeAgents.length; i++) {
-    const a1 = activeAgents[i];
-    if (!a1.active || a1.tapering) continue;
-
-    for (let j = i + 1; j < activeAgents.length; j++) {
-      const a2 = activeAgents[j];
-      if (!a2.active || a2.tapering) continue;
-
-      // Newborn guard (matches SimulationPruning): sibling tips at a birth point must not be
-      // merged and capped within milliseconds, which left tiny stubs at mating sites.
-      // Scoped to newborn ORGANISMS: a per-tip age guard also stopped the normal merging of fresh
-      // sibling tips everywhere and multiplied tip counts ~25x.
-      if (a1.genome.name === a2.genome.name && getOrganismGrowthSteps(engine, a1.genome) < NEWBORN_MERGE_GUARD_STEPS) continue;
-      if (a1.genome.name === a2.genome.name && !isTreeModelAgent(a1) && a1.genome.archetype !== "bush") {
-        const dSq = a1.position.distanceToSquared(a2.position);
-        if (dSq < 25) {
-          const activeStrainsCount = strainCounts.size || 1;
-          const minPerStrain = Math.max(1, Math.floor(engine.minCreatures / activeStrainsCount));
-          const myStrainCount = strainCounts.get(a2.genome.name) || 1;
-
-          if (currentActiveCount - 1 >= engine.minCreatures && myStrainCount > minPerStrain) {
-            const combinedThickness = a1.thickness + a2.thickness * 0.4;
-            a1.thickness = Math.min(
-              combinedThickness,
-              a1.genome.thicknessBase * 3.0,
-            );
-            a1.direction.add(a2.direction).normalize();
-            extrudePointedTerminalCap(engine, a2, a2.genome, a2.thickness);
-            a2.active = false;
-            a2.tapering = false;
-            currentActiveCount--;
-            strainCounts.set(a2.genome.name, myStrainCount - 1);
-            engine.onLog(`Branch Merge: ${a1.genome.name}`);
-            break;
-          }
-        }
-      }
-    }
-  }
-
   performBranchPruning(engine, activeAgents);
 
   processAgents(engine, activeAgents, newAgents, bredThisFrame);
+
+  const isSoft = (engine as any)._isSoftwareRaster;
+  const p = (engine as any)._prunePressure ?? 0.0;
+  const maxC = Math.max(12, engine.maxCreatures || 15);
+  const desktopMaxLive = Math.max(140, Math.round(maxC * 10));
+  const maxLiveAgents = isSoft ? 22 : (p >= 0.5 ? Math.max(64, maxC * 5) : desktopMaxLive);
+  const growingCount = engine.agents.filter(a => a.active && !a.treeDormant && !a.tapering).length;
+  if (growingCount + newAgents.length > maxLiveAgents) {
+    const allowed = Math.max(0, maxLiveAgents - growingCount);
+    const nonFeelers = newAgents.filter(a => !a.isFeeler);
+    const feelers = newAgents.filter(a => a.isFeeler);
+    newAgents = [...nonFeelers, ...feelers.slice(0, Math.max(0, allowed - nonFeelers.length))];
+  }
+
   newAgents.forEach(a => {
     if (a.id === undefined) {
       a.id = engine.nextAgentId++;
@@ -230,6 +205,7 @@ export function updateSimulation(engine: SimulationEngine) {
   const activeNotTapering = engine.agents.filter(a => !a.tapering && !a.isFeeler && a.hasBred);
 
   performCapacityCulling(engine, activeNotTapering);
+  pruneAndCompactGeometry(engine);
 
   // Periodic archetype census breakdown logged every 300 frames (~5s)
   if (engine.frameCount % 300 === 0 && activeNotTapering.length > 0) {
@@ -272,7 +248,8 @@ export function updateSimulation(engine: SimulationEngine) {
     let dyingSegs = engine.dyingStems.size;
     let emptySlots = 0;
     const strainLiveSegs: Record<string, number> = {};
-    for (let i = 0; i < engine.maxDOMs; i++) {
+    const scanLim = Math.min(engine.pointCount, engine.maxDOMs);
+    for (let i = 0; i < scanLim; i++) {
       if (engine.segments[i]) {
         if (!engine.dyingStems.has(i)) {
           liveSegs++;

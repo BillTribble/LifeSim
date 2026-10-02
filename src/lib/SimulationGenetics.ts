@@ -40,6 +40,7 @@ export function setupShaderMaterial(
   material.userData.themeColor2_A = { value: new THREE.Color() };
   material.userData.themeColor1_B = { value: new THREE.Color() };
   material.userData.themeColor2_B = { value: new THREE.Color() };
+  material.userData.uLodLevel = { value: 0.0 };
 
   material.onBeforeCompile = (shader) => {
     bindWindUniformsToShader(shader, material);
@@ -50,6 +51,7 @@ export function setupShaderMaterial(
     shader.uniforms.themeColor2_A = material.userData.themeColor2_A;
     shader.uniforms.themeColor1_B = material.userData.themeColor1_B;
     shader.uniforms.themeColor2_B = material.userData.themeColor2_B;
+    shader.uniforms.uLodLevel = material.userData.uLodLevel;
 
     const leafUVDecl = isLeaf ? 'varying vec3 vLeafUV;' : '';
     const leafFragDecl = isLeaf ? 'varying vec3 vLeafUV;\nuniform float veinStrength;\nuniform float veinGlow;\nuniform float uLodLevel;' : '';
@@ -64,6 +66,8 @@ export function setupShaderMaterial(
     // Expose Attributes & Wind Motion
     shader.vertexShader = `
             ${WIND_VERTEX_DECLARATIONS}
+            uniform float uLodLevel;
+            #define uGlobalTime uWindTime
             attribute vec4 instancePackA;
             attribute vec4 instancePackB;
             attribute vec3 instanceAmbientReflect;
@@ -76,6 +80,7 @@ export function setupShaderMaterial(
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
+            varying float vCamDist;
             ${leafUVDecl}
             ${shader.vertexShader}
         `.replace(
@@ -109,6 +114,11 @@ export function setupShaderMaterial(
                float taperFactor = clamp(1.0 - abs(transformed.z), 0.0, 1.0);
                transformed.x *= taperFactor;
                transformed.y *= taperFactor;
+             } else {
+               float startRatio = clamp(instancePackB.z, 0.55, 2.2);
+               float frustumTaper = mix(startRatio, 1.0, clamp(transformed.z, 0.0, 1.0));
+               transformed.x *= frustumTaper;
+               transformed.y *= frustumTaper;
              }` : ''}`
     ).replace(
       "#include <project_vertex>",
@@ -124,6 +134,7 @@ export function setupShaderMaterial(
       #endif
       ${enableWind ? 'mvPosition.xyz += computeNaturalWindDisplacement(mvPosition.xyz, mvPosition.xyz - attachWorldPos, attachWorldPos, instancePackA.w);' : ''}
       mvPosition = modelViewMatrix * mvPosition;
+      vCamDist = length(mvPosition.xyz);
       gl_Position = projectionMatrix * mvPosition;`
     );
 
@@ -145,6 +156,7 @@ export function setupShaderMaterial(
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
+            varying float vCamDist;
             ${leafFragDecl}
             ${shader.fragmentShader}
         `.replace(
@@ -183,6 +195,12 @@ export function setupShaderMaterial(
              // === VEINS & CENTRAL SPINE (MIDRIB) ===
              // Normalize veinStrength (0-15 range) to 0-1 for color/glow operations
              float veinColorIntensity = clamp(veinStrength / 3.0, 0.0, 1.0);
+             float phaseDither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + vHash * 19.19) * 43758.5453);
+             float leafDetailFade = clamp(vAmbientReflect.x, 0.0, 1.0);
+             float detailFactor = 1.0 - leafDetailFade;
+             float lodVeinPhase = detailFactor * (1.0 - smoothstep(2.1, 2.9, uLodLevel * leafDetailFade));
+             float lodShadowPhase = detailFactor * (1.0 - smoothstep(1.2, 2.2, uLodLevel * leafDetailFade));
+             float lodBumpPhase = detailFactor * (1.0 - smoothstep(0.6, 1.5, uLodLevel * leafDetailFade));
 
              // Blend midrib between soft (veinGlow = 0.0) and crisp/bold (veinGlow = 1.0)
              float midribWidthSoft = mix(0.12, 0.04, vLeafUV.z);
@@ -199,7 +217,7 @@ export function setupShaderMaterial(
              float lateralVal = 0.0;
              float shadowMask = 0.0;
 
-             if (vLeafUV.y > 0.0 && uLodLevel < 2.5) {
+             if (vLeafUV.y > 0.0 && lodVeinPhase > 0.01) {
                  // Genetic variations per species/leaf instance
                  float veinDensity = 4.0 + floor(fract(vHash * 17.3) * 5.0); // 4 to 9 veins
                  float veinAngle = 0.2 + fract(vHash * 29.7) * 0.4;        // 0.2 to 0.6 slope
@@ -215,14 +233,16 @@ export function setupShaderMaterial(
                  float latThickCrisp = mix(0.014, 0.006, vLeafUV.y) * (1.0 - 0.2 * abs(vLeafUV.x)) * (1.0 + veinStrength * 0.05);
                  float lateralValSoft = smoothstep(latThickSoft, latThickSoft * 0.1, distToVeinLine);
                  float lateralValCrisp = step(distToVeinLine, latThickCrisp);
-                 lateralVal = mix(lateralValSoft, lateralValCrisp, veinGlow);
+                 float veinDissolve = clamp(lodVeinPhase * 0.7 + (lodVeinPhase > phaseDither ? 0.3 : 0.0), 0.0, 1.0);
+                 lateralVal = mix(lateralValSoft, lateralValCrisp, veinGlow) * veinDissolve;
 
-                 // Blend lateral shadows (Tiers 0-1; skipped at Tier 2 to save fragment ALU)
-                 if (uLodLevel < 1.5) {
+                 // Blend lateral shadows smoothly with dither dissolve between phases
+                 if (lodShadowPhase > 0.01) {
                      float shadowThickSoft = mix(0.022, 0.009, vLeafUV.y);
                      float shadowMaskSoft = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValSoft);
                      float shadowMaskCrisp = smoothstep(shadowThickSoft, 0.0, distToVeinLine) * (1.0 - lateralValCrisp);
-                     shadowMask = mix(shadowMaskSoft, shadowMaskCrisp, veinGlow);
+                     float shadowDissolve = clamp(lodShadowPhase * 0.7 + (lodShadowPhase > phaseDither ? 0.3 : 0.0), 0.0, 1.0);
+                     shadowMask = mix(shadowMaskSoft, shadowMaskCrisp, veinGlow) * shadowDissolve;
                  }
 
                  // Fade near margins so they don't run off harshly
@@ -245,10 +265,9 @@ export function setupShaderMaterial(
              #endif
 
              // === Screen-Space Normal Perturbation (Bump Mapping) ===
-             // Scale normal perturbation intensity by veinGlow morph slider
-             // View-only LOD: derivative bump mapping is skipped at medium detail and below.
+             // Smoothly dissolve derivative bump mapping across LOD / distance phases
              float bumpH = finalVeinMask * veinStrength * mix(0.18, 0.45, veinGlow); 
-             if (uLodLevel < 0.5) {
+             if (lodBumpPhase > 0.01) {
              vec3 dpdx = dFdx(-vViewPosition);
              vec3 dpdy = dFdy(-vViewPosition);
              float dhdx = dFdx(bumpH);
@@ -258,7 +277,8 @@ export function setupShaderMaterial(
              float denom = dot(dpdx, r2);
              if (abs(denom) > 0.00001) {
                  vec3 surfGrad = (r1 * dhdx + r2 * dhdy) / denom;
-                 perturbedNormal = normalize(perturbedNormal - surfGrad * mix(0.35, 0.6, veinGlow));
+                 float bumpDissolve = clamp(lodBumpPhase * 0.75 + (lodBumpPhase > phaseDither ? 0.25 : 0.0), 0.0, 1.0);
+                 perturbedNormal = normalize(perturbedNormal - surfGrad * mix(0.35, 0.6, veinGlow) * bumpDissolve);
              }
              }
 
@@ -319,12 +339,15 @@ export function setupShaderMaterial(
                  diffuseColor.rgb += diffuseColor.rgb * (vGlowTrait * intrinsicMult + fresnelTrait * 1.5 * intrinsicMult);
              }
              
-             // Environmental proximity directional reflection
-             if (length(vAmbientReflect) > 0.0) {
+             ${!isLeaf ? `
+             // Environmental proximity directional reflection (smoothly dissolved by distance)
+             if (length(vAmbientReflect) > 0.0 && vCamDist < 195.0) {
+                 float reflWeight = 1.0 - smoothstep(135.0, 195.0, vCamDist);
                  float nDotL = max(dot(normalize(vNormal), normalize(vLightDir)), 0.0);
                  float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
-                 diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4);
+                 diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4) * reflWeight;
              }
+             ` : ''}
              ${enableWind ? WIND_FRAGMENT_SHIMMER : ''}
              `
     ).replace(
@@ -365,7 +388,6 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
       uniform float botanyRealism;
       uniform float stemCurviness;
       uniform float veinStrength;
-      uniform float uLodLevel;
       ${shader.vertexShader}
     `.replace(
       "#include <begin_vertex>",
@@ -546,27 +568,33 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
        }
 
        // === 3. PERMANENT 3D MATURE STRUCTURE (blade only) ===
+       // Close leaves retain full 3D sculpt & lateral vein ridges; distant leaves smoothly fade over 3 seconds.
+       float leafDetailFadeVert = clamp(instanceAmbientReflect.x, 0.0, 1.0);
+       float closeDetailVert = 1.0 - leafDetailFadeVert;
+       float sculptRetention = mix(0.35, 1.0, closeDetailVert);
+
        // Deep Crease: sharp V-crease along the midrib seam
-       float creaseStrength = 0.38 * (1.0 - instanceSucculence * 0.6 * botanyRealism);
+       float creaseStrength = 0.38 * (1.0 - instanceSucculence * 0.6 * botanyRealism) * sculptRetention;
        float midribFold = creaseStrength * (1.0 - abs(position.x) * 2.0);
        transformed.z += midribFold * U * isBlade;
 
        // Organic Edge Cupping: lateral margins curl upward or downward
        float cupSign = (instanceHash > 0.5) ? 1.0 : -1.0;
-       float cupStrength = 0.32 * (1.0 - instanceSucculence * 0.7 * botanyRealism);
+       float cupStrength = 0.32 * (1.0 - instanceSucculence * 0.7 * botanyRealism) * sculptRetention;
        float cup = cupSign * cupStrength * (1.0 - cos(position.x * 3.14159)) * U * isBlade;
        transformed.z += cup;
 
        // === 3.5 VEIN 3D RIDGE DISPLACEMENT ===
-       // Preserved across all LOD tiers so leaf 3D volume never collapses when LOD steps down.
        if (isBlade > 0.5 && veinStrength > 0.0) {
            // --- Midrib: wide, tapered central ridge (all tiers) ---
            float midribWidth = mix(0.12, 0.04, bladeT);
            float midribVal = smoothstep(midribWidth, midribWidth * 0.2, abs(position.x * 2.0));
            
-           // --- Lateral veins: individual angled ridges at Tiers 0-1, smooth volume envelope at Tiers 2-3 ---
-           float lateralVal = 0.0;
-           if (uLodLevel < 1.5) {
+           // --- Lateral veins: smoothly cross-dissolve over 3s between individual angled ridges (close) and smooth volume envelope (distant) ---
+           float ridgeEnv = 0.42 * smoothstep(1.0, 0.15, abs(position.x * 2.0)) * sin(bladeT * 3.14159);
+           float lateralVal = ridgeEnv;
+           float ridgePhase = closeDetailVert * (1.0 - smoothstep(1.4, 2.6, uLodLevel * leafDetailFadeVert));
+           if (ridgePhase > 0.01) {
                float veinDensity = 4.0 + floor(fract(instanceHash * 17.3) * 5.0);
                float veinAngle = 0.2 + fract(instanceHash * 29.7) * 0.4;
                
@@ -575,22 +603,21 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
                float distToVeinLine = abs(cellCoord - 0.5) / veinDensity;
                
                float latThick = mix(0.035, 0.015, bladeT) * (1.0 - 0.3 * abs(position.x * 2.0));
-               lateralVal = smoothstep(latThick, latThick * 0.15, distToVeinLine);
-               lateralVal *= smoothstep(1.0, 0.8, abs(position.x * 2.0));
-               lateralVal *= smoothstep(1.0, 0.85, bladeT) * smoothstep(0.0, 0.1, bladeT);
-           } else {
-               lateralVal = 0.42 * smoothstep(1.0, 0.15, abs(position.x * 2.0)) * sin(bladeT * 3.14159);
+               float detLat = smoothstep(latThick, latThick * 0.15, distToVeinLine);
+               detLat *= smoothstep(1.0, 0.8, abs(position.x * 2.0));
+               detLat *= smoothstep(1.0, 0.85, bladeT) * smoothstep(0.0, 0.1, bladeT);
+               lateralVal = mix(ridgeEnv, detLat, ridgePhase);
            }
            
            float finalVeinMask = max(midribVal, lateralVal);
            
            // Valley depressions between veins for pocketed look
            float valleyMask = (1.0 - finalVeinMask) * isBlade;
-           float valleyDepth = 0.04 * valleyMask * veinStrength * U;
+           float valleyDepth = 0.04 * valleyMask * veinStrength * U * mix(0.4, 1.0, closeDetailVert);
            
-           // Strong ridge protrusion: midrib stands out boldly, laterals clearly visible
+           // Strong ridge protrusion: midrib stands out boldly, laterals clearly visible on close leaves
            float midribDisp = mix(0.12, 0.05, bladeT) * midribVal;
-           float lateralDisp = 0.05 * lateralVal;
+           float lateralDisp = 0.05 * lateralVal * mix(0.35, 1.0, closeDetailVert);
            float ridgeHeight = (midribDisp + lateralDisp) * veinStrength * U;
            
            // Push vein ridges outward on both faces, pull valleys inward
@@ -640,10 +667,10 @@ export function setupLeafShaderMaterial(material: THREE.MeshPhysicalMaterial) {
            transformed.z = rz_curl;
        }
 
-       // Wavy Margin Wiggles: detailed ripples along the outer edges of the blade
+       // Wavy Margin Wiggles: detailed ripples along the outer edges of close blades, smoothly faded on distant ones
        float rippleFreq = 10.0 + instanceHash * 6.0;
        float rippleWave = sin(bladeT * rippleFreq + instanceHash * 6.28) * 0.07 * abs(position.x);
-       transformed.z += rippleWave * U * isBlade * mix(1.0, 0.35, step(2.5, uLodLevel));
+       transformed.z += rippleWave * U * isBlade * mix(0.25, 1.0, closeDetailVert);
 
        // === STEM CURVING & RIGID BLADE ROTATION/TRANSLATION ===
        // Compute stem-deformed position

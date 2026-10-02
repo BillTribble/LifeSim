@@ -120,21 +120,11 @@ export function performBranchPruning(
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];
     const arch = firstAgent.genome.archetype || "bush";
-    // Trees, rhizomes, and bushes self-limit through their respective architecture models
-    if (
-      firstAgent.genome.archetype === "tree" ||
-      firstAgent.genome.archetype === "rhizome" ||
-      firstAgent.genome.growthHabit === "rhizome_web" ||
-      firstAgent.genome.archetype === "bush"
-    ) {
-      continue;
-    }
-
-    let minFloor = 1;
-    if (arch === "bush") minFloor = engine.bushMinBranches ?? 2;
-    else if (arch === "rhizome") minFloor = engine.rhizomeMinBranches ?? 6;
-    else if (arch === "tree") minFloor = engine.treeMinBranches ?? 1;
-    else if (arch === "snake") minFloor = engine.snakeMinBranches ?? 1;
+    let minFloor = 2;
+    if (arch === "bush") minFloor = Math.max(2, engine.bushMinBranches ?? 2);
+    else if (arch === "rhizome") minFloor = Math.max(2, engine.rhizomeMinBranches ?? 6);
+    else if (arch === "tree") minFloor = Math.max(2, engine.treeMinBranches ?? 2);
+    else if (arch === "snake") minFloor = Math.max(2, engine.snakeMinBranches ?? 1);
 
     // 1. DEPTH SIMPLIFICATION:
     // Prune peripheral branches that exceed maxBranchDepth (eliminates tangled fractal fuzz)
@@ -154,22 +144,33 @@ export function performBranchPruning(
 
     // 2. CAPACITY / QUOTA SIMPLIFICATION:
     // Keep active branch tips within a balanced botanical quota
-    let targetBranchLimit = getMaxBranchesForArchetype(engine, arch);
+    const pruneP = (engine as any)._prunePressure ?? 0.3;
+    const avgPos = firstAgent.position;
+    const camRef = engine.camera ? Math.max(60, engine.camera.position.distanceTo(engine.controls?.target || new THREE.Vector3(0, 18.92, 0))) : 120;
+    const distRatio = engine.camera ? avgPos.distanceTo(engine.camera.position) / camRef : 1.0;
+    const distPenalty = Math.max(0.45, 1.0 / Math.max(0.75, distRatio));
+    let targetBranchLimit = Math.max(
+      minFloor,
+      Math.round(getMaxBranchesForArchetype(engine, arch) * (1.0 - pruneP * 0.65) * distPenalty),
+    );
     if (lineLoad > 0.65) {
       const loadPenalty = Math.max(0.35, 1.0 - (lineLoad - 0.65) * 2.0);
-      targetBranchLimit = Math.max(minFloor + 1, Math.round(targetBranchLimit * loadPenalty));
+      targetBranchLimit = Math.max(minFloor, Math.round(targetBranchLimit * loadPenalty));
     }
 
     if (remaining.length > targetBranchLimit) {
       const surplusCount = remaining.length - targetBranchLimit;
+      const camPos = engine.camera ? engine.camera.position : new THREE.Vector3();
 
-      // Candidate selection: prioritize outer twigs, never structural trunks
+      // Candidate selection: prioritize outer twigs, never structural trunks; weight by camera distance
       const candidates = remaining.filter(a => !isStructuralStem(a)).sort((a, b) => {
         const depthA = a.branchDepth || 0;
         const depthB = b.branchDepth || 0;
         if (depthB !== depthA) return depthB - depthA; // higher depth (outer twigs) first
-        if (a.thickness !== b.thickness) return a.thickness - b.thickness; // thinnest first
-        return b.position.lengthSq() - a.position.lengthSq(); // outermost distance from base
+        if (Math.abs(a.thickness - b.thickness) > 0.05) return a.thickness - b.thickness; // thinnest first
+        const distA = a.position.distanceToSquared(camPos);
+        const distB = b.position.distanceToSquared(camPos);
+        return distB - distA; // furthest from camera pruned first
       });
 
       const toPrune = Math.min(surplusCount, candidates.length);
@@ -227,7 +228,10 @@ export function performBranchPruning(
               } else if (Math.abs(a1.thickness - a2.thickness) > 0.05) {
                 victim = a1.thickness < a2.thickness ? a1 : a2; // thinnest is victim
               } else {
-                victim = a1.position.lengthSq() > a2.position.lengthSq() ? a1 : a2;
+                const camPos = engine.camera ? engine.camera.position : new THREE.Vector3();
+                const camDist1 = a1.position.distanceToSquared(camPos);
+                const camDist2 = a2.position.distanceToSquared(camPos);
+                victim = camDist1 > camDist2 ? a1 : a2;
               }
             }
 
@@ -241,31 +245,17 @@ export function performBranchPruning(
   }
 
   // 4. OVER-CAPACITY LINE BUDGET MANAGEMENT:
-  // If lines approach maxDOMs, gently dissolve ONLY peripheral twig segments (never base/trunk!)
-  if (lineLoad >= 0.95 && engine.segments.length > 0) {
-    const overBudget = Math.floor((lineLoad - 0.90) * 80);
+  // If lines approach maxDOMs, taper fine outer twig agents rather than deleting mid-branch segments
+  if (lineLoad >= 0.95) {
+    const overBudget = Math.max(1, Math.floor((lineLoad - 0.90) * 20));
     let prunedCount = 0;
-    const now = engine.unscaledTime;
-    const maxScan = Math.min(engine.pointCount, engine.maxDOMs);
-    const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
-
-    // Scan backwards from the newest segments, targeting ONLY fine peripheral twigs (thickness < 0.20)
-    for (let i = maxScan - 1; i >= trunkReserved && prunedCount < overBudget; i--) {
-      const seg = engine.segments[i];
-      if (seg && !engine.dyingStems.has(i)) {
-        if (seg.thickness < 0.20) {
-          engine.markDying(engine.segments, engine.dyingStems, i, now);
-          for (const app of engine.appendages.values()) {
-            for (let aIdx = 0; aIdx < app.segments.length; aIdx++) {
-              const appSeg = app.segments[aIdx];
-              if (appSeg && appSeg.parentIndex === i && !app.dyingSet.has(aIdx)) {
-                engine.markDying(app.segments, app.dyingSet, aIdx, now);
-              }
-            }
-          }
-          prunedCount++;
-          stats.prunedBudget++;
-        }
+    for (let i = activeAgents.length - 1; i >= 0 && prunedCount < overBudget; i--) {
+      const a = activeAgents[i];
+      if (a.active && !a.tapering && !a.isFeeler && (a.branchDepth || 0) >= 2 && !isStructuralStem(a)) {
+        a.tapering = true;
+        a.taperBudget = 0;
+        prunedCount++;
+        stats.prunedBudget++;
       }
     }
   }

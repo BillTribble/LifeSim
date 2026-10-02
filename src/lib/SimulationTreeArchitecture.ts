@@ -3,7 +3,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { resolveAgentHabit } from "./SimulationBotany";
 import { hasBankedTreeBuds, isContinuousTreeGrowth, offerTreeBud, recordTreeNode } from "./SimulationTreeGrowth";
-import { isOverSizeBudget } from "./SimulationPartnerSearch";
+import { getOrganismSegmentBudget, getStrainTissueCount, isOverSizeBudget } from "./SimulationPartnerSearch";
 import { getSeekRamp } from "./SimulationSeekRamp";
 import {
   type TreeHabit,
@@ -17,17 +17,17 @@ export type { TreeHabit, TreeProfile };
 export { PROFILES };
 
 const PIPE_GAMMA = 2.6;
-const MIN_TWIG = 0.038;
+const MIN_TWIG = 0.068;
 
 function minBranchThick(agent: Agent, habit: TreeHabit): number {
   if (habit === "rhizome_tuber") {
-    return Math.max(0.08, (agent.genome?.minThickness || 0.09) * 0.5);
+    return Math.max(0.09, (agent.genome?.minThickness || 0.09) * 0.55);
   }
   if (habit === "rhizome") {
-    return Math.max(0.05, (agent.genome?.minThickness || 0.06) * 0.5);
+    return Math.max(0.075, (agent.genome?.minThickness || 0.07) * 0.55);
   }
   if (habit === "rhizome_lace" || habit === "filigree") {
-    return 0.015;
+    return 0.048;
   }
   if (habit === "monolith") {
     return Math.max(0.22, (agent.genome?.minThickness || 0.28) * 0.80);
@@ -38,8 +38,8 @@ function minBranchThick(agent: Agent, habit: TreeHabit): number {
   return MIN_TWIG;
 }
 
-const STEP_PER_BUDGET = 0.13;
-const SIM_STEP_SCALE = 0.7;
+const STEP_PER_BUDGET = 0.09;
+const SIM_STEP_SCALE = 0.62;
 const UP = new THREE.Vector3(0, 1, 0);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const GOLDEN = 2.39996323;
@@ -181,13 +181,13 @@ function perpendicular(axis: THREE.Vector3, az: number): THREE.Vector3 {
 function initTrunkThickness(agent: Agent, zeroG: boolean) {
   const girthMod = agent.genome?.trunkGirthMod ?? 1.0;
   if (agent.genome?.archetype === "rhizome" || agent.genome?.growthHabit === "rhizome_web") {
-    const base = Math.max(1.3, agent.genome.thicknessBase || 2.0);
-    agent.thickness = base * 0.55 * girthMod;
+    const base = Math.max(1.1, agent.genome.thicknessBase || 2.0);
+    agent.thickness = Math.min(0.52, base * 0.28 * girthMod);
     agent.treeBaseThick = agent.thickness;
     return;
   }
   const base = Math.max(0.5, agent.genome.thicknessBase || 4);
-  agent.thickness = base * (zeroG ? 0.32 : 0.36) * girthMod;
+  agent.thickness = Math.min(0.58, base * (zeroG ? 0.18 : 0.22) * girthMod);
   agent.treeBaseThick = agent.thickness;
 }
 
@@ -222,6 +222,7 @@ function spawnChild(
     ).length;
     if (currentTips >= maxSeekers) return;
   }
+  if (parent.id !== undefined) engine.lastAgentStemIndex?.delete(parent.id);
   const bud = makeTreeAgent(engine, parent, parent.position, dir, thickness, budget, depth, spacing);
   if (!offerTreeBud(engine, bud)) newAgents.push(bud);
 }
@@ -370,11 +371,11 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   d.normalize();
 }
 
-const REST_MIN_TICKS = 24;
-const REST_RANGE_TICKS = 36;
-const REST_GROWTH_PER_FLUSH = 0.08;
-const FLUSH_VIGOR_DECAY = 0.94;
-const FLUSH_VIGOR_FLOOR = 0.55;
+const REST_MIN_TICKS = 14;
+const REST_RANGE_TICKS = 22;
+const REST_GROWTH_PER_FLUSH = 0.05;
+const FLUSH_VIGOR_DECAY = 0.95;
+const FLUSH_VIGOR_FLOOR = 0.65;
 
 function enterTreeRest(agent: Agent) {
   agent.treeDormant = true;
@@ -386,18 +387,24 @@ function enterTreeRest(agent: Agent) {
 
 export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   if (!agent.treeDormant || agent.tapering || agent.isFeeler) return false;
+  if (getStrainTissueCount(engine, agent.genome.name) > getOrganismSegmentBudget(engine, agent.genome.name) * 1.28) return false;
   if (agent.treeRestTicks === undefined) enterTreeRest(agent);
-  agent.treeRestTicks = (agent.treeRestTicks || 0) - 1;
+  const inatCharge = (engine as any).inatBroodinessCharge ?? 0.35;
+  const wakeStep = inatCharge > 0.35 ? 2 : 1;
+  agent.treeRestTicks = (agent.treeRestTicks || 0) - wakeStep;
   if (agent.treeRestTicks > 0) return false;
 
   const p = profileFor(engine, agent);
   const habit = getTreeHabit(engine, agent);
   const maxDepth = maxDepthFor(engine, p, habit, agent);
   const flushes = (agent.treeFlushes = (agent.treeFlushes || 0) + 1);
-  const vigor = Math.max(FLUSH_VIGOR_FLOOR, Math.pow(FLUSH_VIGOR_DECAY, flushes - 1));
+  const vigor = Math.min(
+    1.15,
+    Math.max(FLUSH_VIGOR_FLOOR, Math.pow(FLUSH_VIGOR_DECAY, flushes - 1)) * (1 + 0.22 * inatCharge),
+  );
   const depth = Math.max(1, maxDepth - 2);
   const morphScale = THREE.MathUtils.clamp(agent.genome?.morphScale ?? 1.0, 0.55, 1.85);
-  const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.85 + Math.random() * 0.3);
+  const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.95 + Math.random() * 0.35);
   const spacing = p.lateralSpacing * spacingScale(engine, agent);
 
   const wasTrunk = (agent.branchDepth || 0) === 0;
@@ -409,8 +416,8 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   }
   agent.treeLen = 0;
   agent.treeBudget = budget;
-  agent.treeNextBud = p.noMidBranchLaterals ? Infinity : budget * spacing * (0.45 + Math.random() * 0.5);
-  agent.thickness = Math.max(agent.thickness, MIN_TWIG * 3 * vigor + MIN_TWIG);
+  agent.treeNextBud = p.noMidBranchLaterals ? Infinity : budget * spacing * (0.35 + Math.random() * 0.4);
+  agent.thickness = Math.max(agent.thickness, MIN_TWIG * 3.2 * vigor + MIN_TWIG);
   agent.targetThickness = agent.thickness;
   const az = Math.random() * Math.PI * 2;
   agent.direction.copy(deflect(agent.direction, THREE.MathUtils.degToRad(p.forkAngleDeg), az));
@@ -523,7 +530,8 @@ export function stepTreeArchitecture(
     agent.treeNextBud = (agent.treeNextBud || 0) + baseGap * (0.7 + Math.random() * 0.6);
   }
 
-  if (agent.treeLen < budget) return;
+  const overBudget = isOverSizeBudget(engine, agent.genome.name);
+  if (agent.treeLen < (overBudget && depth >= 1 ? budget * 0.55 : budget)) return;
 
   // ---- Terminal bud: crown division, sympodial fork, or fine tapered tip ----
   if (depth === 0 && p.crownDivision > 0) {
@@ -581,24 +589,30 @@ export function stepTreeArchitecture(
   }
 
   const minForkThick = isRhiz ? minT * 0.95 : minT * 1.15;
-  const canFork = depth >= 1 && depth < maxDepth && agent.thickness > minForkThick && roomForTips;
+  const canFork = depth >= 1 && depth < maxDepth && agent.thickness > minForkThick && roomForTips && (!overBudget || depth < 2);
   if (!canFork) {
-    if (!engine.designerMode) {
+    if (!engine.designerMode && !overBudget && roomForTips) {
       const name = agent.genome.name;
       const banked = hasBankedTreeBuds(engine, name);
-      const targetSeekers = banked ? 2 : 4;
       const aliveCount =
         engine.agents.filter((a: Agent) => a.active && !a.tapering && !a.isFeeler && a.genome.name === name).length +
         newAgents.filter((a: Agent) => a.active && !a.tapering && !a.isFeeler && a.genome.name === name).length;
 
-      if ((aliveCount <= targetSeekers || (agent.isSeekerTwig && !banked)) && (agent.seekerFlushes || 0) < 1 && !isBigBranchingMode(agent.genome)) {
+      if (aliveCount <= (banked ? 2 : 3) && (agent.seekerFlushes || 0) < 2 && !isBigBranchingMode(agent.genome)) {
+        const origDir = agent.direction.clone();
+        const baseAz = Math.random() * Math.PI * 2;
+        const forkAngle = 0.44 + Math.random() * 0.28;
+        const seekerThick = minT * 1.15;
         agent.isSeekerTwig = true;
         agent.seekerFlushes = (agent.seekerFlushes || 0) + 1;
+        agent.branchDepth = Math.max(1, maxDepth - 1);
         agent.treeLen = 0;
-        agent.treeBudget = 6 + Math.random() * 5;
-        const seekerThick = minT * 1.15;
+        agent.treeBudget = 4.5 + Math.random() * 3.0;
         agent.thickness = Math.min(agent.thickness, seekerThick);
-        agent.treeNextBud = Infinity;
+        agent.treeNextBud = agent.treeBudget * spacing * (0.35 + Math.random() * 0.3);
+        agent.direction.copy(deflect(origDir, forkAngle, baseAz));
+        const forkDir = deflect(origDir, forkAngle, baseAz + Math.PI + (Math.random() - 0.5) * 0.5);
+        spawnChild(engine, agent, newAgents, forkDir, seekerThick * 0.88, agent.treeBudget * 0.88, Math.min(maxDepth, depth), spacing);
         return;
       }
     }

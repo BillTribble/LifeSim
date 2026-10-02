@@ -3,6 +3,7 @@ import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { createTreeShoot, isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { isBigBranchingMode, isFiligreeMode } from "./SimulationMorphology";
+import { getOrganismSegmentBudget, getStrainTissueCount, isOverSizeBudget } from "./SimulationPartnerSearch";
 
 /**
  * Continuous tree growth (ecosystem mode).
@@ -36,19 +37,19 @@ interface TreeGrowthState {
 }
 
 /** Growing tips per tree/rhizome at once (paced so crowns unfold continuously over time). */
-const MAX_GROWING_TIPS = 8;
+const MAX_GROWING_TIPS = 12;
 /** Below this many growing tips (and an empty bud bank) the tree sprouts a new shoot. */
-const MIN_GROWING_TIPS = 3;
+const MIN_GROWING_TIPS = 4;
 const MAX_BANKED_BUDS = 120;
 const MAX_NODES = 240;
 /** Growth steps between bud openings / new shoots. */
-const BUD_RELEASE_MIN = 1.4;
-const BUD_RELEASE_RANGE = 1.1;
-const SHOOT_MIN = 2.2;
-const SHOOT_RANGE = 1.8;
+const BUD_RELEASE_MIN = 0.65;
+const BUD_RELEASE_RANGE = 0.55;
+const SHOOT_MIN = 1.4;
+const SHOOT_RANGE = 1.2;
 /** Shoots slowly lose vigor (shorter), floored so the tree never stops growing. */
-const SHOOT_VIGOR_DECAY = 0.985;
-const SHOOT_VIGOR_FLOOR = 0.55;
+const SHOOT_VIGOR_DECAY = 0.994;
+const SHOOT_VIGOR_FLOOR = 0.78;
 
 const states = new WeakMap<SimulationEngine, Map<string, TreeGrowthState>>();
 
@@ -84,8 +85,9 @@ export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   const s = stateFor(engine, bud.genome.name);
   const isFiligree = isFiligreeMode(bud.genome || s.template?.genome);
   const isMacro = isBigBranchingMode(bud.genome || s.template?.genome);
-  const initialTipsCap = isFiligree ? 4 : isMacro ? 2 : 3;
-  const initialMinCap = isMacro ? 2 : 2;
+  const isSoft = !!(engine as any)._isSoftwareRaster;
+  const initialTipsCap = isSoft ? 3 : (isFiligree ? 7 : isMacro ? 4 : 6);
+  const initialMinCap = isSoft ? 2 : (isMacro ? 3 : 4);
   if (((bud.branchDepth || 0) <= 1 && s.growing < initialTipsCap) || (s.growing < initialMinCap && s.buds.length === 0)) {
     s.growing++;
     return false;
@@ -200,19 +202,21 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
     }
     if (engine.suppressedStrains?.has(name)) continue;
 
-    const tick = (engine.growthSpeed ?? 0.11) * (engine.treeSpeed ?? 0.65) * dt;
+    const tick = (engine.growthSpeed ?? 0.06) * (engine.treeSpeed ?? 0.65) * dt;
     const isFiligree = isFiligreeMode(s.template?.genome);
     const isMacro = isBigBranchingMode(s.template?.genome);
-    const maxTips = isFiligree ? 12 : isMacro ? 6 : MAX_GROWING_TIPS;
-    const minTips = isMacro ? 2 : MIN_GROWING_TIPS;
+    const isSoft = !!(engine as any)._isSoftwareRaster;
+    const maxTips = isSoft ? 4 : (isFiligree ? 14 : isMacro ? 8 : MAX_GROWING_TIPS);
+    const minTips = isSoft ? 2 : (isMacro ? 3 : MIN_GROWING_TIPS);
 
     s.growing = growing.get(name) || 0;
     s.clock += tick;
+    if (getStrainTissueCount(engine, name) > getOrganismSegmentBudget(engine, name) * 1.28) continue;
     if (s.clock < s.nextRelease || s.growing >= maxTips) continue;
 
     if (s.buds.length > 0) {
-      // Release 1 bud (2 for filigree) per interval so the crown unfolds gradually over time
-      const releaseLimit = isFiligree ? 2 : 1;
+      // Release 2 buds (3 for filigree) per interval so the crown unfolds with rich branching
+      const releaseLimit = isFiligree ? 3 : 2;
       const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips
         ? Math.min(releaseLimit, maxTips - s.growing)
         : 1;

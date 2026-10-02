@@ -64,36 +64,36 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
 
   if (archetype === "bush") {
     thicknessBase = (2.20 + Math.random() * 0.6) * 0.7;
-    minThickness = (0.35 + Math.random() * 0.15) * 0.7;
+    minThickness = (0.40 + Math.random() * 0.15) * 0.7;
     thicknessDecay = 0.9993 + Math.random() * 0.0005;
     bifurcationRate = 0.32 + Math.random() * 0.10;
     stepSize = (0.45 + Math.random() * 0.15) * 0.7;
     branchTendency = Math.exp((Math.random() - 0.3) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 10.0 : 5.0);
     wanderIntensity = 0.8 + Math.random() * 0.5;
   } else if (archetype === "tree") {
-    thicknessBase = (5.2 + Math.random() * 2.0) * 0.7;
-    minThickness = (0.15 + Math.random() * 0.25) * 0.7;
+    thicknessBase = (4.2 + Math.random() * 1.6) * 0.7;
+    minThickness = (0.36 + Math.random() * 0.20) * 0.7;
     thicknessDecay = 0.9996 + Math.random() * 0.0004;
-    bifurcationRate = 0.024 + Math.random() * 0.016;
-    stepSize = (0.80 + Math.random() * 0.25) * 0.7;
-    branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 4.0 : 2.2);
-    wanderIntensity = 0.15 + Math.random() * 0.20; // [0.15, 0.35]
+    bifurcationRate = 0.042 + Math.random() * 0.025;
+    stepSize = (0.72 + Math.random() * 0.22) * 0.7;
+    branchTendency = Math.exp((Math.random() - 0.4) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.5 ? 4.2 : 2.6);
+    wanderIntensity = 0.18 + Math.random() * 0.20;
   } else if (archetype === "snake") {
-    thicknessBase = (4.8 + Math.random() * 2.2) * 0.7;
-    minThickness = (2.4 + Math.random() * 1.2) * 0.7;
-    thicknessDecay = 0.9998 + Math.random() * 0.0002;
-    bifurcationRate = 0.003 + Math.random() * 0.006;
-    stepSize = (1.8 + Math.random() * 0.8) * 0.7;
-    branchTendency = Math.exp((Math.random() - 0.5) * engine.branchTendencyVar * 0.2) * (Math.random() > 0.9 ? 2.5 : 0.4);
-    wanderIntensity = 0.01 + Math.random() * 0.05;
+    thicknessBase = (3.4 + Math.random() * 1.4) * 0.7;
+    minThickness = (0.85 + Math.random() * 0.45) * 0.7;
+    thicknessDecay = 0.9995 + Math.random() * 0.0003;
+    bifurcationRate = 0.055 + Math.random() * 0.035;
+    stepSize = (1.1 + Math.random() * 0.3) * 0.7;
+    branchTendency = 2.4 + Math.random() * 1.2;
+    wanderIntensity = 0.22 + Math.random() * 0.20;
   } else {
     // Rhizome (creeping slime-mold / tendrilled network: sleek, organic meandering runners)
-    thicknessBase = (1.9 + Math.random() * 0.6) * 0.7;
-    minThickness = (0.35 + Math.random() * 0.15) * 0.7;
+    thicknessBase = (2.1 + Math.random() * 0.6) * 0.7;
+    minThickness = (0.40 + Math.random() * 0.15) * 0.7;
     thicknessDecay = 0.9995 + Math.random() * 0.0004;
-    bifurcationRate = 0.06 + Math.random() * 0.03;
-    stepSize = (1.2 + Math.random() * 0.3) * 0.7;
-    branchTendency = 2.5 + Math.random() * 1.0;
+    bifurcationRate = 0.08 + Math.random() * 0.04;
+    stepSize = (1.0 + Math.random() * 0.25) * 0.7;
+    branchTendency = 2.8 + Math.random() * 1.2;
     wanderIntensity = 0.35 + Math.random() * 0.25;
   }
 
@@ -121,15 +121,16 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     gradientGrowth: Math.random() < (engine.traitProbs["gradient"] || 0.1),
     gradientType: 1 + Math.floor(Math.random() * 4),
     createdAt: engine.time,
-    singleton: archetype === "snake" && Math.random() < 0.5,
+    singleton: false,
     isGlowing: Math.random() < (engine.traitProbs.glow ?? 0.1),
     leafDivision: Math.random(),
     vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
     canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
     phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
     succulence: Math.random(),
+    windStyle: Math.random() < 0.5 ? "seaweed" : "stiff",
     recessive: {
-      archetype: ARCHETYPES.find((a) => a !== archetype) || ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)],
+      archetype: getRandomWeightedArchetype(),
       movementType: MOVEMENT_TYPES.find((m) => m !== movementType) || MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)],
       geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
       appendage: getWeightedAppendage(engine.traitProbs),
@@ -138,6 +139,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
       vernationType: (["circinate", "convolute", "conduplicate"] as const)[Math.floor(Math.random() * 3)],
       canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
       phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
+      windStyle: Math.random() < 0.5 ? "seaweed" : "stiff",
     },
   };
   return assignGenomeMorphology(genome);
@@ -223,6 +225,7 @@ export function updateBoundaryMesh(engine: SimulationEngine): void {
 }
 
 export function setupBoundarySquash(engine: SimulationEngine, val: number): void {
+  (engine as any)._userBoundarySquash = val;
   if (engine.boundarySquash === val) return;
   engine.boundarySquash = val;
   engine.updateBoundaryMesh();
@@ -333,26 +336,28 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
     }
   }
 
+  const centerY = engine.creatureCenterY || 0;
   if (anchors.length === 0) {
     // Genuinely empty world — nothing to anchor to.
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 40,
-      (Math.random() - 0.5) * 20,
-      (Math.random() - 0.5) * 40,
+      (Math.random() - 0.5) * 44,
+      centerY + (Math.random() - 0.5) * 28,
+      (Math.random() - 0.5) * 44,
     );
   }
 
   const anchor = anchors[Math.floor(Math.random() * anchors.length)];
   const offset = new THREE.Vector3(
     Math.random() - 0.5,
-    (Math.random() - 0.5) * 0.4,
+    (Math.random() - 0.5) * 0.85,
     Math.random() - 0.5,
   );
   if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
-  const b = (engine.boundarySize || 60) * 0.7;
+  const b = (engine.boundarySize || 60) * 0.72;
   if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
+  if (Math.abs(anchor.y - centerY) > b) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
   if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
-  offset.normalize().multiplyScalar(6 + Math.random() * 6);
+  offset.normalize().multiplyScalar(10 + Math.random() * 10);
 
   return anchor.clone().add(offset);
 }
@@ -426,7 +431,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
     genome: genome,
     active: true,
     age: 0,
-    thickness: genome.thicknessBase * 1.5,
+    thickness: Math.min(0.58, genome.thicknessBase * 0.35),
     id: engine.nextAgentId++,
     cooldown: initialCooldown,
   };
@@ -469,6 +474,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   if (engine.suppressedStrains) engine.suppressedStrains.clear();
   if (engine.speciesAbove3Percent) engine.speciesAbove3Percent.clear();
   if (engine.speciesLifecycleMap) engine.speciesLifecycleMap.clear();
+  if (engine.genomeMap) engine.genomeMap.clear();
+  (engine as any)._tissueIndex = undefined;
+  (engine as any)._lastBirthTime = undefined;
+  (engine as any)._lastSenescenceDeathTime = undefined;
   engine.hasReachedMinCreatures = false;
   engine.time = 0;
   engine.frameCount = 0;
@@ -614,6 +623,15 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
   }
 
+  if (alphaGenome.appendage !== "leaves" && betaGenome.appendage !== "leaves") {
+    alphaGenome.appendage = "leaves";
+    betaGenome.appendage = "leaves";
+  } else if (alphaGenome.appendage === "leaves" && betaGenome.appendage !== "leaves") {
+    betaGenome.appendage = "leaves";
+  } else if (betaGenome.appendage === "leaves" && alphaGenome.appendage !== "leaves") {
+    alphaGenome.appendage = "leaves";
+  }
+
   assignGenomeMorphology(alphaGenome);
   assignGenomeMorphology(betaGenome, pickMorphModeForArchetype(betaArchetype, alphaGenome.morphMode));
 
@@ -630,6 +648,8 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
   }
   betaGenome.phyllotaxisMode = betaPhyllo;
+  alphaGenome.windStyle = Math.random() < 0.5 ? "seaweed" : "stiff";
+  betaGenome.windStyle = alphaGenome.windStyle === "seaweed" ? "stiff" : "seaweed";
 
   let alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
   if (engine.theme === 1) {
@@ -688,8 +708,9 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   betaGenome.createdAt = engine.time;
 
   const initialCooldown = getHybridCooldownTicks(engine);
-  const alphaStart = new THREE.Vector3(-20, 0, 0);
-  const betaStart = new THREE.Vector3(20, 0, 0);
+  const centerY = engine.creatureCenterY || 0;
+  const alphaStart = new THREE.Vector3(-20, centerY - 6, -15);
+  const betaStart = new THREE.Vector3(20, centerY + 6, 15);
   alphaGenome.birthPos = alphaStart.clone();
   betaGenome.birthPos = betaStart.clone();
   engine.genomeMap.set(alphaGenome.name, alphaGenome);
@@ -704,7 +725,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: alphaStart.clone(),
-    thickness: alphaGenome.thicknessBase * (alphaGenome.archetype === "bush" ? 1.05 : 1.5),
+    thickness: Math.min(0.58, alphaGenome.thicknessBase * 0.35),
     cooldown: initialCooldown,
   });
   engine.spawnHybridArtifact(alphaStart, alphaGenome.color, alphaGenome.name, alphaGenome.name, alphaId, alphaId, alphaGenome.name);
@@ -717,7 +738,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: betaStart.clone(),
-    thickness: betaGenome.thicknessBase * (betaGenome.archetype === "bush" ? 1.05 : 1.5),
+    thickness: Math.min(0.58, betaGenome.thicknessBase * 0.35),
     cooldown: initialCooldown,
   });
   engine.spawnHybridArtifact(betaStart, betaGenome.color, betaGenome.name, betaGenome.name, betaId, betaId, betaGenome.name);

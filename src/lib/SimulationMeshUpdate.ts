@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
 import { getStrainDeathStart } from "./SimulationEngineHelpers";
-import { tryCoalesceStemSegment, markInstanceIndexDirty, markActiveInstancesDirty } from "./SimulationVertexTrimmer";
+import { tryCoalesceStemSegment, markInstanceIndexDirty, markActiveInstancesDirty, deleteStrainAppendages } from "./SimulationVertexTrimmer";
+import { getStemBudget, getPerAppendageCap, getCameraDistanceRatio, remapAppendageParent } from "./SimulationTrianglePruner";
 
 export function updateMeshSegments(
   engine: SimulationEngine,
@@ -21,30 +22,201 @@ export function updateMeshSegments(
   const shouldCountBiomass = !isFeelerSeg && !isStrainAlreadyDying && !isAppendage && thickness >= 0.022;
 
   if (!isAppendage) {
+    (engine as any)._lastStemWriteSucceeded = false;
+    if (p1.distanceToSquared(p2) < 1e-5) return;
     if (tryCoalesceStemSegment(engine, p1, p2, genome, thickness, agentId, isTerminal, shouldCountBiomass, resolvedStrainName)) {
+      (engine as any)._lastStemWriteSucceeded = true;
       return;
     }
   }
 
-  const trunkReserved = Math.min(2000, Math.floor(engine.maxDOMs * 0.1));
   let targetIndexStem = 0;
   let reusedFreeSlot = false;
+  let extendedPrevSeg = false;
+  let extendedStartThick: number | undefined = undefined;
+  let newBiomassWeight = 1;
   if (!isAppendage) {
-    if (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
-      targetIndexStem = engine.freeStemIndices.pop()!;
+    const isSoft = !!(engine as any)._isSoftwareRaster;
+    const stemAnchorCheck = agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
+    const curDepth = stemAnchorCheck?.branchDepth ?? 0;
+    const prevIdx = !isFeelerSeg && !isTerminal && agentId !== undefined ? engine.lastAgentStemIndex?.get(agentId) : undefined;
+    const prevSeg = prevIdx !== undefined ? engine.segments[prevIdx] : undefined;
+    let canExtendPrev = false;
+    if (
+      prevSeg &&
+      prevSeg.agentId === agentId &&
+      prevSeg.strainName === resolvedStrainName &&
+      (prevSeg.branchDepth ?? 0) === curDepth &&
+      !prevSeg.isFeeler &&
+      !prevSeg.isTerminal &&
+      !engine.dyingStems.has(prevSeg.index) &&
+      prevSeg.startPos &&
+      prevSeg.endPos &&
+      prevSeg.endPos.distanceToSquared(p1) < 0.0004 &&
+      Math.abs(thickness - prevSeg.thickness) <= prevSeg.thickness * 0.14 &&
+      prevSeg.startPos.distanceTo(p2) <= (isSoft ? 2.1 : 1.5)
+    ) {
+      const dA = new THREE.Vector3().subVectors(prevSeg.endPos, prevSeg.startPos).normalize();
+      const dB = new THREE.Vector3().subVectors(p2, p1).normalize();
+      if (dA.dot(dB) >= 0.992) {
+        canExtendPrev = true;
+      }
+    }
+
+    if (canExtendPrev && prevSeg) {
+      const pB = engine.cylinderMesh?.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute | undefined;
+      const prevRatio = pB ? pB.getZ(prevSeg.index) : 1.0;
+      extendedStartThick = prevSeg.thickness * (prevRatio > 0.1 ? prevRatio : 1.0);
+      newBiomassWeight = (prevSeg.biomassWeight || 1) + 1;
+      p1 = prevSeg.startPos.clone();
+      targetIndexStem = prevSeg.index;
       reusedFreeSlot = true;
-    } else if (engine.pointCount < engine.maxDOMs) {
-      targetIndexStem = engine.pointCount;
+      extendedPrevSeg = true;
     } else {
-      const recycleSpan = Math.max(1, engine.maxDOMs - trunkReserved);
-      targetIndexStem = trunkReserved + ((engine.pointCount - trunkReserved) % recycleSpan);
+      let poppedFree = -1;
+      const stemCap = isSoft ? getStemBudget(engine) + 16 : engine.maxDOMs;
+      while (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
+        const cand = engine.freeStemIndices.pop()!;
+        if (cand < engine.pointCount && !engine.segments[cand]) {
+          poppedFree = cand;
+          break;
+        }
+      }
+      if (poppedFree >= 0 && (!isSoft || poppedFree < stemCap)) {
+        targetIndexStem = poppedFree;
+        reusedFreeSlot = true;
+      } else if (engine.pointCount < stemCap) {
+        while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
+          engine.pointCount++;
+        }
+        if (engine.pointCount >= engine.maxDOMs) return;
+        targetIndexStem = engine.pointCount;
+      } else {
+        let foundSlot = -1;
+        const searchLim = Math.min(engine.pointCount, isSoft ? stemCap : engine.maxDOMs);
+        for (let i = 0; i < searchLim; i++) {
+          if (!engine.segments[i]) {
+            foundSlot = i;
+            break;
+          }
+        }
+        if (foundSlot >= 0) {
+          targetIndexStem = foundSlot;
+          reusedFreeSlot = true;
+        } else if (!isSoft && engine.pointCount < engine.maxDOMs) {
+          while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
+            engine.pointCount++;
+          }
+          if (engine.pointCount >= engine.maxDOMs) return;
+          targetIndexStem = engine.pointCount;
+        } else {
+          // Software raster at stemCap: recycle oldest dying or feeler slot so totalStems stays bounded
+          let victimSlot = -1;
+          let bestScore = -1;
+          for (let i = 0; i < searchLim; i++) {
+            const s = engine.segments[i];
+            if (!s) { victimSlot = i; break; }
+            const isDying = engine.dyingStems.has(i) || (engine.dyingStrains && engine.dyingStrains.has(s.strainName));
+            if (!s.isFeeler && !isDying) continue;
+            const ageScore = (engine.time - s.timestamp) + (s.isFeeler ? 5000 : 0);
+            if (ageScore > bestScore) {
+              bestScore = ageScore;
+              victimSlot = i;
+            }
+          }
+          if (victimSlot >= 0) {
+            const victimSeg = engine.segments[victimSlot];
+            if (victimSeg && !victimSeg.isFeeler && victimSeg.strainName) {
+              const vStrain = victimSeg.strainName;
+              for (const a of engine.agents) {
+                if (a.active && (a.genome.name === vStrain || a.realGenome?.name === vStrain)) {
+                  a.active = false;
+                  a.tapering = false;
+                }
+              }
+              const zeroM = new THREE.Matrix4().makeScale(0, 0, 0);
+              for (let i = 0; i < searchLim; i++) {
+                if (i === victimSlot) continue;
+                const os = engine.segments[i];
+                if (os && os.strainName === vStrain) {
+                  engine.segments[i] = undefined as any;
+                  engine.dyingStems.delete(i);
+                  if (engine.growingStems) engine.growingStems.delete(i);
+                  engine.cylinderMesh.setMatrixAt(i, zeroM);
+                  markInstanceIndexDirty(engine.cylinderMesh.instanceMatrix, i);
+                  if (engine.freeStemIndices) engine.freeStemIndices.push(i);
+                }
+              }
+              engine.biomassMap.delete(vStrain);
+              deleteStrainAppendages(engine, vStrain);
+            }
+            targetIndexStem = victimSlot;
+            reusedFreeSlot = true;
+          } else if (engine.pointCount < engine.maxDOMs) {
+            while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
+              engine.pointCount++;
+            }
+            if (engine.pointCount >= engine.maxDOMs) return;
+            targetIndexStem = engine.pointCount;
+          } else {
+            return;
+          }
+        }
+      }
     }
   }
 
+  let appSlotIndex = 0;
+  let isNewAppSlot = false;
   if (isAppendage) {
-    const appendageLimit = Math.floor(engine.maxDOMs / 4);
+    const appendageLimit = Math.max(1, Math.min(getPerAppendageCap(engine), Math.floor(engine.maxDOMs / 4)));
     const config = engine.appendages.get(genome.appendage);
-    const appIndex = config ? config.count % appendageLimit : targetIndexStem;
+    if (!config) return;
+
+    if (config.count < appendageLimit) {
+      appSlotIndex = config.count;
+      isNewAppSlot = true;
+    } else {
+      let emptySlot = -1;
+      let bestDyingSlot = -1;
+      let maxDyingAge = -1;
+      let furthestLiveSlot = 0;
+      let secondFurthestSlot = -1;
+      let maxDist = -1;
+      const searchLim = Math.min(config.mesh.count, appendageLimit);
+      for (let i = 0; i < searchLim; i++) {
+        const seg = config.segments[i];
+        if (!seg) {
+          emptySlot = i;
+          break;
+        }
+        if (config.dyingSet.has(i)) {
+          const dAge = engine.unscaledTime - (seg.dyingStart || 0);
+          if (dAge > maxDyingAge) {
+            maxDyingAge = dAge;
+            bestDyingSlot = i;
+          }
+          continue;
+        }
+        const parentPos = engine.segments[seg.parentIndex]?.startPos || seg.rootOrigin;
+        const d = parentPos ? getCameraDistanceRatio(engine, parentPos) : 0;
+        if (d > maxDist) {
+          secondFurthestSlot = furthestLiveSlot;
+          maxDist = d;
+          furthestLiveSlot = i;
+        }
+      }
+      if (emptySlot >= 0) {
+        appSlotIndex = emptySlot;
+      } else if (bestDyingSlot >= 0) {
+        appSlotIndex = bestDyingSlot;
+      } else {
+        appSlotIndex = furthestLiveSlot;
+        if (secondFurthestSlot >= 0 && typeof engine.markDying === "function") {
+          engine.markDying(config.segments, config.dyingSet, secondFurthestSlot, engine.unscaledTime);
+        }
+      }
+    }
 
     const forward = new THREE.Vector3().subVectors(p2, p1);
     const distance = forward.length();
@@ -59,7 +231,7 @@ export function updateMeshSegments(
     const right = new THREE.Vector3().crossVectors(forward, ref).normalize();
 
     // 360-degree radial divergence angle around spine centerline (Golden ratio ~137.5° = 2.39996 rad)
-    const phiAngle = appIndex * (engine.phyllotaxisAngle ? (engine.phyllotaxisAngle * Math.PI / 180) : 2.39996323);
+    const phiAngle = appSlotIndex * (engine.phyllotaxisAngle ? (engine.phyllotaxisAngle * Math.PI / 180) : 2.39996323);
     const radialDir = right.clone().applyAxisAngle(forward, phiAngle).normalize();
 
     // Stem outer radius
@@ -82,8 +254,10 @@ export function updateMeshSegments(
   }
 
   const distance = Math.max(0.001, p1.distanceTo(p2));
-  let scaleX = Math.max(0.001, thickness);
-  let scaleY = Math.max(0.001, thickness);
+  const minVisThick = !isAppendage ? (isFeelerSeg ? 0.04 : 0.035) : 0.001;
+  const visThick = Math.max(minVisThick, thickness);
+  let scaleX = visThick;
+  let scaleY = visThick;
   let scaleZ = distance;
   const stemAnchor = !isAppendage && agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
   const distFromRoot = stemAnchor?.rootOrigin ? p1.distanceTo(stemAnchor.rootOrigin) : 999;
@@ -92,13 +266,9 @@ export function updateMeshSegments(
 
   if (!isAppendage) {
     if (genome.geometryType === "ribbon") {
-      scaleX = thickness * (1.0 + 1.2 * ribbonBlend);
-      scaleY = THREE.MathUtils.lerp(thickness, Math.max(0.6, thickness * 0.8), ribbonBlend);
+      scaleX = visThick * (1.0 + 1.2 * ribbonBlend);
+      scaleY = THREE.MathUtils.lerp(visThick, Math.max(0.6, visThick * 0.8), ribbonBlend);
       scaleZ = distance * 1.02;
-    } else if (genome.geometryType === "segmented" && !isTerminal) {
-      const rawGap = engine.segmentGap !== undefined ? engine.segmentGap : 0.12;
-      const gap = rawGap * THREE.MathUtils.clamp((distFromRoot - 2.5) / 4.0, 0.0, 1.0);
-      scaleZ = distance * Math.max(0.05, 1.0 - gap);
     } else {
       scaleZ = distance * 1.02;
     }
@@ -159,11 +329,10 @@ export function updateMeshSegments(
   let targetIndex = targetIndexStem;
 
   if (isAppendage) {
-    const appendageLimit = Math.floor(engine.maxDOMs / 4);
     const config = engine.appendages.get(genome.appendage);
     if (config) {
       targetMesh = config.mesh;
-      targetIndex = config.count % appendageLimit;
+      targetIndex = appSlotIndex;
 
       const isLeafType = genome.appendage === "leaves" || genome.appendage === "ferns";
       const scaleDial = isLeafType ? (engine.leafScale ?? 0.55) : (engine.flowerSize ?? 1.0);
@@ -294,14 +463,31 @@ export function updateMeshSegments(
     packAAttr.setW(targetIndex, genomeHash);
     
     // Pack B: [growth, vernation, succulence, leafDivision]
-    packBAttr.setX(targetIndex, isAppendage ? 0.22 : 0.01); // appendages start at 0.22 so buds are immediately visible
+    packBAttr.setX(targetIndex, isAppendage ? 0.22 : 1.0); // appendages start at 0.22; stems render solid immediately so thin twigs never dither into dashed gaps
     
     let vernVal = 0.0;
     if (genome.vernationType === "convolute") vernVal = 1.0;
     else if (genome.vernationType === "conduplicate") vernVal = 2.0;
     
     packBAttr.setY(targetIndex, vernVal);
-    packBAttr.setZ(targetIndex, genome.succulence ?? 0.5);
+    if (isAppendage) {
+      packBAttr.setZ(targetIndex, genome.succulence ?? 0.5);
+    } else {
+      const prevIdx = agentId !== undefined ? engine.lastAgentStemIndex?.get(agentId) : undefined;
+      const prevSeg = prevIdx !== undefined ? engine.segments[prevIdx] : undefined;
+      if (!extendedPrevSeg && prevIdx !== undefined && prevIdx !== targetIndex && !engine.dyingStems.has(prevIdx)) {
+        packBAttr.setX(prevIdx, 1.0);
+        if (engine.growingStems) engine.growingStems.delete(prevIdx);
+        markInstanceIndexDirty(packBAttr, prevIdx);
+      }
+      const startThick = extendedStartThick !== undefined
+        ? extendedStartThick
+        : (prevSeg && prevSeg.endPos && prevSeg.endPos.distanceToSquared(p1) < 0.09)
+          ? prevSeg.thickness
+          : thickness;
+      const stemStartRatio = THREE.MathUtils.clamp(Math.max(minVisThick, startThick) / visThick, 0.45, 2.25);
+      packBAttr.setZ(targetIndex, stemStartRatio);
+    }
     packBAttr.setW(
       targetIndex,
       typeof isTerminal === "number" ? isTerminal : isTerminal ? 2.0 : (genome.leafDivision ?? 0.5),
@@ -313,11 +499,14 @@ export function updateMeshSegments(
 
   if (targetMesh === engine.cylinderMesh) {
     const prevSeg = engine.segments[targetIndex];
-    if (prevSeg && prevSeg.countsForBiomass) {
-      const prevCount = engine.biomassMap.get(prevSeg.strainName) || 0;
-      const weight = prevSeg.biomassWeight ?? 1;
-      if (prevCount > weight) engine.biomassMap.set(prevSeg.strainName, prevCount - weight);
-      else engine.biomassMap.delete(prevSeg.strainName);
+    if (prevSeg) {
+      if (prevSeg.countsForBiomass) {
+        const prevCount = engine.biomassMap.get(prevSeg.strainName) || 0;
+        const weight = prevSeg.biomassWeight ?? 1;
+        if (prevCount > weight) engine.biomassMap.set(prevSeg.strainName, prevCount - weight);
+        else engine.biomassMap.delete(prevSeg.strainName);
+      }
+      remapAppendageParent(engine, targetIndex, targetIndex, engine.time);
     }
     if (isStrainAlreadyDying) {
       engine.dyingStems.add(targetIndex);
@@ -343,7 +532,9 @@ export function updateMeshSegments(
         strainPhase = (strainPhase * 31 + resolvedStrainName.charCodeAt(i)) % 1000;
       }
       strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
-      rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
+      const strainGenome = engine.genomeMap?.get(resolvedStrainName) || genome;
+      const isSeaweed = (strainGenome?.windStyle ?? "seaweed") === "seaweed";
+      rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase + (isSeaweed ? 100.0 : 0.0));
       branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
       markInstanceIndexDirty(rootAnchorAttr, targetIndex);
       markInstanceIndexDirty(branchAnchorAttr, targetIndex);
@@ -364,20 +555,23 @@ export function updateMeshSegments(
       branchDepth,
       startPos: p1.clone(),
       endPos: p2.clone(),
-      biomassWeight: 1,
+      biomassWeight: newBiomassWeight,
       isTerminal,
     };
     if (!reusedFreeSlot) {
       engine.pointCount++;
     }
     engine.cylinderMesh.count = Math.min(engine.pointCount, engine.maxDOMs);
+    (engine as any)._lastStemWriteSucceeded = true;
   } else {
     const config = engine.appendages.get(genome.appendage);
     if (config) {
-      const appLimit = Math.floor(engine.maxDOMs / 4);
       config.dyingSet.delete(targetIndex);
-      config.count++;
-      config.mesh.count = Math.min(config.count, appLimit);
+      if (isNewAppSlot) {
+        config.count++;
+      }
+      config.mesh.count = Math.max(config.mesh.count, Math.min(config.count, Math.floor(engine.maxDOMs / 4)));
+      config.mesh.visible = config.mesh.count > 0;
       const lastStemIdx =
         agentId !== undefined && engine.lastAgentStemIndex && engine.lastAgentStemIndex.has(agentId)
           ? engine.lastAgentStemIndex.get(agentId)!
@@ -397,7 +591,9 @@ export function updateMeshSegments(
           strainPhase = (strainPhase * 31 + resolvedStrainName.charCodeAt(i)) % 1000;
         }
         strainPhase = (strainPhase / 1000.0) * Math.PI * 2.0;
-        rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase);
+        const strainGenome = engine.genomeMap?.get(resolvedStrainName) || genome;
+        const isSeaweed = (strainGenome?.windStyle ?? "seaweed") === "seaweed";
+        rootAnchorAttr.setXYZW(targetIndex, rootOrigin.x, rootOrigin.y, rootOrigin.z, strainPhase + (isSeaweed ? 100.0 : 0.0));
         branchAnchorAttr.setXYZW(targetIndex, branchBasePos.x, branchBasePos.y, branchBasePos.z, branchDepth > 0 ? 1.0 : 0.0);
         markInstanceIndexDirty(rootAnchorAttr, targetIndex);
         markInstanceIndexDirty(branchAnchorAttr, targetIndex);
@@ -426,7 +622,7 @@ export function updateMeshSegments(
   if (shouldCountBiomass) {
     engine.biomassMap.set(
       genome.name,
-      (engine.biomassMap.get(genome.name) || 0) + 1,
+      (engine.biomassMap.get(genome.name) || 0) + newBiomassWeight,
     );
     engine.genomeMap.set(genome.name, genome);
   } else if (!genome.name.startsWith("Feeler-")) {
@@ -462,11 +658,11 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 180 unscaled frame ticks = 3.0 seconds of real-time transparency fade OUT.
-    // Feeler trails dissolve on the FEELER_FADE dial: 10 (default) = 3 s, higher = faster.
+    // 360 unscaled frame ticks = ~6.0 seconds of slow, gentle transparency dissolve for dying organisms.
+    // Feeler trails dissolve rapidly (~0.9 s) so they never linger as unbranched snake lines.
     const wipeDuration = seg.isFeeler
-      ? 180.0 * (10 / Math.max(1, engine.feelerFade ?? 10))
-      : 180.0;
+      ? 55.0 * (10 / Math.max(1, engine.feelerFade ?? 10))
+      : 360.0;
 
     if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();

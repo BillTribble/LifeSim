@@ -174,6 +174,23 @@ export function applyBotanicalConceptSteering(
   // 2. Habit-Specific Gravitropism & Tropism Envelopes (Pic 3 & Pic 4)
   if (isTreeModelAgent(agent)) {
     applyTreeTropism(engine, agent);
+  } else if (!engine.designerMode) {
+    // Simulation Mode 3D Radial Tropism: bushes expand in 3D around their birth origin rather than floating to the +Y ceiling
+    const origin = agent.rootOrigin || agent.genome.birthPos || agent.position;
+    const radial3D = agent.position.clone().sub(origin);
+    if (radial3D.lengthSq() > 0.25) {
+      radial3D.normalize();
+      if (habit === "elm" && depth >= 1) {
+        const archProgress = Math.min(1.0, age / 75);
+        agent.direction.lerp(radial3D, 0.035 + archProgress * 0.03).normalize();
+      } else if (habit === "willow" && depth >= 1 && age >= 30) {
+        // Gentle 3D curtain arc perpendicular to radial vector without forcing all tips to world -Y/ceiling
+        const tangent = new THREE.Vector3(-radial3D.z, radial3D.x * 0.5, radial3D.x).normalize();
+        agent.direction.lerp(tangent, 0.04).normalize();
+      } else if (habit === "oak" && depth === 1) {
+        agent.direction.lerp(radial3D, 0.03).normalize();
+      }
+    }
   } else if (habit === "pine") {
     if (depth === 0) {
       // White Pine (Pic 4 Top-Left): Arrow-straight vertical central leader
@@ -356,7 +373,7 @@ export function executeBotanicalBranching(
   const evo = getEvolutionStepConfig((engine as any).evolutionStep);
   const maxDepthAllowed = evo.maxDepth;
 
-  const allowedToBranch =
+  let allowedToBranch =
     (myStrainCount < maxForArchetype || isUnderMinCreatures) &&
     (currentDepth < maxDepthAllowed || isUnderMinCreatures);
 
@@ -373,7 +390,7 @@ export function executeBotanicalBranching(
           ? Math.max(3, 6 - currentDepth)
           : Math.max(3, 6 - currentDepth);
 
-  const branchReady =
+  let branchReady =
     (agent.branchCooldown || 0) <= 0 && agent.age >= baseMinInterval;
 
   const liveBranchTendency =
@@ -405,10 +422,25 @@ export function executeBotanicalBranching(
     branchProb = Math.max(0.08, branchProb * 1.6);
   }
 
+  const isSoft = (engine as any)._isSoftwareRaster;
+  const p = (engine as any)._prunePressure ?? 0.0;
+  const maxC = Math.max(12, engine.maxCreatures || 12);
+  const desktopAgentLimit = Math.max(engine.maxAgents * 3.5, maxC * 14);
+  const agentLimit = isSoft ? 22 : (p >= 0.5 ? Math.min(110, Math.round(desktopAgentLimit * 0.55)) : desktopAgentLimit);
+  const myActiveTips = strainCounts.get(genome.name) || 1;
+  if (myActiveTips <= 1 && agent.age >= 10) {
+    allowedToBranch = true;
+    branchReady = true;
+    branchProb = 1.0;
+  } else if (myActiveTips <= 2 && agent.age >= 14) {
+    branchReady = true;
+    branchProb = Math.max(branchProb, 0.72);
+  }
+
   if (
     !allowedToBranch ||
     !branchReady ||
-    activeAgents.length + newAgents.length >= engine.maxAgents * 3.5 ||
+    (activeAgents.length + newAgents.length >= agentLimit && myActiveTips > 1) ||
     Math.random() >= branchProb
   ) {
     return;
@@ -452,6 +484,7 @@ export function executeBotanicalBranching(
     }
     // Leader thins slightly after throwing a whorl
     agent.thickness *= 0.92;
+    if (agent.id !== undefined) engine.lastAgentStemIndex?.delete(agent.id);
     return;
   }
 
@@ -498,6 +531,7 @@ export function executeBotanicalBranching(
         });
       }
     }
+    if (agent.id !== undefined) engine.lastAgentStemIndex?.delete(agent.id);
     return;
   }
 
@@ -554,6 +588,7 @@ export function executeBotanicalBranching(
 
   const childThickness = Math.max(0.03, agent.thickness * childRatio);
   agent.thickness = Math.max(0.04, agent.thickness * leaderRatio);
+  if (agent.id !== undefined) engine.lastAgentStemIndex?.delete(agent.id);
 
   newAgents.push({
     position: agent.position.clone(),

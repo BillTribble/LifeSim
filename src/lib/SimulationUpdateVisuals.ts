@@ -157,26 +157,36 @@ export function updateMeshesAndStemsGrowth(
   const windFlutterMult = effectiveOverall * ((engine.shimmer ?? 0.40) * 0.65 + (engine.wavy ?? 0.35) * 0.35);
   const motionActivity = Math.min(1.0, effectiveOverall * ((engine.shimmer ?? 0.40) + (engine.wavy ?? 0.35) + (engine.branchMovement ?? 0.45)));
 
-  const growthDuration = 40;
+  const growthDuration = 96;
   const updateMeshGrowth = (mesh: THREE.InstancedMesh, segments: any[]) => {
     let changed = false;
     const isHybrid = engine.hybridMeshes.includes(mesh);
     const hybridVarId = isHybrid ? engine.hybridMeshes.indexOf(mesh) : -1;
     // Per-mesh invariants (hoisted out of the per-segment loop)
     const isLeaf = mesh === engine.appendages.get("leaves")?.mesh;
+    const isFern = mesh === engine.appendages.get("ferns")?.mesh;
     const pB = mesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
+    const ambAttr = (isLeaf || isFern)
+      ? (mesh.geometry.getAttribute("instanceAmbientReflect") as THREE.InstancedBufferAttribute | undefined)
+      : undefined;
     if (isLeaf && !pB) throw new Error("CRITICAL SHADER ERROR: instancePackB attribute is UNDEFINED on leaves mesh geometry!");
     const leafWind = isLeaf && engine.windVelocity > 0 && windFlutterMult > 0.0001;
     // View-only LOD: settled leaves re-pose for wind on a stride (1/2 at medium, 1/4 at low, paused at minimal).
     const windStride = WIND_STRIDE[engine.lod?.tier ?? 0];
+    const realDtSec = Math.min(0.1, ((engine as any)._lastRealFrameDtMs || 16.7) / 1000.0);
+    // 3-second real wall-clock fade between leaf detail levels regardless of viewer speed (timeScale)
+    const leafDetailFadeStep = realDtSec / 3.0;
+    const camPos = engine.camera.position;
+    const centerY = engine.creatureCenterY || 0;
+    const camRefDist = Math.max(25.0, Math.hypot(camPos.x, camPos.y - centerY, camPos.z));
+    const globalTierNorm = Math.min(1.0, (engine.lod?.tier ?? 0) / 3.0);
 
+    let pBChanged = false;
+    let ambChanged = false;
     for (let i = 0; i < (mesh.count || 0); i++) {
       const seg = segments[i];
       if (!seg) continue;
       if (isHybrid && seg.variant !== hybridVarId) {
-        engine.dummy.matrix.makeScale(0, 0, 0);
-        mesh.setMatrixAt(i, engine.dummy.matrix);
-        changed = true;
         continue;
       }
       const age = engine.time - seg.timestamp;
@@ -186,9 +196,31 @@ export function updateMeshesAndStemsGrowth(
       if (pB && motionActivity > 0.0001) {
         const val = pB.getX(i);
         if (val < 1.0) {
-          const leafStep = Math.max(0.02, (engine.leafGrowthSpeed || 0.0045) * Math.max(3.0, engine.timeScale));
-          pB.setX(i, Math.min(1.0, val + (isLeaf ? leafStep : 0.05 * engine.timeScale)));
-          markActiveInstancesDirty(pB, mesh.count);
+          const ts = Math.max(0.25, engine.timeScale || 1.0);
+          const leafStep = Math.max(0.006, (engine.leafGrowthSpeed || 0.0045) * 1.6 * ts);
+          pB.setX(i, Math.min(1.0, val + (isLeaf ? leafStep : 0.014 * ts)));
+          pBChanged = true;
+        }
+      }
+      if (ambAttr && seg.matrix) {
+        const me = seg.matrix.elements;
+        const distRatio = Math.hypot(me[12] - camPos.x, me[13] - camPos.y, me[14] - camPos.z) / camRefDist;
+        // Close leaves (distRatio <= 0.90) stay detailed (0.0); distant leaves (distRatio >= 1.15) simplify (1.0)
+        const distDetailTarget = THREE.MathUtils.clamp((distRatio - 0.90) / 0.25, 0.0, 1.0);
+        const targetDetail = distRatio <= 0.90
+          ? 0.0
+          : Math.max(distDetailTarget, globalTierNorm * THREE.MathUtils.clamp((distRatio - 0.88) / 0.25, 0.0, 1.0));
+        if (seg.detailBlend === undefined) {
+          seg.detailBlend = targetDetail;
+          ambAttr.setX(i, seg.detailBlend);
+          ambChanged = true;
+        } else if (Math.abs(targetDetail - seg.detailBlend) > 0.0005) {
+          const diff = targetDetail - seg.detailBlend;
+          seg.detailBlend = Math.abs(diff) <= leafDetailFadeStep
+            ? targetDetail
+            : seg.detailBlend + Math.sign(diff) * leafDetailFadeStep;
+          ambAttr.setX(i, seg.detailBlend);
+          ambChanged = true;
         }
       }
 
@@ -222,7 +254,7 @@ export function updateMeshesAndStemsGrowth(
         }
 
         const isLeafApp = mesh === engine.appendages.get("leaves")?.mesh || mesh === engine.appendages.get("ferns")?.mesh;
-        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? (engine.hybridSize || 2.0) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
+        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? 1.0 : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
         engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulse);
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -233,6 +265,8 @@ export function updateMeshesAndStemsGrowth(
         changed = true;
       }
     }
+    if (pBChanged && pB) markActiveInstancesDirty(pB, mesh.count);
+    if (ambChanged && ambAttr) markActiveInstancesDirty(ambAttr, mesh.count);
     if (changed) {
       markActiveInstancesDirty(mesh.instanceMatrix, mesh.count);
       if (mesh.instanceColor) markActiveInstancesDirty(mesh.instanceColor, mesh.count);
@@ -246,7 +280,7 @@ export function updateMeshesAndStemsGrowth(
   const stemPackBAttr = engine.cylinderMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
   if (motionActivity > 0.0001 && stemPackBAttr && engine.growingStems && engine.growingStems.size > 0) {
     let updated = false;
-    const step = Math.max(0.02, 0.05 * (engine.timeScale || 1.0));
+    const step = Math.max(0.008, 0.018 * (engine.timeScale || 1.0));
     for (const idx of Array.from(engine.growingStems)) {
       const seg = engine.segments[idx];
       if (!seg || engine.dyingStems.has(idx)) {
@@ -310,10 +344,10 @@ export function updateMeshesAndStemsGrowth(
     }
   }
 
-  // Ambient reflection from glowing agents
+  // Ambient reflection from glowing agents (skipped on software rasterizer where fast Lambert shader ignores it)
   const ambientAttr = engine.cylinderMesh.geometry.getAttribute("instanceAmbientReflect") as THREE.InstancedBufferAttribute;
   const lightDirAttr = engine.cylinderMesh.geometry.getAttribute("instanceLightDir") as THREE.InstancedBufferAttribute;
-  if (ambientAttr && lightDirAttr && engine.glowTraitReflect > 0.0) {
+  if (!(engine as any)._isSoftwareRaster && ambientAttr && lightDirAttr && engine.glowTraitReflect > 0.0) {
     const glowingAgents = engine.agents.filter((a) => a.active && !a.isFeeler && a.genome.isGlowing);
     if (glowingAgents.length > 0) {
       const activePoints = Math.min(engine.pointCount, engine.maxDOMs);
@@ -364,6 +398,8 @@ export function updateMeshesAndStemsGrowth(
 
 export function updateHybridConnectionMesh(engine: SimulationEngine) {
   if (!engine.hybridConnectionMesh) return;
+  engine.hybridConnectionMesh.visible = false;
+  return;
 
   const positions: number[] = [];
   const colors: number[] = [];

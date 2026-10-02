@@ -6,13 +6,14 @@ import {
   POST_MATING_COOLDOWN_STEPS,
 } from "./SimulationSeekRamp";
 import { getStrainTissueCount } from "./SimulationPartnerSearch";
+import { inatService } from "./SimulationINatService";
 
 /** Unbred organisms get this many growth steps after reaching fertility before they may be culled. */
-export const MATURITY_GRACE_STEPS = 90;
+export const MATURITY_GRACE_STEPS = 220;
 /** Max lifespan of an organism in growth steps before age-based senescence. */
-export const MAX_ORGANISM_LIFESPAN_STEPS = 320;
+export const MAX_ORGANISM_LIFESPAN_STEPS = 620;
 /** Minimum growth-step spacing between routine senescence die-offs so the colony cycles one oldest creature at a time. */
-export const SENESCENCE_INTERVAL_STEPS = 70;
+export const SENESCENCE_INTERVAL_STEPS = 110;
 
 /** True when an organism may be deleted without dropping below the minCreatures floor. */
 export function canEnterDeleting(
@@ -34,7 +35,7 @@ export function canEnterDeleting(
           }
           return living.size;
         })();
-  const minCreatures = engine.minCreatures ?? 4;
+  const minCreatures = engine.minCreatures ?? 9;
   if (livingOrganisms < minCreatures) return false;
   if (livingOrganisms - countAsRemoved < minCreatures) return false;
   return true;
@@ -60,7 +61,7 @@ function isOldestLivingOrganism(
   return true;
 }
 
-/** Kills the agent's species once it has bred out or exceeded its max lifespan, pacing turnover near maxCreatures. */
+/** Kills the agent's species once it has bred out or exceeded its max lifespan, pacing continuous rolling turnover once the aquarium space has filled. */
 export function checkLifespanDeath(
   engine: SimulationEngine,
   agent: Agent,
@@ -69,9 +70,14 @@ export function checkLifespanDeath(
   maxM: number,
 ) {
   if (agent.tapering || agent.isFeeler) return;
+  const charge = Math.min(1, Math.max(0, (inatService.getBroodinessMultiplier() - 1) / 1.5));
+  const broodTempoScale = Math.max(0.68, 1.0 - 0.28 * charge);
   const organismAgeSteps = getOrganismGrowthSteps(engine, agent.genome);
-  const minMatingLifespan = FERTILITY_MIN_GROWTH_STEPS + (maxM + 1) * POST_MATING_COOLDOWN_STEPS * 1.25;
-  const maxLifespan = Math.max(minMatingLifespan, MAX_ORGANISM_LIFESPAN_STEPS);
+  const minMatingLifespan = Math.max(
+    380,
+    (FERTILITY_MIN_GROWTH_STEPS + (maxM + 1) * POST_MATING_COOLDOWN_STEPS * 1.5) * broodTempoScale,
+  );
+  const maxLifespan = Math.max(minMatingLifespan, MAX_ORGANISM_LIFESPAN_STEPS * broodTempoScale);
   const lifecycle = (engine as any).speciesLifecycleMap?.get(agent.genome.name);
   const speciesMCount = lifecycle?.matingCount || agent.matingCount || 0;
   const hasSpeciesBred = !!(agent.hasBred || lifecycle?.hasBred || speciesMCount > 0);
@@ -84,24 +90,23 @@ export function checkLifespanDeath(
 
   if (!shouldDieFromMating && !shouldDieFromAge) return;
 
-  const minC = engine.minCreatures ?? 4;
-  const maxC = Math.max(minC + 1, engine.maxCreatures || 7);
-  // Allow population to climb to maxCreatures before routine turnover begins; once at maxCreatures
-  // (or maxCreatures - 1 when well past maxLifespan), retire the oldest organism on a paced interval.
-  const atCapacityForTurnover =
-    livingOrganismCount >= maxC ||
-    (shouldDieFromAge && organismAgeSteps > maxLifespan * 1.25 && livingOrganismCount >= Math.max(minC + 1, maxC - 1));
-  if (!atCapacityForTurnover) return;
+  const isSoft = !!(engine as any)._isSoftwareRaster;
+  const minC = isSoft ? Math.min(4, engine.minCreatures ?? 9) : (engine.minCreatures ?? 9);
+  const maxC = isSoft ? Math.min(6, engine.maxCreatures ?? 15) : Math.max(minC + 2, engine.maxCreatures ?? 15);
+  // Let the aquarium fill up toward maxCreatures before retiring the oldest organism one at a time.
+  const turnoverFloor = isSoft ? 4 : Math.max(minC + 2, Math.floor((minC + maxC) * 0.75));
+  if (livingOrganismCount < turnoverFloor) return;
   if (livingOrganismCount - 1 < minC) return;
 
-  const stepRate = Math.max(0.01, (engine.growthSpeed || 0.24) * 60);
+  const stepRate = Math.max(0.01, (engine.growthSpeed || 0.06) * 60);
   const lastDeathTime = (engine as any)._lastSenescenceDeathTime;
   const stepsSinceLastDeath =
     lastDeathTime !== undefined ? ((engine.time - lastDeathTime) / 60) * stepRate : Infinity;
-  if (stepsSinceLastDeath < SENESCENCE_INTERVAL_STEPS) return;
+  const effectiveInterval = (isSoft ? 45 : SENESCENCE_INTERVAL_STEPS) * broodTempoScale;
+  if (stepsSinceLastDeath < effectiveInterval) return;
   if (!isOldestLivingOrganism(engine, activeAgents, agent.genome.name)) return;
 
-  if (canEnterDeleting(engine, activeAgents, 1)) {
+  if (canEnterDeleting(engine, activeAgents, 1) || (isSoft && livingOrganismCount >= 4)) {
     (engine as any)._lastSenescenceDeathTime = engine.time;
     const reason = shouldDieFromMating ? `bred ${speciesMCount} times` : "reached max lifespan";
     engine.killSpecies(agent.genome.name, reason);
@@ -114,11 +119,14 @@ export function enforceCreatureCap(
   activeAgents: Agent[],
   nonTaperingStrains: Set<string>,
 ): void {
-  if (!engine.designerMode && nonTaperingStrains.size > engine.maxCreatures) {
+  const isSoft = !!(engine as any)._isSoftwareRaster;
+  const effectiveMax = isSoft ? Math.min(6, engine.maxCreatures) : engine.maxCreatures;
+  const effectiveMin = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
+  if (!engine.designerMode && nonTaperingStrains.size > effectiveMax) {
     let guard = 0;
     while (
-      nonTaperingStrains.size > engine.maxCreatures &&
-      canEnterDeleting(engine, activeAgents, 1) &&
+      nonTaperingStrains.size > effectiveMax &&
+      (canEnterDeleting(engine, activeAgents, 1) || (isSoft && nonTaperingStrains.size > 5)) &&
       guard++ < 16
     ) {
       // Hard cap: prefer bred, then oldest; fall back to ignoring the maturity window.
@@ -126,7 +134,7 @@ export function enforceCreatureCap(
         selectCullVictim(engine, activeAgents, new Set(), "preferBredSmallest") ||
         selectCullVictim(engine, activeAgents, new Set(), "preferBredSmallest", true);
       if (!victim) break;
-      if (engine.getLivingOrganismCount() - 1 < engine.minCreatures) break;
+      if (engine.getLivingOrganismCount() - 1 < effectiveMin) break;
 
       (engine as any)._lastSenescenceDeathTime = engine.time;
       engine.killSpecies(victim, "maximum species capacity reached");
@@ -175,9 +183,13 @@ export function selectCullVictim(
     }
     const lc = engine.speciesLifecycleMap.get(name);
     const bred = !!(lc?.hasBred || (lc?.matingCount ?? 0) > 0 || ca.hasBred);
-    if (!bred && !ignoreProtection) {
+    if (!ignoreProtection) {
       const steps = getOrganismGrowthSteps(engine, ca.genome);
-      if (steps < FERTILITY_MIN_GROWTH_STEPS + MATURITY_GRACE_STEPS) continue;
+      const isSoft = !!(engine as any)._isSoftwareRaster;
+      const minSteps = bred
+        ? FERTILITY_MIN_GROWTH_STEPS + (isSoft ? 45 : 90)
+        : FERTILITY_MIN_GROWTH_STEPS + (isSoft ? 70 : MATURITY_GRACE_STEPS);
+      if (steps < minSteps) continue;
     }
     const createdAt = ca.genome.createdAt ?? 0;
     const size = getStrainTissueCount(engine, name);

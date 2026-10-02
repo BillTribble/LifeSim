@@ -387,6 +387,7 @@ export function SimulationView(props: SimulationViewProps) {
     }
     engineRef.current = engine;
     (window as any).__LIFESIM_ENGINE__ = engine;
+    (window as any).THREE = THREE;
     applyEngineProps(engine, props);
     engine.initAgents();
     if (window.location.search.includes("autorun20=1")) {

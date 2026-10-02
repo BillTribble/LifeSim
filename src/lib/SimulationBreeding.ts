@@ -182,7 +182,9 @@ export function handleBreedingAndFeelers(
         }
       }
 
-      const touchDist = Math.max(0.5, Math.min(agent.thickness, (bestPartner.thickness || 1.0)) * 0.5);
+      const touchDist = agent.isFeeler
+        ? Math.max(1.35, (agent.feelerStep ?? 1.1) * 1.15)
+        : Math.max(0.5, Math.min(agent.thickness, (bestPartner.thickness || 1.0)) * 0.5);
       const breedReach = touchDist * touchDist;
       // Global birth throttle (plan 3.3), checked before any cull so a blocked birth kills nobody.
       // Counted, not logged: one line per blocked contact would flood the log.
@@ -195,7 +197,10 @@ export function handleBreedingAndFeelers(
         const parent1Genome = resolveRootOrganismGenome(agent, engine);
         const parent2Genome = resolveRootOrganismGenome(nearestPartner, engine);
         let allowBreeding = true;
-        if (nonTaperingStrains.size >= engine.maxCreatures) {
+        const isSoft = !!(engine as any)._isSoftwareRaster;
+        const effectiveMaxCreatures = isSoft ? Math.min(4, engine.maxCreatures) : engine.maxCreatures;
+        const effectiveMinCreatures = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
+        if (nonTaperingStrains.size >= effectiveMaxCreatures) {
           const parentAName = parent1Genome.name;
           const parentBName = parent2Genome.name;
           const lcMap = (engine as any).speciesLifecycleMap;
@@ -203,26 +208,24 @@ export function handleBreedingAndFeelers(
           if ((lcMap?.get(parentAName)?.matingCount || 0) === 0) excludeFirstTimeParents.add(parentAName);
           if ((lcMap?.get(parentBName)?.matingCount || 0) === 0) excludeFirstTimeParents.add(parentBName);
 
-          const victimSpeciesName =
-            selectCullVictim(engine, activeAgents, excludeFirstTimeParents) ||
-            selectCullVictim(engine, activeAgents, new Set(), "preferBredSmallest", true);
+          const victimSpeciesName = selectCullVictim(engine, activeAgents, excludeFirstTimeParents);
 
           if (victimSpeciesName) {
             const livingOrganisms = engine.getLivingOrganismCount();
-            if (livingOrganisms - 1 >= engine.minCreatures) {
+            if (livingOrganisms - 1 >= effectiveMinCreatures) {
               (engine as any)._lastSenescenceDeathTime = engine.time;
               engine.killSpecies(victimSpeciesName, "sacrificed for new hybrid birth");
               nonTaperingStrains.delete(victimSpeciesName);
               engine.onLog(`Breeding recorded. Culling oldest species: ${victimSpeciesName}. (policy=preferBredSmallest)`);
             } else {
               engine.onLog(
-                `🛡️ Sacrifice blocked for ${victimSpeciesName}: would drop organisms below minCreatures (${livingOrganisms} - 1 < ${engine.minCreatures}). Breeding blocked to honor maxCreatures.`,
+                `🛡️ Sacrifice blocked for ${victimSpeciesName}: would drop organisms below minCreatures (${livingOrganisms} - 1 < ${effectiveMinCreatures}). Breeding blocked to honor maxCreatures.`,
               );
               allowBreeding = false;
             }
           } else {
             engine.onLog(
-              `🛡️ No cullable organism available (${nonTaperingStrains.size}/${engine.maxCreatures}). Breeding blocked to honor maxCreatures.`,
+              `🛡️ No cullable organism available (${nonTaperingStrains.size}/${effectiveMaxCreatures}). Breeding blocked to honor maxCreatures.`,
             );
             allowBreeding = false;
           }
@@ -258,7 +261,7 @@ export function handleBreedingAndFeelers(
             perp.normalize();
             if (Math.random() < 0.5) perp.negate();
             childDir.copy(perp).add(
-              new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.3) * 0.5, (Math.random() - 0.5) * 0.5),
+              new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
             );
           }
           childDir.normalize();
@@ -270,6 +273,7 @@ export function handleBreedingAndFeelers(
           }
           // Spawn newborn directly at the contact nexus so it grows out of its base hybrid artifact
           const spawnPoint = clampInsideBounds(engine, midPoint.clone());
+          childGenome.birthPos = spawnPoint.clone();
 
           const cd = Math.max(
             minGrowthTicks,
@@ -302,7 +306,7 @@ export function handleBreedingAndFeelers(
             genome: childGenome,
             active: true,
             age: 0,
-            thickness: childGenome.thicknessBase,
+            thickness: Math.min(0.58, childGenome.thicknessBase * 0.35),
             cooldown: cd,
           });
 
@@ -366,7 +370,7 @@ export function handleBreedingAndFeelers(
                 fa === nearestPartner
               ) {
                 endFeeler(engine, fa, "mated", {
-                  dissolve: false,
+                  dissolve: true,
                   detail: fa === agent || fa === nearestPartner ? "self" : "organism",
                 });
               }
@@ -401,8 +405,8 @@ export function handleBreedingAndFeelers(
           bredThisFrame.add(agent);
           bredThisFrame.add(nearestPartner);
 
-          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: false, detail: "self" });
-          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: false, detail: "self" });
+          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: true, detail: "self" });
+          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: true, detail: "self" });
         }
       }
     }

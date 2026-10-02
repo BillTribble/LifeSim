@@ -10,7 +10,8 @@ import {
 import { assignGenomeMorphology, inheritGenomeMorphology } from "./SimulationMorphology";
 
 export function getRandomWeightedArchetype(): Archetype {
-  return ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
+  const branchingPool: Archetype[] = ["bush", "tree", "rhizome", "bush", "tree", "rhizome"];
+  return branchingPool[Math.floor(Math.random() * branchingPool.length)];
 }
 
 export function getWeightedAppendage(
@@ -131,38 +132,39 @@ export function clampArchetypeGenome(res: Genome): Genome {
   if (!res.morphMode) {
     assignGenomeMorphology(res);
   }
+  res.singleton = false;
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.65, 3.6);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.025, 0.25);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.972, 0.994);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.03, 0.14);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 1.5, 4.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.4);
-    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.2, 0.65);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.75, 3.6);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.18, 0.35);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.982, 0.995);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.06, 0.05, 0.16);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.0, 2.0, 4.5);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.15);
+    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.25, 0.65);
   } else if (res.archetype === "bush") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.60, 3.4);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.05, 0.03, 0.16);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.980, 0.995);
-    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.20 + Math.random() * 0.12);
-    res.branchTendency = Math.max(res.branchTendency || 0.5, 3.5 + Math.random() * 4.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.32, 0.90);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.75, 3.4);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.20, 0.18, 0.32);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.996);
+    res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.22 + Math.random() * 0.12);
+    res.branchTendency = Math.max(res.branchTendency || 0.5, 3.8 + Math.random() * 4.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.32, 0.85);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.4, 8.5);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.1, 0.02, 0.55);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.975, 0.994);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.01, 0.012, 0.055);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 0.5, 1.4, 6.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.45);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.4, 6.5);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.22, 0.20, 0.55);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.982, 0.995);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.04, 0.035, 0.085);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.2, 2.0, 6.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.15);
     if (res.morphMode === "filigree") {
-      res.morphScale = THREE.MathUtils.clamp(res.morphScale ?? 0.55, 0.42, 0.68);
+      res.morphScale = THREE.MathUtils.clamp(res.morphScale ?? 0.55, 0.48, 0.68);
     }
   } else if (res.archetype === "snake") {
-    res.thicknessBase = Math.max(res.thicknessBase, 3.5 + Math.random() * 2.0);
-    res.minThickness = Math.max(res.minThickness, 1.8);
-    res.bifurcationRate = Math.min(res.bifurcationRate, 0.01);
-    res.branchTendency = Math.min(res.branchTendency, 1.5);
-    res.stepSize = Math.max(res.stepSize, 2.0);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.8, 4.2);
+    res.minThickness = Math.max(res.minThickness, 0.45);
+    res.bifurcationRate = Math.max(res.bifurcationRate || 0.05, 0.05);
+    res.branchTendency = Math.max(res.branchTendency || 2.2, 2.2);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.65, 1.25);
   }
   if (!res.appendage) {
     res.appendage = getWeightedAppendage({});
@@ -231,6 +233,11 @@ export function breedGenomes(
   const phylloInheritance = selectMendelianAlleles(
     g1.phyllotaxisMode ?? "spiral", g1.recessive?.phyllotaxisMode,
     g2.phyllotaxisMode ?? "spiral", g2.recessive?.phyllotaxisMode
+  );
+
+  const windInheritance = selectMendelianAlleles(
+    g1.windStyle ?? "seaweed", g1.recessive?.windStyle,
+    g2.windStyle ?? "stiff", g2.recessive?.windStyle
   );
 
   // Stable Color Blending: Direct lerp of expressed parent colors with tight variation (+/- 0.015)
@@ -332,6 +339,7 @@ export function breedGenomes(
     vernationType: vernInheritance.expressed,
     canopyZone: canopyInheritance.expressed,
     phyllotaxisMode: phylloInheritance.expressed,
+    windStyle: windInheritance.expressed,
     succulence: THREE.MathUtils.clamp(
       ((g1.succulence ?? 0.5) + (g2.succulence ?? 0.5)) / 2 + (Math.random() - 0.5) * 0.1,
       0,
@@ -350,6 +358,7 @@ export function breedGenomes(
       vernationType: vernInheritance.recessive,
       canopyZone: canopyInheritance.recessive,
       phyllotaxisMode: phylloInheritance.recessive,
+      windStyle: windInheritance.recessive,
     },
   };
   inheritGenomeMorphology(res, g1, g2);

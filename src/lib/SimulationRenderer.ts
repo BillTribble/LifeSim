@@ -180,7 +180,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       color: 0xffffff,
       roughness: 0.6,
       metalness: 0.3,
-      clearcoat: 0.5,
+      clearcoat: 0.0,
       reflectivity: 1.0
     }));
 
@@ -245,7 +245,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       color: 0xffffff,
       roughness: 0.6,
       metalness: 0.3,
-      clearcoat: 0.5,
+      clearcoat: 0.0,
       reflectivity: 1.0
     }));
 
@@ -256,7 +256,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       color: 0xffffff,
       roughness: 0.6,
       metalness: 0.3,
-      clearcoat: 0.5,
+      clearcoat: 0.0,
       reflectivity: 1.0
     }), false, true);
     engine.appendageMaterial = appendageMaterial;

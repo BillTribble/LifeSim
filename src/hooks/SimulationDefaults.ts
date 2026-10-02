@@ -67,9 +67,9 @@ export const DEFAULTS: Record<string, any> = {
   "tideThickness": 456.24642604695646,
   "tideOpacity": 0.25621486859877396,
   "tideSaturation": 0.5579982505111011,
-  "growthSpeed": 0.24,
+  "growthSpeed": 0.06,
   "widthGrowthEffect": 0,
-  "diebackRate": 1.3182568226156233,
+  "diebackRate": 0.45,
   "allowBreeding": true,
   "hybridCooldown": 3,
   "hybridStickiness": 10,
@@ -84,9 +84,9 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 51,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 12,
+  "maxCreatures": 15,
   "ecoFade": 0.02946475338922394,
-  "minCreatures": 7,
+  "minCreatures": 9,
   "boundarySize": 60,
   "boundarySquash": 1,
   "desiccationSpeed": 4.289796350823339,
@@ -94,7 +94,7 @@ export const DEFAULTS: Record<string, any> = {
   "terminationProb": 0.6071318627934128,
   "termProbPostBranch": 0.35,
   "segmentGap": 0.12,
-  "taperDuration": 1.0466962184788358,
+  "taperDuration": 2.4,
   "diebackAgeBias": 4.314851637950758,
   "enableGlow": false,
   "glowSize": 0.5,
@@ -168,14 +168,14 @@ export const DEFAULTS: Record<string, any> = {
   "version": "0.3",
   "appendageSize": 1,
   "hybridDecay": 10,
-  "deathRate": 1.3182568226156233,
+  "deathRate": 0.45,
   "speed": 1,
   "slowMotion": 1,
   "rotationVelocity": 0.1,
   "rotationVelocityY": 0,
   "swarmCohesion": 0.15,
   "detectionRange": 24,
-  "extrusionSpeed": 0.24,
+  "extrusionSpeed": 0.06,
   "fadeSpeed": 4.289796350823339,
   "pulseSpeed": 0.22800937123499115,
   "saturation": 0.3503112579376193,
@@ -187,7 +187,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-09-30-v1.3";
+export const CURRENT_SCHEMA = "2026-10-01-v1.4";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
@@ -218,10 +218,10 @@ export function getStoredFloat(key: string, fallback?: number): number {
     if (!isNaN(val)) {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
-      if (key === "minCreatures" && (val === 11 || val === 3 || val === 14 || val === 4)) return DEFAULTS.minCreatures;
-      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19 || val === 7)) return DEFAULTS.maxCreatures;
+      if (key === "minCreatures" && (val === 11 || val === 3 || val === 14 || val === 4 || val === 7)) return DEFAULTS.minCreatures;
+      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19 || val === 7 || val === 12)) return DEFAULTS.maxCreatures;
       if (key === "rotationSpeed" && val === 0.2) return DEFAULTS.rotationSpeed;
-      if ((key === "growthSpeed" || key === "extrusionSpeed") && Math.abs(val - 0.11) < 1e-6) return DEFAULTS.growthSpeed;
+      if ((key === "growthSpeed" || key === "extrusionSpeed") && (Math.abs(val - 0.11) < 1e-6 || Math.abs(val - 0.24) < 1e-6)) return DEFAULTS.growthSpeed;
       if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];
       if (key === "feelerDelay" && val === 6) return DEFAULTS.feelerDelay;
       // Ecology-health migrations: legacy stored values that would defeat the clumping fixes

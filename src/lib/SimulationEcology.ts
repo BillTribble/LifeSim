@@ -80,11 +80,13 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
         }
 
         if (!engine.speciesAbove3Percent) engine.speciesAbove3Percent = new Set();
-        
-        if (ratio > 0.03) {
+        const targetPop = Math.max(7, engine.getLivingOrganismCount(), engine.maxCreatures || 7);
+        const ratioThreshold = Math.min(0.03, 0.21 / targetPop);
+
+        if (ratio > ratioThreshold) {
           engine.speciesAbove3Percent.add(strainName);
         } else if (
-          ratio < 0.03 &&
+          ratio < ratioThreshold * 0.75 &&
           engine.speciesAbove3Percent.has(strainName) &&
           engine.hasAnyOrganismBred &&
           // Don't cull an organism that was just born or just bred (it killed founders mid-breeding)
@@ -92,10 +94,11 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           engine.getLivingOrganismCount() - 1 >= engine.minCreatures
         ) {
           engine.speciesAbove3Percent.delete(strainName);
-          engine.killSpecies(strainName, 'dropped below 3% ratio');
+          const pctLabel = (ratioThreshold * 100).toFixed(1);
+          engine.killSpecies(strainName, `dropped below ${pctLabel}% ratio`);
           const genome3 = engine.genomeMap?.get(strainName);
           const arch3 = genome3?.archetype || 'bush';
-          engine.onLog(`📉 Species ${strainName} [${arch3.toUpperCase()}] dropped below 3% and was culled to make space.`);
+          engine.onLog(`📉 Species ${strainName} [${arch3.toUpperCase()}] dropped below ${pctLabel}% and was culled to make space.`);
         }
       });
     }
@@ -143,9 +146,17 @@ export function performCapacityCulling(
   engine: SimulationEngine,
   activeNotTapering: Agent[],
 ): void {
+  const anyEng = engine as any;
+  const isSoft = anyEng._isSoftwareRaster;
+  const p = anyEng._prunePressure ?? 0.0;
+  const totalActive = engine.agents.filter(a => a.active && !a.isFeeler).length;
+  const maxC = Math.max(12, engine.maxCreatures || 12);
+  const desktopCap = Math.max(engine.maxAgents * 3.0, maxC * 12);
+  const cap = isSoft ? 18 : (p >= 0.5 ? Math.max(60, maxC * 5) : desktopCap);
+
   if (
     engine.hasAnyOrganismBred &&
-    activeNotTapering.length > engine.maxAgents * 3.0
+    totalActive > cap
   ) {
     const strainGroups = new Map<string, typeof activeNotTapering>();
     activeNotTapering.forEach((a) => {
@@ -174,7 +185,7 @@ export function performCapacityCulling(
     if (oldestName) {
       const livingOrganisms = engine.getLivingOrganismCount();
       if (livingOrganisms - 1 >= engine.minCreatures) {
-        engine.onLog(`⚠️ Capacity overflow (${activeNotTapering.length} agents > ${engine.maxAgents * 3.0} limit) — culling oldest: ${oldestName}`);
+        engine.onLog(`⚠️ Capacity overflow (${totalActive} agents > ${cap} limit) — culling oldest: ${oldestName}`);
         engine.killSpecies(oldestName, "capacity overflow");
       }
     }

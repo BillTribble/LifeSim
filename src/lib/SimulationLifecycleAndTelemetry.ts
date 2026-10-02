@@ -60,13 +60,15 @@ export function initSpeciesLifecycle(engine: SimulationEngine, strainName: strin
 export function killSpecies(engine: SimulationEngine, strainName: string, reason: string): void {
   const livingOrganisms = engine.getLivingOrganisms();
   const livingCount = livingOrganisms.size;
-  if (livingCount < engine.minCreatures) {
-    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): living organisms (${livingCount}) has not reached minCreatures (${engine.minCreatures}).`);
+  const isSoft = !!(engine as any)._isSoftwareRaster;
+  const minFloor = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
+  if (livingCount < minFloor) {
+    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): living organisms (${livingCount}) has not reached minCreatures (${minFloor}).`);
     return;
   }
 
-  if (livingCount - 1 < engine.minCreatures) {
-    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): deleting this creature would drop organisms below minCreatures (${livingCount} - 1 < ${engine.minCreatures}).`);
+  if (livingCount - 1 < minFloor) {
+    engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): deleting this creature would drop organisms below minCreatures (${livingCount} - 1 < ${minFloor}).`);
     return;
   }
 
@@ -110,17 +112,25 @@ export function spawnHybridArtifact(
   childStrainName?: string,
 ): void {
   if (engine.hybridMeshes.length === 0) return;
-  const currentCount = engine.hybridCount % 2000;
+  const maxHybrids = (engine as any)._isSoftwareRaster ? 16 : 2000;
+  const currentCount = engine.hybridCount % maxHybrids;
 
   engine.dummy.position.copy(pos);
   engine.dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  engine.dummy.scale.set(engine.hybridSize, engine.hybridSize, engine.hybridSize);
+  const artScale = Math.min(0.65, Math.max(0.30, (engine.hybridSize || 4.0) * 0.08));
+  engine.dummy.scale.set(artScale, artScale, artScale);
   engine.dummy.updateMatrix();
 
   const variant = Math.floor(Math.random() * engine.hybridMeshes.length);
   const mesh = engine.hybridMeshes[variant];
   mesh.setMatrixAt(currentCount, engine.dummy.matrix);
   mesh.setColorAt(currentCount, color);
+  const zeroMat = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (let v = 0; v < engine.hybridMeshes.length; v++) {
+    if (v !== variant) {
+      engine.hybridMeshes[v].setMatrixAt(currentCount, zeroMat);
+    }
+  }
   const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
   if (packAAttr) {
     packAAttr.setZ(currentCount, 0.0);
@@ -155,9 +165,9 @@ export function spawnHybridArtifact(
   engine.dyingHybrids.delete(currentCount);
   engine.hybridCount++;
 
-  const drawCount = Math.min(2000, Math.max(engine.hybridCount, currentCount + 1));
+  const drawCount = Math.min(maxHybrids, Math.max(Math.min(engine.hybridCount, maxHybrids), currentCount + 1));
   for (const m of engine.hybridMeshes) {
-    m.count = Math.max(m.count, drawCount);
+    m.count = Math.min(maxHybrids, Math.max(m.count, drawCount));
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }

@@ -24,6 +24,7 @@ export type LodTier = 0 | 1 | 2 | 3;
 
 export type MovementType = "wiggle" | "spiral" | "orthogonal";
 export const MOVEMENT_TYPES: MovementType[] = ["wiggle", "spiral", "orthogonal"];
+export type WindStyle = "seaweed" | "stiff";
 
 export const PULSE_TARGETS = ["none", "stem", "appendage", "all"] as const;
 
@@ -51,6 +52,7 @@ export interface RecessiveGenes {
   vernationType: "circinate" | "convolute" | "conduplicate";
   canopyZone: "wholeBody" | "terminal" | "basal";
   phyllotaxisMode: "spiral" | "decussate" | "whorled";
+  windStyle?: WindStyle;
   growthHabit?: string;
   morphMode?: MorphMode;
   morphScale?: number;
@@ -62,6 +64,7 @@ export interface Genome {
   name: string;
   archetype: Archetype;
   movementType: MovementType;
+  windStyle?: WindStyle;
   color: THREE.Color;
   thicknessBase: number;
   thicknessDecay: number;

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import {
   createTrimmedLeafBoxGeometry,
+  createSimplifiedLeafBladeGeometry,
   createWeldedStemGeometry,
   createWeldedConeGeometry,
   weldNonIndexedGeometry,
@@ -10,6 +11,7 @@ import {
   isMobileDevice,
   enforceVertexBudget,
 } from "./SimulationVertexTrimmer";
+import { updateTrianglePruner } from "./SimulationTrianglePruner";
 
 /**
  * View-only Level of Detail (LOD) for LifeSim.
@@ -33,9 +35,9 @@ export const LOD_UP_MS = 17.2;
 export const LOD_BASE_UPGRADE_FRAMES = 90;
 export const LOD_MAX_UPGRADE_FRAMES = 720;
 /** Frames to wait after a downgrade before another downgrade (lets the swap take effect). */
-export const LOD_DOWN_COOLDOWN = 20;
+export const LOD_DOWN_COOLDOWN = 6;
 /** Net count of raw slow frames required before a downgrade (a single hitch never downgrades). */
-export const LOD_SLOW_FRAMES = 10;
+export const LOD_SLOW_FRAMES = 3;
 /** Tier-0-equivalent triangle budgets that force a minimum tier regardless of FPS. */
 export const LOD_TRI_BUDGET = DESKTOP_LOD_TRI_BUDGET;
 
@@ -51,6 +53,7 @@ export const SHARED_INSTANCE_ATTRIBUTES = [
 export interface LodState {
   mode: LodMode;
   tier: LodTier;
+  smoothTier: number;
   fpsTier: LodTier;
   emaFrameMs: number;
   fps: number;
@@ -81,6 +84,7 @@ export function createLodState(): LodState {
   return {
     mode: initMode,
     tier: initTier,
+    smoothTier: initTier,
     fpsTier: initTier,
     emaFrameMs: isMobile ? 33.3 : 16.7,
     fps: isMobile ? 30 : 60,
@@ -101,8 +105,10 @@ export function createLodState(): LodState {
 // ---------------------------------------------------------------------------
 
 function leafGeometry(tier: LodTier): THREE.BufferGeometry {
-  const [sx, sy] = ([[16, 24], [10, 14], [6, 8], [3, 5]] as const)[tier];
-  return createTrimmedLeafBoxGeometry(sx, sy, 0.05);
+  if (tier === 3) return createSimplifiedLeafBladeGeometry(4, 6);
+  if (tier === 2) return createSimplifiedLeafBladeGeometry(4, 8);
+  if (tier === 1) return createTrimmedLeafBoxGeometry(6, 10, 0.045);
+  return createTrimmedLeafBoxGeometry(16, 24, 0.05);
 }
 
 function fernGeometry(tier: LodTier): THREE.BufferGeometry {
@@ -126,7 +132,7 @@ function fernGeometry(tier: LodTier): THREE.BufferGeometry {
 
 /** Stem segment. Tiers 0-1 keep end caps (visible on segmented creatures); 2-3 drop them. */
 export function stemGeometry(tier: LodTier): THREE.BufferGeometry {
-  const [radial, heightSegs, withCaps] = ([[6, 2, true], [5, 1, false], [4, 1, false], [3, 1, false]] as const)[tier];
+  const [radial, heightSegs, withCaps] = ([[10, 2, true], [8, 1, true], [6, 1, false], [6, 1, false]] as const)[tier];
   return createWeldedStemGeometry(radial, heightSegs, withCaps);
 }
 
@@ -150,7 +156,7 @@ export const APPENDAGE_BUILDERS: Record<string, Builder> = {
   thorns: (t) => createWeldedConeGeometry(0.3, 0.6, pick(t, [4, 4, 3, 3]), 0.3),
   hair: (t) => createWeldedStemGeometry(pick(t, [4, 3, 3, 3]), 1, false).scale(0.04, 0.04, 1),
   curlyHair: (t) => {
-    const [tub, rad] = pick(t, [[32, 5], [20, 4], [12, 3], [8, 2]] as const);
+    const [tub, rad] = pick(t, [[32, 5], [20, 4], [12, 3], [4, 2]] as const);
     return new THREE.TorusKnotGeometry(0.4, 0.08, tub, rad);
   },
   crystals: () => weldNonIndexedGeometry(new THREE.OctahedronGeometry(0.6)),
@@ -222,8 +228,20 @@ export function registerLodMesh(engine: SimulationEngine, mesh: THREE.InstancedM
   if (current !== mesh.geometry) mesh.geometry = current;
 }
 
+export function syncLodUniforms(engine: SimulationEngine, smoothTier: number) {
+  const stemMat = engine.cylinderMesh?.material as THREE.Material | undefined;
+  if (stemMat?.userData?.uLodLevel) stemMat.userData.uLodLevel.value = smoothTier;
+  const appMat = engine.appendageMaterial as THREE.Material | undefined;
+  if (appMat?.userData?.uLodLevel) appMat.userData.uLodLevel.value = smoothTier;
+  const leafMat = engine.appendages.get("leaves")?.mesh.material as THREE.Material | undefined;
+  if (leafMat?.userData?.uLodLevel) leafMat.userData.uLodLevel.value = smoothTier;
+  const fernMat = engine.appendages.get("ferns")?.mesh.material as THREE.Material | undefined;
+  if (fernMat?.userData?.uLodLevel) fernMat.userData.uLodLevel.value = smoothTier;
+}
+
 export function applyLodTier(engine: SimulationEngine, tier: LodTier) {
   const lod = engine.lod;
+  if (lod.smoothTier === undefined) lod.smoothTier = tier;
   if (lod.tier !== tier) {
     if (tier < lod.tier) lod.framesSinceUpgrade = 0;
     lod.tier = tier;
@@ -239,10 +257,7 @@ export function applyLodTier(engine: SimulationEngine, tier: LodTier) {
       if (mesh.geometry !== g) mesh.geometry = g;
     }
   }
-  const leafMat = engine.appendages.get("leaves")?.mesh.material as THREE.Material | undefined;
-  if (leafMat?.userData?.uLodLevel) leafMat.userData.uLodLevel.value = tier;
-  const fernMat = engine.appendages.get("ferns")?.mesh.material as THREE.Material | undefined;
-  if (fernMat?.userData?.uLodLevel) fernMat.userData.uLodLevel.value = tier;
+  syncLodUniforms(engine, lod.smoothTier);
   if (engine.isMobile && engine.renderer?.setPixelRatio && typeof window !== "undefined") {
     engine.renderer.setPixelRatio(tier >= 3 ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.25));
   }
@@ -316,16 +331,32 @@ export function updateAdaptiveLOD(engine: SimulationEngine, frameDtMs: number): 
 
   // Ignore tab-switch / debugger pauses; clamp hitches so one spike can't dominate the EMA.
   const validSample = frameDtMs > 0 && frameDtMs < 1000;
+  const realDtMs = validSample ? Math.min(frameDtMs, 100) : 16.7;
+  (engine as any)._lastRealFrameDtMs = realDtMs;
   if (validSample) {
-    const dt = Math.min(frameDtMs, 100);
-    lod.emaFrameMs = lod.emaFrameMs * 0.88 + dt * 0.12;
+    lod.emaFrameMs = lod.emaFrameMs * 0.88 + realDtMs * 0.12;
     lod.fps = 1000 / lod.emaFrameMs;
   }
+  updateTrianglePruner(engine, frameDtMs);
+
+  // Smooth linear fade over 3.0 real wall-clock seconds (3000ms) regardless of viewer speed (timeScale)
+  const stepPerFrame = realDtMs / 3000.0;
+  const advanceSmoothTier = () => {
+    if (lod.smoothTier === undefined) lod.smoothTier = lod.tier;
+    const diff = lod.tier - lod.smoothTier;
+    if (Math.abs(diff) <= stepPerFrame) {
+      lod.smoothTier = lod.tier;
+    } else {
+      lod.smoothTier += Math.sign(diff) * stepPerFrame;
+    }
+    syncLodUniforms(engine, lod.smoothTier);
+  };
 
   lod.activeTrianglesTier0 = getSceneGeometryStats(engine, 0).triangles;
 
   if (lod.mode !== "auto") {
     if (lod.tier !== lod.mode) applyLodTier(engine, lod.mode);
+    advanceSmoothTier();
     lod.activeTriangles = getSceneGeometryStats(engine).triangles;
     return lod.tier;
   }
@@ -362,9 +393,12 @@ export function updateAdaptiveLOD(engine: SimulationEngine, frameDtMs: number): 
   }
   if (lod.framesSinceUpgrade > 1200) lod.upgradeFramesRequired = LOD_BASE_UPGRADE_FRAMES;
 
-  const rawTarget = Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0, engine.isMobile)) as LodTier;
+  const rawTarget = (engine as any)._isSoftwareRaster
+    ? (3 as LodTier)
+    : (Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0, engine.isMobile)) as LodTier);
   const target = (engine.isMobile ? Math.max(1, rawTarget) : rawTarget) as LodTier;
   if (target !== lod.tier) applyLodTier(engine, target);
+  advanceSmoothTier();
   lod.activeTriangles = getSceneGeometryStats(engine).triangles;
   return lod.tier;
 }

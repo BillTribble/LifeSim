@@ -174,76 +174,42 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side, isMobile 
   let cx = targetPos?.x ?? 0;
   let cy = targetPos?.y ?? 0;
 
-  if (isMobile) {
-    const W = window.innerWidth;
-    const marginX = 68;
+  const W = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const H = typeof window !== "undefined" ? window.innerHeight : 768;
+  const marginX = isMobile ? 68 : 96;
+  const stackStepY = isMobile ? 24 : 28;
 
-    if (isValidTarget) {
-      cx = targetPos!.x;
-      cy = targetPos!.y;
-
-      if (side === "left") {
-        const halfWayLeft = cx * 0.5;
-        cardX = Math.max(marginX, Math.min(cx - 48, halfWayLeft));
-      } else {
-        const halfWayRight = cx + (W - cx) * 0.5;
-        cardX = Math.min(W - marginX, Math.max(cx + 48, halfWayRight));
-      }
-
-      const targetY = cy + 64 + stackIndex * 24;
-      const marginYTop = 80;
-      const marginYBottom = 48;
-      cardY = Math.max(marginYTop, Math.min(window.innerHeight - marginYBottom, targetY));
-    } else {
-      cx = side === "left" ? W * 0.3 : W * 0.7;
-      cy = window.innerHeight * 0.45;
-
-      const baseCardY = window.innerHeight - 80;
-      cardY = baseCardY - stackIndex * 24;
-      cardX = side === "left"
-        ? Math.max(marginX, W * 0.25)
-        : Math.min(W - marginX, W * 0.75);
-    }
-  } else if (isValidTarget) {
+  if (isValidTarget) {
     cx = targetPos!.x;
     cy = targetPos!.y;
 
-    const W = window.innerWidth;
-    const marginX = 160;
-
     if (side === "left") {
-      // Position card on the LEFT side of cx, halfway to the left edge of screen
       const halfWayLeft = cx * 0.5;
-      cardX = Math.max(marginX, Math.min(cx - 150, halfWayLeft));
+      cardX = Math.max(marginX, Math.min(cx - (isMobile ? 48 : 72), halfWayLeft));
     } else {
-      // Position card on the RIGHT side of cx, halfway to the right edge of screen
       const halfWayRight = cx + (W - cx) * 0.5;
-      cardX = Math.min(W - marginX, Math.max(cx + 150, halfWayRight));
+      cardX = Math.min(W - marginX, Math.max(cx + (isMobile ? 48 : 72), halfWayRight));
     }
 
-    // Position cards lower down below the organisms so they never obscure 3D structures
-    const targetY = cy + 135 + (stackIndex * 85);
-    const marginYTop = 110;
-    const marginYBottom = 60;
-    cardY = Math.max(marginYTop, Math.min(window.innerHeight - marginYBottom, targetY));
+    const targetY = cy + (isMobile ? 64 : 76) + stackIndex * stackStepY;
+    const marginYTop = 80;
+    const marginYBottom = 48;
+    cardY = Math.max(marginYTop, Math.min(H - marginYBottom, targetY));
   } else {
-    // Default creature screen position estimate for non-targeted cards
-    const defaultCx = side === "left" ? window.innerWidth * 0.25 : window.innerWidth * 0.75;
-    cx = defaultCx;
-    cy = window.innerHeight / 2;
+    cx = side === "left" ? W * 0.3 : W * 0.7;
+    cy = H * 0.45;
 
-    const baseCardY = window.innerHeight - 80;
-    const verticalShift = stackIndex * 75;
-    cardY = baseCardY - verticalShift;
+    const baseCardY = H - 80;
+    cardY = baseCardY - stackIndex * stackStepY;
     cardX = side === "left"
-      ? Math.max(160, window.innerWidth * 0.20)
-      : Math.min(window.innerWidth - 160, window.innerWidth * 0.80);
+      ? Math.max(marginX, W * 0.25)
+      : Math.min(W - marginX, W * 0.75);
   }
 
-  // Anchor line point on top/edge of card (or directly above small title text on mobile)
-  const anchorPointX = isMobile ? cardX : cardX < cx ? cardX + 100 : cardX - 100;
-  const anchorPointY = isMobile ? cardY - 9 : cardY - 25;
-  const showLine = isValidTarget || (isMobile && !targetPos?.isBehind);
+  // Anchor line point directly above minimal title text on all viewport sizes
+  const anchorPointX = cardX;
+  const anchorPointY = cardY - (isMobile ? 9 : 11);
+  const showLine = isValidTarget || !targetPos?.isBehind;
 
   return (
     <>
@@ -262,7 +228,7 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side, isMobile 
             </linearGradient>
           </defs>
 
-          {/* Solid Vector Line connecting creature target (cx, cy) to card edge anchor */}
+          {/* Solid Vector Line connecting creature target (cx, cy) to title anchor */}
           <line
             x1={cx}
             y1={cy}
@@ -276,207 +242,28 @@ function PopupCardItem({ item, targetPos, onDismiss, stackIndex, side, isMobile 
           <circle cx={cx} cy={cy} r="8" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity={stackOpacity * 0.6} />
           <circle cx={cx} cy={cy} r="4" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
 
-          {/* Anchor Dot at Card / Title */}
+          {/* Anchor Dot at Title */}
           <circle cx={anchorPointX} cy={anchorPointY} r={isMobile ? "2.5" : "3"} fill={strokeColor} />
         </svg>
       )}
 
-      {isMobile ? (
-        /* Mobile Viewport: Minimal transparent title only (no panel) */
-        <div
-          style={{
-            left: `${cardX}px`,
-            top: `${cardY}px`,
-            zIndex,
-            transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
-            opacity: visible ? stackOpacity : 0,
-            transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
-          }}
-          className="fixed bg-transparent pointer-events-none"
-        >
-          <div className="bg-transparent text-[10px] font-mono font-medium text-white whitespace-nowrap tracking-wide">
-            {item.title}
-          </div>
+      {/* Minimal transparent title only (no opaque panel) across all viewport sizes */}
+      <div
+        data-popup-notification="true"
+        style={{
+          left: `${cardX}px`,
+          top: `${cardY}px`,
+          zIndex,
+          transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
+          opacity: visible ? stackOpacity : 0,
+          transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
+        }}
+        className="fixed bg-transparent pointer-events-none"
+      >
+        <div className="bg-transparent text-[10px] sm:text-xs font-mono font-medium text-white whitespace-nowrap tracking-wide">
+          {item.title}
         </div>
-      ) : (
-        /* Desktop Pop-up Window Card with Cascading Stack Shift and Scale */
-        <div
-          style={{
-            left: `${cardX}px`,
-            top: `${cardY}px`,
-            zIndex,
-            transform: `translate(-50%, -50%) scale(${visible ? scale : 0.95})`,
-            opacity: visible ? stackOpacity : 0,
-            transition: "top 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease, scale 0.45s ease",
-          }}
-          className="fixed w-[270px] sm:w-[300px] pointer-events-auto"
-        >
-          <div
-            className="bg-[#001220]/95 backdrop-blur-xl border rounded-xl p-3 shadow-2xl shadow-purple-950/70 text-[#D2B48C] font-mono relative overflow-hidden"
-            style={{ borderColor: `${strokeColor}70` }}
-          >
-            {/* Close Button */}
-            <button
-              onClick={handleClose}
-              className="absolute top-2 right-2 p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors z-10"
-              title="Dismiss notification"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Content based on type */}
-            {currentContent(item, getHexColor)}
-          </div>
-        </div>
-      )}
+      </div>
     </>
   );
-}
-
-function currentContent(item: PopupItem, getHexColor: (c: any) => string) {
-  if ((item.type === "organism1" || item.type === "organism2") && item.genome) {
-    const hex = getHexColor(item.genome.color);
-    return (
-      <div className="flex items-start gap-2.5">
-        <div
-          className="p-1.5 rounded-lg border shrink-0 mt-0.5 shadow-md flex items-center justify-center"
-          style={{
-            backgroundColor: `${hex}25`,
-            borderColor: hex,
-          }}
-        >
-          <Dna className="w-4 h-4" style={{ color: hex }} />
-        </div>
-        <div className="flex-1 pr-3">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: hex }}>
-              {item.subtitle}
-            </span>
-            <span
-              className="w-2 h-2 rounded-full inline-block border border-white/30"
-              style={{ backgroundColor: hex }}
-            />
-          </div>
-          <h3 className="text-xs font-bold text-white mb-1">
-            {item.title}
-          </h3>
-
-          <div className="grid grid-cols-2 gap-1 text-[9px] bg-black/40 p-1.5 rounded border border-white/10">
-            <div>
-              <span className="text-purple-300/70">ARCHETYPE:</span>{" "}
-              <span className="text-white font-bold uppercase">{item.genome.archetype}</span>
-            </div>
-            <div>
-              <span className="text-purple-300/70">STEM FORM:</span>{" "}
-              <span className="text-white">
-                {item.genome.thicknessBase > 3.0 ? "Stout" : "Slender"} ({item.genome.thicknessBase.toFixed(1)})
-              </span>
-            </div>
-            <div>
-              <span className="text-purple-300/70">VERNATION:</span>{" "}
-              <span className="text-cyan-300 capitalize">{item.genome.vernationType || "Circinate"}</span>
-            </div>
-            <div>
-              <span className="text-purple-300/70">PHYLLOTAXIS:</span>{" "}
-              <span className="text-cyan-300 capitalize">{item.genome.phyllotaxisMode || "Spiral"}</span>
-            </div>
-            <div>
-              <span className="text-purple-300/70">CANOPY:</span>{" "}
-              <span className="text-pink-300 capitalize">{item.genome.canopyZone || "Whole"}</span>
-            </div>
-            <div>
-              <span className="text-purple-300/70">APPENDAGE:</span>{" "}
-              <span className="text-green-300 capitalize">{item.genome.appendage || "Leaves"}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (item.type === "mating" && item.matingData) {
-    const parent1Hex = getHexColor(item.matingData.parent1.color);
-    const parent2Hex = getHexColor(item.matingData.parent2.color);
-    const childHex = getHexColor(item.matingData.child.color);
-
-    return (
-      <div className="flex items-start gap-2.5">
-        <div className="p-1.5 rounded-lg bg-pink-500/20 border border-pink-400/50 text-pink-300 shrink-0 mt-0.5">
-          <Heart className="w-4 h-4 text-pink-400 fill-pink-400/40" />
-        </div>
-        <div className="flex-1 pr-3">
-          <div className="text-[9px] font-bold tracking-widest text-pink-400 uppercase">
-            {item.subtitle}
-          </div>
-          <h3 className="text-xs font-bold text-white mb-0.5">
-            {item.title}
-          </h3>
-          <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
-            Organism contact established. New hybrid species formed.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-1.5 text-[9px] bg-black/40 p-1.5 rounded border border-pink-500/30">
-            <div className="flex items-center gap-1">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40"
-                style={{ backgroundColor: parent1Hex }}
-              />
-              <span className="text-white">{item.matingData.parent1.name.split(' ')[0]}</span>
-            </div>
-            <span className="text-pink-400 font-bold">+</span>
-            <div className="flex items-center gap-1">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40"
-                style={{ backgroundColor: parent2Hex }}
-              />
-              <span className="text-white">{item.matingData.parent2.name.split(' ')[0]}</span>
-            </div>
-            <span className="text-pink-400 font-bold">➔</span>
-            <div className="flex items-center gap-1 border border-pink-400/50 px-1 py-0.5 rounded bg-pink-500/20">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-white/40"
-                style={{ backgroundColor: childHex }}
-              />
-              <span className="text-pink-200 font-bold">{item.matingData.child.name}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (item.type === "feeler" && item.feelerData) {
-    const parentHex = getHexColor(item.feelerData.parent.color);
-
-    return (
-      <div className="flex items-start gap-2.5">
-        <div className="p-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 shrink-0 mt-0.5">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-        </div>
-        <div className="flex-1 pr-3">
-          <div className="text-[9px] font-bold tracking-widest text-cyan-400 uppercase">
-            {item.subtitle}
-          </div>
-          <h3 className="text-xs font-bold text-white mb-0.5">
-            {item.title}
-          </h3>
-          <p className="text-[10px] text-[#D2B48C]/90 mb-1.5 leading-snug">
-            {item.feelerData.parent.name.split(' ')[0]} extended a sensory feeler to initiate hybridization.
-          </p>
-
-          <div className="flex items-center gap-1 text-[9px] bg-black/40 p-1.5 rounded border border-cyan-500/30">
-            <span
-              className="w-2.5 h-2.5 rounded-full border border-white/40"
-              style={{ backgroundColor: parentHex }}
-            />
-            <span className="text-white font-bold">{item.feelerData.parent.name}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-
-  return null;
 }

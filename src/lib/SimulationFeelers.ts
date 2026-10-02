@@ -8,7 +8,7 @@ import {
 } from "./SimulationSeekRamp";
 import { isStrainDying } from "./SimulationEngineHelpers";
 import { FEELER_REACH_GROWTH_STEPS, getStepsSinceLastMating } from "./SimulationDrought";
-import { getEffectiveMaxMatings } from "./SimulationPartnerSearch";
+import { getEffectiveMaxMatings, getStrainTissueIndex } from "./SimulationPartnerSearch";
 
 /**
  * Feelers: temporary sensory extensions of an organism. They inherit the root organism's genome
@@ -114,9 +114,9 @@ export function createFeelerGenome(agent: Agent, engine?: SimulationEngine): any
     parentStrainName: rootGenome.name,
     _isFeeler: true,
     archetype: rootGenome.archetype, // Preserve parent organism archetype (Bush, Tree, Rhizome). Never snake!
-    thicknessBase: Math.max(0.2, Math.min(0.35, agent.thickness * 0.4)),
-    minThickness: 0.5,
-    stepSize: 1.3,
+    thicknessBase: Math.max(0.045, Math.min(0.08, agent.thickness * 0.25)),
+    minThickness: 0.04,
+    stepSize: 0.85,
     wanderIntensity: 0.15,
     bifurcationRate: 0.0001,
     branchTendency: 0,
@@ -134,17 +134,17 @@ export function createFeelerGenome(agent: Agent, engine?: SimulationEngine): any
 }
 
 /** Feeler lifetime cap in growth steps. */
-export const FEELER_MAX_LIFETIME_STEPS = 450;
+export const FEELER_MAX_LIFETIME_STEPS = 140;
 /** Feeler step relative to the parent tip's botanical step. */
-const FEELER_STEP_SCALE = 1.25;
+const FEELER_STEP_SCALE = 1.05;
 /** Per-step turn toward the target (was a hard copy, which drew ruler-straight rays). */
-const FEELER_HOMING_LERP = 0.25;
+const FEELER_HOMING_LERP = 0.34;
 /** Stronger homing inside a few steps of the target so feelers land instead of orbiting. */
-const FEELER_CLOSE_HOMING_LERP = 0.6;
+const FEELER_CLOSE_HOMING_LERP = 0.72;
 
 /**
- * Maximum feeler reach (spawn distance gate and travel cap): starts at 0.85 x boundarySize,
- * ramping up to 1.65 x, and up to 1.85 x when population is at or below minCreatures.
+ * Maximum feeler reach (spawn distance gate and travel cap): allows feelers to bridge the gap
+ * between organisms (up to 1.35x boundarySize when under minCreatures) and dissolve immediately on contact.
  */
 export function getFeelerMaxReach(engine: SimulationEngine, genome?: any): number {
   const b = Math.max(10, engine.boundarySize || 60);
@@ -155,7 +155,7 @@ export function getFeelerMaxReach(engine: SimulationEngine, genome?: any): numbe
       : 2;
   const underMin = living <= (engine.minCreatures ?? 4);
   const t = genome ? Math.min(1, getStepsSinceLastMating(engine, genome) / FEELER_REACH_GROWTH_STEPS) : 0;
-  const mult = underMin ? 1.85 : 1.25 + 0.65 * t;
+  const mult = underMin ? 1.35 : 0.85 + 0.55 * t;
   return mult * b;
 }
 
@@ -180,9 +180,10 @@ export function spawnFeeler(
 ): void {
   const rootGenome = resolveRootOrganismGenome(agent, engine);
   const feelerGenome = createFeelerGenome(agent, engine);
-  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 1.1) * FEELER_STEP_SCALE, 0.85, 1.6);
-  const maxLen = Math.min(1.6 * targetDist + 10 * step, getFeelerMaxReach(engine, rootGenome));
+  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 1.1) * FEELER_STEP_SCALE, 0.95, 1.6);
+  const maxLen = Math.max(1.35 * targetDist + 8 * step, Math.min(1.45 * targetDist + 12 * step, getFeelerMaxReach(engine, rootGenome)));
   newAgents.push({
+    id: engine.nextAgentId++,
     position: agent.position.clone(),
     lastPosition: agent.position.clone(),
     direction: towardsPartner.clone(),
@@ -278,34 +279,61 @@ export function updateFeelerSeeking(
     return endFeeler(engine, agent, "reach", dissolve);
   }
 
-  const target = agent.feelerTargetStrain;
-  const targetGenome = target ? engine.genomeMap.get(target) : undefined;
-  const targetMCount = target ? lifecycleMap?.get(target)?.matingCount || 0 : 0;
-  const targetMaxM = getEffectiveMaxMatings(engine, targetMCount);
+  let target = agent.feelerTargetStrain;
+  let targetGenome = target ? engine.genomeMap.get(target) : undefined;
+  let targetMCount = target ? lifecycleMap?.get(target)?.matingCount || 0 : 0;
+  let targetMaxM = getEffectiveMaxMatings(engine, targetMCount);
   if (
     !target ||
     isStrainDying(engine, target) ||
     targetMCount >= targetMaxM ||
     !areStrainsCompatibleForMating(engine, myStrainName, evalGenome, target, targetGenome)
   ) {
-    return endFeeler(engine, agent, "targetLost", dissolve);
+    // Attempt to retarget feeler in-flight to another compatible living organism before aborting
+    let bestRetarget: string | undefined;
+    let bestRetargetDistSq = Infinity;
+    for (let aIdx = 0; aIdx < engine.agents.length; aIdx++) {
+      const cand = engine.agents[aIdx];
+      if (!cand.active || cand.isFeeler || cand.tapering) continue;
+      const candStrain = cand.genome.name;
+      if (candStrain === myStrainName || isStrainDying(engine, candStrain)) continue;
+      const candMCount = lifecycleMap?.get(candStrain)?.matingCount || cand.matingCount || 0;
+      if (candMCount >= getEffectiveMaxMatings(engine, candMCount)) continue;
+      if (!areStrainsCompatibleForMating(engine, myStrainName, evalGenome, candStrain, cand.genome)) continue;
+      const dSq = agent.position.distanceToSquared(cand.position);
+      if (dSq < bestRetargetDistSq) {
+        bestRetargetDistSq = dSq;
+        bestRetarget = candStrain;
+      }
+    }
+    if (!bestRetarget) {
+      return endFeeler(engine, agent, "targetLost", dissolve);
+    }
+    target = bestRetarget;
+    agent.feelerTargetStrain = bestRetarget;
+    targetGenome = engine.genomeMap.get(bestRetarget);
+    const extraReach = Math.sqrt(bestRetargetDistSq) * 1.35 + 18;
+    agent.feelerMaxLen = Math.min(
+      getFeelerMaxReach(engine, rootGenome) * 1.25,
+      Math.max(agent.feelerMaxLen ?? 120, (agent.feelerTravel ?? 0) + extraReach),
+    );
   }
 
-  // Full scan of the target's live tissue plus its (non-feeler) growth tips.
+  // Fast scan of the target's stride-sampled live tissue plus its (non-feeler) growth tips.
   const anchors = nexusAnchors(engine, myStrainName, evalGenome, target, targetGenome);
   const px = agent.position.x, py = agent.position.y, pz = agent.position.z;
   let minDSq = Infinity;
   let nx = 0, ny = 0, nz = 0;
-  const limit = Math.min(engine.pointCount, engine.maxDOMs);
-  for (let sIdx = 0; sIdx < limit; sIdx++) {
-    const seg = engine.segments[sIdx];
-    if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName !== target) continue;
-    const m = seg.matrix.elements;
-    const dx = px - m[12], dy = py - m[13], dz = pz - m[14];
-    const dSq = dx * dx + dy * dy + dz * dz;
-    if (dSq < minDSq && !insideAnyAnchor(anchors, m[12], m[13], m[14])) {
-      minDSq = dSq;
-      nx = m[12]; ny = m[13]; nz = m[14];
+  const targetTissue = getStrainTissueIndex(engine).get(target);
+  if (targetTissue) {
+    for (let k = 0; k < targetTissue.xs.length; k++) {
+      const tx = targetTissue.xs[k], ty = targetTissue.ys[k], tz = targetTissue.zs[k];
+      const dx = px - tx, dy = py - ty, dz = pz - tz;
+      const dSq = dx * dx + dy * dy + dz * dz;
+      if (dSq < minDSq && !insideAnyAnchor(anchors, tx, ty, tz)) {
+        minDSq = dSq;
+        nx = tx; ny = ty; nz = tz;
+      }
     }
   }
   for (let aIdx = 0; aIdx < engine.agents.length; aIdx++) {
@@ -325,7 +353,11 @@ export function updateFeelerSeeking(
   const dist = Math.sqrt(minDSq);
   const step = getFeelerStepSize(agent);
   const homing = new THREE.Vector3(nx - px, ny - py, nz - pz);
-  if (homing.lengthSq() < 1e-9) {
+  if (dist < 0.25 || homing.lengthSq() < 1e-6) {
+    (agent as any)._atTargetSteps = ((agent as any)._atTargetSteps || 0) + 1;
+    if ((agent as any)._atTargetSteps > 2) {
+      return endFeeler(engine, agent, "reach", dissolve);
+    }
     agent.feelerStepOverride = 0;
     return;
   }

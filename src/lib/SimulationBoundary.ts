@@ -173,37 +173,30 @@ export function isMobileViewport(width: number): boolean {
   return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
 
+const REF_ASPECT = 1.6;
+
 /**
- * Computes the camera distance from `controls.target` so the 3D bounding box
- * fills 90% of the screen width on mobile and 80% of the screen width on desktop.
+ * Computes the camera distance from `controls.target` using a locked reference
+ * horizontal aspect ratio so resizing the viewport never zooms creatures bigger or smaller.
  */
 export function getResponsiveBoundaryCameraDistance(engine: SimulationEngine): number {
   const b = Math.max(10, engine.boundarySize || 60);
-  const width = engine.width > 0 ? engine.width : (typeof window !== "undefined" ? window.innerWidth || 1280 : 1280);
-  const height = engine.height > 0 ? engine.height : (typeof window !== "undefined" ? window.innerHeight || 800 : 800);
-  const aspect = Math.max(0.1, width / Math.max(1, height));
-
-  const mobile = isMobileViewport(width);
-  const targetWidthFill = mobile ? 0.90 : 0.80;
+  const targetWidthFill = 0.82;
 
   const baseFOV = 45.0;
   const proj = engine.cameraProjection !== undefined ? engine.cameraProjection : 1.0;
   const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, proj));
-  const tanHalfV = Math.tan((targetFOV * Math.PI) / 360);
-  const tanHalfH = Math.max(1e-4, tanHalfV * aspect);
-  const k = 1.0 / (targetWidthFill * tanHalfH);
+  const tanHalfVRef = Math.tan((targetFOV * Math.PI) / 360);
+  const tanHalfHRef = Math.max(1e-4, tanHalfVRef * REF_ASPECT);
+  const k = 1.0 / (targetWidthFill * tanHalfHRef);
 
-  // For a sphere of radius b, the horizontal silhouette tangent is at b / sqrt(D^2 - b^2) = targetWidthFill * tanHalfH => D = b * sqrt(1 + k^2).
-  // For a cuboid of half-extent b, the front face at depth (D - b) has b / (D - b) = targetWidthFill * tanHalfH => D = b * (1 + k).
-  if (engine.boundaryShape === "sphere") {
-    return b * Math.sqrt(1.0 + k * k);
-  }
-  return b * (1.0 + k);
+  return b * Math.sqrt(1.0 + k * k);
 }
 
 /**
- * Updates camera FOV, distance along the current view ray, and fog range so the
- * bounding box responsively fills 90% width on mobile and 80% width on desktop.
+ * Keeps horizontal FOV and camera distance fixed (so creatures never get bigger/smaller
+ * when the viewport scales) and squashes/expands the 3D space vertically (`boundarySquash`)
+ * to fit the viewport's vertical height.
  */
 export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine): void {
   if (!engine.camera || !engine.controls) return;
@@ -212,10 +205,28 @@ export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine):
     return;
   }
 
+  const width = engine.width > 0 ? engine.width : (typeof window !== "undefined" ? window.innerWidth || 1280 : 1280);
+  const height = engine.height > 0 ? engine.height : (typeof window !== "undefined" ? window.innerHeight || 800 : 800);
+  const aspect = Math.max(0.25, width / Math.max(1, height));
+
   const baseFOV = 45.0;
   const proj = engine.cameraProjection !== undefined ? engine.cameraProjection : 1.0;
-  const targetFOV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, proj));
+  const refV = THREE.MathUtils.lerp(1.0, baseFOV, Math.max(0.01, proj));
+  const tanHalfHRef = Math.tan((refV * Math.PI) / 360) * REF_ASPECT;
+  const tanHalfV = tanHalfHRef / aspect;
+  const lockedHorizFOV = THREE.MathUtils.clamp((Math.atan(tanHalfV) * 360) / Math.PI, 1.0, 120.0);
+
   const newDist = getResponsiveBoundaryCameraDistance(engine);
+
+  if ((engine as any)._userBoundarySquash === undefined) {
+    (engine as any)._userBoundarySquash = engine.boundarySquash ?? 1.0;
+  }
+  const baseSquash = (engine as any)._userBoundarySquash ?? 1.0;
+  const targetVerticalSquash = THREE.MathUtils.clamp(baseSquash * (REF_ASPECT / aspect), 0.30, 2.60);
+  if (Math.abs((engine.boundarySquash ?? 1.0) - targetVerticalSquash) > 0.005) {
+    engine.boundarySquash = targetVerticalSquash;
+    engine.updateBoundaryMesh();
+  }
 
   const dir = new THREE.Vector3().subVectors(engine.camera.position, engine.controls.target);
   if (dir.lengthSq() < 1e-6) {
@@ -224,7 +235,7 @@ export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine):
     dir.normalize();
   }
 
-  engine.camera.fov = targetFOV;
+  engine.camera.fov = lockedHorizFOV;
   engine.camera.position.copy(engine.controls.target).addScaledVector(dir, newDist);
   engine.camera.updateProjectionMatrix();
 

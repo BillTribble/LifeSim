@@ -41,6 +41,8 @@ import {
 import { BiomassPanel } from "./BiomassPanel";
 import { BotanicalConcept, BotanicalConceptMeta } from "../lib/SimulationBotany";
 import { BotanicalConceptSwitcher } from "./BotanicalConceptSwitcher";
+import { INatInfoPanel } from "./INatInfoPanel";
+import { inatService } from "../lib/SimulationINatService";
 
 interface HUDProps {
   showHUD: boolean;
@@ -88,6 +90,8 @@ export function HUD({
   const [landscapePanelOpen, setLandscapePanelOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
+  const [inatPanelOpen, setInatPanelOpen] = useState(false);
+  const [broodCharge, setBroodCharge] = useState(() => inatService.getBroodinessCharge());
   const [isControlsExpanded, setIsControlsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,10 +99,17 @@ export function HUD({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    return inatService.subscribe(() => {
+      setBroodCharge(inatService.getBroodinessCharge());
+    });
+  }, []);
+
+  React.useEffect(() => {
     if (showHUD) {
       setIsControlsExpanded(true);
     } else {
       setSoundPanelOpen(false);
+      setInatPanelOpen(false);
       setThemePanelOpen(false);
       setPresetPanelOpen(false);
       setCloudPanelOpen(false);
@@ -401,6 +412,33 @@ export function HUD({
               >
                 <Volume2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               </button>
+            )}
+
+            {/* BIO-LINK // INFO button */}
+            {showHUD && (
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setInatPanelOpen(!inatPanelOpen)}
+                  className={`h-7 flex items-center gap-1.5 px-2.5 rounded-full border transition-all pointer-events-auto backdrop-blur-md select-none font-mono font-bold text-[9px] shadow-sm ${
+                    inatPanelOpen
+                      ? "bg-cyan-950/70 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.35)]"
+                      : "bg-[#001220]/80 border-cyan-500/40 text-cyan-300 hover:border-cyan-400 hover:text-white"
+                  }`}
+                  title="iNaturalist Live Telemetry & Simulation Guide"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse shrink-0" />
+                  <span className="tracking-wide">BIO-LINK // INFO</span>
+                  <span className="text-emerald-400 font-normal">
+                    BROOD {Math.round(broodCharge * 100)}%
+                  </span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${inatPanelOpen ? "rotate-180" : ""}`} />
+                </button>
+                {inatPanelOpen && (
+                  <div className="absolute right-0 top-full mt-2 z-[9999]">
+                    <INatInfoPanel onClose={() => setInatPanelOpen(false)} />
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="flex flex-col items-end relative shrink-0">

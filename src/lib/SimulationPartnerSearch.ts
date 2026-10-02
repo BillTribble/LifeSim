@@ -15,6 +15,7 @@ import { getOrganismBudgetMultiplier } from "./SimulationMorphology";
 
 /** Live, non-dying, non-feeler stem positions grouped by strain, with a bounding sphere per strain. */
 export interface StrainTissue {
+  count: number;
   xs: number[];
   ys: number[];
   zs: number[];
@@ -24,10 +25,13 @@ export interface StrainTissue {
   r: number;
 }
 
+const MAX_TISSUE_SAMPLES_PER_STRAIN = 160;
+
 /**
  * Per-frame spatial index of organism tissue (plan 3.6). Built once per frame in O(segments)
  * and reused by every partner scan instead of re-walking engine.segments for every tip × partner.
- * Segments drawn later in the same frame are not in the index; partner tips are scanned directly.
+ * Keeps exact `count` per strain while stride-sampling spatial anchor points (`<= 160` per strain)
+ * so partner and feeler scans remain O(1) bounded and hold 60 FPS even with 12 mature organisms.
  */
 export function getStrainTissueIndex(engine: SimulationEngine): Map<string, StrainTissue> {
   const cache = (engine as any)._tissueIndex;
@@ -35,14 +39,27 @@ export function getStrainTissueIndex(engine: SimulationEngine): Map<string, Stra
   const map = new Map<string, StrainTissue>();
   const segLen = engine.segments ? engine.segments.length : 0;
   const limit = Math.min(engine.pointCount ?? segLen, engine.maxDOMs ?? segLen);
+  const counts = new Map<string, number>();
   for (let i = 0; i < limit; i++) {
     const seg = engine.segments[i];
     if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName.startsWith("Feeler-")) continue;
-    let t = map.get(seg.strainName);
-    if (!t) {
-      t = { xs: [], ys: [], zs: [], cx: 0, cy: 0, cz: 0, r: 0 };
-      map.set(seg.strainName, t);
-    }
+    counts.set(seg.strainName, (counts.get(seg.strainName) || 0) + 1);
+  }
+  const strides = new Map<string, number>();
+  const seen = new Map<string, number>();
+  for (const [name, total] of counts.entries()) {
+    strides.set(name, Math.max(1, Math.floor(total / MAX_TISSUE_SAMPLES_PER_STRAIN)));
+    seen.set(name, 0);
+    map.set(name, { count: total, xs: [], ys: [], zs: [], cx: 0, cy: 0, cz: 0, r: 0 });
+  }
+  for (let i = 0; i < limit; i++) {
+    const seg = engine.segments[i];
+    if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName.startsWith("Feeler-")) continue;
+    const idx = seen.get(seg.strainName) || 0;
+    seen.set(seg.strainName, idx + 1);
+    const stride = strides.get(seg.strainName) || 1;
+    if (idx % stride !== 0) continue;
+    const t = map.get(seg.strainName)!;
     const m = seg.matrix.elements;
     t.xs.push(m[12]);
     t.ys.push(m[13]);
@@ -50,6 +67,7 @@ export function getStrainTissueIndex(engine: SimulationEngine): Map<string, Stra
   }
   for (const t of map.values()) {
     const n = t.xs.length;
+    if (n === 0) continue;
     let cx = 0, cy = 0, cz = 0;
     for (let i = 0; i < n; i++) {
       cx += t.xs[i];
@@ -75,20 +93,23 @@ export function getStrainTissueIndex(engine: SimulationEngine): Map<string, Stra
 
 /** Live tissue segment count of an organism this frame (0 if none). */
 export function getStrainTissueCount(engine: SimulationEngine, strainName: string): number {
-  return getStrainTissueIndex(engine).get(strainName)?.xs.length ?? 0;
+  return getStrainTissueIndex(engine).get(strainName)?.count ?? 0;
 }
 
-/** Global live-segment budget shared by maxCreatures organisms (per-organism clamp 1500..2500). */
-export const GLOBAL_SEGMENT_BUDGET = 28000;
+/** Global live-segment budget shared by maxCreatures organisms (per-organism clamp 950..2600). */
+export const GLOBAL_SEGMENT_BUDGET = 32000;
 
 export function getOrganismSegmentBudget(engine: SimulationEngine, strainName?: string): number {
-  const baseBudget = Math.min(2500, Math.max(1500, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 7)));
   const genome = strainName ? engine.genomeMap?.get(strainName) : undefined;
   const mult = getOrganismBudgetMultiplier(genome);
-  return Math.min(3200, Math.max(900, Math.round(baseBudget * mult)));
+  if ((engine as any)._isSoftwareRaster) {
+    return Math.round(THREE.MathUtils.clamp(92 * mult, 78, 115));
+  }
+  const baseBudget = Math.min(2600, Math.max(950, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 15)));
+  return Math.min(3200, Math.max(850, Math.round(baseBudget * mult)));
 }
 
-/** True when the organism's live tissue exceeds its soft size budget (it then stops branching). */
+/** True when the organism's live tissue exceeds its soft size budget (it then slows and caps tips). */
 export function isOverSizeBudget(engine: SimulationEngine, strainName: string): boolean {
   return getStrainTissueCount(engine, strainName) > getOrganismSegmentBudget(engine, strainName);
 }
@@ -196,7 +217,8 @@ export function findNearestPartner(
 
     const partnerMCount = lifecycle?.get(pg.name)?.matingCount || partner.matingCount || 0;
     const partnerMaxM = Math.max(maxM, getEffectiveMaxMatings(engine, partnerMCount));
-    const partnerViable = !partner.tapering || (partner.thickness > 0.1 && partnerMCount === 0);
+    const partnerDying = !!(engine.dyingStrains && engine.dyingStrains.has(pg.name));
+    const partnerViable = !partnerDying && (!partner.tapering || partner.thickness > 0.02);
     if (!partnerViable || partnerMCount >= partnerMaxM || bredThisFrame.has(partner)) continue;
     if (!areStrainsCompatibleForMating(engine, evalGenome.name, evalGenome, pg.name, pg)) continue;
 
