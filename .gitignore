@@ -7,3 +7,12 @@ coverage/
 .env*
 !.env.example
 test_results/
+
+# Scratch verification scripts and screenshots (never commit; see AGENTS.md)
+/verify_*
+/benchmark_*
+/profile_*
+/diagnostic_*
+/test_*.mjs
+/scripts/capture_*
+/*.png
