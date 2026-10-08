@@ -69,7 +69,7 @@ export function getStemBudget(engine: SimulationEngine): number {
   if (anyEng._isSoftwareRaster) {
     return Math.round(THREE.MathUtils.lerp(275, 220, p));
   }
-  const maxC = Math.max(9, engine.maxCreatures || 15, engine.minCreatures || 9);
+  const maxC = Math.max(9, engine.maxCreatures || 12, engine.minCreatures || 9);
   const highBudget = Math.min(engine.maxDOMs || 32000, Math.max(18000, maxC * 1600));
   const lowBudget = Math.min(highBudget, Math.max(5200, maxC * 500));
   return Math.round(THREE.MathUtils.lerp(highBudget, lowBudget, p));
@@ -81,7 +81,7 @@ export function getPerAppendageCap(engine: SimulationEngine): number {
   if (anyEng._isSoftwareRaster) {
     return Math.round(THREE.MathUtils.lerp(45, 30, p));
   }
-  const maxC = Math.max(9, engine.maxCreatures || 15, engine.minCreatures || 9);
+  const maxC = Math.max(9, engine.maxCreatures || 12, engine.minCreatures || 9);
   const highCap = Math.min(Math.floor((engine.maxDOMs || 32000) / 4), Math.max(2800, maxC * 240));
   const lowCap = Math.min(highCap, Math.max(1100, maxC * 100));
   return Math.round(THREE.MathUtils.lerp(highCap, lowCap, p));
@@ -558,37 +558,26 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
     }
   }
 
-  if (pruned < targetPruneCount && engine.dyingStrains && engine.dyingStrains.size > 0) {
-    // Reclaim ALL segments of any already-dying strain as a complete unit so no organism is left half-chopped
-    for (const dyingName of Array.from(engine.dyingStrains)) {
-      if (pruned >= targetPruneCount) break;
-      for (const a of engine.agents) {
-        if (a.active && (a.genome.name === dyingName || a.realGenome?.name === dyingName)) {
-          a.active = false;
-          a.tapering = false;
-        }
-      }
-      for (let i = 0; i < currentStems; i++) {
-        const s = engine.segments[i];
-        if (s && s.strainName === dyingName) deleteStemSlot(i);
-      }
-      deleteStrainAppendages(engine, dyingName);
-    }
-  }
-
-  if (pruned < targetPruneCount) {
-    // Retire the single oldest living strain as a complete unit ONLY when >= 4 living strains occupy the buffer
+  if (
+    pruned < targetPruneCount &&
+    (!engine.dyingStrains || engine.dyingStrains.size === 0) &&
+    typeof engine.killSpecies === "function"
+  ) {
+    // Never instant-delete organism stems or appendages (which causes sudden disappearance).
+    // Instead, when live stems exceed budget and no organism is already fading, transition the single
+    // oldest living strain into normal END_OF_LIFE so processDyingSegments fades it out slowly.
     const strainOldestTs = new Map<string, number>();
     for (let i = 0; i < currentStems; i++) {
       const s = engine.segments[i];
-      if (!s || !s.strainName || s.isFeeler) continue;
+      if (!s || !s.strainName || s.isFeeler || s.dyingStart) continue;
       if (engine.dyingStrains && engine.dyingStrains.has(s.strainName)) continue;
       const prev = strainOldestTs.get(s.strainName);
       if (prev === undefined || s.timestamp < prev) {
         strainOldestTs.set(s.strainName, s.timestamp);
       }
     }
-    if (strainOldestTs.size >= 4) {
+    const minFloor = isSoft ? Math.min(3, engine.minCreatures || 9) : (engine.minCreatures || 9);
+    if (strainOldestTs.size > minFloor) {
       let oldestStrain = "";
       let oldestTs = Infinity;
       for (const [sName, ts] of strainOldestTs.entries()) {
@@ -598,18 +587,7 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
         }
       }
       if (oldestStrain) {
-        if (engine.dyingStrains) engine.dyingStrains.add(oldestStrain);
-        for (const a of engine.agents) {
-          if (a.active && (a.genome.name === oldestStrain || a.realGenome?.name === oldestStrain)) {
-            a.active = false;
-            a.tapering = false;
-          }
-        }
-        for (let i = 0; i < currentStems; i++) {
-          const s = engine.segments[i];
-          if (s && s.strainName === oldestStrain) deleteStemSlot(i);
-        }
-        deleteStrainAppendages(engine, oldestStrain);
+        engine.killSpecies(oldestStrain, "stem budget pressure");
       }
     }
   }
@@ -681,13 +659,17 @@ export function pruneAndCompactGeometry(engine: SimulationEngine): void {
   const p = getPrunePressure(engine);
 
   const currentStems = Math.min(engine.pointCount, engine.cylinderMesh.count);
+  const liveStems = Math.max(
+    0,
+    currentStems - (engine.freeStemIndices?.length || 0) - engine.dyingStems.size,
+  );
   const livingCount = Math.max(2, typeof engine.getLivingOrganismCount === "function" ? engine.getLivingOrganismCount() : 4);
   const fairShareStems = isSoft
     ? Math.max(125, Math.floor(stemBudget / Math.max(4, livingCount)))
     : Math.min(640, Math.max(240, Math.floor(stemBudget / Math.max(4, livingCount * 1.25))));
   const minActiveTipsFloor = isSoft ? 3 : 4;
 
-  if ((isSoft || p >= 0.20 || currentStems >= stemBudget * 0.92) && currentStems >= stemBudget * 0.88) {
+  if ((isSoft || p >= 0.20 || liveStems >= stemBudget * 0.92) && liveStems >= stemBudget * 0.88) {
     const outerTips = engine.agents.filter(a => {
       if (!a.active || a.tapering || a.isFeeler) return false;
       const strainBiomass = engine.biomassMap?.get(a.genome.name) || 0;
@@ -696,7 +678,7 @@ export function pruneAndCompactGeometry(engine: SimulationEngine): void {
       if ((a.age || 0) < 35) return false;
       return (
         (a.branchDepth || 0) >= 2 ||
-        (currentStems >= stemBudget * 0.95 && getCameraDistanceRatio(engine, a.position) >= 1.10)
+        (liveStems >= stemBudget * 0.95 && getCameraDistanceRatio(engine, a.position) >= 1.10)
       );
     });
     if (outerTips.length > 0) {
@@ -719,14 +701,16 @@ export function pruneAndCompactGeometry(engine: SimulationEngine): void {
     }
   }
 
-  if (currentStems > stemBudget && engine.frameCount % 4 === 0) {
-    const needed = currentStems - stemBudget;
+  if (liveStems > stemBudget && engine.frameCount % 4 === 0) {
+    const needed = liveStems - stemBudget;
     const merged = mergeAdjacentBranchSegments(engine, needed);
     const stillNeeded = needed - merged;
     if (stillNeeded > 0) {
       emergencyPruneDistantTips(engine, stillNeeded);
     }
-    compactTailSlots(engine, stemBudget);
+    compactTailSlots(engine, stemBudget + engine.dyingStems.size);
+  } else if ((engine.freeStemIndices?.length || 0) > 128 && engine.frameCount % 16 === 0) {
+    compactTailSlots(engine, Math.max(stemBudget + engine.dyingStems.size, liveStems + engine.dyingStems.size));
   }
 
   // Smoothly dissolve furthest background appendages when pool nears capacity so slot recycling never pops

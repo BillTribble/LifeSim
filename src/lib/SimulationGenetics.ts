@@ -319,21 +319,22 @@ export function setupShaderMaterial(
 
              if (vDecay > 0.0) {
                  float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-                 if (ditherLimit < vDecay || vDecay >= 0.98) discard;
+                 if (ditherLimit < vDecay || vDecay >= 0.99) discard;
+                 diffuseColor.rgb *= (1.0 - smoothstep(0.0, 0.98, vDecay) * 0.85);
              }
              
              // Subtle selecting highlight outline glow across all themes
              if (vGlow > 0.0) {
                  float fresnelSelect = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
                  vec3 selectColor = mix(diffuseColor.rgb, vec3(1.0, 1.0, 1.0), 0.5);
-                 diffuseColor.rgb += selectColor * (vGlow * 0.4 + fresnelSelect * vGlow * 0.5);
+                 diffuseColor.rgb += selectColor * (vGlow * 0.4 + fresnelSelect * vGlow * 0.5) * (1.0 - clamp(vDecay, 0.0, 1.0));
              }
              
              // Intrinsic body glow & outline aura trait
              if (vGlowTrait > 0.0) {
                  float intrinsicMult = 1.0;
-                 if (vDecay > 0.0) { // Faltering flicker when reaching dying stage
-                     intrinsicMult = sin(gl_FragCoord.x * 12.34 + gl_FragCoord.y * 45.67) * 0.4 + 0.6;
+                 if (vDecay > 0.0) { // Smooth fade + subtle flicker when reaching dying stage
+                     intrinsicMult = (sin(gl_FragCoord.x * 12.34 + gl_FragCoord.y * 45.67) * 0.25 + 0.75) * (1.0 - smoothstep(0.0, 0.95, vDecay));
                  }
                  float fresnelTrait = 1.0 - max(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0);
                  diffuseColor.rgb += diffuseColor.rgb * (vGlowTrait * intrinsicMult + fresnelTrait * 1.5 * intrinsicMult);
@@ -342,7 +343,7 @@ export function setupShaderMaterial(
              ${!isLeaf ? `
              // Environmental proximity directional reflection (smoothly dissolved by distance)
              if (length(vAmbientReflect) > 0.0 && vCamDist < 195.0) {
-                 float reflWeight = 1.0 - smoothstep(135.0, 195.0, vCamDist);
+                 float reflWeight = (1.0 - smoothstep(135.0, 195.0, vCamDist)) * (1.0 - clamp(vDecay, 0.0, 1.0));
                  float nDotL = max(dot(normalize(vNormal), normalize(vLightDir)), 0.0);
                  float fresnelReflect = 1.0 - max(dot(normalize(vNormal), normalize(vViewPosition)), 0.0);
                  diffuseColor.rgb += vAmbientReflect * (nDotL * 0.7 + fresnelReflect * 0.4) * reflWeight;
@@ -357,7 +358,7 @@ export function setupShaderMaterial(
              // Bypassing all lighting: Add pure emissive neon glow to the outgoing light!
              if (veinStrength > 0.0 && veinGlow > 0.0) {
                  vec3 glowingVeinColor = mix(diffuseColor.rgb * 2.2, vec3(0.98, 1.0, 0.72), 0.65);
-                 gl_FragColor.rgb += glowingVeinColor * finalVeinMask * 0.85 * veinColorIntensity * veinGlow;
+                 gl_FragColor.rgb += glowingVeinColor * finalVeinMask * 0.85 * veinColorIntensity * veinGlow * (1.0 - smoothstep(0.0, 0.95, vDecay));
              }
              ` : ''}
             `

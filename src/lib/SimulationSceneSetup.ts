@@ -614,6 +614,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     attempts < 50 &&
     (betaGenome.geometryType === alphaGenome.geometryType ||
       betaGenome.movementType === alphaGenome.movementType ||
+      betaGenome.appendage === alphaGenome.appendage ||
       (!forceBoth && betaGenome.archetype === alphaGenome.archetype) ||
       betaGenome.canopyZone === alphaGenome.canopyZone)
   ) {
@@ -621,15 +622,6 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome = generateRandomGenome(engine, "Beta", betaArchetype);
     betaGenome.appendage = getWeightedAppendage(engine.traitProbs);
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
-  }
-
-  if (alphaGenome.appendage !== "leaves" && betaGenome.appendage !== "leaves") {
-    alphaGenome.appendage = "leaves";
-    betaGenome.appendage = "leaves";
-  } else if (alphaGenome.appendage === "leaves" && betaGenome.appendage !== "leaves") {
-    betaGenome.appendage = "leaves";
-  } else if (betaGenome.appendage === "leaves" && alphaGenome.appendage !== "leaves") {
-    alphaGenome.appendage = "leaves";
   }
 
   assignGenomeMorphology(alphaGenome);
@@ -713,6 +705,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   const betaStart = new THREE.Vector3(20, centerY + 6, 15);
   alphaGenome.birthPos = alphaStart.clone();
   betaGenome.birthPos = betaStart.clone();
+  (engine as any).alphaStrainName = alphaGenome.name;
+  (engine as any).betaStrainName = betaGenome.name;
+  (engine as any).alphaBirthPos = alphaStart.clone();
+  (engine as any).betaBirthPos = betaStart.clone();
   engine.genomeMap.set(alphaGenome.name, alphaGenome);
   engine.genomeMap.set(betaGenome.name, betaGenome);
   const alphaId = engine.nextAgentId++;
@@ -725,6 +721,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: alphaStart.clone(),
+    rootOrigin: alphaStart.clone(),
     thickness: Math.min(0.58, alphaGenome.thicknessBase * 0.35),
     cooldown: initialCooldown,
   });
@@ -738,6 +735,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     active: true,
     age: 0,
     lastPosition: betaStart.clone(),
+    rootOrigin: betaStart.clone(),
     thickness: Math.min(0.58, betaGenome.thicknessBase * 0.35),
     cooldown: initialCooldown,
   });
@@ -753,6 +751,9 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.hasAnyOrganismBred = false;
   if (engine.onInitOrganisms) {
     engine.onInitOrganisms({ alpha: alphaGenome, beta: betaGenome });
+  }
+  if (engine.onStateUpdate && engine.lod && typeof engine.getTrackedPositions === "function") {
+    emitStateUpdate(engine);
   }
 }
 

@@ -160,7 +160,8 @@ export function createFastAppendageMaterial(): THREE.MeshLambertMaterial {
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-        if (ditherLimit < vDecay || vDecay >= 0.98) discard;
+        if (ditherLimit < vDecay || vDecay >= 0.99) discard;
+        diffuseColor.rgb *= (1.0 - smoothstep(0.0, 0.98, vDecay) * 0.85);
       }
       `
     );
@@ -223,7 +224,8 @@ export function createFastStemMaterial(): THREE.MeshLambertMaterial {
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-        if (ditherLimit < vDecay || vDecay >= 0.98) discard;
+        if (ditherLimit < vDecay || vDecay >= 0.99) discard;
+        diffuseColor.rgb *= (1.0 - smoothstep(0.0, 0.98, vDecay) * 0.85);
       }
       `
     );
@@ -322,7 +324,8 @@ export function createFastLeafMaterial(): THREE.MeshLambertMaterial {
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-        if (ditherLimit < vDecay || vDecay >= 0.98) discard;
+        if (ditherLimit < vDecay || vDecay >= 0.99) discard;
+        diffuseColor.rgb *= (1.0 - smoothstep(0.0, 0.98, vDecay) * 0.85);
       }
       float latVein = 0.0;
       if (vFastLeafUV.z > 0.5 && vDetailRetention > 0.02) {

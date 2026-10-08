@@ -84,7 +84,7 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 51,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 15,
+  "maxCreatures": 12,
   "ecoFade": 0.02946475338922394,
   "minCreatures": 9,
   "boundarySize": 60,
@@ -219,7 +219,7 @@ export function getStoredFloat(key: string, fallback?: number): number {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
       if (key === "minCreatures" && (val === 11 || val === 3 || val === 14 || val === 4 || val === 7)) return DEFAULTS.minCreatures;
-      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 19 || val === 7 || val === 12)) return DEFAULTS.maxCreatures;
+      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 15 || val === 19 || val === 7)) return DEFAULTS.maxCreatures;
       if (key === "rotationSpeed" && val === 0.2) return DEFAULTS.rotationSpeed;
       if ((key === "growthSpeed" || key === "extrusionSpeed") && (Math.abs(val - 0.11) < 1e-6 || Math.abs(val - 0.24) < 1e-6)) return DEFAULTS.growthSpeed;
       if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];

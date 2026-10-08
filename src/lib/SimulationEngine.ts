@@ -201,7 +201,7 @@ export class SimulationEngine {
   boundarySize: number = 60;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxCreatures: number = 15;
+  maxCreatures: number = 12;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;

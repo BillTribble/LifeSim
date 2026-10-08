@@ -326,6 +326,56 @@ export function emitStateUpdate(engine: SimulationEngine): void {
   });
 }
 
+function resolveFounderWorldPos(
+  engine: SimulationEngine,
+  strainName: string | undefined,
+  birthPos: THREE.Vector3 | undefined,
+  fallbackPos: THREE.Vector3
+): THREE.Vector3 {
+  if (strainName && engine.segments && engine.segments.length > 0) {
+    const accum = new THREE.Vector3();
+    const tmp = new THREE.Vector3();
+    let count = 0;
+    for (let i = 0; i < engine.segments.length; i++) {
+      const seg = engine.segments[i];
+      if (seg && seg.dyingStart === undefined && !seg.isFeeler && seg.strainName === strainName) {
+        if (seg.startPos && seg.endPos) {
+          accum.add(seg.startPos).add(seg.endPos);
+          count += 2;
+        } else if (seg.matrix) {
+          tmp.setFromMatrixPosition(seg.matrix);
+          accum.add(tmp);
+          count += 1;
+        }
+        if (count >= 48) break; // Anchor to the early core body of the organism
+      }
+    }
+    if (count > 0) {
+      return accum.multiplyScalar(1 / count);
+    }
+  }
+  if (strainName && engine.agents && engine.agents.length > 0) {
+    const accum = new THREE.Vector3();
+    let count = 0;
+    for (let i = 0; i < engine.agents.length; i++) {
+      const ag = engine.agents[i];
+      if (ag.genome && ag.genome.name === strainName) {
+        accum.add(ag.position);
+        count++;
+      }
+    }
+    if (count > 0) {
+      return accum.multiplyScalar(1 / count);
+    }
+  }
+  if (birthPos) return birthPos.clone();
+  if (strainName && engine.genomeMap) {
+    const g = engine.genomeMap.get(strainName);
+    if (g && g.birthPos) return g.birthPos.clone();
+  }
+  return fallbackPos;
+}
+
 export function getTrackedPositions(engine: SimulationEngine): any {
   if (!engine.camera || !engine.width || !engine.height) return null;
   engine.camera.updateMatrixWorld();
@@ -336,8 +386,19 @@ export function getTrackedPositions(engine: SimulationEngine): any {
     const y = (-v.y * 0.5 + 0.5) * engine.height;
     return { x, y, isBehind: v.z > 1 };
   };
-  const alphaPos = new THREE.Vector3(-20, 0, 0);
-  const betaPos = new THREE.Vector3(20, 0, 0);
+  const centerY = engine.creatureCenterY || 0;
+  const alphaPos = resolveFounderWorldPos(
+    engine,
+    (engine as any).alphaStrainName,
+    (engine as any).alphaBirthPos,
+    new THREE.Vector3(-20, centerY - 6, -15)
+  );
+  const betaPos = resolveFounderWorldPos(
+    engine,
+    (engine as any).betaStrainName,
+    (engine as any).betaBirthPos,
+    new THREE.Vector3(20, centerY + 6, 15)
+  );
 
   return {
     org1: projectPos(alphaPos),
@@ -346,3 +407,4 @@ export function getTrackedPositions(engine: SimulationEngine): any {
     feeler: engine.lastFeelerWorldPos ? projectPos(engine.lastFeelerWorldPos) : null,
   };
 }
+

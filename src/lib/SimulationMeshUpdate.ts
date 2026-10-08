@@ -74,7 +74,7 @@ export function updateMeshSegments(
       extendedPrevSeg = true;
     } else {
       let poppedFree = -1;
-      const stemCap = isSoft ? getStemBudget(engine) + 16 : engine.maxDOMs;
+      const stemCap = isSoft ? getStemBudget(engine) + engine.dyingStems.size + 16 : engine.maxDOMs;
       while (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
         const cand = engine.freeStemIndices.pop()!;
         if (cand < engine.pointCount && !engine.segments[cand]) {
@@ -110,7 +110,7 @@ export function updateMeshSegments(
           if (engine.pointCount >= engine.maxDOMs) return;
           targetIndexStem = engine.pointCount;
         } else {
-          // Software raster at stemCap: recycle oldest dying or feeler slot so totalStems stays bounded
+          // Recycle single oldest feeler or furthest-faded dying slot without bulk-erasing the organism
           let victimSlot = -1;
           let bestScore = -1;
           for (let i = 0; i < searchLim; i++) {
@@ -118,38 +118,14 @@ export function updateMeshSegments(
             if (!s) { victimSlot = i; break; }
             const isDying = engine.dyingStems.has(i) || (engine.dyingStrains && engine.dyingStrains.has(s.strainName));
             if (!s.isFeeler && !isDying) continue;
-            const ageScore = (engine.time - s.timestamp) + (s.isFeeler ? 5000 : 0);
+            const dAge = s.dyingStart ? Math.max(0, engine.unscaledTime - s.dyingStart) : 0;
+            const ageScore = dAge * 10 + (engine.time - s.timestamp) + (s.isFeeler ? 50000 : 0);
             if (ageScore > bestScore) {
               bestScore = ageScore;
               victimSlot = i;
             }
           }
           if (victimSlot >= 0) {
-            const victimSeg = engine.segments[victimSlot];
-            if (victimSeg && !victimSeg.isFeeler && victimSeg.strainName) {
-              const vStrain = victimSeg.strainName;
-              for (const a of engine.agents) {
-                if (a.active && (a.genome.name === vStrain || a.realGenome?.name === vStrain)) {
-                  a.active = false;
-                  a.tapering = false;
-                }
-              }
-              const zeroM = new THREE.Matrix4().makeScale(0, 0, 0);
-              for (let i = 0; i < searchLim; i++) {
-                if (i === victimSlot) continue;
-                const os = engine.segments[i];
-                if (os && os.strainName === vStrain) {
-                  engine.segments[i] = undefined as any;
-                  engine.dyingStems.delete(i);
-                  if (engine.growingStems) engine.growingStems.delete(i);
-                  engine.cylinderMesh.setMatrixAt(i, zeroM);
-                  markInstanceIndexDirty(engine.cylinderMesh.instanceMatrix, i);
-                  if (engine.freeStemIndices) engine.freeStemIndices.push(i);
-                }
-              }
-              engine.biomassMap.delete(vStrain);
-              deleteStrainAppendages(engine, vStrain);
-            }
             targetIndexStem = victimSlot;
             reusedFreeSlot = true;
           } else if (engine.pointCount < engine.maxDOMs) {
@@ -169,9 +145,13 @@ export function updateMeshSegments(
   let appSlotIndex = 0;
   let isNewAppSlot = false;
   if (isAppendage) {
-    const appendageLimit = Math.max(1, Math.min(getPerAppendageCap(engine), Math.floor(engine.maxDOMs / 4)));
     const config = engine.appendages.get(genome.appendage);
     if (!config) return;
+    const hardMaxApp = Math.floor(engine.maxDOMs / 4);
+    const appendageLimit = Math.max(
+      1,
+      Math.min(getPerAppendageCap(engine) + config.dyingSet.size, hardMaxApp),
+    );
 
     if (config.count < appendageLimit) {
       appSlotIndex = config.count;
@@ -566,7 +546,11 @@ export function updateMeshSegments(
   } else {
     const config = engine.appendages.get(genome.appendage);
     if (config) {
-      config.dyingSet.delete(targetIndex);
+      if (isStrainAlreadyDying) {
+        config.dyingSet.add(targetIndex);
+      } else {
+        config.dyingSet.delete(targetIndex);
+      }
       if (isNewAppSlot) {
         config.count++;
       }
@@ -610,6 +594,7 @@ export function updateMeshSegments(
         parentTimestamp: engine.segments[lastStemIdx]?.timestamp ?? engine.time,
         randomFactor: genome.appendage === "leaves" ? Math.random() : undefined,
         countsForBiomass: false,
+        dyingStart: strainDeathStart,
         rootOrigin,
         branchBasePos,
         branchDepth,
@@ -658,11 +643,11 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 360 unscaled frame ticks = ~6.0 seconds of slow, gentle transparency dissolve for dying organisms.
+    // 540 unscaled frame ticks = ~9.0 seconds of slow, gentle transparency + luminance dissolve for dying organisms.
     // Feeler trails dissolve rapidly (~0.9 s) so they never linger as unbranched snake lines.
     const wipeDuration = seg.isFeeler
       ? 55.0 * (10 / Math.max(1, engine.feelerFade ?? 10))
-      : 360.0;
+      : 540.0;
 
     if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();
@@ -685,7 +670,8 @@ export function processDyingSegments(
         packAAttr.setZ(idx, 1.0);
       }
     } else {
-      const dissolveProgress = Math.min(1.0, fadeAge / wipeDuration);
+      const t = Math.min(1.0, Math.max(0.0, fadeAge / wipeDuration));
+      const dissolveProgress = t * t * (3.0 - 2.0 * t);
 
       const packAAttr = mesh.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute;
       if (packAAttr) {
