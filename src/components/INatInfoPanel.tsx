@@ -207,7 +207,6 @@ export function INatInfoPanel({ onClose }: INatInfoPanelProps) {
               </div>
               <div className="flex items-center gap-1.5 shrink-0 font-mono">
                 <span className="text-cyan-300/80">Δ{s.deltaSec}s</span>
-                <span className="text-emerald-400 font-bold">+{s.boostPct}%</span>
               </div>
             </div>
           ))}
