@@ -16,12 +16,13 @@ import {
   useSimulationPersistence,
   resetSimulationToDefaults,
 } from "./SimulationStatePersistence";
+import { computeViewportBoundarySquash } from "../lib/SimulationBoundary";
 
 export { DEFAULTS, DEFAULT_PALETTE, CURRENT_SCHEMA };
 
 export function useSimulationState() {
   checkSchemaVersion();
-  if (!localStorage.getItem("lifesim_wind_v8_ready")) {
+  if (!localStorage.getItem("lifesim_wind_v9_ready")) {
     localStorage.setItem("shimmer", String(DEFAULTS.shimmer));
     localStorage.setItem("wavy", String(DEFAULTS.wavy));
     localStorage.setItem("branchMovement", String(DEFAULTS.branchMovement));
@@ -34,7 +35,7 @@ export function useSimulationState() {
     localStorage.setItem("maxCreatures", String(DEFAULTS.maxCreatures));
     localStorage.setItem("showBoundaryBox", String(DEFAULTS.showBoundaryBox));
     localStorage.removeItem("dialLimits");
-    localStorage.setItem("lifesim_wind_v8_ready", "true");
+    localStorage.setItem("lifesim_wind_v9_ready", "true");
   }
 
   const [snakeSpeed, setSnakeSpeed] = useState(() => getStoredFloat("snakeSpeed"));
@@ -112,7 +113,12 @@ export function useSimulationState() {
   const [desiccationSpeed, setDesiccationSpeed] = useState(() => getStoredFloat("desiccationSpeed"));
   const [minCreatures, setMinCreatures] = useState(() => getStoredFloat("minCreatures"));
   const [boundarySize, setBoundarySize] = useState(() => getStoredFloat("boundarySize"));
-  const [boundarySquash, setBoundarySquash] = useState(() => getStoredFloat("boundarySquash"));
+  const [boundarySquash, setBoundarySquash] = useState(() =>
+    computeViewportBoundarySquash(
+      typeof window !== "undefined" ? window.innerWidth : 1280,
+      typeof window !== "undefined" ? window.innerHeight : 800,
+    ),
+  );
   const [hybridSize, setHybridSize] = useState(() => getStoredFloat("hybridSize"));
   const [terminationProb, setTerminationProb] = useState(() => getStoredFloat("terminationProb"));
   const [termProbPostBranch, setTermProbPostBranch] = useState(() => getStoredFloat("termProbPostBranch"));

@@ -29,6 +29,7 @@ interface Config {
 }
 
 const CONFIGS: Config[] = [
+  { min: 4, max: 5, frames: 2500 },
   { min: 3, max: 9, frames: 3000 },
   { min: 9, max: 14, frames: 3000 },
   { min: 2, max: 4, frames: 2500 },

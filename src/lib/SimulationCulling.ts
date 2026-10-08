@@ -35,7 +35,7 @@ export function canEnterDeleting(
           }
           return living.size;
         })();
-  const minCreatures = engine.minCreatures ?? 9;
+  const minCreatures = engine.minCreatures ?? 4;
   if (livingOrganisms < minCreatures) return false;
   if (livingOrganisms - countAsRemoved < minCreatures) return false;
   return true;
@@ -91,10 +91,12 @@ export function checkLifespanDeath(
   if (!shouldDieFromMating && !shouldDieFromAge) return;
 
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const minC = isSoft ? Math.min(4, engine.minCreatures ?? 9) : (engine.minCreatures ?? 9);
-  const maxC = isSoft ? Math.min(6, engine.maxCreatures ?? 15) : Math.max(minC + 2, engine.maxCreatures ?? 15);
+  const minC = isSoft ? Math.min(4, engine.minCreatures ?? 4) : (engine.minCreatures ?? 4);
+  const maxC = isSoft ? Math.min(6, engine.maxCreatures ?? 5) : Math.max(minC + 1, engine.maxCreatures ?? 5);
   // Let the aquarium fill up toward maxCreatures before retiring the oldest organism one at a time.
-  const turnoverFloor = isSoft ? 4 : Math.max(minC + 2, Math.floor((minC + maxC) * 0.75));
+  const turnoverFloor = isSoft
+    ? Math.min(maxC, 4)
+    : Math.min(maxC, Math.max(minC + 1, Math.floor(minC + (maxC - minC) * 0.75)));
   if (livingOrganismCount < turnoverFloor) return;
   if (livingOrganismCount - 1 < minC) return;
 

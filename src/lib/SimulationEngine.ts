@@ -195,13 +195,13 @@ export class SimulationEngine {
   growingStems: Set<number> = new Set();
   lastStemIndex: number = 0;
   lastAgentStemIndex: Map<number, number> = new Map();
-  minCreatures: number = 9;
+  minCreatures: number = 4;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
   boundarySize: number = 45;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxCreatures: number = 12;
+  maxCreatures: number = 5;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;

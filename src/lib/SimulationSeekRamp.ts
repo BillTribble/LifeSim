@@ -87,8 +87,8 @@ export const BIRTH_INTERVAL_MAX_STEPS = 42;
  */
 export function getBirthIntervalTicks(engine: SimulationEngine): number {
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const minC = isSoft ? Math.min(3, engine.minCreatures ?? 9) : (engine.minCreatures ?? 9);
-  const maxC = isSoft ? Math.max(minC + 1, Math.min(4, engine.maxCreatures || 15)) : Math.max(minC + 1, engine.maxCreatures || 15);
+  const minC = isSoft ? Math.min(3, engine.minCreatures ?? 4) : (engine.minCreatures ?? 4);
+  const maxC = isSoft ? Math.max(minC + 1, Math.min(4, engine.maxCreatures || 5)) : Math.max(minC + 1, engine.maxCreatures || 5);
   const living = getLivingCountCached(engine);
   const frac = Math.min(1, Math.max(0, (living - minC) / (maxC - minC)));
   const minSteps = minC > 8 && living < minC

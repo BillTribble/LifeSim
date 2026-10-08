@@ -31,8 +31,8 @@ assert(DEFAULTS.movementLfoSpeed === 0.14, `Expected movementLfoSpeed 0.14, got 
 assert(DEFAULTS.movementLfoDepth === 0.12, `Expected movementLfoDepth 0.12, got ${DEFAULTS.movementLfoDepth}`);
 assert(DEFAULTS.movementLfoPeak === 0.42, `Expected movementLfoPeak 0.42, got ${DEFAULTS.movementLfoPeak}`);
 assert(DEFAULTS.movementLfoRandom === 73, `Expected movementLfoRandom 73, got ${DEFAULTS.movementLfoRandom}`);
-assert(DEFAULTS.minCreatures === 9, `Expected minCreatures 9, got ${DEFAULTS.minCreatures}`);
-assert(DEFAULTS.maxCreatures === 12, `Expected maxCreatures 12, got ${DEFAULTS.maxCreatures}`);
+assert(DEFAULTS.minCreatures === 4, `Expected minCreatures 4, got ${DEFAULTS.minCreatures}`);
+assert(DEFAULTS.maxCreatures === 5, `Expected maxCreatures 5, got ${DEFAULTS.maxCreatures}`);
 assert(DEFAULTS.showBoundaryBox === true, `Expected showBoundaryBox true, got ${DEFAULTS.showBoundaryBox}`);
 
 const limits = DEFAULTS.dialLimits;
