@@ -139,9 +139,10 @@ console.log("\n[4] Adaptive controller: step-down, hysteresis, recovery, damping
   const engine = makeEngine(); // empty scene -> complexity budget never forces a tier
   const feed = (ms: number, n: number) => { for (let i = 0; i < n; i++) updateAdaptiveLOD(engine, ms); return engine.lod.tier; };
   check(feed(16.6, 120) === 0, "60 FPS stays at tier 0");
-  check(feed(25, 120) === 1, "sustained 25 ms (40 FPS) -> tier 1");
-  check(feed(35, 120) === 2, "sustained 35 ms (29 FPS) -> tier 2");
-  check(feed(55, 120) === 3, "sustained 55 ms (18 FPS) -> tier 3");
+  check(feed(33.3, 120) === 0, "30 FPS (>= 24 FPS) stays at tier 0");
+  check(feed(45, 120) === 1, "sustained 45 ms (~22 FPS, < 24 FPS) -> tier 1");
+  check(feed(56, 120) === 2, "sustained 56 ms (~18 FPS, < 20 FPS) -> tier 2");
+  check(feed(75, 120) === 3, "sustained 75 ms (~13 FPS, < 15 FPS) -> tier 3");
   check(feed(10, 10) === 3, "10 fast frames right after downgrade: no upgrade (hysteresis)");
   const tiersSeen: number[] = [];
   for (let i = 0; i < 1200; i++) { updateAdaptiveLOD(engine, 10); tiersSeen.push(engine.lod.tier); }
@@ -158,7 +159,7 @@ console.log("\n[4] Adaptive controller: step-down, hysteresis, recovery, damping
   // Oscillation damping: slow right after an upgrade doubles the required fast streak.
   const e2 = makeEngine();
   const f2 = (ms: number, n: number) => { for (let i = 0; i < n; i++) updateAdaptiveLOD(e2, ms); };
-  f2(25, 120); f2(10, 200); const before = e2.lod.upgradeFramesRequired; f2(25, 60);
+  f2(45, 120); f2(10, 200); const before = e2.lod.upgradeFramesRequired; f2(45, 60);
   check(e2.lod.upgradeFramesRequired > before, `downgrade soon after upgrade doubles upgrade wait (${before} -> ${e2.lod.upgradeFramesRequired})`);
   // Manual override.
   requestLodMode(2); updateAdaptiveLOD(e2, 5);

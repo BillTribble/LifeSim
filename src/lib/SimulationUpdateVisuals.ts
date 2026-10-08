@@ -179,7 +179,7 @@ export function updateMeshesAndStemsGrowth(
     const camPos = engine.camera.position;
     const centerY = engine.creatureCenterY || 0;
     const camRefDist = Math.max(25.0, Math.hypot(camPos.x, camPos.y - centerY, camPos.z));
-    const globalTierNorm = Math.min(1.0, (engine.lod?.tier ?? 0) / 3.0);
+    const globalTierNorm = Math.min(1.0, (engine.lod?.smoothTier ?? engine.lod?.tier ?? 0) / 3.0);
 
     let pBChanged = false;
     let ambChanged = false;
@@ -205,11 +205,12 @@ export function updateMeshesAndStemsGrowth(
       if (ambAttr && seg.matrix) {
         const me = seg.matrix.elements;
         const distRatio = Math.hypot(me[12] - camPos.x, me[13] - camPos.y, me[14] - camPos.z) / camRefDist;
-        // Close leaves (distRatio <= 0.90) stay detailed (0.0); distant leaves (distRatio >= 1.15) simplify (1.0)
-        const distDetailTarget = THREE.MathUtils.clamp((distRatio - 0.90) / 0.25, 0.0, 1.0);
-        const targetDetail = distRatio <= 0.90
+        // At Tier 0 (>= 24 FPS), globalTierNorm is 0.0 so all leaves keep full veins/bump/sculpt;
+        // when FPS drops below 24 FPS (globalTierNorm > 0), distant leaves (distRatio > 0.95) smoothly simplify.
+        const distDetailTarget = THREE.MathUtils.clamp((distRatio - 0.95) / 0.35, 0.0, 1.0);
+        const targetDetail = distRatio <= 0.95
           ? 0.0
-          : Math.max(distDetailTarget, globalTierNorm * THREE.MathUtils.clamp((distRatio - 0.88) / 0.25, 0.0, 1.0));
+          : globalTierNorm * distDetailTarget;
         if (seg.detailBlend === undefined) {
           seg.detailBlend = targetDetail;
           ambAttr.setX(i, seg.detailBlend);

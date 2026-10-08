@@ -21,9 +21,9 @@ export function measureScreenFillSilhouette(engine: SimulationEngine): ScreenFil
   const h = 72;
   const totalPixels = w * h;
 
-  // FAST-PATH: Mobile or low-LOD tiers skip offscreen GPU readback entirely (0 readRenderTargetPixels calls).
+  // FAST-PATH: Mobile or low-LOD tiers (<24 FPS) skip offscreen GPU readback entirely (0 readRenderTargetPixels calls).
   // Approximates silhouette coverage analytically from active biomass distribution.
-  const skipGPUReadback = Boolean(engine.isMobile || (engine.lod && (engine.lod.tier >= 2 || engine.lod.emaFrameMs > 22)));
+  const skipGPUReadback = Boolean(engine.isMobile || (engine.lod && (engine.lod.tier >= 2 || engine.lod.emaFrameMs > 41.7)));
   if (skipGPUReadback) {
     let totalBiomass = 0;
     const speciesBreakdown: {

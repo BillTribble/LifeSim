@@ -28,17 +28,17 @@ export const LOD_TIERS: LodTier[] = [0, 1, 2, 3];
 export const LOD_LABELS = ["High", "Medium", "Low", "Minimal"] as const;
 export type LodMode = "auto" | LodTier;
 
-/** Frame-time thresholds (ms, EMA) that trigger a step down to tier 1/2/3. */
-export const LOD_DOWN_MS = [20.8, 29.0, 45.0];
-/** EMA must stay under this for `upgradeFramesRequired` frames before stepping up. */
-export const LOD_UP_MS = 17.2;
+/** Frame-time thresholds (ms, EMA) that trigger a step down to tier 1/2/3 (<24 FPS, <20 FPS, <15 FPS). */
+export const LOD_DOWN_MS = [41.7, 50.0, 66.7];
+/** EMA must stay under this (~28 FPS) for `upgradeFramesRequired` frames before stepping up. */
+export const LOD_UP_MS = 35.7;
 export const LOD_BASE_UPGRADE_FRAMES = 90;
 export const LOD_MAX_UPGRADE_FRAMES = 720;
 /** Frames to wait after a downgrade before another downgrade (lets the swap take effect). */
-export const LOD_DOWN_COOLDOWN = 6;
+export const LOD_DOWN_COOLDOWN = 12;
 /** Net count of raw slow frames required before a downgrade (a single hitch never downgrades). */
-export const LOD_SLOW_FRAMES = 3;
-/** Tier-0-equivalent triangle budgets that force a minimum tier regardless of FPS. */
+export const LOD_SLOW_FRAMES = 5;
+/** Tier-0-equivalent triangle budgets that force a minimum tier when frame rate is under pressure. */
 export const LOD_TRI_BUDGET = DESKTOP_LOD_TRI_BUDGET;
 
 export const SHARED_INSTANCE_ATTRIBUTES = [
@@ -257,7 +257,7 @@ export function applyLodTier(engine: SimulationEngine, tier: LodTier) {
       if (mesh.geometry !== g) mesh.geometry = g;
     }
   }
-  syncLodUniforms(engine, lod.smoothTier);
+  syncLodUniforms(engine, tier);
   if (engine.isMobile && engine.renderer?.setPixelRatio && typeof window !== "undefined") {
     engine.renderer.setPixelRatio(tier >= 3 ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.25));
   }
@@ -395,7 +395,9 @@ export function updateAdaptiveLOD(engine: SimulationEngine, frameDtMs: number): 
 
   const rawTarget = (engine as any)._isSoftwareRaster
     ? (3 as LodTier)
-    : (Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0, engine.isMobile)) as LodTier);
+    : lod.fpsTier === 0 && !engine.isMobile
+      ? (0 as LodTier)
+      : (Math.max(lod.fpsTier, complexityTier(lod.activeTrianglesTier0, engine.isMobile)) as LodTier);
   const target = (engine.isMobile ? Math.max(1, rawTarget) : rawTarget) as LodTier;
   if (target !== lod.tier) applyLodTier(engine, target);
   advanceSmoothTier();
