@@ -12,8 +12,8 @@ export function BiomassPanel({ stats, totalBiomass, state, showHUD }: BiomassPan
   const [isBiomassCollapsed, setIsBiomassCollapsed] = useState(() => window.innerWidth < 640);
 
   return (
-    <div className={`flex-1 flex flex-col items-start pointer-events-none transition-all duration-500 ${showHUD ? "opacity-100 visible pointer-events-none" : "opacity-0 invisible pointer-events-none"}`}>
-      <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-36 sm:w-48 mt-1 max-h-[calc(100vh-140px)] flex flex-col">
+    <div className={`flex-1 min-h-0 flex flex-col items-start pointer-events-none overflow-hidden my-1 transition-all duration-500 ${showHUD ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+      <div className="border border-[#D2B48C]/30 p-2 sm:p-3 bg-[#001220]/60 backdrop-blur-sm pointer-events-auto shadow-lg w-36 sm:w-48 max-h-full flex flex-col rounded">
         <h2 
           className="text-[8px] font-mono mb-2 text-[#87CEEB] flex items-center justify-between gap-1.5 tracking-widest cursor-pointer select-none shrink-0"
           onClick={() => setIsBiomassCollapsed(!isBiomassCollapsed)}

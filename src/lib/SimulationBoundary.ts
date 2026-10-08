@@ -194,9 +194,25 @@ export function getResponsiveBoundaryCameraDistance(engine: SimulationEngine): n
 }
 
 /**
+ * Computes the vertical boundary squash (`bY = bX * boundarySquash`) relative to viewport
+ * width and aspect ratio — progressively smaller squash on wider viewports so the 3D
+ * boundary arena becomes more rectangular on wide screens and closer to square on narrow screens.
+ */
+export function computeViewportBoundarySquash(width: number, height: number): number {
+  const w = width > 0 ? width : (typeof window !== "undefined" ? window.innerWidth || 1280 : 1280);
+  const h = height > 0 ? height : (typeof window !== "undefined" ? window.innerHeight || 800 : 800);
+  const aspect = Math.max(0.4, w / Math.max(1, h));
+  const aspectSquash = 1.0 / Math.max(0.85, aspect);
+  const widthT = THREE.MathUtils.clamp((w - 640) / (1920 - 640), 0.0, 1.25);
+  const widthSquash = 1.0 - widthT * 0.22;
+  const rawSquash = aspectSquash * widthSquash;
+  return Math.round(THREE.MathUtils.clamp(rawSquash, 0.30, 1.00) * 100) / 100;
+}
+
+/**
  * Keeps horizontal FOV and camera distance fixed (so creatures never get bigger/smaller
  * when the viewport scales) and squashes/expands the 3D space vertically (`boundarySquash`)
- * to fit the viewport's vertical height.
+ * relative to viewport width so wide screens have a more rectangular arena.
  */
 export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine): void {
   if (!engine.camera || !engine.controls) return;
@@ -218,14 +234,21 @@ export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine):
 
   const newDist = getResponsiveBoundaryCameraDistance(engine);
 
-  if ((engine as any)._userBoundarySquash === undefined) {
-    (engine as any)._userBoundarySquash = engine.boundarySquash ?? 1.0;
-  }
-  const baseSquash = (engine as any)._userBoundarySquash ?? 1.0;
-  const targetVerticalSquash = THREE.MathUtils.clamp(baseSquash * (REF_ASPECT / aspect), 0.30, 2.60);
-  if (Math.abs((engine.boundarySquash ?? 1.0) - targetVerticalSquash) > 0.005) {
-    engine.boundarySquash = targetVerticalSquash;
-    engine.updateBoundaryMesh();
+  const lastW = (engine as any)._lastViewportWidth;
+  const lastH = (engine as any)._lastViewportHeight;
+  const viewportChanged = lastW !== width || lastH !== height;
+  if (viewportChanged) {
+    (engine as any)._lastViewportWidth = width;
+    (engine as any)._lastViewportHeight = height;
+    const targetVerticalSquash = computeViewportBoundarySquash(width, height);
+    (engine as any)._userBoundarySquash = targetVerticalSquash;
+    if (Math.abs((engine.boundarySquash ?? 1.0) - targetVerticalSquash) > 0.005) {
+      engine.boundarySquash = targetVerticalSquash;
+      engine.updateBoundaryMesh();
+    }
+    if (engine.onConfigChange) {
+      engine.onConfigChange({ boundarySquash: targetVerticalSquash });
+    }
   }
 
   const dir = new THREE.Vector3().subVectors(engine.camera.position, engine.controls.target);

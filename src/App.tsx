@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SimulationView } from "./components/SimulationView";
 import { HUD } from "./components/HUD";
-import { PerfIndicator } from "./components/PerfIndicator";
 import { ArchetypeDesigner } from "./components/ArchetypeDesigner";
 import { PopupNotification, PopupItem } from "./components/PopupNotification";
 import { useSimulationState } from "./hooks/useSimulationState";
@@ -257,6 +256,7 @@ export default function App() {
         onConfigChange={(config) => {
           if (config.bgColor) setters.setBgColor(config.bgColor);
           if (config.theme !== undefined) setters.setTheme(config.theme);
+          if (config.boundarySquash !== undefined) setters.setBoundarySquash(config.boundarySquash);
         }}
         restartTrigger={restartKey}
         randomizeTrigger={randomizeKey}
@@ -407,8 +407,6 @@ export default function App() {
       {mode === "simulation" && (
         <PopupNotification queue={popupQueue} trackedPositions={stats.trackedPositions} onDismiss={handleDismissPopup} />
       )}
-
-      {mode === "simulation" && <PerfIndicator perf={(stats as any).perf} showHUD={showHUD} />}
 
       {mode === "simulation" ? (
         <HUD

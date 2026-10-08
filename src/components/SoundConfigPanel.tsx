@@ -7,6 +7,7 @@ interface SoundConfigPanelProps {
   state: any;
   setters: any;
   stats?: any;
+  onClose?: () => void;
 }
 
 const MIXER_CHANNELS: { id: string; label: string; color: string; defaultVol: number; defaultRev: number; defaultOct: number; tip: string }[] = [
@@ -19,7 +20,7 @@ const MIXER_CHANNELS: { id: string; label: string; color: string; defaultVol: nu
   { id: "weather", label: "WX", color: "#67E8F9", defaultVol: 65, defaultRev: 30, defaultOct: 6, tip: "Rain, breeze & atmospheric droplets" },
 ];
 
-export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProps) {
+export function SoundConfigPanel({ state, setters, stats, onClose }: SoundConfigPanelProps) {
   const soundInfo = stats?.soundInfo;
   const currentEnv = (state.soundEnvironment || "rain") as SoundEnvironmentId;
   const mixer = state.soundMixer || {};
@@ -72,7 +73,7 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
   ];
 
   return (
-    <div className="absolute top-16 right-4 sm:right-48 bg-[#001220]/95 border border-cyan-500/50 p-4 rounded w-72 sm:w-80 backdrop-blur-md z-50 pointer-events-auto font-mono text-[#D2B48C] shadow-lg shadow-cyan-900/30 overflow-y-auto max-h-[85vh] mt-24 sm:mt-0">
+    <div className="bg-[#001220]/95 border border-cyan-500/50 p-3.5 sm:p-4 rounded-lg w-[min(320px,calc(100vw-1.5rem))] backdrop-blur-md pointer-events-auto font-mono text-[#D2B48C] shadow-lg shadow-cyan-900/30 overflow-y-auto custom-scrollbar max-h-[calc(100vh-150px)]">
       {/* Header */}
       <div className="flex justify-between items-center mb-3 border-b border-cyan-500/30 pb-2 shrink-0">
         <div className="flex items-center gap-1.5">
@@ -83,17 +84,28 @@ export function SoundConfigPanel({ state, setters, stats }: SoundConfigPanelProp
           )}
           <span className="text-[10px] font-bold tracking-widest text-cyan-300">SOUND ENGINE</span>
         </div>
-        <button
-          onClick={() => setters.setSoundEnabled(!state.soundEnabled)}
-          className={`px-2.5 py-0.5 border rounded text-[9px] font-bold transition-colors ${
-            state.soundEnabled
-              ? "bg-cyan-500/30 border-cyan-400 text-cyan-300"
-              : "bg-red-500/30 border-red-400 text-red-300"
-          }`}
-          title="Toggle Sound Engine On/Off"
-        >
-          {state.soundEnabled ? "SOUND ON" : "MUTED"}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setters.setSoundEnabled(!state.soundEnabled)}
+            className={`px-2.5 py-0.5 border rounded text-[9px] font-bold transition-colors ${
+              state.soundEnabled
+                ? "bg-cyan-500/30 border-cyan-400 text-cyan-300"
+                : "bg-red-500/30 border-red-400 text-red-300"
+            }`}
+            title="Toggle Sound Engine On/Off"
+          >
+            {state.soundEnabled ? "SOUND ON" : "MUTED"}
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-[#87CEEB]/70 hover:text-white px-1.5 py-0.5 hover:bg-white/10 rounded text-[10px]"
+              title="Close sound panel"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 text-[9px]">

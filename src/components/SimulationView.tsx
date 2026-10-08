@@ -195,7 +195,6 @@ function applyEngineProps(engine: any, props: Record<string, any>) {
     widthGrowthEffect: "setWidthGrowthEffect",
     minCreatures: "setMinCreatures",
     boundarySize: "setBoundarySize",
-    boundarySquash: "setBoundarySquash",
     tideSpeed: "setTideSpeed",
     tideColor: "setTideColor",
     bgColor: "setBgColor",
@@ -343,10 +342,18 @@ export function SimulationView(props: SimulationViewProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const lastRaycastTime = useRef<number>(0);
   const pointerDownStart = useRef<{ x: number; y: number } | null>(null);
+  const lastPropBoundarySquashRef = useRef<number | undefined>(props.boundarySquash);
 
   useEffect(() => {
     if (engineRef.current) {
       applyEngineProps(engineRef.current, props);
+      if (
+        props.boundarySquash !== undefined &&
+        props.boundarySquash !== lastPropBoundarySquashRef.current
+      ) {
+        lastPropBoundarySquashRef.current = props.boundarySquash;
+        engineRef.current.setBoundarySquash(props.boundarySquash);
+      }
     }
   }, Object.values(props));
 
@@ -382,13 +389,19 @@ export function SimulationView(props: SimulationViewProps) {
     if (kioskMode !== undefined) engine.kioskMode = kioskMode;
     if (props.onDesignerStrainName) engine.onDesignerStrainName = props.onDesignerStrainName;
     if (onConfigChange) {
-      engine.onConfigChange = onConfigChange;
-      onConfigChange({ bgColor: engine.bgColor });
+      engine.onConfigChange = (cfg) => {
+        if (cfg.boundarySquash !== undefined) {
+          lastPropBoundarySquashRef.current = cfg.boundarySquash;
+        }
+        onConfigChange(cfg);
+      };
+      onConfigChange({ bgColor: engine.bgColor, boundarySquash: engine.boundarySquash });
     }
     engineRef.current = engine;
     (window as any).__LIFESIM_ENGINE__ = engine;
     (window as any).THREE = THREE;
     applyEngineProps(engine, props);
+    lastPropBoundarySquashRef.current = engine.boundarySquash;
     engine.initAgents();
     if (window.location.search.includes("autorun20=1")) {
       runHeadless20RoundsIfRequested(engine);

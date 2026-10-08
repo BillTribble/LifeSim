@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { DEFAULTS } from "./SimulationDefaults";
+import { computeViewportBoundarySquash } from "../lib/SimulationBoundary";
 
 export function useSimulationPersistence(state: Record<string, any>) {
   useEffect(() => {
@@ -274,7 +275,12 @@ export function resetSimulationToDefaults(setters: Record<string, any>) {
   setters.setEcoFade(DEFAULTS.ecoFade);
   setters.setMinCreatures(DEFAULTS.minCreatures);
   setters.setBoundarySize(DEFAULTS.boundarySize);
-  setters.setBoundarySquash(DEFAULTS.boundarySquash);
+  setters.setBoundarySquash(
+    computeViewportBoundarySquash(
+      typeof window !== "undefined" ? window.innerWidth : 1280,
+      typeof window !== "undefined" ? window.innerHeight : 800,
+    ),
+  );
   setters.setDesiccationSpeed(DEFAULTS.desiccationSpeed);
   setters.setHybridSize(DEFAULTS.hybridSize);
   setters.setTerminationProb(DEFAULTS.terminationProb);

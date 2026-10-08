@@ -149,9 +149,18 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
   };
 
   return (
-    <div className="absolute top-16 right-4 sm:right-[24rem] bg-[#001220]/90 border border-[#D2B48C]/50 p-4 rounded w-64 sm:w-72 backdrop-blur-md z-50 pointer-events-auto font-mono text-[#D2B48C] shadow-lg shadow-[#D2B48C]/20 max-h-[80vh] overflow-y-auto custom-scrollbar mt-24 sm:mt-0">
+    <div className="bg-[#001220]/95 border border-[#D2B48C]/50 p-3.5 sm:p-4 rounded-lg w-[min(290px,calc(100vw-1.5rem))] backdrop-blur-md pointer-events-auto font-mono text-[#D2B48C] shadow-lg shadow-[#D2B48C]/20 max-h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar">
       <div className="flex justify-between items-center mb-4">
         <span className="text-[9px] sm:text-[10px] font-bold tracking-widest text-[#D2B48C]">PRESETS</span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-[#87CEEB]/70 hover:text-white px-1.5 py-0.5 hover:bg-white/10 rounded text-[10px]"
+            title="Close presets panel"
+          >
+            ✕
+          </button>
+        )}
       </div>
       
       <div className="flex gap-2 mb-4">
