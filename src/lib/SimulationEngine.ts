@@ -174,7 +174,7 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.88;
+  leafScale: number = 0.2;
   leafDensity: number = 0.24;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
@@ -282,7 +282,7 @@ export class SimulationEngine {
   private reqId: number = 0;
   lastFlowerSize: number = 1.0;
   lastHybridSize: number = 2.0;
-  lastLeafScale: number = 0.55;
+  lastLeafScale: number = 0.2;
   lastRelativeLeafSizeDiff: number = 0.2;
   lastStemCurviness: number = 1.0;
   width: number = 0;
@@ -351,7 +351,7 @@ export class SimulationEngine {
   setDespairAge(val: number) { this.despairAge = val; }
   setMaxMatings(val: number) { this.maxMatings = Math.max(1, Math.round(val)); }
   setStartColorMode(val: string) { this.startColorMode = val; }
-  setFlowerSize(val: number) { this.flowerSize = val; this.leafScale = val; }
+  setFlowerSize(val: number) { this.flowerSize = val; }
   setMinCreatures(val: number) {
     this.minCreatures = val;
     if (this.maxCreatures <= val) {

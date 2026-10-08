@@ -110,7 +110,7 @@ export const DEFAULTS: Record<string, any> = {
   "movementLfoDepth": 0.12,
   "movementLfoPeak": 0.42,
   "movementLfoRandom": 73,
-  "leafScale": 0.88,
+  "leafScale": 0.2,
   "leafDensity": 0.24,
   "relativeLeafSizeDiff": 0.2,
   "leafGrowthSpeed": 0.0045,
@@ -187,7 +187,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-10-08-v1.8";
+export const CURRENT_SCHEMA = "2026-10-08-v1.9";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
@@ -225,6 +225,7 @@ export function getStoredFloat(key: string, fallback?: number): number {
       if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];
       if (key === "feelerDelay" && val === 6) return DEFAULTS.feelerDelay;
       if (key === "boundarySize" && (val === 62 || val === 36)) return DEFAULTS.boundarySize;
+      if (key === "leafScale" && (Math.abs(val - 0.88) < 1e-6 || Math.abs(val - 0.55) < 1e-6 || Math.abs(val - 0.3) < 1e-6)) return DEFAULTS.leafScale;
       // Ecology-health migrations: legacy stored values that would defeat the clumping fixes
       if (key === "proximity" && val > 100) return DEFAULTS.proximity; // legacy 362 / 484 = whole world
       if (key === "maxMatings" && val === 6) return DEFAULTS.maxMatings; // old default
