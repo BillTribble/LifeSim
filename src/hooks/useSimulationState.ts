@@ -21,7 +21,7 @@ export { DEFAULTS, DEFAULT_PALETTE, CURRENT_SCHEMA };
 
 export function useSimulationState() {
   checkSchemaVersion();
-  if (!localStorage.getItem("lifesim_wind_v7_ready")) {
+  if (!localStorage.getItem("lifesim_wind_v8_ready")) {
     localStorage.setItem("shimmer", String(DEFAULTS.shimmer));
     localStorage.setItem("wavy", String(DEFAULTS.wavy));
     localStorage.setItem("branchMovement", String(DEFAULTS.branchMovement));
@@ -34,7 +34,7 @@ export function useSimulationState() {
     localStorage.setItem("maxCreatures", String(DEFAULTS.maxCreatures));
     localStorage.setItem("showBoundaryBox", String(DEFAULTS.showBoundaryBox));
     localStorage.removeItem("dialLimits");
-    localStorage.setItem("lifesim_wind_v7_ready", "true");
+    localStorage.setItem("lifesim_wind_v8_ready", "true");
   }
 
   const [snakeSpeed, setSnakeSpeed] = useState(() => getStoredFloat("snakeSpeed"));

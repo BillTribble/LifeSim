@@ -25,10 +25,10 @@ const NEWBORN_MERGE_GUARD_STEPS = 10;
 
 export function updateSimulation(engine: SimulationEngine) {
   const isMotionZero =
-    (engine.overallMovement ?? 0.25) <= 0.0001 ||
-    ((engine.shimmer ?? 0.40) <= 0.0001 &&
-      (engine.wavy ?? 0.35) <= 0.0001 &&
-      (engine.branchMovement ?? 0.45) <= 0.0001);
+    (engine.overallMovement ?? 0.40) <= 0.0001 ||
+    ((engine.shimmer ?? 0.04) <= 0.0001 &&
+      (engine.wavy ?? 0.00) <= 0.0001 &&
+      (engine.branchMovement ?? 0.32) <= 0.0001);
 
   if (!isMotionZero) {
     engine.time += engine.timeScale;

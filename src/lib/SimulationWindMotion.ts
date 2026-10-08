@@ -327,8 +327,8 @@ export function computeLfoModulatedOverall(engine: {
       cycleRandomMeterNorm,
     };
   }
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.28;
-  const lfoDepth = engine.movementLfoDepth ?? 0.07;
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.14;
+  const lfoDepth = engine.movementLfoDepth ?? 0.12;
   if (lfoSpeed <= 0.0001 || lfoDepth <= 0.0001) {
     return {
       effectiveOverall: overall,
@@ -343,7 +343,7 @@ export function computeLfoModulatedOverall(engine: {
       cycleRandomMeterNorm,
     };
   }
-  const peakWidth = Math.max(0.05, Math.min(1.0, engine.movementLfoPeak ?? 0.48));
+  const peakWidth = Math.max(0.05, Math.min(1.0, engine.movementLfoPeak ?? 0.42));
   const TWO_PI = Math.PI * 2.0;
   const rawPhase = engine.movementLfoPhase ?? 0.0;
   const normPhase = (((rawPhase % TWO_PI) + TWO_PI) % TWO_PI) / TWO_PI; // [0, 1)
@@ -384,14 +384,14 @@ export function computeLfoModulatedOverall(engine: {
 }
 
 export function updateWindMaterialUniforms(engine: SimulationEngine) {
-  const shimmer = engine.shimmer ?? 0.34;
-  const wavy = engine.wavy ?? 0.40;
-  const branchMovement = engine.branchMovement ?? 0.31;
+  const shimmer = engine.shimmer ?? 0.04;
+  const wavy = engine.wavy ?? 0.00;
+  const branchMovement = engine.branchMovement ?? 0.32;
   const overallMovement = engine.overallMovement ?? 0.40;
   const anyActive = overallMovement > 0.0001 && (shimmer > 0.0001 || wavy > 0.0001 || branchMovement > 0.0001);
 
-  const lfoSpeed = engine.movementLfoSpeed ?? 0.28;
-  const lfoDepth = engine.movementLfoDepth ?? 0.07;
+  const lfoSpeed = engine.movementLfoSpeed ?? 0.14;
+  const lfoDepth = engine.movementLfoDepth ?? 0.12;
   const lfoRandom = engine.movementLfoRandom ?? 73;
 
   if (lfoRandom <= 0.0001) {

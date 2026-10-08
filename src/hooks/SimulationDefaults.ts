@@ -102,13 +102,13 @@ export const DEFAULTS: Record<string, any> = {
   "botanyRealism": true,
   "windVelocity": 0.2,
   "flutterIntensity": 0.5,
-  "shimmer": 0.34,
-  "wavy": 0.40,
-  "branchMovement": 0.31,
+  "shimmer": 0.04,
+  "wavy": 0.00,
+  "branchMovement": 0.32,
   "overallMovement": 0.40,
-  "movementLfoSpeed": 0.28,
-  "movementLfoDepth": 0.07,
-  "movementLfoPeak": 0.48,
+  "movementLfoSpeed": 0.14,
+  "movementLfoDepth": 0.12,
+  "movementLfoPeak": 0.42,
   "movementLfoRandom": 73,
   "leafScale": 0.88,
   "leafDensity": 0.24,
@@ -187,7 +187,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-10-08-v1.6";
+export const CURRENT_SCHEMA = "2026-10-08-v1.7";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [

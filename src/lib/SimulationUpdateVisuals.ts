@@ -10,8 +10,8 @@ const scratchQuat = new THREE.Quaternion();
 const scratchEuler = new THREE.Euler();
 
 export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
-  const isMotionZero = (engine.overallMovement ?? 0.25) <= 0.0001 ||
-    (((engine.shimmer ?? 0.40) <= 0.0001) && ((engine.wavy ?? 0.35) <= 0.0001) && ((engine.branchMovement ?? 0.45) <= 0.0001));
+  const isMotionZero = (engine.overallMovement ?? 0.40) <= 0.0001 ||
+    (((engine.shimmer ?? 0.04) <= 0.0001) && ((engine.wavy ?? 0.00) <= 0.0001) && ((engine.branchMovement ?? 0.32) <= 0.0001));
 
   // Kiosk Mode Interval & Smooth Fade Handling
   if (engine.kioskMode) {
@@ -154,8 +154,8 @@ export function updateMeshesAndStemsGrowth(
   if ((engine as any).lastOverallMovement !== engine.overallMovement) { appChanged = true; (engine as any).lastOverallMovement = engine.overallMovement; }
 
   const { effectiveOverall } = computeLfoModulatedOverall(engine);
-  const windFlutterMult = effectiveOverall * ((engine.shimmer ?? 0.40) * 0.65 + (engine.wavy ?? 0.35) * 0.35);
-  const motionActivity = Math.min(1.0, effectiveOverall * ((engine.shimmer ?? 0.40) + (engine.wavy ?? 0.35) + (engine.branchMovement ?? 0.45)));
+  const windFlutterMult = effectiveOverall * ((engine.shimmer ?? 0.04) * 0.65 + (engine.wavy ?? 0.00) * 0.35);
+  const motionActivity = Math.min(1.0, effectiveOverall * ((engine.shimmer ?? 0.04) + (engine.wavy ?? 0.00) + (engine.branchMovement ?? 0.32)));
 
   const growthDuration = 96;
   const updateMeshGrowth = (mesh: THREE.InstancedMesh, segments: any[]) => {

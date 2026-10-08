@@ -676,12 +676,12 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             state={state}
             setters={setters}
             keywords={["lfo", "lfo peak", "peak width", "peak length", "squashed peak", "narrow sine", "wind lfo", "movement lfo", "duty cycle"]}
-            tooltip={"MOVEMENT LFO PEAK WIDTH\nControls how narrow/squashed the curved sine wave peak is relative to the cycle (0.48 = narrow curved sine peak with a flat baseline lull, ramping up rapidly then dropping back down; 1.00 = full sine wave)."}
+            tooltip={"MOVEMENT LFO PEAK WIDTH\nControls how narrow/squashed the curved sine wave peak is relative to the cycle (0.42 = narrow curved sine peak with a flat baseline lull, ramping up rapidly then dropping back down; 1.00 = full sine wave)."}
             label="LFO_PEAK"
             min={0.05}
             max={1.0}
             step={0.01}
-            value={state.movementLfoPeak ?? 0.48}
+            value={state.movementLfoPeak ?? 0.42}
             onChange={setters.setMovementLfoPeak}
             color="#34d399"
           />

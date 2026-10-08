@@ -38,9 +38,9 @@ export function LfoActionMeter({ state }: LfoActionMeterProps) {
         cycleRandomMeterNorm,
       } = computeLfoModulatedOverall({
         overallMovement: source.overallMovement ?? stateRef.current?.overallMovement ?? 0.40,
-        movementLfoSpeed: source.movementLfoSpeed ?? stateRef.current?.movementLfoSpeed ?? 0.28,
-        movementLfoDepth: source.movementLfoDepth ?? stateRef.current?.movementLfoDepth ?? 0.07,
-        movementLfoPeak: source.movementLfoPeak ?? stateRef.current?.movementLfoPeak ?? 0.48,
+        movementLfoSpeed: source.movementLfoSpeed ?? stateRef.current?.movementLfoSpeed ?? 0.14,
+        movementLfoDepth: source.movementLfoDepth ?? stateRef.current?.movementLfoDepth ?? 0.12,
+        movementLfoPeak: source.movementLfoPeak ?? stateRef.current?.movementLfoPeak ?? 0.42,
         movementLfoRandom: source.movementLfoRandom ?? stateRef.current?.movementLfoRandom ?? 73,
         movementLfoPhase: source.movementLfoPhase ?? 0.0,
         movementLfoCycleMult: source.movementLfoCycleMult ?? 1.0,

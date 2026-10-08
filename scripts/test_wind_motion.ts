@@ -23,15 +23,15 @@ console.log("Starting Wind Motion & Hierarchical Branching Automated Tests...");
 // Test 1: Defaults & Ranges
 // ==========================================
 console.log("-> Test 1: Defaults & Ranges");
-assert(DEFAULTS.shimmer === 0.34, `Expected shimmer 0.34, got ${DEFAULTS.shimmer}`);
-assert(DEFAULTS.wavy === 0.40, `Expected wavy 0.40, got ${DEFAULTS.wavy}`);
-assert(DEFAULTS.branchMovement === 0.31, `Expected branchMovement 0.31, got ${DEFAULTS.branchMovement}`);
+assert(DEFAULTS.shimmer === 0.04, `Expected shimmer 0.04, got ${DEFAULTS.shimmer}`);
+assert(DEFAULTS.wavy === 0.00, `Expected wavy 0.00, got ${DEFAULTS.wavy}`);
+assert(DEFAULTS.branchMovement === 0.32, `Expected branchMovement 0.32, got ${DEFAULTS.branchMovement}`);
 assert(DEFAULTS.overallMovement === 0.40, `Expected overallMovement 0.40, got ${DEFAULTS.overallMovement}`);
-assert(DEFAULTS.movementLfoSpeed === 0.28, `Expected movementLfoSpeed 0.28, got ${DEFAULTS.movementLfoSpeed}`);
-assert(DEFAULTS.movementLfoDepth === 0.07, `Expected movementLfoDepth 0.07, got ${DEFAULTS.movementLfoDepth}`);
-assert(DEFAULTS.movementLfoPeak === 0.48, `Expected movementLfoPeak 0.48, got ${DEFAULTS.movementLfoPeak}`);
+assert(DEFAULTS.movementLfoSpeed === 0.14, `Expected movementLfoSpeed 0.14, got ${DEFAULTS.movementLfoSpeed}`);
+assert(DEFAULTS.movementLfoDepth === 0.12, `Expected movementLfoDepth 0.12, got ${DEFAULTS.movementLfoDepth}`);
+assert(DEFAULTS.movementLfoPeak === 0.42, `Expected movementLfoPeak 0.42, got ${DEFAULTS.movementLfoPeak}`);
 assert(DEFAULTS.movementLfoRandom === 73, `Expected movementLfoRandom 73, got ${DEFAULTS.movementLfoRandom}`);
-assert(DEFAULTS.minCreatures === 7, `Expected minCreatures 7, got ${DEFAULTS.minCreatures}`);
+assert(DEFAULTS.minCreatures === 9, `Expected minCreatures 9, got ${DEFAULTS.minCreatures}`);
 assert(DEFAULTS.maxCreatures === 12, `Expected maxCreatures 12, got ${DEFAULTS.maxCreatures}`);
 assert(DEFAULTS.showBoundaryBox === true, `Expected showBoundaryBox true, got ${DEFAULTS.showBoundaryBox}`);
 
