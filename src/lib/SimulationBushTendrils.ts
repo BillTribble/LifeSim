@@ -29,7 +29,7 @@ export function trackBushBranchStep(agent: Agent, stepSize: number = 0.65): void
 }
 
 function getBushRambleScale(agent: Agent): number {
-  const r = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6);
+  const r = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 0.74, 0.55, 2.6);
   return 1.0 + (r - 1.0) * 0.65;
 }
 

@@ -7,10 +7,17 @@ import {
   MOVEMENT_TYPES,
   Archetype,
 } from "./SimulationTypes";
-import { assignGenomeMorphology, inheritGenomeMorphology, rollRambleFactor } from "./SimulationMorphology";
+import {
+  assignGenomeMorphology,
+  inheritGenomeMorphology,
+  rollRambleFactor,
+  rollTrunkGirthMod,
+  clampTrunkGirthMod,
+  clampRambleFactor,
+} from "./SimulationMorphology";
 
 export function getRandomWeightedArchetype(): Archetype {
-  const branchingPool: Archetype[] = ["bush", "tree", "rhizome", "bush", "tree", "rhizome"];
+  const branchingPool: Archetype[] = ["tree", "tree", "bush", "rhizome", "tree", "bush"];
   return branchingPool[Math.floor(Math.random() * branchingPool.length)];
 }
 
@@ -134,31 +141,35 @@ export function clampArchetypeGenome(res: Genome): Genome {
   }
   res.singleton = false;
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.50, 4.2);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.04, 0.35);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.982, 0.995);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.06, 0.05, 0.16);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.0, 2.0, 4.5);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.15);
-    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.25, 0.65);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.55, 1.65);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.03, 0.14);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.978, 0.992);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.06, 0.04, 0.16);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.0, 1.8, 4.5);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.65, 1.35);
+    res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.12, 0.65);
   } else if (res.archetype === "bush") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.50, 4.2);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.20, 0.04, 0.35);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.996);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.95, 2.20);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.10, 0.05, 0.22);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.995);
     res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.22 + Math.random() * 0.12);
     res.branchTendency = Math.max(res.branchTendency || 0.5, 3.8 + Math.random() * 4.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.32, 0.85);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.85);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.80, 7.2);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.22, 0.04, 0.55);
-    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.982, 0.995);
-    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.04, 0.035, 0.085);
-    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.2, 2.0, 6.0);
-    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.45, 1.15);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.00, 4.80);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.16, 0.03, 0.45);
+    res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.978, 0.995);
+    res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.03, 0.018, 0.085);
+    res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.2, 1.8, 6.0);
+    res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.55, 1.15);
     if (res.morphMode === "filigree") {
       res.morphScale = THREE.MathUtils.clamp(res.morphScale ?? 0.85, 0.65, 1.45);
     }
+    if (res.geometryType === "ribbon") {
+      res.geometryType = "cylinder";
+    }
+    res.windStyle = "stiff";
   } else if (res.archetype === "snake") {
     res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 1.8, 4.2);
     res.minThickness = Math.max(res.minThickness, 0.45);
@@ -166,7 +177,8 @@ export function clampArchetypeGenome(res: Genome): Genome {
     res.branchTendency = Math.max(res.branchTendency || 2.2, 2.2);
     res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.65, 1.25);
   }
-  res.rambleFactor = THREE.MathUtils.clamp(res.rambleFactor ?? rollRambleFactor(res.archetype, res.morphMode), 0.85, 2.6);
+  res.trunkGirthMod = clampTrunkGirthMod(res.archetype, res.trunkGirthMod ?? rollTrunkGirthMod(res.archetype, res.morphMode));
+  res.rambleFactor = clampRambleFactor(res.archetype, res.rambleFactor ?? rollRambleFactor(res.archetype, res.morphMode));
   if (!res.appendage) {
     res.appendage = getWeightedAppendage({});
   }
