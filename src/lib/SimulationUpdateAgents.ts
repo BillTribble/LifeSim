@@ -528,8 +528,9 @@ export function processAgents(
           } else if (arch !== "snake") {
             const maxDepth = Math.max(5, engine.maxBranchDepth ?? 5);
             const branchAgeLimit =
-              (branchDepth === 0 ? 280 : Math.max(55, 175 - branchDepth * 26)) /
-              Math.max(0.25, archTaper);
+              ((branchDepth === 0 ? 280 : Math.max(55, 175 - branchDepth * 26)) /
+              Math.max(0.25, archTaper)) *
+              THREE.MathUtils.clamp((genome as any).rambleFactor ?? 1.2, 1.0, 2.2);
             const termChance =
               (engine.terminationProb || 0.05) * 0.014 * (1.0 + branchDepth * 0.5) * archTaper;
             const minTwigThreshold = 0.055;
@@ -552,7 +553,7 @@ export function processAgents(
         agent.thickness,
         0.001,
         genome.archetype === "bush"
-          ? Math.min(agent.thickness, genome.thicknessBase * 1.15 * Math.max(1, getBushMorphScale(genome) * 0.65))
+          ? Math.max(engine.maxLineWidth, genome.thicknessBase * (genome.trunkGirthMod ?? 1.5) * 1.35)
           : Math.max(engine.maxLineWidth, genome.thicknessBase * (genome.trunkGirthMod ?? 1.5) * 1.2),
       );
       const isRootTrunk = !agent.isFeeler && !agent.parentId && (agent.branchDepth || 0) === 0;

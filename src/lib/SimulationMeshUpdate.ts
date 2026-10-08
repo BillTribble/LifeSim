@@ -2,8 +2,11 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Genome } from "./SimulationTypes";
 import { getStrainDeathStart } from "./SimulationEngineHelpers";
-import { tryCoalesceStemSegment, markInstanceIndexDirty, markActiveInstancesDirty, deleteStrainAppendages } from "./SimulationVertexTrimmer";
+import { markInstanceIndexDirty, markActiveInstancesDirty, deleteStrainAppendages } from "./SimulationVertexTrimmer";
 import { getStemBudget, getPerAppendageCap, getCameraDistanceRatio, remapAppendageParent } from "./SimulationTrianglePruner";
+
+export const STEM_BIRTH_GROWTH_INIT = 0.02;
+export const APPENDAGE_BIRTH_GROWTH_INIT = 0.02;
 
 export function updateMeshSegments(
   engine: SimulationEngine,
@@ -24,10 +27,6 @@ export function updateMeshSegments(
   if (!isAppendage) {
     (engine as any)._lastStemWriteSucceeded = false;
     if (p1.distanceToSquared(p2) < 1e-5) return;
-    if (tryCoalesceStemSegment(engine, p1, p2, genome, thickness, agentId, isTerminal, shouldCountBiomass, resolvedStrainName)) {
-      (engine as any)._lastStemWriteSucceeded = true;
-      return;
-    }
   }
 
   let targetIndexStem = 0;
@@ -37,44 +36,9 @@ export function updateMeshSegments(
   let newBiomassWeight = 1;
   if (!isAppendage) {
     const isSoft = !!(engine as any)._isSoftwareRaster;
-    const stemAnchorCheck = agentId !== undefined ? engine.agentAnchorMap.get(agentId) : undefined;
-    const curDepth = stemAnchorCheck?.branchDepth ?? 0;
-    const prevIdx = !isFeelerSeg && !isTerminal && agentId !== undefined ? engine.lastAgentStemIndex?.get(agentId) : undefined;
-    const prevSeg = prevIdx !== undefined ? engine.segments[prevIdx] : undefined;
-    let canExtendPrev = false;
-    if (
-      prevSeg &&
-      prevSeg.agentId === agentId &&
-      prevSeg.strainName === resolvedStrainName &&
-      (prevSeg.branchDepth ?? 0) === curDepth &&
-      !prevSeg.isFeeler &&
-      !prevSeg.isTerminal &&
-      !engine.dyingStems.has(prevSeg.index) &&
-      prevSeg.startPos &&
-      prevSeg.endPos &&
-      prevSeg.endPos.distanceToSquared(p1) < 0.0004 &&
-      Math.abs(thickness - prevSeg.thickness) <= prevSeg.thickness * 0.14 &&
-      prevSeg.startPos.distanceTo(p2) <= (isSoft ? 2.1 : 1.5)
-    ) {
-      const dA = new THREE.Vector3().subVectors(prevSeg.endPos, prevSeg.startPos).normalize();
-      const dB = new THREE.Vector3().subVectors(p2, p1).normalize();
-      if (dA.dot(dB) >= 0.992) {
-        canExtendPrev = true;
-      }
-    }
-
-    if (canExtendPrev && prevSeg) {
-      const pB = engine.cylinderMesh?.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute | undefined;
-      const prevRatio = pB ? pB.getZ(prevSeg.index) : 1.0;
-      extendedStartThick = prevSeg.thickness * (prevRatio > 0.1 ? prevRatio : 1.0);
-      newBiomassWeight = (prevSeg.biomassWeight || 1) + 1;
-      p1 = prevSeg.startPos.clone();
-      targetIndexStem = prevSeg.index;
-      reusedFreeSlot = true;
-      extendedPrevSeg = true;
-    } else {
-      let poppedFree = -1;
-      const stemCap = isSoft ? getStemBudget(engine) + engine.dyingStems.size + 16 : engine.maxDOMs;
+    const canExtendPrev = false;
+    let poppedFree = -1;
+    const stemCap = isSoft ? getStemBudget(engine) + engine.dyingStems.size + 16 : engine.maxDOMs;
       while (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
         const cand = engine.freeStemIndices.pop()!;
         if (cand < engine.pointCount && !engine.segments[cand]) {
@@ -113,17 +77,22 @@ export function updateMeshSegments(
           // Recycle single oldest feeler or furthest-faded dying slot without bulk-erasing the organism
           let victimSlot = -1;
           let bestScore = -1;
+          const packA = engine.cylinderMesh?.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute | undefined;
           for (let i = 0; i < searchLim; i++) {
             const s = engine.segments[i];
-            if (!s) { victimSlot = i; break; }
+            if (!s) { victimSlot = i; bestScore = 1e9; break; }
             const isDying = engine.dyingStems.has(i) || (engine.dyingStrains && engine.dyingStrains.has(s.strainName));
             if (!s.isFeeler && !isDying) continue;
+            const dissolveProgress = packA?.getZ(i) ?? 0;
             const dAge = s.dyingStart ? Math.max(0, engine.unscaledTime - s.dyingStart) : 0;
-            const ageScore = dAge * 10 + (engine.time - s.timestamp) + (s.isFeeler ? 50000 : 0);
+            const ageScore = dAge * 10 + dissolveProgress * 5000 + (engine.time - s.timestamp) + (s.isFeeler ? 50000 : 0);
             if (ageScore > bestScore) {
               bestScore = ageScore;
               victimSlot = i;
             }
+          }
+          if (bestScore < 0) {
+            return;
           }
           if (victimSlot >= 0) {
             targetIndexStem = victimSlot;
@@ -139,7 +108,6 @@ export function updateMeshSegments(
           }
         }
       }
-    }
   }
 
   let appSlotIndex = 0;
@@ -443,7 +411,7 @@ export function updateMeshSegments(
     packAAttr.setW(targetIndex, genomeHash);
     
     // Pack B: [growth, vernation, succulence, leafDivision]
-    packBAttr.setX(targetIndex, isAppendage ? 0.22 : 1.0); // appendages start at 0.22; stems render solid immediately so thin twigs never dither into dashed gaps
+    packBAttr.setX(targetIndex, isAppendage ? APPENDAGE_BIRTH_GROWTH_INIT : STEM_BIRTH_GROWTH_INIT);
     
     let vernVal = 0.0;
     if (genome.vernationType === "convolute") vernVal = 1.0;
@@ -455,11 +423,8 @@ export function updateMeshSegments(
     } else {
       const prevIdx = agentId !== undefined ? engine.lastAgentStemIndex?.get(agentId) : undefined;
       const prevSeg = prevIdx !== undefined ? engine.segments[prevIdx] : undefined;
-      if (!extendedPrevSeg && prevIdx !== undefined && prevIdx !== targetIndex && !engine.dyingStems.has(prevIdx)) {
-        packBAttr.setX(prevIdx, 1.0);
-        if (engine.growingStems) engine.growingStems.delete(prevIdx);
-        markInstanceIndexDirty(packBAttr, prevIdx);
-      }
+      // DO NOT snap prevIdx to 1.0 or delete it from growingStems!
+      // Every stem segment must stay in engine.growingStems until SimulationUpdateVisuals ramps its packBAttr.x to 1.0.
       const startThick = extendedStartThick !== undefined
         ? extendedStartThick
         : (prevSeg && prevSeg.endPos && prevSeg.endPos.distanceToSquared(p1) < 0.09)

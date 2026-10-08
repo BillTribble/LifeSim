@@ -7,3 +7,17 @@
 - NEVER invoke browser testing tools or the browser subagent unless the user explicitly asks you to do so.
 - HIERARCHY & POPULATION FLOOR: In LifeSim, distinct living creatures listed in the side panel are **Organisms / Strains / Species** (e.g., Alpha, Beta, Gamma), while `Agent` objects in code represent individual branch tips / growth vectors of an organism. The `MIN_CREATURES` dial (formerly `MIN_AGENTS`) controls the minimum number of **distinct living organisms** in the side panel. Never conflate branch tips with organisms. Organism death must be strictly halted until the number of living organisms reaches `minCreatures` (`minAgents`), and once reached, it must never drop below that floor. See `docs/SIMULATION_HIERARCHY.md` for full definitions.
 - FEELERS & BREEDING GENETICS: A feeler (`agent.isFeeler === true`) is strictly a temporary sensory extension of an organism, NEVER an independent creature or snake. Feelers must never be assigned a separate archetype (they inherit their parent organism's archetype) and feelers can never spawn other feelers. When a feeler mates, offspring MUST inherit the `realGenome` and archetype of the root organism that spawned the feeler. Valid organism archetypes in LifeSim are strictly botanical (`bush`, `tree`, `rhizome`). Feelers must automatically dissolve if they fail to mate or if their parent organism dies.- SCRATCH SCRIPTS: One-off verification, benchmark, profiling or screenshot scripts (e.g. `verify_*.mjs`, `benchmark_*.mjs`, headless Puppeteer checks) and their screenshots are never committed. Write them outside the repo (agent scratch dir); `.gitignore` blocks the common names. Only commit a test if it is wired into `package.json` scripts or the user asks.
+
+## Birth & Death Dissolve Invariant (MANDATORY REGRESSION GUARD)
+
+Every newborn stem and appendage segment must smoothly dissolve into existence via screen-space stochastic dithering and axial fade, rather than popping solid instantly. Every dying segment must dissolve out over 540 unscaled frames (~9s).
+
+Five invariants are permanently guarded by `scripts/test_dissolve_guard.ts`:
+1. **Birth Initial State**: Stem and appendage segments start with `vGrowth <= 0.05` (`STEM_BIRTH_GROWTH_INIT`, `APPENDAGE_BIRTH_GROWTH_INIT`) and are registered in `engine.growingStems`.
+2. **No Premature Snap or In-Place Coalescing**: Spawning subsequent segments on an agent must never coalesce growing stems or snap prior segments to `1.0`.
+3. **Smooth Wind-Independent Birth Ramp**: Visual growth ramps monotonically over >= 30 frames even when wind movement is zero.
+4. **Smooth Multi-Frame Death Dissolve**: Dying segments ramp `vDecay` smoothly and are cleanly purged after fadeAge >= 540 frames.
+5. **Shader Source Guard**: `SimulationGenetics.ts` and `SimulationVertexTrimmer.ts` shaders must maintain `axialGrowth`, `ditherIn > axialGrowth`, `diffuseColor.rgb *= mix(`, and `vDecay`.
+
+**Verification Rule**: Always run `npm run test:dissolve` before finishing any task to guarantee no regressions.
+

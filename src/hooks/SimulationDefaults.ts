@@ -29,9 +29,9 @@ export const DEFAULTS: Record<string, any> = {
   "rhizomeSpeed": 0.8,
   "treeSpeed": 0.8,
   "bushSpeed": 1.1,
-  "bushStepSize": 0.8500000000000001,
-  "treeStepSize": 0.6000000000000001,
-  "rhizomeStepSize": 0.6000000000000001,
+  "bushStepSize": 1.15,
+  "treeStepSize": 0.95,
+  "rhizomeStepSize": 0.95,
   "bushBranching": 50,
   "widthVariance": 0.5,
   "branchGrowthBoost": 0.1,
@@ -80,14 +80,14 @@ export const DEFAULTS: Record<string, any> = {
   "branchBigger": 0.5698922626920427,
   "branchSplitSizeProb": 0.3542749591689085,
   "pruningStrength": 1.3139052798602047,
-  "maxBranchDepth": 5,
-  "maxBranchesPerSpecies": 51,
+  "maxBranchDepth": 4,
+  "maxBranchesPerSpecies": 24,
   "maxDOMs": 100000,
   "maxAgents": 560,
   "maxCreatures": 12,
   "ecoFade": 0.02946475338922394,
   "minCreatures": 9,
-  "boundarySize": 60,
+  "boundarySize": 45,
   "boundarySquash": 1,
   "desiccationSpeed": 4.289796350823339,
   "hybridSize": 2,
@@ -110,8 +110,8 @@ export const DEFAULTS: Record<string, any> = {
   "movementLfoDepth": 0.07,
   "movementLfoPeak": 0.48,
   "movementLfoRandom": 73,
-  "leafScale": 0.7,
-  "leafDensity": 0.35,
+  "leafScale": 0.88,
+  "leafDensity": 0.24,
   "relativeLeafSizeDiff": 0.2,
   "leafGrowthSpeed": 0.0045,
   "phyllotaxisAngle": 137.5,
@@ -187,7 +187,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-10-01-v1.4";
+export const CURRENT_SCHEMA = "2026-10-08-v1.6";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
@@ -224,6 +224,7 @@ export function getStoredFloat(key: string, fallback?: number): number {
       if ((key === "growthSpeed" || key === "extrusionSpeed") && (Math.abs(val - 0.11) < 1e-6 || Math.abs(val - 0.24) < 1e-6)) return DEFAULTS.growthSpeed;
       if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];
       if (key === "feelerDelay" && val === 6) return DEFAULTS.feelerDelay;
+      if (key === "boundarySize" && (val === 62 || val === 36)) return DEFAULTS.boundarySize;
       // Ecology-health migrations: legacy stored values that would defeat the clumping fixes
       if (key === "proximity" && val > 100) return DEFAULTS.proximity; // legacy 362 / 484 = whole world
       if (key === "maxMatings" && val === 6) return DEFAULTS.maxMatings; // old default

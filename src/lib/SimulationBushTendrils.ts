@@ -28,6 +28,11 @@ export function trackBushBranchStep(agent: Agent, stepSize: number = 0.65): void
   a.distSinceLastFork = (a.distSinceLastFork ?? 0) + stepSize;
 }
 
+function getBushRambleScale(agent: Agent): number {
+  const r = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6);
+  return 1.0 + (r - 1.0) * 0.65;
+}
+
 export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent): void {
   if (agent.genome.archetype !== "bush") return;
   const depth = agent.branchDepth || 0, dist = (agent as any).branchDist ?? 0;
@@ -36,8 +41,9 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
     agent.direction.applyAxisAngle(axis, sign * 0.042).normalize();
   }
   const bushScale = getBushMorphScale(agent.genome);
+  const rambleScale = getBushRambleScale(agent);
   // Radial fan relative to root birth position
-  if (depth >= 1 && dist < 8.0 * bushScale) {
+  if (depth >= 1 && dist < 18.0 * bushScale * rambleScale) {
     const origin = agent.rootOrigin || agent.genome.birthPos || new THREE.Vector3(0, 0, 0);
     if (engine.designerMode) {
       const radial = new THREE.Vector3(agent.position.x - origin.x, 0, agent.position.z - origin.z);
@@ -47,15 +53,19 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
       // Zero-gravity 3D spherical radial expansion so bushes fill 3D space instead of climbing to the ceiling
       const radial3D = new THREE.Vector3().subVectors(agent.position, origin);
       if (radial3D.lengthSq() > 1e-4) radial3D.normalize(); else radial3D.copy(agent.direction);
-      agent.direction.addScaledVector(radial3D, 0.055).normalize();
+      agent.direction.addScaledVector(radial3D, 0.068).normalize();
     }
   }
+
+  const meanderAxis = constructTransverseAxis(agent.direction, (agent.id || 0) * 1.3 + (agent.age || 0) * 0.04);
+  const meanderStrength = Math.sin((agent.age || 0) * 0.08 + (agent.id || 0)) * 0.035 * Math.max(0.2, rambleScale - 0.85);
+  agent.direction.addScaledVector(meanderAxis, meanderStrength).normalize();
 }
 
 export function canBushTipTaper(agent: Agent): boolean {
   if (agent.genome.archetype !== "bush" || (agent.branchDepth || 0) === 0) return true;
   const bushScale = getBushMorphScale(agent.genome);
-  return ((agent as any).branchDist ?? 0) >= 5.0 * Math.min(1.35, Math.max(0.55, bushScale));
+  return ((agent as any).branchDist ?? 0) >= 5.5 * Math.min(1.8, Math.max(0.60, bushScale)) * getBushRambleScale(agent);
 }
 
 export function retireOldestBushSibling(
@@ -123,11 +133,16 @@ export function stepBushTendrilBranching(
   const branchDist = (agent as any).branchDist ?? (agent.age * 0.6);
   const distSinceLastFork = (agent as any).distSinceLastFork ?? branchDist;
   const bushScale = getBushMorphScale(agent.genome);
-  const minBushThick = Math.max(0.055, agent.genome.minThickness || 0.06);
+  const rambleScale = getBushRambleScale(agent);
+  const minBushThick = Math.min(
+    Math.max(0.036, (agent.genome.minThickness || 0.06) * 0.45),
+    (agent.genome.thicknessBase || 1.0) * (agent.genome.trunkGirthMod ?? 1.0) * 0.14,
+  );
 
   // 1. Shrub Base Architecture: at depth 0, grow 1.8-unit trunk then burst into 3 diverging canes
   if (currentDepth === 0) {
-    if (distSinceLastFork < 1.8 * bushScale && agent.age < 5) return false;
+    const trunkSplitDist = 1.8 * bushScale * (0.85 + 0.30 * Math.min(1.8, agent.genome.trunkGirthMod ?? 1.0));
+    if (distSinceLastFork < trunkSplitDist && agent.age < 6) return false;
     const baseAzimuth = Math.random() * Math.PI * 2;
     const caneSpread = THREE.MathUtils.degToRad(38 + Math.random() * 14);
     const caneThickness = Math.max(minBushThick * 2.0, agent.thickness * 0.78);
@@ -160,19 +175,23 @@ export function stepBushTendrilBranching(
   // 2. Lateral Stems & Tendrils: Distance-Driven Branch Intervals
   const branchingDial = Math.max(20, engine.bushBranching || 50);
   const scale = 50 / branchingDial;
-  const targetDist = (currentDepth === 1 ? 3.4 : 2.8) * bushScale * scale * (0.85 + ((agent.id || 0) % 5) * 0.08);
+  const targetDist =
+    (currentDepth === 1 ? 5.2 : 4.4) * bushScale * scale * (0.85 + ((agent.id || 0) % 5) * 0.08) * rambleScale;
 
   const styleSetting = (engine as any).bushBranchStyle ||
     (typeof window !== "undefined" ? localStorage.getItem("bushBranchStyle") : null) || "hybrid";
 
   const reachedInterval = distSinceLastFork >= targetDist;
-  const reachedCorymbTrigger = currentDepth >= 1 && (branchDist >= 7.5 * bushScale || (styleSetting === "corymb" && distSinceLastFork >= 3.2 * bushScale));
+  const reachedCorymbTrigger =
+    currentDepth >= 1 &&
+    (branchDist >= 7.5 * bushScale * rambleScale ||
+      (styleSetting === "corymb" && distSinceLastFork >= 3.2 * bushScale));
 
   if (!reachedInterval && !reachedCorymbTrigger && !isUnderMinCreatures) return false;
 
   const myStrainCount = strainCounts.get(agent.genome.name) || 1;
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const maxBranches = isSoft ? 4 : Math.max(10, getMaxBranchesForArchetype(engine, "bush"));
+  const maxBranches = isSoft ? 4 : Math.min(16, Math.max(8, Math.round(getMaxBranchesForArchetype(engine, "bush") * 0.55)));
   const globalAgentLimit = isSoft ? 22 : Math.max(engine.maxAgents * 2.5, (engine.maxCreatures || 12) * 10);
   if (activeAgents.length + newAgents.length >= globalAgentLimit && myStrainCount >= 2) {
     retireOldestBushSibling(engine, activeAgents, agent.genome.name, agent);
@@ -185,7 +204,7 @@ export function stepBushTendrilBranching(
     if (!retired && myStrainCount >= maxBranches) return false;
   }
 
-  const maxDepthAllowed = engine.maxBranchDepth ?? 5;
+  const maxDepthAllowed = Math.min(4, engine.maxBranchDepth ?? 4);
   const childDepth = Math.min(maxDepthAllowed - 1, currentDepth + 1);
   const phase = ((agent as any).phyllotaxisPhase ?? 0) + GOLDEN_ANGLE_RAD;
   (agent as any).phyllotaxisPhase = phase;

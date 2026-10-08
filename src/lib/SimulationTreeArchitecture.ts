@@ -11,35 +11,35 @@ import {
   PROFILES,
   isBigBranchingMode,
   isFiligreeMode,
+  computeInitialTrunkThickness,
 } from "./SimulationMorphology";
 
 export type { TreeHabit, TreeProfile };
 export { PROFILES };
 
 const PIPE_GAMMA = 2.6;
-const MIN_TWIG = 0.068;
+const MIN_TWIG = 0.095;
 
 function minBranchThick(agent: Agent, habit: TreeHabit): number {
+  let rawMin: number;
   if (habit === "rhizome_tuber") {
-    return Math.max(0.09, (agent.genome?.minThickness || 0.09) * 0.55);
+    rawMin = Math.max(0.09, (agent.genome?.minThickness || 0.09) * 0.55);
+  } else if (habit === "rhizome") {
+    rawMin = Math.max(0.075, (agent.genome?.minThickness || 0.07) * 0.55);
+  } else if (habit === "rhizome_lace" || habit === "filigree") {
+    rawMin = 0.048;
+  } else if (habit === "monolith") {
+    rawMin = Math.max(0.22, (agent.genome?.minThickness || 0.28) * 0.80);
+  } else if (habit === "big_branching" || habit === "candelabra") {
+    rawMin = Math.max(0.15, (agent.genome?.minThickness || 0.20) * 0.70);
+  } else {
+    rawMin = MIN_TWIG;
   }
-  if (habit === "rhizome") {
-    return Math.max(0.075, (agent.genome?.minThickness || 0.07) * 0.55);
-  }
-  if (habit === "rhizome_lace" || habit === "filigree") {
-    return 0.048;
-  }
-  if (habit === "monolith") {
-    return Math.max(0.22, (agent.genome?.minThickness || 0.28) * 0.80);
-  }
-  if (habit === "big_branching" || habit === "candelabra") {
-    return Math.max(0.15, (agent.genome?.minThickness || 0.20) * 0.70);
-  }
-  return MIN_TWIG;
+  return Math.min(rawMin, Math.max(0.032, (agent.treeBaseThick || agent.thickness || 0.4) * 0.22));
 }
 
-const STEP_PER_BUDGET = 0.09;
-const SIM_STEP_SCALE = 0.62;
+const STEP_PER_BUDGET = 0.15;
+const SIM_STEP_SCALE = 1.05;
 const UP = new THREE.Vector3(0, 1, 0);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const GOLDEN = 2.39996323;
@@ -107,7 +107,7 @@ function endTaperFor(engine: SimulationEngine, p: TreeProfile, agent?: Agent): n
 
 function tipCap(engine: SimulationEngine): number {
   const dial = engine.maxBranchesPerSpecies ?? 51;
-  return Math.max(200, dial * (engine.designerMode ? 24 : 6));
+  return Math.max(60, dial * (engine.designerMode ? 24 : 3.5));
 }
 
 export function getTreeStepSize(engine: SimulationEngine, agent: Agent): number {
@@ -115,7 +115,8 @@ export function getTreeStepSize(engine: SimulationEngine, agent: Agent): number 
   const budget = agent.treeBudget ?? p.trunkLength;
   const dial = (engine.treeStepSize ?? 0.6) / 0.6;
   const simScale = engine.designerMode ? 1 : SIM_STEP_SCALE;
-  return THREE.MathUtils.clamp(budget * STEP_PER_BUDGET, p.stepMin, p.stepMax) * dial * simScale;
+  const base = THREE.MathUtils.clamp(budget * STEP_PER_BUDGET, p.stepMin, p.stepMax) * dial * simScale;
+  return base * (1.0 + Math.max(0, ((agent.genome as any)?.rambleFactor ?? 1.0) - 1.0) * 0.18);
 }
 
 function deflect(dir: THREE.Vector3, angle: number, azimuth: number): THREE.Vector3 {
@@ -130,8 +131,9 @@ function initTreeAgent(engine: SimulationEngine, agent: Agent) {
   const morphScale = THREE.MathUtils.clamp(agent.genome?.morphScale ?? 1.0, 0.55, 1.85);
   const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
   const delayScale = isRhiz ? 1.0 : THREE.MathUtils.clamp(0.75 + (engine.treeBranchDelay ?? 5) * 0.05, 0.6, 1.6);
+  const ramble = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6);
   agent.treeLen = 0;
-  agent.treeBudget = p.trunkLength * morphScale * delayScale * (0.92 + Math.random() * 0.16);
+  agent.treeBudget = p.trunkLength * morphScale * delayScale * (0.92 + Math.random() * 0.16) * (1.0 + (ramble - 1.0) * (isRhiz ? 0.70 : 0.55));
   agent.treeBudIdx = Math.floor(Math.random() * 8);
   agent.treeRoot = agent.position.clone();
   if (p.noMidBranchLaterals) {
@@ -155,7 +157,7 @@ function initTreeAgent(engine: SimulationEngine, agent: Agent) {
     } else {
       const centre = new THREE.Vector3(0, engine.creatureCenterY || 18.921075, 0);
       const toCentre = centre.sub(agent.position);
-      const bias = toCentre.lengthSq() > 1 ? toCentre.normalize().multiplyScalar(0.9) : toCentre.set(0, 0, 0);
+      const bias = toCentre.lengthSq() > 1 ? toCentre.normalize().multiplyScalar(toCentre.length() > 28 ? 0.22 : 0.05) : toCentre.set(0, 0, 0);
       const axis = new THREE.Vector3().randomDirection().add(bias).normalize();
       agent.treeAxis = axis;
       agent.direction.copy(axis);
@@ -179,15 +181,7 @@ function perpendicular(axis: THREE.Vector3, az: number): THREE.Vector3 {
 }
 
 function initTrunkThickness(agent: Agent, zeroG: boolean) {
-  const girthMod = agent.genome?.trunkGirthMod ?? 1.0;
-  if (agent.genome?.archetype === "rhizome" || agent.genome?.growthHabit === "rhizome_web") {
-    const base = Math.max(1.1, agent.genome.thicknessBase || 2.0);
-    agent.thickness = Math.min(0.52, base * 0.28 * girthMod);
-    agent.treeBaseThick = agent.thickness;
-    return;
-  }
-  const base = Math.max(0.5, agent.genome.thicknessBase || 4);
-  agent.thickness = Math.min(0.58, base * (zeroG ? 0.18 : 0.22) * girthMod);
+  agent.thickness = computeInitialTrunkThickness(agent.genome, zeroG);
   agent.treeBaseThick = agent.thickness;
 }
 
@@ -280,9 +274,10 @@ export function createTreeShoot(
   const maxDepth = maxDepthFor(engine, p, habit, template);
   const depth = Math.max(1, Math.min(woodDepth + 1, maxDepth - 2));
   const morphScale = THREE.MathUtils.clamp(template.genome?.morphScale ?? 1.0, 0.55, 1.85);
-  const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.8 + Math.random() * 0.4);
-  const minT = minBranchThick(template, habit);
   const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
+  const rambleMult = 1.0 + (THREE.MathUtils.clamp((template.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6) - 1.0) * (isRhiz ? 0.70 : 0.55);
+  const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.8 + Math.random() * 0.4) * rambleMult;
+  const minT = minBranchThick(template, habit);
   const thickness =
     isRhiz
       ? THREE.MathUtils.clamp(Math.max(woodThickness * 0.82, minT * (1.15 + 0.35 * vigor)), minT, minT * 3.2)
@@ -319,6 +314,9 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   const d = agent.direction;
   const root = agent.treeRoot || agent.position;
   const seekFactor = depth >= 1 ? Math.max(0.15, 1.0 - 0.75 * getSeekRamp(engine, agent)) : 1.0;
+  const ramble = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6);
+  const meanderAmt = Math.sin((agent.age || 0) * 0.09 + (agent.id || 0) * 1.7) * 0.038 * Math.max(0, ramble - 0.95);
+  const meanderPerp = perpendicular(d, ((agent.id || 0) * GOLDEN) + (agent.age || 0) * 0.03);
 
   if (habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace") {
     const rel3D = new THREE.Vector3().subVectors(agent.position, root);
@@ -327,8 +325,9 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
         rel3D.y = Math.sign(d.y) * Math.abs(rel3D.y);
       }
       rel3D.normalize();
-      d.addScaledVector(rel3D, (depth <= 1 ? 0.028 : 0.018) * seekFactor);
+      d.addScaledVector(rel3D, (depth <= 1 ? 0.045 : 0.030) * ramble * seekFactor);
     }
+    d.addScaledVector(meanderPerp, meanderAmt);
     d.normalize();
     return;
   }
@@ -342,17 +341,18 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
   const progress = agent.treeBudget ? Math.min(1, (agent.treeLen || 0) / agent.treeBudget) : 0;
   const lean = (target: number, k: number) => {
     const a = d.dot(A);
-    d.addScaledVector(A, THREE.MathUtils.lerp(a, target, k * seekFactor) - a);
+    const scaledK = (k / Math.pow(ramble, 0.65)) * seekFactor;
+    d.addScaledVector(A, THREE.MathUtils.lerp(a, target, scaledK) - a);
   };
 
   if (depth === 0) {
-    d.lerp(A, habit === "pine" ? 0.08 : 0.1);
+    d.lerp(A, (habit === "pine" ? 0.08 : 0.1) / Math.pow(ramble, 0.65));
   } else if (habit === "candelabra") {
     lean(depth === 1 ? 0.82 : 0.72, 0.045);
-    d.addScaledVector(radial, 0.012 * seekFactor);
+    d.addScaledVector(radial, 0.012 * seekFactor * ramble * 1.35);
   } else if (habit === "oak" || habit === "monolith" || habit === "big_branching" || habit === "filigree") {
     lean(depth === 1 ? 0.68 : depth === 2 ? 0.5 : 0.35, 0.035);
-    d.addScaledVector(radial, 0.018 * seekFactor);
+    d.addScaledVector(radial, 0.018 * seekFactor * ramble * 1.35);
   } else if (habit === "elm") {
     const target =
       depth === 1
@@ -363,10 +363,13 @@ export function applyTreeTropism(engine: SimulationEngine, agent: Agent) {
             ? 0.08
             : -0.25;
     lean(target, 0.04);
-    d.addScaledVector(radial, (depth === 1 ? 0.008 : 0.015) * seekFactor);
+    d.addScaledVector(radial, (depth === 1 ? 0.008 : 0.015) * seekFactor * ramble * 1.35);
   } else {
     lean(depth === 1 ? 0.02 + progress * 0.16 : 0.04, 0.05);
-    if (depth === 1) d.addScaledVector(radial, 0.04 * seekFactor);
+    if (depth === 1) d.addScaledVector(radial, 0.04 * seekFactor * ramble * 1.35);
+  }
+  if (depth >= 1) {
+    d.addScaledVector(meanderPerp, meanderAmt * 0.85);
   }
   d.normalize();
 }
@@ -404,7 +407,12 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   );
   const depth = Math.max(1, maxDepth - 2);
   const morphScale = THREE.MathUtils.clamp(agent.genome?.morphScale ?? 1.0, 0.55, 1.85);
-  const budget = p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.95 + Math.random() * 0.35);
+  const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
+  const rambleMult =
+    1.0 +
+    (THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6) - 1.0) * (isRhiz ? 0.70 : 0.55);
+  const budget =
+    p.limbLength * morphScale * Math.pow(p.lengthRatio, depth - 1) * vigor * (0.95 + Math.random() * 0.35) * rambleMult;
   const spacing = p.lateralSpacing * spacingScale(engine, agent);
 
   const wasTrunk = (agent.branchDepth || 0) === 0;
@@ -421,7 +429,6 @@ export function tickTreeRest(engine: SimulationEngine, agent: Agent): boolean {
   agent.targetThickness = agent.thickness;
   const az = Math.random() * Math.PI * 2;
   agent.direction.copy(deflect(agent.direction, THREE.MathUtils.degToRad(p.forkAngleDeg), az));
-  const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
   if (isRhiz) {
     const root = agent.treeRoot || agent.position;
     const rel3D = new THREE.Vector3().subVectors(agent.position, root);
@@ -464,6 +471,9 @@ export function stepTreeArchitecture(
   const roomForTips = strainCount + newAgents.length < tipCap(engine);
   const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
   const morphScale = THREE.MathUtils.clamp(agent.genome?.morphScale ?? 1.0, 0.55, 1.85);
+  const rambleMult =
+    1.0 +
+    (THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6) - 1.0) * (isRhiz ? 0.70 : 0.55);
 
   agent.treeLen = (agent.treeLen || 0) + stepLen;
   recordTreeNode(engine, agent);
@@ -485,7 +495,7 @@ export function stepTreeArchitecture(
       if (depth === 0 && habit === "pine") {
         const count = 2 + Math.floor(Math.random() * 4);
         const baseAz = Math.random() * Math.PI * 2;
-        const tierLen = p.limbLength * morphScale * (1.05 - 0.8 * frac) * (0.7 + Math.random() * 0.6);
+        const tierLen = p.limbLength * morphScale * (1.05 - 0.8 * frac) * (0.7 + Math.random() * 0.6) * rambleMult;
         const childT = Math.max(MIN_TWIG, agent.thickness * Math.pow(p.lateralAlpha, 1 / PIPE_GAMMA));
         for (let w = 0; w < count; w++) {
           const az = baseAz + (w * Math.PI * 2) / count + (Math.random() - 0.5) * 0.4;
@@ -516,12 +526,14 @@ export function stepTreeArchitecture(
         let childBudget: number;
         if (isRhiz) {
           childBudget =
-            (depth === 0 ? p.limbLength * morphScale * (0.85 + Math.random() * 0.25) : budget * p.lengthRatio) *
+            (depth === 0 ? p.limbLength * morphScale * (0.85 + Math.random() * 0.25) * rambleMult : budget * p.lengthRatio) *
             (0.85 + Math.random() * 0.3);
         } else {
           const posFactor = habit === "pine" ? 1.0 - 0.4 * frac : 0.6 + 0.4 * frac;
           childBudget =
-            (depth === 0 ? p.limbLength * morphScale * 0.7 : budget * p.lengthRatio) * posFactor * (0.85 + Math.random() * 0.3);
+            (depth === 0 ? p.limbLength * morphScale * 0.7 * rambleMult : budget * p.lengthRatio) *
+            posFactor *
+            (0.85 + Math.random() * 0.3);
         }
         spawnChild(engine, agent, newAgents, dir, childT, childBudget, depth + 1, spacing);
       }
@@ -547,7 +559,7 @@ export function stepTreeArchitecture(
         const clampedY = THREE.MathUtils.clamp(elev, -0.88, 0.88);
         const rXZ = Math.sqrt(Math.max(0.08, 1 - clampedY * clampedY));
         const dir = new THREE.Vector3(Math.cos(az) * rXZ, clampedY, Math.sin(az) * rXZ).normalize();
-        const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.28);
+        const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.28) * rambleMult;
         if (k === 0) {
           agent.direction.copy(dir);
           agent.thickness = limbT;
@@ -571,7 +583,7 @@ export function stepTreeArchitecture(
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.5;
       const spread = THREE.MathUtils.degToRad(p.divisionSpreadDeg + (Math.random() - 0.5) * 16);
       const dir = deflect(axisOf(agent), spread, az);
-      const limbBudget = p.limbLength * morphScale * (0.85 + Math.random() * 0.3);
+      const limbBudget = p.limbLength * morphScale * (0.85 + Math.random() * 0.3) * rambleMult;
       if (k === 0) {
         agent.direction.copy(dir);
         agent.thickness = limbT;

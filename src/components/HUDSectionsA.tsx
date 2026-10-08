@@ -149,7 +149,7 @@ Size of the simulation area.
 High: Vast open space.
 Low: Confined, dense space."
           label="RADIUS"
-          min={50}
+          min={15}
           max={1000}
           step={10}
           value={state.boundarySize}

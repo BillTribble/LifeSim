@@ -77,6 +77,7 @@ export function setupShaderMaterial(
             varying float vDecay;
             varying float vHash;
             varying float vGrowth;
+            varying float vAxialZ;
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
@@ -92,6 +93,7 @@ export function setupShaderMaterial(
              vDecay = instancePackA.z;
              vHash = instancePackA.w;
              vGrowth = instancePackB.x;
+             vAxialZ = clamp(position.z, 0.0, 1.0);
              vAmbientReflect = instanceAmbientReflect;
              vLightDir = instanceLightDir;
              #ifdef USE_INSTANCING_COLOR
@@ -153,6 +155,7 @@ export function setupShaderMaterial(
             varying float vDecay;
             varying float vHash;
             varying float vGrowth;
+            varying float vAxialZ;
             varying vec3 vAmbientReflect;
             varying vec3 vLightDir;
             varying vec3 vInstanceColor;
@@ -306,14 +309,18 @@ export function setupShaderMaterial(
       `vec4 diffuseColor = vec4( diffuse, opacity );
             
              ${isLeaf ? `
-             if (vGrowth < 0.25) {
+             if (vGrowth < 0.65) {
+                 float leafFade = smoothstep(0.0, 0.65, vGrowth);
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
-                 if (ditherIn > smoothstep(0.0, 0.25, vGrowth)) discard;
+                 if (ditherIn > leafFade) discard;
+                 diffuseColor.rgb *= mix(0.20, 1.0, leafFade);
              }
              ` : `
              if (vGrowth < 1.0) {
+                 float axialGrowth = clamp(vGrowth * 1.35 - vAxialZ * 0.35, 0.0, 1.0);
                  float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
-                 if (ditherIn > vGrowth) discard;
+                 if (ditherIn > axialGrowth) discard;
+                 diffuseColor.rgb *= mix(0.18, 1.0, smoothstep(0.0, 1.0, axialGrowth));
              }
              `}
 

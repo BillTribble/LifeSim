@@ -96,8 +96,8 @@ export function getStrainTissueCount(engine: SimulationEngine, strainName: strin
   return getStrainTissueIndex(engine).get(strainName)?.count ?? 0;
 }
 
-/** Global live-segment budget shared by maxCreatures organisms (per-organism clamp 950..2600). */
-export const GLOBAL_SEGMENT_BUDGET = 32000;
+/** Global live-segment budget shared by maxCreatures organisms. */
+export const GLOBAL_SEGMENT_BUDGET = 11000;
 
 export function getOrganismSegmentBudget(engine: SimulationEngine, strainName?: string): number {
   const genome = strainName ? engine.genomeMap?.get(strainName) : undefined;
@@ -105,8 +105,8 @@ export function getOrganismSegmentBudget(engine: SimulationEngine, strainName?: 
   if ((engine as any)._isSoftwareRaster) {
     return Math.round(THREE.MathUtils.clamp(92 * mult, 78, 115));
   }
-  const baseBudget = Math.min(2600, Math.max(950, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 15)));
-  return Math.min(3200, Math.max(850, Math.round(baseBudget * mult)));
+  const baseBudget = Math.min(850, Math.max(280, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 12)));
+  return Math.min(1050, Math.max(240, Math.round(baseBudget * mult)));
 }
 
 /** True when the organism's live tissue exceeds its soft size budget (it then slows and caps tips). */

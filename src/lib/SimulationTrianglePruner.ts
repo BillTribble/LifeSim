@@ -259,11 +259,6 @@ function relocateStemSlot(engine: SimulationEngine, highIdx: number, lowIdx: num
     packA.setZ(lowIdx, engine.dyingStems.has(highIdx) ? packA.getZ(highIdx) : 0.0);
     markInstanceIndexDirty(packA, lowIdx);
   }
-  const packB = geo.getAttribute("instancePackB") as THREE.InstancedBufferAttribute | undefined;
-  if (packB) {
-    packB.setX(lowIdx, 1.0);
-    markInstanceIndexDirty(packB, lowIdx);
-  }
 
   if (seg.agentId !== undefined && engine.lastAgentStemIndex?.get(seg.agentId) === highIdx) {
     engine.lastAgentStemIndex.set(seg.agentId, lowIdx);
@@ -291,7 +286,7 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
   const total = Math.min(engine.pointCount, engine.cylinderMesh.count);
   for (let i = 0; i < total; i++) {
     const seg = engine.segments[i];
-    if (seg && !engine.dyingStems.has(i) && seg.strainName && seg.startPos && seg.endPos && !seg.isTerminal) {
+    if (seg && !engine.dyingStems.has(i) && !engine.growingStems?.has(i) && seg.strainName && seg.startPos && seg.endPos && !seg.isTerminal) {
       let list = strainSegments.get(seg.strainName);
       if (!list) {
         list = [];

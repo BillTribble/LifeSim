@@ -193,7 +193,7 @@ export function updateMeshesAndStemsGrowth(
       const genome = uniqueGenomes.get(seg.strainName);
       let sizePulse = 1.0;
       let colPulse = 1.0;
-      if (pB && motionActivity > 0.0001) {
+      if (pB && (engine.timeScale ?? 1.0) > 0.0001) {
         const val = pB.getX(i);
         if (val < 1.0) {
           const ts = Math.max(0.25, engine.timeScale || 1.0);
@@ -278,9 +278,9 @@ export function updateMeshesAndStemsGrowth(
 
   // CRITICAL FIX (Primary Bug P0 — Stem Dither Fade-In):
   const stemPackBAttr = engine.cylinderMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute;
-  if (motionActivity > 0.0001 && stemPackBAttr && engine.growingStems && engine.growingStems.size > 0) {
+  if ((engine.timeScale ?? 1.0) > 0.0001 && stemPackBAttr && engine.growingStems && engine.growingStems.size > 0) {
     let updated = false;
-    const step = Math.max(0.008, 0.018 * (engine.timeScale || 1.0));
+    const step = Math.max(0.006, 0.016 * (engine.timeScale || 1.0));
     for (const idx of Array.from(engine.growingStems)) {
       const seg = engine.segments[idx];
       if (!seg || engine.dyingStems.has(idx)) {

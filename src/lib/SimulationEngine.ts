@@ -174,8 +174,8 @@ export class SimulationEngine {
   botanyRealism: boolean = true;
   windVelocity: number = 0.2;
   flutterIntensity: number = 0.5;
-  leafScale: number = 0.7;
-  leafDensity: number = 0.35;
+  leafScale: number = 0.88;
+  leafDensity: number = 0.24;
   relativeLeafSizeDiff: number = 0.2;
   leafGrowthSpeed: number = 0.0045;
   phyllotaxisAngle: number = 137.5;
@@ -198,7 +198,7 @@ export class SimulationEngine {
   minCreatures: number = 9;
   hasReachedMinCreatures: boolean = false;
   lastEmergenceTick: number = 0;
-  boundarySize: number = 60;
+  boundarySize: number = 45;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
   maxCreatures: number = 12;
@@ -264,9 +264,9 @@ export class SimulationEngine {
   bushSpeed: number = 1.1;
   treeSpeed: number = 0.65;
   rhizomeSpeed: number = 1.0;
-  bushStepSize: number = 0.85;
-  treeStepSize: number = 0.6;
-  rhizomeStepSize: number = 1.2;
+  bushStepSize: number = 1.15;
+  treeStepSize: number = 0.95;
+  rhizomeStepSize: number = 0.95;
   bushBranching: number = 50.0;
   treeBranching: number = 17.5;
   treeBranchDelay: number = 5;

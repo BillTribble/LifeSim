@@ -180,8 +180,8 @@ const REF_ASPECT = 1.6;
  * horizontal aspect ratio so resizing the viewport never zooms creatures bigger or smaller.
  */
 export function getResponsiveBoundaryCameraDistance(engine: SimulationEngine): number {
-  const b = Math.max(10, engine.boundarySize || 60);
-  const targetWidthFill = 0.82;
+  const b = Math.max(10, engine.boundarySize || 45);
+  const targetWidthFill = 0.71;
 
   const baseFOV = 45.0;
   const proj = engine.cameraProjection !== undefined ? engine.cameraProjection : 1.0;

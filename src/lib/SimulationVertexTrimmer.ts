@@ -157,6 +157,7 @@ export function createFastAppendageMaterial(): THREE.MeshLambertMaterial {
       if (vGrowth < 1.0) {
         float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
         if (ditherIn > vGrowth) discard;
+        diffuseColor.rgb *= mix(0.20, 1.0, smoothstep(0.0, 1.0, vGrowth));
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -177,6 +178,7 @@ export function createFastStemMaterial(): THREE.MeshLambertMaterial {
       attribute vec4 instancePackB;
       varying float vDecay;
       varying float vGrowth;
+      varying float vAxialZ;
       ${shader.vertexShader}
     `;
     shader.vertexShader = shader.vertexShader.replace(
@@ -185,6 +187,7 @@ export function createFastStemMaterial(): THREE.MeshLambertMaterial {
       #include <color_vertex>
       vDecay = instancePackA.z;
       vGrowth = instancePackB.x;
+      vAxialZ = clamp(position.z, 0.0, 1.0);
       `
     );
     shader.vertexShader = shader.vertexShader.replace(
@@ -212,6 +215,7 @@ export function createFastStemMaterial(): THREE.MeshLambertMaterial {
     shader.fragmentShader = `
       varying float vDecay;
       varying float vGrowth;
+      varying float vAxialZ;
       ${shader.fragmentShader}
     `;
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -219,8 +223,10 @@ export function createFastStemMaterial(): THREE.MeshLambertMaterial {
       `
       vec4 diffuseColor = vec4( diffuse, opacity );
       if (vGrowth < 1.0) {
+        float axialGrowth = clamp(vGrowth * 1.35 - vAxialZ * 0.35, 0.0, 1.0);
         float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
-        if (ditherIn > vGrowth) discard;
+        if (ditherIn > axialGrowth) discard;
+        diffuseColor.rgb *= mix(0.18, 1.0, smoothstep(0.0, 1.0, axialGrowth));
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -318,9 +324,11 @@ export function createFastLeafMaterial(): THREE.MeshLambertMaterial {
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `
       vec4 diffuseColor = vec4( diffuse, opacity );
-      if (vGrowth < 0.25) {
+      if (vGrowth < 0.65) {
+        float leafFade = smoothstep(0.0, 0.65, vGrowth);
         float ditherIn = fract(sin(dot(gl_FragCoord.xy, vec2(54.321, 12.987))) * 43758.5453);
-        if (ditherIn > smoothstep(0.0, 0.25, vGrowth)) discard;
+        if (ditherIn > leafFade) discard;
+        diffuseColor.rgb *= mix(0.20, 1.0, leafFade);
       }
       if (vDecay > 0.0) {
         float ditherLimit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -490,6 +498,7 @@ export function tryCoalesceStemSegment(
   if ((engine as any).enableCoalescing === false) return false;
   const prevIdx = engine.lastAgentStemIndex?.get(agentId);
   if (prevIdx === undefined) return false;
+  if (engine.growingStems?.has(prevIdx)) return false;
   const prevSeg = engine.segments[prevIdx];
   if (!prevSeg || engine.dyingStems.has(prevIdx) || prevSeg.isTerminal || prevSeg.agentId !== agentId ||
       prevSeg.strainName !== resolvedStrainName || !prevSeg.startPos || !prevSeg.endPos) return false;

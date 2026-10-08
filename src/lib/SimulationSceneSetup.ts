@@ -21,7 +21,7 @@ import {
   buildBoundaryGeometry,
   applyResponsiveBoundaryCameraDistance,
 } from "./SimulationBoundary";
-import { assignGenomeMorphology, pickMorphModeForArchetype } from "./SimulationMorphology";
+import { assignGenomeMorphology, pickMorphModeForArchetype, computeInitialTrunkThickness } from "./SimulationMorphology";
 import {
   resetCamera,
   executeReset,
@@ -51,7 +51,9 @@ export {
 function initialCreatureDirection(engine: SimulationEngine, pos: THREE.Vector3): THREE.Vector3 {
   const centre = new THREE.Vector3(0, engine.creatureCenterY || 18.921075, 0);
   const toCentre = centre.sub(pos);
-  const bias = toCentre.lengthSq() > 1 ? toCentre.normalize().multiplyScalar(0.9) : toCentre.set(0, 0, 0);
+  const dist = toCentre.length();
+  const biasScalar = dist > 28 ? 0.22 : 0.05;
+  const bias = dist > 1 ? toCentre.normalize().multiplyScalar(biasScalar) : toCentre.set(0, 0, 0);
   return new THREE.Vector3().randomDirection().add(bias).normalize();
 }
 
@@ -339,10 +341,11 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
   const centerY = engine.creatureCenterY || 0;
   if (anchors.length === 0) {
     // Genuinely empty world — nothing to anchor to.
+    const halfBox = (Math.min(32, (engine.boundarySize || 36) * 0.85));
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 44,
-      centerY + (Math.random() - 0.5) * 28,
-      (Math.random() - 0.5) * 44,
+      (Math.random() - 0.5) * halfBox,
+      centerY + (Math.random() - 0.5) * halfBox * 0.65,
+      (Math.random() - 0.5) * halfBox,
     );
   }
 
@@ -353,11 +356,11 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
     Math.random() - 0.5,
   );
   if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
-  const b = (engine.boundarySize || 60) * 0.72;
+  const b = (engine.boundarySize || 36) * 0.72;
   if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
   if (Math.abs(anchor.y - centerY) > b) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
   if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
-  offset.normalize().multiplyScalar(10 + Math.random() * 10);
+  offset.normalize().multiplyScalar(Math.min((engine.boundarySize || 36) * 0.52, 12 + Math.random() * 14));
 
   return anchor.clone().add(offset);
 }
@@ -431,7 +434,7 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
     genome: genome,
     active: true,
     age: 0,
-    thickness: Math.min(0.58, genome.thicknessBase * 0.35),
+    thickness: computeInitialTrunkThickness(genome, !engine.designerMode),
     id: engine.nextAgentId++,
     cooldown: initialCooldown,
   };
@@ -701,14 +704,26 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
 
   const initialCooldown = getHybridCooldownTicks(engine);
   const centerY = engine.creatureCenterY || 0;
-  const alphaStart = new THREE.Vector3(-20, centerY - 6, -15);
-  const betaStart = new THREE.Vector3(20, centerY + 6, 15);
+  const span = Math.min(15, (engine.boundarySize || 36) * 0.42);
+  const alphaStart = new THREE.Vector3(-span, centerY - 5, -span * 0.75);
+  const betaStart = new THREE.Vector3(span, centerY + 5, span * 0.75);
   alphaGenome.birthPos = alphaStart.clone();
   betaGenome.birthPos = betaStart.clone();
   (engine as any).alphaStrainName = alphaGenome.name;
   (engine as any).betaStrainName = betaGenome.name;
   (engine as any).alphaBirthPos = alphaStart.clone();
   (engine as any).betaBirthPos = betaStart.clone();
+
+  const alphaIsStout = Math.random() < 0.5;
+  alphaGenome.trunkGirthMod = alphaIsStout
+    ? 1.65 + Math.random() * 0.55
+    : 0.38 + Math.random() * 0.22;
+  betaGenome.trunkGirthMod = alphaIsStout
+    ? 0.38 + Math.random() * 0.22
+    : 1.65 + Math.random() * 0.55;
+  alphaGenome.rambleFactor = 1.75 + Math.random() * 0.55;
+  betaGenome.rambleFactor = 1.35 + Math.random() * 0.55;
+
   engine.genomeMap.set(alphaGenome.name, alphaGenome);
   engine.genomeMap.set(betaGenome.name, betaGenome);
   const alphaId = engine.nextAgentId++;
@@ -722,7 +737,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: alphaStart.clone(),
     rootOrigin: alphaStart.clone(),
-    thickness: Math.min(0.58, alphaGenome.thicknessBase * 0.35),
+    thickness: computeInitialTrunkThickness(alphaGenome, !engine.designerMode),
     cooldown: initialCooldown,
   });
   engine.spawnHybridArtifact(alphaStart, alphaGenome.color, alphaGenome.name, alphaGenome.name, alphaId, alphaId, alphaGenome.name);
@@ -736,7 +751,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     age: 0,
     lastPosition: betaStart.clone(),
     rootOrigin: betaStart.clone(),
-    thickness: Math.min(0.58, betaGenome.thicknessBase * 0.35),
+    thickness: computeInitialTrunkThickness(betaGenome, !engine.designerMode),
     cooldown: initialCooldown,
   });
   engine.spawnHybridArtifact(betaStart, betaGenome.color, betaGenome.name, betaGenome.name, betaId, betaId, betaGenome.name);

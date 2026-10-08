@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { breedGenomes } from "./SimulationGenetics";
+import { computeInitialTrunkThickness } from "./SimulationMorphology";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { inatService } from "./SimulationINatService";
 import {
@@ -306,7 +307,7 @@ export function handleBreedingAndFeelers(
             genome: childGenome,
             active: true,
             age: 0,
-            thickness: Math.min(0.58, childGenome.thicknessBase * 0.35),
+            thickness: computeInitialTrunkThickness(childGenome, !engine.designerMode),
             cooldown: cd,
           });
 

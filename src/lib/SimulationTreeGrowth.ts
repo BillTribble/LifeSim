@@ -37,15 +37,15 @@ interface TreeGrowthState {
 }
 
 /** Growing tips per tree/rhizome at once (paced so crowns unfold continuously over time). */
-const MAX_GROWING_TIPS = 12;
+const MAX_GROWING_TIPS = 6;
 /** Below this many growing tips (and an empty bud bank) the tree sprouts a new shoot. */
-const MIN_GROWING_TIPS = 4;
-const MAX_BANKED_BUDS = 120;
+const MIN_GROWING_TIPS = 2;
+const MAX_BANKED_BUDS = 48;
 const MAX_NODES = 240;
 /** Growth steps between bud openings / new shoots. */
-const BUD_RELEASE_MIN = 0.65;
+const BUD_RELEASE_MIN = 1.1;
 const BUD_RELEASE_RANGE = 0.55;
-const SHOOT_MIN = 1.4;
+const SHOOT_MIN = 2.2;
 const SHOOT_RANGE = 1.2;
 /** Shoots slowly lose vigor (shorter), floored so the tree never stops growing. */
 const SHOOT_VIGOR_DECAY = 0.994;
@@ -86,8 +86,8 @@ export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   const isFiligree = isFiligreeMode(bud.genome || s.template?.genome);
   const isMacro = isBigBranchingMode(bud.genome || s.template?.genome);
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const initialTipsCap = isSoft ? 3 : (isFiligree ? 7 : isMacro ? 4 : 6);
-  const initialMinCap = isSoft ? 2 : (isMacro ? 3 : 4);
+  const initialTipsCap = isSoft ? 2 : (isFiligree ? 5 : isMacro ? 3 : 4);
+  const initialMinCap = isSoft ? 2 : 2;
   if (((bud.branchDepth || 0) <= 1 && s.growing < initialTipsCap) || (s.growing < initialMinCap && s.buds.length === 0)) {
     s.growing++;
     return false;
@@ -206,8 +206,8 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
     const isFiligree = isFiligreeMode(s.template?.genome);
     const isMacro = isBigBranchingMode(s.template?.genome);
     const isSoft = !!(engine as any)._isSoftwareRaster;
-    const maxTips = isSoft ? 4 : (isFiligree ? 14 : isMacro ? 8 : MAX_GROWING_TIPS);
-    const minTips = isSoft ? 2 : (isMacro ? 3 : MIN_GROWING_TIPS);
+    const maxTips = isSoft ? 3 : (isFiligree ? 7 : isMacro ? 5 : MAX_GROWING_TIPS);
+    const minTips = 2;
 
     s.growing = growing.get(name) || 0;
     s.clock += tick;

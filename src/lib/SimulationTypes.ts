@@ -58,6 +58,7 @@ export interface RecessiveGenes {
   morphScale?: number;
   trunkGirthMod?: number;
   branchOrderCap?: number;
+  rambleFactor?: number;
 }
 
 export interface Genome {
@@ -100,6 +101,7 @@ export interface Genome {
   morphScale?: number;
   trunkGirthMod?: number;
   branchOrderCap?: number;
+  rambleFactor?: number;
 
   recessive?: RecessiveGenes;
   genomeHash?: number;
@@ -138,6 +140,7 @@ export interface Agent {
   taperBudget?: number;
   dieAfterTicks?: number;
   id?: number;
+  meanderPhase?: number;
   parentId?: number;
   branchDepth?: number;
   hasFeelerAttempted?: boolean;
