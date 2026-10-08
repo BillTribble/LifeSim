@@ -37,14 +37,14 @@ interface TreeGrowthState {
 }
 
 /** Growing tips per tree/rhizome at once (paced so crowns unfold continuously over time). */
-const MAX_GROWING_TIPS = 6;
+const MAX_GROWING_TIPS = 56;
 /** Below this many growing tips (and an empty bud bank) the tree sprouts a new shoot. */
 const MIN_GROWING_TIPS = 2;
-const MAX_BANKED_BUDS = 48;
+const MAX_BANKED_BUDS = 240;
 const MAX_NODES = 240;
 /** Growth steps between bud openings / new shoots. */
-const BUD_RELEASE_MIN = 1.1;
-const BUD_RELEASE_RANGE = 0.55;
+const BUD_RELEASE_MIN = 0.03;
+const BUD_RELEASE_RANGE = 0.03;
 const SHOOT_MIN = 2.2;
 const SHOOT_RANGE = 1.2;
 /** Shoots slowly lose vigor (shorter), floored so the tree never stops growing. */
@@ -83,12 +83,20 @@ function stateFor(engine: SimulationEngine, name: string): TreeGrowthState {
 export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   if (!isContinuousTreeGrowth(engine)) return false;
   const s = stateFor(engine, bud.genome.name);
-  const isFiligree = isFiligreeMode(bud.genome || s.template?.genome);
-  const isMacro = isBigBranchingMode(bud.genome || s.template?.genome);
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const initialTipsCap = isSoft ? 2 : (isFiligree ? 5 : isMacro ? 3 : 4);
-  const initialMinCap = isSoft ? 2 : 2;
-  if (((bud.branchDepth || 0) <= 1 && s.growing < initialTipsCap) || (s.growing < initialMinCap && s.buds.length === 0)) {
+  const depth = bud.branchDepth || 0;
+
+  // Never bank structural limbs (depth <= 2) so all big limbs grow out synchronously
+  if (depth <= 2) {
+    s.growing++;
+    return false;
+  }
+  const hasPrimaryGrowing = s.buds.some((b) => (b.branchDepth || 0) <= 2);
+  if (!hasPrimaryGrowing && s.growing < (isSoft ? 48 : MAX_GROWING_TIPS)) {
+    s.growing++;
+    return false;
+  }
+  if (s.growing < 2 && s.buds.length === 0) {
     s.growing++;
     return false;
   }
@@ -114,16 +122,17 @@ export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
 /** Records a point of grown wood that future shoots can sprout from (ring buffer: recent-biased). */
 export function recordTreeNode(engine: SimulationEngine, agent: Agent) {
   if (!isContinuousTreeGrowth(engine)) return;
-  if ((agent.branchDepth || 0) === 0 && (agent.treeLen || 0) < 3.0) return;
+  const rawDepth = agent.branchDepth || 0;
+  // Never sprout reiteration shoots out of the main trunk (depth 0)
+  if (rawDepth < 1) return;
   const s = stateFor(engine, agent.genome.name);
   s.template = agent;
-  const rawDepth = agent.branchDepth || 0;
   const node: TreeNode = {
     pos: agent.position.clone(),
     dir: agent.direction.clone(),
-    depth: Math.max(1, rawDepth),
+    depth: rawDepth,
     thickness: agent.thickness,
-    branchBasePos: (rawDepth === 0 ? agent.position : (agent.branchBasePos || agent.position)).clone(),
+    branchBasePos: (agent.branchBasePos || agent.position).clone(),
   };
   if (s.nodes.length < MAX_NODES) {
     s.nodes.push(node);
@@ -170,13 +179,17 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
   if (!map || map.size === 0) return;
 
   const growing = new Map<string, number>();
+  const hasStructuralGrowing = new Set<string>();
   const alive = new Set<string>();
   const count = (list: Agent[]) => {
     for (const a of list) {
       if (!a.active || a.tapering || !isTreeModelAgent(a)) continue;
       const name = a.genome.name;
       alive.add(name);
-      if (!a.treeDormant) growing.set(name, (growing.get(name) || 0) + 1);
+      if (!a.treeDormant) {
+        growing.set(name, (growing.get(name) || 0) + 1);
+        if ((a.branchDepth || 0) <= 2) hasStructuralGrowing.add(name);
+      }
     }
   };
   count(activeAgents);
@@ -204,34 +217,50 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
 
     const tick = (engine.growthSpeed ?? 0.06) * (engine.treeSpeed ?? 0.65) * dt;
     const isFiligree = isFiligreeMode(s.template?.genome);
-    const isMacro = isBigBranchingMode(s.template?.genome);
     const isSoft = !!(engine as any)._isSoftwareRaster;
-    const maxTips = isSoft ? 3 : (isFiligree ? 7 : isMacro ? 5 : MAX_GROWING_TIPS);
+    const maxTips = isSoft ? 48 : (isFiligree ? 64 : 56);
     const minTips = 2;
 
     s.growing = growing.get(name) || 0;
     s.clock += tick;
-    if (getStrainTissueCount(engine, name) > getOrganismSegmentBudget(engine, name) * 1.28) continue;
+    const overTissueCap = getStrainTissueCount(engine, name) > getOrganismSegmentBudget(engine, name) * 2.15;
+    const hasEssentialBuds = s.buds.some((b) => (b.branchDepth || 0) <= 3);
+    if (overTissueCap && !hasEssentialBuds) continue;
     if (s.clock < s.nextRelease || s.growing >= maxTips) continue;
 
     if (s.buds.length > 0) {
-      // Release 2 buds (3 for filigree) per interval so the crown unfolds with rich branching
-      const releaseLimit = isFiligree ? 3 : 2;
+      // Release buds in rich clusters when limbs finish, prioritizing lowest branchDepth first across the crown
+      const releaseLimit = isSoft ? 18 : (isFiligree ? 24 : 20);
       const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips
         ? Math.min(releaseLimit, maxTips - s.growing)
         : 1;
       for (let r = 0; r < toRelease && s.buds.length > 0; r++) {
-        const idx = Math.floor(Math.random() * Math.min(3, s.buds.length));
-        const bud = s.buds.splice(idx, 1)[0];
+        let bestIdx = 0;
+        let bestDepth = s.buds[0].branchDepth || 0;
+        for (let i = 1; i < s.buds.length; i++) {
+          const d = s.buds[i].branchDepth || 0;
+          if (d < bestDepth) {
+            bestDepth = d;
+            bestIdx = i;
+          }
+        }
+        if (overTissueCap && bestDepth >= 4) break;
+        const bud = s.buds.splice(bestIdx, 1)[0];
         bud.lastPosition.copy(bud.position);
         newAgents.push(bud);
         s.growing++;
       }
       const budInterval = isFiligree ? BUD_RELEASE_MIN * 0.75 : BUD_RELEASE_MIN;
       s.nextRelease = s.clock + budInterval + Math.random() * BUD_RELEASE_RANGE;
-    } else if (s.growing < minTips && s.template && s.nodes.length > 0) {
+    } else if (
+      s.growing < minTips &&
+      !hasStructuralGrowing.has(name) &&
+      s.template &&
+      s.nodes.length > 0 &&
+      getStrainTissueCount(engine, name) < getOrganismSegmentBudget(engine, name) * 0.55
+    ) {
       const mode = s.template.genome?.morphMode;
-      const minDepth = mode === "filigree" || mode === "rhizome_lace" ? 2 : 1;
+      const minDepth = mode === "filigree" || mode === "rhizome_lace" ? 2 : 2;
 
       const node = pickNode(engine, s, minDepth);
       const shootInterval = SHOOT_MIN + Math.random() * SHOOT_RANGE;

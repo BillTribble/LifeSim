@@ -67,7 +67,7 @@ export function getStemBudget(engine: SimulationEngine): number {
   const p = getPrunePressure(engine);
   const anyEng = engine as any;
   if (anyEng._isSoftwareRaster) {
-    return Math.round(THREE.MathUtils.lerp(275, 220, p));
+    return Math.round(THREE.MathUtils.lerp(3200, 2200, p));
   }
   const maxC = Math.max(9, engine.maxCreatures || 12, engine.minCreatures || 9);
   const highBudget = Math.min(engine.maxDOMs || 32000, Math.max(18000, maxC * 1600));
@@ -79,7 +79,7 @@ export function getPerAppendageCap(engine: SimulationEngine): number {
   const p = getPrunePressure(engine);
   const anyEng = engine as any;
   if (anyEng._isSoftwareRaster) {
-    return Math.round(THREE.MathUtils.lerp(45, 30, p));
+    return Math.round(THREE.MathUtils.lerp(180, 110, p));
   }
   const maxC = Math.max(9, engine.maxCreatures || 12, engine.minCreatures || 9);
   const highCap = Math.min(Math.floor((engine.maxDOMs || 32000) / 4), Math.max(2800, maxC * 240));
@@ -153,25 +153,25 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
   }
 
   let p = anyEng._prunePressure ?? 0.0;
-  const fps = engine.lod?.fps ?? 30;
+  const fps = engine.lod?.fps ?? 60;
 
-  if (frameDtMs > 32.8 || fps < 30.5) {
-    p = Math.min(1.0, p + 0.06);
-  } else if (frameDtMs < 28.0 && fps > 33.0) {
+  // Only accumulate prune pressure when frame rate drops below 24 FPS (> 41.7 ms)
+  if (frameDtMs > 41.7 && fps < 24.0) {
+    p = Math.min(1.0, p + 0.03);
+  } else if (frameDtMs < 38.5 && fps >= 25.5) {
     const minP = anyEng._isSoftwareRaster ? 0.30 : 0.0;
-    p = Math.max(minP, p - 0.03);
+    p = Math.max(minP, p - 0.04);
   }
   anyEng._prunePressure = p;
-
-  if (anyEng._fastStemMat === undefined) {
-    anyEng._fastStemMat = createFastStemMaterial();
-    anyEng._fastLeafMat = createFastLeafMaterial();
-    anyEng._fastAppMat = createFastAppendageMaterial();
-  }
 
   // Only use fast Lambert materials on software rasterizers; hardware GPUs keep their unified
   // shader material and smoothly dissolve complexity via uLodLevel (smoothTier) and vCamDist.
   if (anyEng._isSoftwareRaster) {
+    if (anyEng._fastStemMat === undefined) {
+      anyEng._fastStemMat = createFastStemMaterial();
+      anyEng._fastLeafMat = createFastLeafMaterial();
+      anyEng._fastAppMat = createFastAppendageMaterial();
+    }
     if (!anyEng._origStemMat && engine.cylinderMesh) {
       anyEng._origStemMat = engine.cylinderMesh.material;
     }
@@ -191,20 +191,21 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
     }
   }
 
-  if (anyEng._isSoftwareRaster || p >= 0.45 || (engine.lod && engine.lod.tier >= 2)) {
+  if (anyEng._isSoftwareRaster || (fps < 24.0 && (p >= 0.55 || (engine.lod && engine.lod.tier >= 2)))) {
     if (engine.renderer?.setPixelRatio) {
-      const targetDpr = anyEng._isSoftwareRaster ? 0.65 : (p >= 0.70 ? 0.50 : 0.75);
-      if (engine.renderer.getPixelRatio() !== targetDpr) {
+      const targetDpr = anyEng._isSoftwareRaster ? 0.65 : (p >= 0.85 ? 0.70 : 0.85);
+      if (engine.renderer.getPixelRatio?.() !== targetDpr) {
         engine.renderer.setPixelRatio(targetDpr);
       }
     }
-    const showGrids = !anyEng._isSoftwareRaster && p < 0.65 && !!engine.showBoundaryBox;
+    const showGrids = !anyEng._isSoftwareRaster && p < 0.75 && !!engine.showBoundaryBox;
     if (engine.floorGridMesh) engine.floorGridMesh.visible = showGrids;
     if (engine.ceilingGridMesh) engine.ceilingGridMesh.visible = showGrids;
-  } else if (p < 0.25 && engine.lod && engine.lod.tier <= 1) {
+  } else if (p < 0.35 && engine.lod && engine.lod.tier <= 1) {
     if (engine.renderer?.setPixelRatio) {
-      const normalDpr = engine.isMobile ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.25);
-      if (engine.renderer.getPixelRatio() !== normalDpr) {
+      const baseDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+      const normalDpr = engine.isMobile ? 1.0 : Math.min(baseDpr, 1.25);
+      if (engine.renderer.getPixelRatio?.() !== normalDpr) {
         engine.renderer.setPixelRatio(normalDpr);
       }
     }
@@ -442,8 +443,8 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
     const ribbonBlend = THREE.MathUtils.clamp(distFromRoot / 8.0, 0.0, 1.0);
     const genome = engine.genomeMap?.get(segA.strainName);
     if (genome?.geometryType === "ribbon") {
-      scaleX = visThick * (1.0 + 1.2 * ribbonBlend);
-      scaleY = THREE.MathUtils.lerp(visThick, Math.max(0.6, visThick * 0.8), ribbonBlend);
+      scaleX = visThick * (1.0 + 0.65 * ribbonBlend);
+      scaleY = visThick * THREE.MathUtils.lerp(1.0, 0.52, ribbonBlend);
     }
     engine.dummy.scale.set(scaleX, scaleY, scaleZ);
     engine.dummy.updateMatrix();
@@ -571,7 +572,7 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
         strainOldestTs.set(s.strainName, s.timestamp);
       }
     }
-    const minFloor = isSoft ? Math.min(3, engine.minCreatures || 9) : (engine.minCreatures || 9);
+    const minFloor = isSoft ? Math.min(3, engine.minCreatures || 4) : (engine.minCreatures || 4);
     if (strainOldestTs.size > minFloor) {
       let oldestStrain = "";
       let oldestTs = Infinity;
@@ -660,19 +661,20 @@ export function pruneAndCompactGeometry(engine: SimulationEngine): void {
   );
   const livingCount = Math.max(2, typeof engine.getLivingOrganismCount === "function" ? engine.getLivingOrganismCount() : 4);
   const fairShareStems = isSoft
-    ? Math.max(125, Math.floor(stemBudget / Math.max(4, livingCount)))
+    ? Math.max(380, Math.floor(stemBudget / Math.max(4, livingCount)))
     : Math.min(640, Math.max(240, Math.floor(stemBudget / Math.max(4, livingCount * 1.25))));
-  const minActiveTipsFloor = isSoft ? 3 : 4;
+  const minActiveTipsFloor = isSoft ? 4 : 4;
 
   if ((isSoft || p >= 0.20 || liveStems >= stemBudget * 0.92) && liveStems >= stemBudget * 0.88) {
     const outerTips = engine.agents.filter(a => {
       if (!a.active || a.tapering || a.isFeeler) return false;
       const strainBiomass = engine.biomassMap?.get(a.genome.name) || 0;
       if (strainBiomass < fairShareStems) return false;
-      if ((a.branchDepth || 0) < 2) return false;
+      const minPruneDepth = a.genome?.archetype === "tree" ? 4 : 2;
+      if ((a.branchDepth || 0) < minPruneDepth) return false;
       if ((a.age || 0) < 35) return false;
       return (
-        (a.branchDepth || 0) >= 2 ||
+        (a.branchDepth || 0) >= minPruneDepth ||
         (liveStems >= stemBudget * 0.95 && getCameraDistanceRatio(engine, a.position) >= 1.10)
       );
     });

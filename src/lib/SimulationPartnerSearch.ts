@@ -103,10 +103,10 @@ export function getOrganismSegmentBudget(engine: SimulationEngine, strainName?: 
   const genome = strainName ? engine.genomeMap?.get(strainName) : undefined;
   const mult = getOrganismBudgetMultiplier(genome);
   if ((engine as any)._isSoftwareRaster) {
-    return Math.round(THREE.MathUtils.clamp(92 * mult, 78, 115));
+    return Math.round(THREE.MathUtils.clamp(360 * mult, 260, 560));
   }
-  const baseBudget = Math.min(850, Math.max(280, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 12)));
-  return Math.min(1050, Math.max(240, Math.round(baseBudget * mult)));
+  const baseBudget = Math.min(880, Math.max(320, GLOBAL_SEGMENT_BUDGET / Math.max(1, engine.maxCreatures || 12)));
+  return Math.min(1350, Math.max(280, Math.round(baseBudget * mult)));
 }
 
 /** True when the organism's live tissue exceeds its soft size budget (it then slows and caps tips). */

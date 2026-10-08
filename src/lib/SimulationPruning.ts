@@ -54,6 +54,9 @@ function pruneAgentTip(engine: SimulationEngine, agent: Agent) {
  */
 function isStructuralStem(agent: Agent): boolean {
   const depth = agent.branchDepth || 0;
+  if (agent.genome?.archetype === "tree") {
+    if (depth <= 2) return true; // Trunk (0), primary limbs (1), and secondary limbs (2)
+  }
   if (depth <= 1) return true; // Trunk (0) and primary main limbs (1)
   const baseThick = agent.genome.thicknessBase || 1.0;
   if (agent.thickness >= baseThick * 0.45) return true; // Substantial load-bearing limb
@@ -91,7 +94,7 @@ export function performBranchPruning(
   }
   if (totalHealthyAgents <= engine.minCreatures) return stats;
 
-  const maxBranchDepth = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 4;
+  const maxBranchDepth = engine.maxBranchDepth !== undefined ? engine.maxBranchDepth : 5;
 
   // Group active non-feeler agents by strain
   const strainMap = new Map<string, Agent[]>();
@@ -120,10 +123,12 @@ export function performBranchPruning(
   for (const [strainName, agents] of strainMap.entries()) {
     const firstAgent = agents[0];
     const arch = firstAgent.genome.archetype || "bush";
+    // Tree architecture (SimulationTreeArchitecture + SimulationTreeGrowth) manages its own
+    // bud bank, concurrent tip cap, and multi-order twig clusters (depth 0..5/6).
+    if (arch === "tree") continue;
     let minFloor = 2;
     if (arch === "bush") minFloor = Math.max(2, engine.bushMinBranches ?? 2);
     else if (arch === "rhizome") minFloor = Math.max(2, engine.rhizomeMinBranches ?? 6);
-    else if (arch === "tree") minFloor = Math.max(2, engine.treeMinBranches ?? 2);
     else if (arch === "snake") minFloor = Math.max(2, engine.snakeMinBranches ?? 1);
 
     // 1. DEPTH SIMPLIFICATION:
@@ -188,7 +193,7 @@ export function performBranchPruning(
     // 3. SPATIAL CROWDING SIMPLIFICATION (Canopy Self-Thinning):
     // Prune overlapping branches growing too close together to open clean negative space
     if (pruningStrength >= 0.1 && remaining.length > minFloor) {
-      const crowdingRadius = (arch === "rhizome" ? 3.5 : arch === "tree" ? 3.2 : 4.0) * (pruningStrength * 0.8);
+      const crowdingRadius = (arch === "rhizome" ? 3.5 : 4.0) * (pruningStrength * 0.8);
       const crowdingRadiusSq = crowdingRadius * crowdingRadius;
 
       for (let i = 0; i < remaining.length; i++) {

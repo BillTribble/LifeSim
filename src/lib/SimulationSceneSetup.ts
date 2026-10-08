@@ -113,7 +113,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     branchTendency: branchTendency,
     wavingSpeed: Math.random() * 0.05,
     wavingAmplitude: Math.random() * 0.08,
-    geometryType: GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
+    geometryType: archetype === "tree" ? "cylinder" : GEO_TYPES[Math.floor(Math.random() * GEO_TYPES.length)],
     appendage: getWeightedAppendage(engine.traitProbs),
     multicolorAppendage: false,
     sameColorAppendage: Math.random() < engine.sameColorAppProb,
@@ -130,7 +130,7 @@ export function generateRandomGenome(engine: SimulationEngine, baseName: string,
     canopyZone: (["wholeBody", "terminal", "basal"] as const)[Math.floor(Math.random() * 3)],
     phyllotaxisMode: (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)],
     succulence: Math.random(),
-    windStyle: Math.random() < 0.5 ? "seaweed" : "stiff",
+    windStyle: archetype === "tree" ? "stiff" : (Math.random() < 0.5 ? "seaweed" : "stiff"),
     recessive: {
       archetype: getRandomWeightedArchetype(),
       movementType: MOVEMENT_TYPES.find((m) => m !== movementType) || MOVEMENT_TYPES[Math.floor(Math.random() * MOVEMENT_TYPES.length)],
@@ -339,12 +339,13 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
   }
 
   const centerY = engine.creatureCenterY || 0;
+  const squash = engine.boundarySquash ?? 1.0;
   if (anchors.length === 0) {
     // Genuinely empty world — nothing to anchor to.
     const halfBox = (Math.min(32, (engine.boundarySize || 36) * 0.85));
     return new THREE.Vector3(
       (Math.random() - 0.5) * halfBox,
-      centerY + (Math.random() - 0.5) * halfBox * 0.65,
+      centerY + (Math.random() - 0.5) * halfBox * 0.65 * squash,
       (Math.random() - 0.5) * halfBox,
     );
   }
@@ -352,13 +353,14 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
   const anchor = anchors[Math.floor(Math.random() * anchors.length)];
   const offset = new THREE.Vector3(
     Math.random() - 0.5,
-    (Math.random() - 0.5) * 0.85,
+    (Math.random() - 0.5) * 0.85 * squash,
     Math.random() - 0.5,
   );
   if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
   const b = (engine.boundarySize || 36) * 0.72;
+  const bY = Math.max(4, b * squash);
   if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
-  if (Math.abs(anchor.y - centerY) > b) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
+  if (Math.abs(anchor.y - centerY) > bY) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
   if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
   offset.normalize().multiplyScalar(Math.min((engine.boundarySize || 36) * 0.52, 12 + Math.random() * 14));
 
@@ -556,7 +558,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       active: true,
       age: 0,
       lastPosition: spawnPos.clone(),
-      thickness: designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
+      thickness: designerGenome.archetype === "tree" ? computeInitialTrunkThickness(designerGenome, false) : designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
       cooldown: 0,
     });
     engine.spawnHybridArtifact(spawnPos, designerGenome.color, designerGenome.name, designerGenome.name, designerId, designerId, designerGenome.name);
@@ -582,10 +584,13 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
 
   const forcedArch = typeof window !== "undefined" ? (localStorage.getItem("forceArchetype") as Archetype | null) : null;
   const forceBoth = typeof window !== "undefined" && localStorage.getItem("forceBothArchetypes") === "true";
-  const alphaArchetype = forcedArch || getRandomWeightedArchetype();
+  let alphaArchetype = forcedArch || getRandomWeightedArchetype();
   let betaArchetype = (forceBoth && forcedArch) ? forcedArch : getRandomWeightedArchetype();
   while (!forceBoth && betaArchetype === alphaArchetype) {
     betaArchetype = getRandomWeightedArchetype();
+  }
+  if (!forcedArch && alphaArchetype !== "tree" && betaArchetype !== "tree") {
+    alphaArchetype = "tree";
   }
 
   const getHashForFamilyAndRange = (family: number, range: "alpha" | "beta"): number => {
@@ -643,8 +648,8 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaPhyllo = (["spiral", "decussate", "whorled"] as const)[Math.floor(Math.random() * 3)];
   }
   betaGenome.phyllotaxisMode = betaPhyllo;
-  alphaGenome.windStyle = Math.random() < 0.5 ? "seaweed" : "stiff";
-  betaGenome.windStyle = alphaGenome.windStyle === "seaweed" ? "stiff" : "seaweed";
+  alphaGenome.windStyle = alphaGenome.archetype === "tree" ? "stiff" : (Math.random() < 0.5 ? "seaweed" : "stiff");
+  betaGenome.windStyle = betaGenome.archetype === "tree" ? "stiff" : (alphaGenome.windStyle === "seaweed" ? "stiff" : "seaweed");
 
   let alphaHue = alphaGenome.color.getHSL({ h: 0, s: 0, l: 0 }).h;
   if (engine.theme === 1) {
@@ -705,24 +710,15 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   const initialCooldown = getHybridCooldownTicks(engine);
   const centerY = engine.creatureCenterY || 0;
   const span = Math.min(15, (engine.boundarySize || 36) * 0.42);
-  const alphaStart = new THREE.Vector3(-span, centerY - 5, -span * 0.75);
-  const betaStart = new THREE.Vector3(span, centerY + 5, span * 0.75);
+  const yOffset = 5 * Math.min(1.0, engine.boundarySquash ?? 1.0);
+  const alphaStart = new THREE.Vector3(-span, centerY - yOffset, -span * 0.75);
+  const betaStart = new THREE.Vector3(span, centerY + yOffset, span * 0.75);
   alphaGenome.birthPos = alphaStart.clone();
   betaGenome.birthPos = betaStart.clone();
   (engine as any).alphaStrainName = alphaGenome.name;
   (engine as any).betaStrainName = betaGenome.name;
   (engine as any).alphaBirthPos = alphaStart.clone();
   (engine as any).betaBirthPos = betaStart.clone();
-
-  const alphaIsStout = Math.random() < 0.5;
-  alphaGenome.trunkGirthMod = alphaIsStout
-    ? 1.65 + Math.random() * 0.55
-    : 0.38 + Math.random() * 0.22;
-  betaGenome.trunkGirthMod = alphaIsStout
-    ? 0.38 + Math.random() * 0.22
-    : 1.65 + Math.random() * 0.55;
-  alphaGenome.rambleFactor = 1.75 + Math.random() * 0.55;
-  betaGenome.rambleFactor = 1.35 + Math.random() * 0.55;
 
   engine.genomeMap.set(alphaGenome.name, alphaGenome);
   engine.genomeMap.set(betaGenome.name, betaGenome);

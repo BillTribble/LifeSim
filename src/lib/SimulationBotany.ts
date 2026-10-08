@@ -627,6 +627,7 @@ export function spawnAgentAppendages(
   if ((agent.tapering && (agent.taperBudget || 0) > 6) || agent.isFeeler) return;
 
   const depth = agent.branchDepth || 0;
+  if (genome.archetype === "tree" && (depth === 0 || (depth === 1 && (agent.treeLen || 0) < (agent.treeBudget || 10) * 0.65))) return;
   if (isBigBranchingMode(genome) && depth === 0 && agent.age < 15) return;
   const evo = getEvolutionStepConfig((engine as any).evolutionStep);
   if (depth === 0 && evo.appendageMinDepth > 0 && agent.age < 15) return;

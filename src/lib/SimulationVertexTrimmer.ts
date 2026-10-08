@@ -576,8 +576,8 @@ export function tryCoalesceStemSegment(
     const distFromRoot = stemAnchor?.rootOrigin ? prevSeg.startPos.distanceTo(stemAnchor.rootOrigin) : 999;
     const ribbonBlend = THREE.MathUtils.clamp(distFromRoot / 8.0, 0.0, 1.0);
     if (genome.geometryType === "ribbon") {
-      scaleX = visThick * (1.0 + 1.2 * ribbonBlend);
-      scaleY = THREE.MathUtils.lerp(visThick, Math.max(0.6, visThick * 0.8), ribbonBlend);
+      scaleX = visThick * (1.0 + 0.65 * ribbonBlend);
+      scaleY = visThick * THREE.MathUtils.lerp(1.0, 0.52, ribbonBlend);
     }
     engine.dummy.scale.set(scaleX, scaleY, scaleZ);
     engine.dummy.updateMatrix();

@@ -214,8 +214,8 @@ export function updateMeshSegments(
 
   if (!isAppendage) {
     if (genome.geometryType === "ribbon") {
-      scaleX = visThick * (1.0 + 1.2 * ribbonBlend);
-      scaleY = THREE.MathUtils.lerp(visThick, Math.max(0.6, visThick * 0.8), ribbonBlend);
+      scaleX = visThick * (1.0 + 0.65 * ribbonBlend);
+      scaleY = visThick * THREE.MathUtils.lerp(1.0, 0.52, ribbonBlend);
       scaleZ = distance * 1.02;
     } else {
       scaleZ = distance * 1.02;

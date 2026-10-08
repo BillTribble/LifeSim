@@ -100,7 +100,10 @@ export function processAgents(
     }
 
     let widthSpeedMult = 1.0;
-    if (engine.widthGrowthEffect) {
+    if (agent.genome.archetype === "tree" && !agent.isFeeler) {
+      const d = agent.branchDepth || 0;
+      widthSpeedMult = d === 0 ? 1.90 : d <= 2 ? 1.75 : 1.85;
+    } else if (engine.widthGrowthEffect) {
       const refThickness = Math.max(0.1, agent.thickness);
       widthSpeedMult = Math.pow(1.0 / refThickness, engine.widthGrowthEffect);
       widthSpeedMult = Math.max(0.1, Math.min(5.0, widthSpeedMult));
@@ -115,7 +118,8 @@ export function processAgents(
       );
 
     const overSoftBudget = !isDying && !agent.isFeeler && isOverSizeBudget(engine, agent.genome.name);
-    const budgetPaceMult = overSoftBudget ? 0.32 : 1.0;
+    const isTreeTwig = agent.genome.archetype === "tree" && (agent.branchDepth || 0) >= 3;
+    const budgetPaceMult = overSoftBudget ? (isTreeTwig ? 0.85 : 0.32) : 1.0;
 
     const speedMult =
       baseSpeedMult *
@@ -456,7 +460,7 @@ export function processAgents(
           const taperDecay = Math.max(0.58, 0.76 - (agent.taperBudget || 0) * 0.04);
           agent.thickness *= taperDecay;
           const maxTaperSteps = isBigBranchingMode(genome) ? 3 : (treeModel || isOverSizeBudget(engine, genome.name)) ? 4 : 8;
-          const minTaperThick = isBigBranchingMode(genome) ? 0.14 : 0.035;
+          const minTaperThick = 0.035;
           if (agent.thickness <= minTaperThick || agent.taperBudget >= maxTaperSteps) {
             if (agent.id !== undefined) {
               if (!agent.rootOrigin) agent.rootOrigin = (agent.treeRoot || agent.lastPosition || agent.position).clone();
@@ -604,8 +608,8 @@ export function processAgents(
 
       agent.lastPosition.copy(agent.position);
 
-      if (treeModel && bounced) {
-        // Tree tips stop at the world boundary instead of snaking along it
+      if (treeModel && bounced && (agent.branchDepth || 0) >= 4) {
+        // Outermost tree twigs stop at the world boundary; trunks & limbs reflect inward to complete their crown
         endTreeTipAtBoundary(engine, agent, newAgents);
         if (agent.tapering && agent.active) {
           agent.active = false;
