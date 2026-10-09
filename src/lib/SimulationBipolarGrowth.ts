@@ -2,12 +2,12 @@ import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
 
-export const BASAL_SCALE = 0.15;
+export const BASAL_SCALE = 0.50;
 
 /**
  * Creates a basal twin agent growing in the opposite direction from the origin/seed point.
  * Tree and bush archetypes are bipolar: primary top end grows upward / forward (scale = 1.0),
- * basal bottom end grows in the opposite direction (scale = 0.15).
+ * basal bottom end grows in the opposite direction (scale = 0.50, 50% height/length of main creature).
  * Both ends share the same initial thickness at the seed point so they join seamlessly.
  */
 export function createBasalTwinAgent(engine: SimulationEngine, primary: Agent): Agent | null {
