@@ -168,6 +168,9 @@ export interface Agent {
   rootOrigin?: THREE.Vector3;
   branchBasePos?: THREE.Vector3;
   lastStepSize?: number;
+  isBasalEnd?: boolean;
+  growthScale?: number;
+  treeBudgetScale?: number;
 }
 
 export interface Segment {

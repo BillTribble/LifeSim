@@ -20,6 +20,7 @@ import {
 } from "./SimulationSeekRamp";
 import { isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { applyTreeStrainCooldown } from "./SimulationTreeGrowth";
+import { createBasalTwinAgent } from "./SimulationBipolarGrowth";
 import {
   endFeeler,
   getFeelerMaxReach,
@@ -300,7 +301,7 @@ export function handleBreedingAndFeelers(
             spawnPoint,
           );
 
-          newAgents.push({
+          const childAgent: Agent = {
             position: spawnPoint.clone(),
             lastPosition: spawnPoint.clone(),
             direction: childDir,
@@ -309,7 +310,11 @@ export function handleBreedingAndFeelers(
             age: 0,
             thickness: computeInitialTrunkThickness(childGenome, !engine.designerMode),
             cooldown: cd,
-          });
+            id: engine.nextAgentId++,
+          };
+          newAgents.push(childAgent);
+          const childTwin = createBasalTwinAgent(engine, childAgent);
+          if (childTwin) newAgents.push(childTwin);
 
           engine.sound?.onSpeciesBorn(childGenome, spawnPoint, engine.camera);
           engine.hasAnyOrganismBred = true;
@@ -371,7 +376,7 @@ export function handleBreedingAndFeelers(
                 fa === nearestPartner
               ) {
                 endFeeler(engine, fa, "mated", {
-                  dissolve: true,
+                  dissolve: false,
                   detail: fa === agent || fa === nearestPartner ? "self" : "organism",
                 });
               }
@@ -406,8 +411,8 @@ export function handleBreedingAndFeelers(
           bredThisFrame.add(agent);
           bredThisFrame.add(nearestPartner);
 
-          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: true, detail: "self" });
-          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: true, detail: "self" });
+          if (agent.isFeeler) endFeeler(engine, agent, "mated", { dissolve: false, detail: "self" });
+          if (nearestPartner.isFeeler) endFeeler(engine, nearestPartner, "mated", { dissolve: false, detail: "self" });
         }
       }
     }

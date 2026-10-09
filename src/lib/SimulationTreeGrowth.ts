@@ -4,6 +4,7 @@ import { Agent } from "./SimulationTypes";
 import { createTreeShoot, isTreeModelAgent } from "./SimulationTreeArchitecture";
 import { isBigBranchingMode, isFiligreeMode } from "./SimulationMorphology";
 import { getOrganismSegmentBudget, getStrainTissueCount, isOverSizeBudget } from "./SimulationPartnerSearch";
+import { getEffectiveBoundaryExtents } from "./SimulationBoundary";
 
 /**
  * Continuous tree growth (ecosystem mode).
@@ -144,10 +145,17 @@ export function recordTreeNode(engine: SimulationEngine, agent: Agent) {
 
 /** Tree tips end at the world boundary, so shoots sprouting right next to it would only make stubs. */
 function nearBoundary(engine: SimulationEngine, pos: THREE.Vector3): boolean {
-  const b = engine.boundarySize * 0.85;
-  const bY = Math.max(5.0, engine.boundarySize * (engine.boundarySquash ?? 1.0)) * 0.85;
+  const { bX, bY } = getEffectiveBoundaryExtents(engine);
+  const limitX = bX * 0.85;
+  const limitY = bY * 0.85;
   const dy = pos.y - (engine.creatureCenterY || 18.921075);
-  return Math.abs(pos.x) > b || Math.abs(pos.z) > b || Math.abs(dy) > bY;
+  if (engine.boundaryShape === "sphere") {
+    const nx = pos.x / limitX;
+    const ny = dy / limitY;
+    const nz = pos.z / limitX;
+    return nx * nx + ny * ny + nz * nz > 1.0;
+  }
+  return Math.abs(pos.x) > limitX || Math.abs(pos.z) > limitX || Math.abs(dy) > limitY;
 }
 
 /** Tournament pick favouring wood far from the tree's root, so the crown expands outward. */

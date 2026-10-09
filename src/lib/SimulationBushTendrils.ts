@@ -64,8 +64,8 @@ export function applyBushTendrilSteering(engine: SimulationEngine, agent: Agent)
 
 export function canBushTipTaper(agent: Agent): boolean {
   if (agent.genome.archetype !== "bush" || (agent.branchDepth || 0) === 0) return true;
-  const bushScale = getBushMorphScale(agent.genome);
-  return ((agent as any).branchDist ?? 0) >= 5.5 * Math.min(1.8, Math.max(0.60, bushScale)) * getBushRambleScale(agent);
+  const bushScale = getBushMorphScale(agent.genome) * (agent.growthScale ?? 1.0);
+  return ((agent as any).branchDist ?? 0) >= 5.5 * Math.min(1.8, Math.max(0.60, bushScale)) * getBushRambleScale(agent) * (agent.growthScale ?? 1.0);
 }
 
 export function retireOldestBushSibling(
@@ -111,6 +111,7 @@ function spawnBushChild(
     direction: dir, genome: parent.genome, active: true, age: 0,
     thickness, targetThickness: thickness, cooldown: 0, id: engine.nextAgentId++,
     parentAgent: parent, parentId: parent.id, branchDepth: depth, isSeekerTwig: parent.isSeekerTwig,
+    isBasalEnd: parent.isBasalEnd, growthScale: parent.growthScale,
     rootOrigin: (parent.rootOrigin || parent.position).clone(),
     branchBasePos: (depth <= 1 ? parent.position : (parent.branchBasePos || parent.position)).clone(),
   };
@@ -132,7 +133,7 @@ export function stepBushTendrilBranching(
   const currentDepth = agent.branchDepth || 0;
   const branchDist = (agent as any).branchDist ?? (agent.age * 0.6);
   const distSinceLastFork = (agent as any).distSinceLastFork ?? branchDist;
-  const bushScale = getBushMorphScale(agent.genome);
+  const bushScale = getBushMorphScale(agent.genome) * (agent.growthScale ?? 1.0);
   const rambleScale = getBushRambleScale(agent);
   const minBushThick = Math.min(
     Math.max(0.036, (agent.genome.minThickness || 0.06) * 0.45),
@@ -147,10 +148,10 @@ export function stepBushTendrilBranching(
     const caneSpread = THREE.MathUtils.degToRad(38 + Math.random() * 14);
     const caneThickness = Math.max(minBushThick * 2.0, agent.thickness * 0.78);
     const trunkAxis = engine.designerMode
-      ? new THREE.Vector3(0, 1, 0)
+      ? (agent.isBasalEnd ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0))
       : agent.direction.lengthSq() > 1e-4
         ? agent.direction.clone().normalize()
-        : new THREE.Vector3(0, 1, 0);
+        : (agent.isBasalEnd ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0));
 
     for (let c = 0; c < 3; c++) {
       const az = baseAzimuth + (c * Math.PI * 2) / 3 + (Math.random() - 0.5) * 0.22;

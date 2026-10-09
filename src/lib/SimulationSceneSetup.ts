@@ -1,38 +1,22 @@
 import * as THREE from "three";
 import {
-  Genome,
-  Agent,
-  Archetype,
-  MAX_POINTS,
-  GEO_TYPES,
-  PULSE_TARGETS,
-  ARCHETYPES,
-  MOVEMENT_TYPES,
-  SpeciesLifecycleState,
+  Genome, Agent, Archetype, MAX_POINTS, GEO_TYPES, PULSE_TARGETS,
+  ARCHETYPES, MOVEMENT_TYPES, SpeciesLifecycleState,
 } from "./SimulationTypes";
-import {
-  getWeightedAppendage,
-  getRandomWeightedArchetype,
-  formatGenomeName,
-} from "./SimulationGenetics";
+import { getWeightedAppendage, getRandomWeightedArchetype, formatGenomeName } from "./SimulationGenetics";
 import { ensureUniqueStrainName } from "./SimulationGenomeGenerators";
 import { getHybridCooldownTicks, setSpeciesCooldown } from "./SimulationSeekRamp";
 import {
-  buildBoundaryGeometry,
-  applyResponsiveBoundaryCameraDistance,
+  buildBoundaryGeometry, applyResponsiveBoundaryCameraDistance,
+  getEffectiveBoundaryExtents, clampInsideBounds,
 } from "./SimulationBoundary";
 import { assignGenomeMorphology, pickMorphModeForArchetype, computeInitialTrunkThickness } from "./SimulationMorphology";
 import {
-  resetCamera,
-  executeReset,
-  initSpeciesLifecycle,
-  killSpecies,
-  spawnHybridArtifact,
-  updateGridHelpers,
-  handleScreenFade,
-  emitStateUpdate,
-  getTrackedPositions,
+  resetCamera, executeReset, initSpeciesLifecycle, killSpecies,
+  spawnHybridArtifact, updateGridHelpers, handleScreenFade,
+  emitStateUpdate, getTrackedPositions,
 } from "./SimulationLifecycleAndTelemetry";
+import { createBasalTwinAgent } from "./SimulationBipolarGrowth";
 import type { SimulationEngine } from "./SimulationEngine";
 
 export {
@@ -339,32 +323,46 @@ export function pickEmergencePosition(engine: SimulationEngine): THREE.Vector3 {
   }
 
   const centerY = engine.creatureCenterY || 0;
-  const squash = engine.boundarySquash ?? 1.0;
+  const { bX: effBX, bY: effBY } = getEffectiveBoundaryExtents(engine);
+  const effSquash = effBY / Math.max(1, effBX);
   if (anchors.length === 0) {
     // Genuinely empty world — nothing to anchor to.
-    const halfBox = (Math.min(32, (engine.boundarySize || 36) * 0.85));
-    return new THREE.Vector3(
-      (Math.random() - 0.5) * halfBox,
-      centerY + (Math.random() - 0.5) * halfBox * 0.65 * squash,
-      (Math.random() - 0.5) * halfBox,
+    const halfBox = Math.min(36, effBX * 0.85);
+    return clampInsideBounds(
+      engine,
+      new THREE.Vector3(
+        (Math.random() - 0.5) * halfBox,
+        centerY + (Math.random() - 0.5) * halfBox * 0.65 * effSquash,
+        (Math.random() - 0.5) * halfBox,
+      ),
+      3,
     );
   }
 
   const anchor = anchors[Math.floor(Math.random() * anchors.length)];
   const offset = new THREE.Vector3(
     Math.random() - 0.5,
-    (Math.random() - 0.5) * 0.85 * squash,
+    (Math.random() - 0.5) * 0.85 * effSquash,
     Math.random() - 0.5,
   );
   if (offset.lengthSq() < 1e-6) offset.set(1, 0, 0);
-  const b = (engine.boundarySize || 36) * 0.72;
-  const bY = Math.max(4, b * squash);
-  if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
-  if (Math.abs(anchor.y - centerY) > bY) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
-  if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
-  offset.normalize().multiplyScalar(Math.min((engine.boundarySize || 36) * 0.52, 12 + Math.random() * 14));
+  const b = effBX * 0.72;
+  const bY = Math.max(4, effBY * 0.72);
+  if (engine.boundaryShape === "sphere") {
+    const nx = anchor.x / b;
+    const ny = (anchor.y - centerY) / bY;
+    const nz = anchor.z / b;
+    if (nx * nx + ny * ny + nz * nz > 1.0) {
+      offset.set(-anchor.x, -(anchor.y - centerY) * effSquash, -anchor.z);
+    }
+  } else {
+    if (Math.abs(anchor.x) > b) offset.x = -Math.sign(anchor.x) * Math.abs(offset.x);
+    if (Math.abs(anchor.y - centerY) > bY) offset.y = -Math.sign(anchor.y - centerY) * Math.abs(offset.y);
+    if (Math.abs(anchor.z) > b) offset.z = -Math.sign(anchor.z) * Math.abs(offset.z);
+  }
+  offset.normalize().multiplyScalar(Math.min(effBX * 0.52, 12 + Math.random() * 14));
 
-  return anchor.clone().add(offset);
+  return clampInsideBounds(engine, anchor.clone().add(offset), 3);
 }
 
 export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Archetype): Genome {
@@ -442,6 +440,8 @@ export function spawnNewSpecies(engine: SimulationEngine, forceArchetype?: Arche
   };
 
   engine.agents.push(agent);
+  const twin = createBasalTwinAgent(engine, agent);
+  if (twin) engine.agents.push(twin);
   engine.spawnHybridArtifact(pos, genome.color, genome.name, genome.name, agent.id, agent.id, genome.name);
   if (engine.sound) {
     engine.sound.onSpeciesBorn(genome, pos, engine.camera);
@@ -550,7 +550,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     const spawnDir = new THREE.Vector3(0, 1, 0);
     const designerId = engine.nextAgentId++;
 
-    engine.agents.push({
+    const designerAgent: Agent = {
       id: designerId,
       position: spawnPos.clone(),
       direction: spawnDir.clone(),
@@ -560,7 +560,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       lastPosition: spawnPos.clone(),
       thickness: designerGenome.archetype === "tree" ? computeInitialTrunkThickness(designerGenome, false) : designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
       cooldown: 0,
-    });
+    };
+    engine.agents.push(designerAgent);
+    const designerTwin = createBasalTwinAgent(engine, designerAgent);
+    if (designerTwin) engine.agents.push(designerTwin);
     engine.spawnHybridArtifact(spawnPos, designerGenome.color, designerGenome.name, designerGenome.name, designerId, designerId, designerGenome.name);
 
     engine.matingCount = 0;
@@ -724,7 +727,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
   engine.genomeMap.set(betaGenome.name, betaGenome);
   const alphaId = engine.nextAgentId++;
   const betaId = engine.nextAgentId++;
-  engine.agents.push({
+  const alphaAgent: Agent = {
     position: alphaStart.clone(),
     direction: initialCreatureDirection(engine, alphaStart),
     genome: alphaGenome,
@@ -735,10 +738,13 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     rootOrigin: alphaStart.clone(),
     thickness: computeInitialTrunkThickness(alphaGenome, !engine.designerMode),
     cooldown: initialCooldown,
-  });
+  };
+  engine.agents.push(alphaAgent);
+  const alphaTwin = createBasalTwinAgent(engine, alphaAgent);
+  if (alphaTwin) engine.agents.push(alphaTwin);
   engine.spawnHybridArtifact(alphaStart, alphaGenome.color, alphaGenome.name, alphaGenome.name, alphaId, alphaId, alphaGenome.name);
 
-  engine.agents.push({
+  const betaAgent: Agent = {
     id: betaId,
     position: betaStart.clone(),
     direction: initialCreatureDirection(engine, betaStart),
@@ -749,7 +755,10 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     rootOrigin: betaStart.clone(),
     thickness: computeInitialTrunkThickness(betaGenome, !engine.designerMode),
     cooldown: initialCooldown,
-  });
+  };
+  engine.agents.push(betaAgent);
+  const betaTwin = createBasalTwinAgent(engine, betaAgent);
+  if (betaTwin) engine.agents.push(betaTwin);
   engine.spawnHybridArtifact(betaStart, betaGenome.color, betaGenome.name, betaGenome.name, betaId, betaId, betaGenome.name);
 
   initSpeciesLifecycle(engine, alphaGenome.name);

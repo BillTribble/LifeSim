@@ -95,17 +95,18 @@ export function getTreeStepSize(engine: SimulationEngine, agent: Agent): number 
   const dial = (engine.treeStepSize ?? 0.6) / 0.6;
   const simScale = engine.designerMode ? 1 : SIM_STEP_SCALE;
   const depth = agent.branchDepth || 0;
+  const bScale = Math.sqrt(agent.treeBudgetScale ?? 1.0);
   let base: number;
   if (depth <= 1) {
-    base = THREE.MathUtils.clamp(budget * 0.14, p.stepMin, p.stepMax) * dial * simScale;
+    base = THREE.MathUtils.clamp(budget * 0.14, p.stepMin * bScale, p.stepMax * bScale) * dial * simScale;
   } else if (depth === 2) {
-    base = THREE.MathUtils.clamp(budget * 0.16, 0.55, 1.05) * dial * simScale;
+    base = THREE.MathUtils.clamp(budget * 0.16, 0.55 * bScale, 1.05 * bScale) * dial * simScale;
   } else if (depth === 3) {
-    base = THREE.MathUtils.clamp(budget * 0.18, 0.42, 0.78) * dial * simScale;
+    base = THREE.MathUtils.clamp(budget * 0.18, 0.42 * bScale, 0.78 * bScale) * dial * simScale;
   } else if (depth === 4) {
-    base = THREE.MathUtils.clamp(budget * 0.22, 0.34, 0.62) * dial * simScale;
+    base = THREE.MathUtils.clamp(budget * 0.22, 0.34 * bScale, 0.62 * bScale) * dial * simScale;
   } else {
-    base = THREE.MathUtils.clamp(budget * 0.26, 0.28, 0.48) * dial * simScale;
+    base = THREE.MathUtils.clamp(budget * 0.26, 0.28 * bScale, 0.48 * bScale) * dial * simScale;
   }
   return base * (1.0 + Math.max(0, ((agent.genome as any)?.rambleFactor ?? 1.0) - 1.0) * 0.18);
 }
@@ -124,7 +125,7 @@ function initTreeAgent(engine: SimulationEngine, agent: Agent) {
   const delayScale = isRhiz ? 1.0 : THREE.MathUtils.clamp(0.85 + ((engine.treeBranchDelay ?? 15) - 15) * 0.02, 0.75, 1.15);
   const ramble = THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6);
   agent.treeLen = 0;
-  agent.treeBudget = p.trunkLength * Math.pow(morphScale, 0.55) * delayScale * (0.92 + Math.random() * 0.16);
+  agent.treeBudget = p.trunkLength * Math.pow(morphScale, 0.55) * delayScale * (0.92 + Math.random() * 0.16) * (agent.treeBudgetScale ?? 1.0);
   agent.treeBudIdx = Math.floor(Math.random() * 8);
   agent.treeRoot = agent.position.clone();
   if (p.noMidBranchLaterals) {
@@ -264,6 +265,9 @@ function makeTreeAgent(
     treeBaseThick: thickness,
     rootOrigin: (parent.rootOrigin || parent.treeRoot || parent.position).clone(),
     branchBasePos: (depth <= 1 ? pos : (parent.branchBasePos || pos)).clone(),
+    isBasalEnd: parent.isBasalEnd,
+    treeBudgetScale: parent.treeBudgetScale,
+    growthScale: parent.growthScale,
   };
 }
 
@@ -479,12 +483,11 @@ export function stepTreeArchitecture(
   const maxDepth = maxDepthFor(engine, p, habit, agent);
   const spacing = p.lateralSpacing * spacingScale(engine, agent);
   const budget = agent.treeBudget!;
+  const tScale = agent.treeBudgetScale ?? 1.0;
   const roomForTips = strainCount + newAgents.length < tipCap(engine);
   const isRhiz = habit === "rhizome" || habit === "rhizome_tuber" || habit === "rhizome_lace";
   const morphScale = THREE.MathUtils.clamp(agent.genome?.morphScale ?? 1.0, 0.55, 1.85);
-  const rambleMult =
-    1.0 +
-    (THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6) - 1.0) * (isRhiz ? 0.70 : 0.55);
+  const rambleMult = 1.0 + (THREE.MathUtils.clamp((agent.genome as any)?.rambleFactor ?? 1.2, 0.85, 2.6) - 1.0) * (isRhiz ? 0.70 : 0.55);
 
   agent.treeLen = (agent.treeLen || 0) + stepLen;
   recordTreeNode(engine, agent);
@@ -497,19 +500,12 @@ export function stepTreeArchitecture(
   } else {
     // Trees: hold stout girth on trunk & main body of limbs, taper distal limb ends smoothly into twigs
     let orderTaper: number;
-    if (depth === 0) {
-      orderTaper = habit === "pine" ? 0.68 : 0.85;
-    } else if (depth === 1) {
-      orderTaper = progressFrac < 0.65 ? 0.86 : 0.58;
-    } else if (depth === 2) {
-      orderTaper = progressFrac < 0.50 ? 0.82 : 0.42;
-    } else if (depth === 3) {
-      orderTaper = 0.72;
-    } else if (depth === 4) {
-      orderTaper = 0.68;
-    } else {
-      orderTaper = 0.52;
-    }
+    if (depth === 0) orderTaper = habit === "pine" ? 0.68 : 0.85;
+    else if (depth === 1) orderTaper = progressFrac < 0.65 ? 0.86 : 0.58;
+    else if (depth === 2) orderTaper = progressFrac < 0.50 ? 0.82 : 0.42;
+    else if (depth === 3) orderTaper = 0.72;
+    else if (depth === 4) orderTaper = 0.68;
+    else orderTaper = 0.52;
     agent.thickness = Math.max(0.028, agent.thickness * Math.pow(orderTaper, stepLen / budget));
   }
 
@@ -521,7 +517,7 @@ export function stepTreeArchitecture(
       if (depth === 0 && habit === "pine") {
         const count = 2 + (Math.random() < 0.45 ? 1 : 0);
         const baseAz = Math.random() * Math.PI * 2;
-        const tierLen = p.limbLength * morphScale * (0.95 - 0.35 * frac) * (0.85 + Math.random() * 0.25) * rambleMult;
+        const tierLen = p.limbLength * morphScale * (0.95 - 0.35 * frac) * (0.85 + Math.random() * 0.25) * rambleMult * tScale;
         const childT = Math.max(0.55, agent.thickness * 0.72);
         for (let w = 0; w < count; w++) {
           const az = baseAz + (w * Math.PI * 2) / count + (Math.random() - 0.5) * 0.4;
@@ -542,7 +538,7 @@ export function stepTreeArchitecture(
         if (out3D.lengthSq() > 0.04) dir.addScaledVector(out3D.normalize(), 0.22).normalize();
         const childBudget =
           (depth === 0 ? p.limbLength * morphScale * (0.85 + Math.random() * 0.25) * rambleMult : budget * p.lengthRatio) *
-          (0.85 + Math.random() * 0.3);
+          (0.85 + Math.random() * 0.3) * tScale;
         spawnChild(engine, agent, newAgents, dir, childT, childBudget, depth + 1, spacing);
       } else {
         // Tree lateral buds: preserve parent thickness on depth 0..2; burst compact twigs on depth >= 2
@@ -551,23 +547,23 @@ export function stepTreeArchitecture(
         if (depth === 0) {
           childT = agent.thickness * 0.72;
           agent.thickness *= 0.94;
-          childBudget = p.limbLength * morphScale * (0.82 + Math.random() * 0.20) * rambleMult;
+          childBudget = p.limbLength * morphScale * (0.82 + Math.random() * 0.20) * rambleMult * tScale;
         } else if (depth === 1) {
           childT = agent.thickness * 0.70;
           agent.thickness *= 0.94;
-          childBudget = THREE.MathUtils.clamp(budget * p.lengthRatio * (0.85 + Math.random() * 0.20), 3.6, 5.2);
+          childBudget = THREE.MathUtils.clamp(budget * p.lengthRatio * (0.85 + Math.random() * 0.20), 3.6 * tScale, 5.2 * tScale);
         } else if (depth === 2) {
           childT = THREE.MathUtils.clamp(agent.thickness * 0.52, 0.16, 0.30);
           agent.thickness *= 0.92;
-          childBudget = THREE.MathUtils.clamp(budget * 0.60, 2.2, 3.2);
+          childBudget = THREE.MathUtils.clamp(budget * 0.60, 2.2 * tScale, 3.2 * tScale);
         } else if (depth === 3) {
           childT = THREE.MathUtils.clamp(agent.thickness * 0.58, 0.095, 0.16);
           agent.thickness *= 0.93;
-          childBudget = THREE.MathUtils.clamp(budget * 0.65, 1.5, 2.3);
+          childBudget = THREE.MathUtils.clamp(budget * 0.65, 1.5 * tScale, 2.3 * tScale);
         } else {
           childT = THREE.MathUtils.clamp(agent.thickness * 0.58, 0.048, 0.09);
           agent.thickness *= 0.94;
-          childBudget = THREE.MathUtils.clamp(budget * 0.65, 1.0, 1.6);
+          childBudget = THREE.MathUtils.clamp(budget * 0.65, 1.0 * tScale, 1.6 * tScale);
         }
 
         const az = (agent.treeBudIdx = (agent.treeBudIdx || 0) + 1) * GOLDEN;
@@ -604,7 +600,7 @@ export function stepTreeArchitecture(
         const clampedY = THREE.MathUtils.clamp(elev, -0.88, 0.88);
         const rXZ = Math.sqrt(Math.max(0.08, 1 - clampedY * clampedY));
         const dir = new THREE.Vector3(Math.cos(az) * rXZ, clampedY, Math.sin(az) * rXZ).normalize();
-        const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.28) * rambleMult;
+        const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.28) * rambleMult * tScale;
         if (k === 0) {
           agent.direction.copy(dir);
           agent.thickness = limbT;
@@ -629,7 +625,7 @@ export function stepTreeArchitecture(
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.45;
       const spread = THREE.MathUtils.degToRad(p.divisionSpreadDeg + (Math.random() - 0.5) * 14);
       const dir = deflect(axisOf(agent), spread, az);
-      const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.22) * rambleMult;
+      const limbBudget = p.limbLength * morphScale * (0.88 + Math.random() * 0.22) * rambleMult * tScale;
       const nextBud = p.noMidBranchLaterals ? Infinity : limbBudget * (0.52 + Math.random() * 0.16);
       if (k === 0) {
         agent.direction.copy(dir);
@@ -673,7 +669,7 @@ export function stepTreeArchitecture(
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.6;
       const ang = THREE.MathUtils.degToRad(p.forkAngleDeg * (k === 0 && !equal ? 0.45 : 1) + (Math.random() - 0.5) * 14);
       const dir = deflect(agent.direction, ang, az);
-      const childBudget = budget * p.lengthRatio * (0.85 + Math.random() * 0.3);
+      const childBudget = budget * p.lengthRatio * (0.85 + Math.random() * 0.3) * tScale;
       if (k === 0) {
         agent.direction.copy(dir);
         agent.thickness = t;
@@ -701,7 +697,7 @@ export function stepTreeArchitecture(
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.45;
       const ang = THREE.MathUtils.degToRad(p.forkAngleDeg * (0.92 + Math.random() * 0.20));
       const dir = deflect(agent.direction, ang, az);
-      const childBudget = THREE.MathUtils.clamp(budget * p.lengthRatio * (0.85 + Math.random() * 0.22), 3.8, 5.2);
+      const childBudget = THREE.MathUtils.clamp(budget * p.lengthRatio * (0.85 + Math.random() * 0.22), 3.8 * tScale, 5.2 * tScale);
       const childNextBud = childBudget * (0.55 + Math.random() * 0.16);
       if (k === 0) {
         agent.direction.copy(dir);
@@ -722,7 +718,7 @@ export function stepTreeArchitecture(
     const childSpacing = Math.max(0.28, spacing * 0.85);
     for (let k = 0; k < n; k++) {
       const t = THREE.MathUtils.clamp(startT * (0.50 + Math.random() * 0.10), 0.16, 0.30);
-      const childBudget = THREE.MathUtils.clamp(budget * 0.60 * (0.85 + Math.random() * 0.25), 2.2, 3.2);
+      const childBudget = THREE.MathUtils.clamp(budget * 0.60 * (0.85 + Math.random() * 0.25), 2.2 * tScale, 3.2 * tScale);
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.55;
       const dir = deflect(agent.direction, twigAngle, az);
       const childNextBud = childBudget * (0.52 + Math.random() * 0.16);
@@ -745,7 +741,7 @@ export function stepTreeArchitecture(
     const childSpacing = Math.max(0.28, spacing * 0.85);
     for (let k = 0; k < n; k++) {
       const t = THREE.MathUtils.clamp(startT * (0.58 + Math.random() * 0.10), 0.095, 0.16);
-      const childBudget = THREE.MathUtils.clamp(budget * 0.65 * (0.85 + Math.random() * 0.25), 1.5, 2.3);
+      const childBudget = THREE.MathUtils.clamp(budget * 0.65 * (0.85 + Math.random() * 0.25), 1.5 * tScale, 2.3 * tScale);
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.6;
       const dir = deflect(agent.direction, fineAngle, az);
       if (k === 0) {
@@ -766,7 +762,7 @@ export function stepTreeArchitecture(
     const ang = THREE.MathUtils.degToRad(Math.max(52, p.forkAngleDeg * 1.28) + (Math.random() - 0.5) * 18);
     for (let k = 0; k < n; k++) {
       const t = THREE.MathUtils.clamp(startT * (0.58 + Math.random() * 0.08), 0.048, 0.09);
-      const childBudget = THREE.MathUtils.clamp(budget * 0.65 * (0.85 + Math.random() * 0.25), 1.0, 1.6);
+      const childBudget = THREE.MathUtils.clamp(budget * 0.65 * (0.85 + Math.random() * 0.25), 1.0 * tScale, 1.6 * tScale);
       const az = baseAz + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.55;
       const dir = deflect(agent.direction, ang, az);
       if (k === 0) {

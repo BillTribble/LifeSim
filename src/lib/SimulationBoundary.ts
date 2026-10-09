@@ -2,12 +2,17 @@ import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
 
-/** Clamps an agent to the world boundary (box or ellipsoid) and reflects its direction. Returns true on a bounce. */
-export function reflectAtBoundary(engine: SimulationEngine, agent: Agent): boolean {
+export function getEffectiveBoundaryExtents(engine: SimulationEngine): { bX: number; bY: number; bZ: number } {
   const bX = engine.boundarySize;
   const bZ = engine.boundarySize;
   const squash = engine.boundarySquash ?? 1.0;
   const bY = Math.max(5.0, engine.boundarySize * squash);
+  return { bX, bY, bZ };
+}
+
+/** Clamps an agent to the world boundary (box or ellipsoid) and reflects its direction. Returns true on a bounce. */
+export function reflectAtBoundary(engine: SimulationEngine, agent: Agent): boolean {
+  const { bX, bY, bZ } = getEffectiveBoundaryExtents(engine);
   const creatureCenterY = engine.creatureCenterY || 18.921075;
   let bounced = false;
 

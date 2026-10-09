@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { sustainTreeGrowth } from "./SimulationTreeGrowth";
+import { sustainTrailingGrowth, stepTrailingBranching } from "./SimulationTrailingGrowth";
 import { areStrainsCompatibleForMating, getSeekRadius, getSeekRamp, isOrganismDesperate, isSpeciesOnCooldown } from "./SimulationSeekRamp";
 import { handleBreedingAndFeelers } from "./SimulationBreeding";
 import { endFeeler, getFeelerStepSize, updateFeelerSeeking } from "./SimulationFeelers";
@@ -235,6 +236,7 @@ export function processAgents(
         // Scaled from the parent's botanical step at spawn (was a fixed 1.3)
         effectiveStepSize = getFeelerStepSize(agent);
       } else {
+        effectiveStepSize *= Math.sqrt(agent.growthScale ?? 1.0);
         agent.lastStepSize = effectiveStepSize;
       }
 
@@ -404,6 +406,12 @@ export function processAgents(
             .normalize();
           const twigBoost = agent.isSeekerTwig ? 1.5 : 1.0;
           agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean * twigBoost) * seekRamp).normalize();
+        } else if (nearestTargetPos && seekRamp <= 0 && dist < 18.0) {
+          const awayFromTarget = new THREE.Vector3()
+            .subVectors(agent.position, nearestTargetPos)
+            .normalize();
+          const repulsionLean = 0.035 * (1.0 - dist / 18.0);
+          agent.direction.lerp(awayFromTarget, repulsionLean).normalize();
         }
       }
 
@@ -618,7 +626,9 @@ export function processAgents(
         }
       }
 
-      if (treeModel) {
+      if (agent.isSeekerTwig) {
+        stepTrailingBranching(engine, agent, newAgents, activeAgents);
+      } else if (treeModel) {
         stepTreeArchitecture(
           engine,
           agent,
@@ -732,5 +742,6 @@ export function processAgents(
   }
 
   sustainTreeGrowth(engine, activeAgents, newAgents);
+  sustainTrailingGrowth(engine, activeAgents, newAgents);
   engine.agents = activeAgents.filter((a) => a.active);
 }
