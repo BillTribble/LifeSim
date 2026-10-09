@@ -26,7 +26,7 @@ export function PresetPanel({ state, setters, stats, setRandomizeKey, handleRest
         maxBranchDepth: 4,
         maxBranchesPerSpecies: 48,
         maxAgents: 667,
-        maxCreatures: 7,
+        maxCreatures: 12,
         minCreatures: 4,
         boundarySize: 80,
         magnetism: 10.0,

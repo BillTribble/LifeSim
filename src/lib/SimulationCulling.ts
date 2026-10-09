@@ -21,7 +21,7 @@ export function canEnterDeleting(
   activeAgents: Agent[],
   countAsRemoved: number = 1,
 ): boolean {
-  if (!engine.hasAnyOrganismBred) return false;
+  if (!engine.hasAnyOrganismBred || !engine.hasReachedMinCreatures) return false;
   const livingOrganisms =
     typeof engine.getLivingOrganismCount === "function"
       ? engine.getLivingOrganismCount()
@@ -35,7 +35,7 @@ export function canEnterDeleting(
           }
           return living.size;
         })();
-  const minCreatures = engine.minCreatures ?? 4;
+  const minCreatures = Math.max(4, engine.minCreatures ?? 4);
   if (livingOrganisms < minCreatures) return false;
   if (livingOrganisms - countAsRemoved < minCreatures) return false;
   return true;
@@ -91,13 +91,13 @@ export function checkLifespanDeath(
   if (!shouldDieFromMating && !shouldDieFromAge) return;
 
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const minC = isSoft ? Math.min(4, engine.minCreatures ?? 4) : (engine.minCreatures ?? 4);
-  const maxC = isSoft ? Math.min(6, engine.maxCreatures ?? 5) : Math.max(minC + 1, engine.maxCreatures ?? 5);
+  const minC = Math.max(4, engine.minCreatures ?? 4);
+  const maxC = Math.max(minC + 1, isSoft ? Math.min(8, engine.maxCreatures ?? 10) : (engine.maxCreatures ?? 10));
   // Let the aquarium fill up toward maxCreatures before retiring the oldest organism one at a time.
   const turnoverFloor = isSoft
     ? Math.min(maxC, 4)
     : Math.min(maxC, Math.max(minC + 1, Math.floor(minC + (maxC - minC) * 0.75)));
-  if (livingOrganismCount < turnoverFloor) return;
+  if (!engine.hasReachedMinCreatures || livingOrganismCount < turnoverFloor) return;
   if (livingOrganismCount - 1 < minC) return;
 
   const stepRate = Math.max(0.01, (engine.growthSpeed || 0.06) * 60);
@@ -108,7 +108,7 @@ export function checkLifespanDeath(
   if (stepsSinceLastDeath < effectiveInterval) return;
   if (!isOldestLivingOrganism(engine, activeAgents, agent.genome.name)) return;
 
-  if (canEnterDeleting(engine, activeAgents, 1) || (isSoft && livingOrganismCount >= 4)) {
+  if (canEnterDeleting(engine, activeAgents, 1) || (isSoft && engine.hasReachedMinCreatures && livingOrganismCount >= 4)) {
     (engine as any)._lastSenescenceDeathTime = engine.time;
     const reason = shouldDieFromMating ? `bred ${speciesMCount} times` : "reached max lifespan";
     engine.killSpecies(agent.genome.name, reason);
@@ -122,13 +122,13 @@ export function enforceCreatureCap(
   nonTaperingStrains: Set<string>,
 ): void {
   const isSoft = !!(engine as any)._isSoftwareRaster;
-  const effectiveMax = isSoft ? Math.min(6, engine.maxCreatures) : engine.maxCreatures;
-  const effectiveMin = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
-  if (!engine.designerMode && nonTaperingStrains.size > effectiveMax) {
+  const effectiveMin = Math.max(4, engine.minCreatures ?? 4);
+  const effectiveMax = Math.max(effectiveMin + 1, isSoft ? Math.min(8, engine.maxCreatures ?? 10) : (engine.maxCreatures ?? 10));
+  if (!engine.designerMode && engine.hasReachedMinCreatures && nonTaperingStrains.size > effectiveMax) {
     let guard = 0;
     while (
       nonTaperingStrains.size > effectiveMax &&
-      (canEnterDeleting(engine, activeAgents, 1) || (isSoft && nonTaperingStrains.size > 5)) &&
+      (canEnterDeleting(engine, activeAgents, 1) || (isSoft && nonTaperingStrains.size > effectiveMax)) &&
       guard++ < 16
     ) {
       // Hard cap: prefer bred, then oldest; fall back to ignoring the maturity window.

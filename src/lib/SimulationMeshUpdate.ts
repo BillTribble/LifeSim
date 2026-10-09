@@ -82,10 +82,10 @@ export function updateMeshSegments(
             const s = engine.segments[i];
             if (!s) { victimSlot = i; bestScore = 1e9; break; }
             const isDying = engine.dyingStems.has(i) || (engine.dyingStrains && engine.dyingStrains.has(s.strainName));
-            if (!s.isFeeler && !isDying) continue;
+            if (!isDying) continue;
             const dissolveProgress = packA?.getZ(i) ?? 0;
             const dAge = s.dyingStart ? Math.max(0, engine.unscaledTime - s.dyingStart) : 0;
-            const ageScore = dAge * 10 + dissolveProgress * 5000 + (engine.time - s.timestamp) + (s.isFeeler ? 50000 : 0);
+            const ageScore = dAge * 10 + dissolveProgress * 5000 + (engine.time - s.timestamp);
             if (ageScore > bestScore) {
               bestScore = ageScore;
               victimSlot = i;
@@ -608,11 +608,8 @@ export function processDyingSegments(
       continue;
     }
     const fadeAge = engine.unscaledTime - seg.dyingStart;
-    // 540 unscaled frame ticks = ~9.0 seconds of slow, gentle transparency + luminance dissolve for dying organisms.
-    // Feeler trails dissolve rapidly (~0.9 s) so they never linger as unbranched snake lines.
-    const wipeDuration = seg.isFeeler
-      ? 55.0 * (10 / Math.max(1, engine.feelerFade ?? 10))
-      : 540.0;
+    // 540 unscaled frame ticks = ~9.0 seconds of slow, gentle transparency + luminance dissolve for dying organisms (including feelers).
+    const wipeDuration = 540.0;
 
     if (fadeAge >= wipeDuration) {
       engine.dummy.matrix.identity();

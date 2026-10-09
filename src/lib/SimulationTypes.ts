@@ -59,6 +59,7 @@ export interface RecessiveGenes {
   trunkGirthMod?: number;
   branchOrderCap?: number;
   rambleFactor?: number;
+  curvinessGene?: number;
 }
 
 export interface Genome {
@@ -102,6 +103,7 @@ export interface Genome {
   trunkGirthMod?: number;
   branchOrderCap?: number;
   rambleFactor?: number;
+  curvinessGene?: number;
 
   recessive?: RecessiveGenes;
   genomeHash?: number;

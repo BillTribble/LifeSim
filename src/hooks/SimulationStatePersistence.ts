@@ -325,4 +325,7 @@ export function resetSimulationToDefaults(setters: Record<string, any>) {
   setters.setGlowTraitDistance(DEFAULTS.glowTraitDistance);
   setters.setGlowTraitReflect(DEFAULTS.glowTraitReflect);
   setters.setDialLimits(DEFAULTS.dialLimits);
+  if (typeof window !== "undefined" && (window as any).__LIFESIM_ENGINE__?.setCameraZoom) {
+    (window as any).__LIFESIM_ENGINE__.setCameraZoom(DEFAULTS.cameraZoom);
+  }
 }

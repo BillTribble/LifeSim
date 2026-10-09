@@ -3,7 +3,8 @@ import { SpeciesLifecycleState } from "./SimulationTypes";
 import { NOTE_NAMES } from "./SimulationSound";
 import { measureScreenFillSilhouette, ScreenFillData } from "./SimulationSilhouette";
 import {
-  getResponsiveBoundaryCameraDistance,
+  DEFAULT_CAMERA_ZOOM,
+  getZoomedBoundaryCameraDistance,
   applyResponsiveBoundaryCameraDistance,
   randomizeBoundaryShape,
 } from "./SimulationBoundary";
@@ -12,22 +13,41 @@ import type { SimulationEngine } from "./SimulationEngine";
 export function resetCamera(engine: SimulationEngine): void {
   if (engine.camera && engine.controls) {
     const creatureCenterY = engine.designerMode ? 15.0 : (engine.creatureCenterY || 18.921075);
-    const camZ = engine.designerMode ? -95.0 : getResponsiveBoundaryCameraDistance(engine);
     const wasAutoRotate = engine.controls.autoRotate;
     engine.controls.autoRotate = false;
 
-    engine.controls.target.set(0, creatureCenterY, 0);
-    engine.camera.position.set(0, creatureCenterY, camZ);
-    engine.camera.up.set(0, 1, 0);
-    engine.camera.lookAt(engine.controls.target);
-    engine.camera.updateProjectionMatrix();
+    if (engine.designerMode) {
+      (engine as any)._wasDesignerMode = true;
+      const camZ = -95.0;
+      engine.controls.target.set(0, creatureCenterY, 0);
+      engine.camera.position.set(0, creatureCenterY, camZ);
+      engine.camera.up.set(0, 1, 0);
+      engine.camera.lookAt(engine.controls.target);
+      engine.camera.updateProjectionMatrix();
+      engine.controls.saveState();
+      engine.controls.reset();
+      engine.camera.position.set(0, creatureCenterY, camZ);
+      engine.controls.target.set(0, creatureCenterY, 0);
+      engine.controls.update();
+    } else {
+      // Do NOT reset camera zoom on Restart: preserve current engine.cameraZoom and viewing direction
+      const camDist = getZoomedBoundaryCameraDistance(engine);
+      const dir = new THREE.Vector3().subVectors(engine.camera.position, engine.controls.target);
+      if ((engine as any)._wasDesignerMode || dir.lengthSq() < 1e-6) {
+        dir.set(-60.54567454015903, 0, 42.08034001656362).normalize();
+      } else {
+        dir.normalize();
+      }
+      (engine as any)._wasDesignerMode = false;
 
-    engine.controls.saveState();
-    engine.controls.reset();
-
-    engine.camera.position.set(0, creatureCenterY, camZ);
-    engine.controls.target.set(0, creatureCenterY, 0);
-    engine.controls.update();
+      engine.controls.target.set(0, creatureCenterY, 0);
+      engine.camera.position.copy(engine.controls.target).addScaledVector(dir, camDist);
+      engine.camera.up.set(0, 1, 0);
+      engine.camera.lookAt(engine.controls.target);
+      engine.camera.updateProjectionMatrix();
+      engine.controls.saveState();
+      engine.controls.update();
+    }
 
     engine.controls.autoRotate = wasAutoRotate;
     applyResponsiveBoundaryCameraDistance(engine);
@@ -60,9 +80,8 @@ export function initSpeciesLifecycle(engine: SimulationEngine, strainName: strin
 export function killSpecies(engine: SimulationEngine, strainName: string, reason: string): void {
   const livingOrganisms = engine.getLivingOrganisms();
   const livingCount = livingOrganisms.size;
-  const isSoft = !!(engine as any)._isSoftwareRaster;
-  const minFloor = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
-  if (livingCount < minFloor) {
+  const minFloor = Math.max(4, engine.minCreatures ?? 4);
+  if (!engine.hasReachedMinCreatures || livingCount < minFloor) {
     engine.onLog(`🛡️ Deletion blocked for ${strainName} (${reason}): living organisms (${livingCount}) has not reached minCreatures (${minFloor}).`);
     return;
   }
@@ -112,12 +131,12 @@ export function spawnHybridArtifact(
   childStrainName?: string,
 ): void {
   if (engine.hybridMeshes.length === 0) return;
-  const maxHybrids = (engine as any)._isSoftwareRaster ? 16 : 2000;
+  const maxHybrids = (engine as any)._isSoftwareRaster ? 64 : 2000;
   const currentCount = engine.hybridCount % maxHybrids;
 
   engine.dummy.position.copy(pos);
   engine.dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  const artScale = Math.min(0.65, Math.max(0.30, (engine.hybridSize || 4.0) * 0.08));
+  const artScale = Math.max(0.8, (engine.hybridSize || 2.0) * 0.85);
   engine.dummy.scale.set(artScale, artScale, artScale);
   engine.dummy.updateMatrix();
 
@@ -151,7 +170,7 @@ export function spawnHybridArtifact(
     index: currentCount,
     timestamp: engine.time,
     matrix: engine.dummy.matrix.clone(),
-    thickness: engine.hybridSize,
+    thickness: engine.hybridSize || 2.0,
     strainName: strainName || "hybrid",
     strainBName: strainBName || "hybrid",
     childStrainName: childStrainName,
@@ -282,6 +301,9 @@ export function emitStateUpdate(engine: SimulationEngine): void {
     lastSilhouetteData = measureScreenFillSilhouette(engine);
   }
 
+  const currentZoom = engine.cameraZoom || DEFAULT_CAMERA_ZOOM;
+  (engine as any)._lastEmittedZoom = currentZoom;
+
   engine.onStateUpdate({
     geometryCount: totalActiveGeometries,
     perf: {
@@ -291,6 +313,7 @@ export function emitStateUpdate(engine: SimulationEngine): void {
       lodMode: engine.lod.mode,
       triangles: engine.lod.activeTriangles,
       trianglesAtHigh: engine.lod.activeTrianglesTier0,
+      zoom: currentZoom,
     },
     totalAgents: activeCount,
     hybridCount: engine.totalHybridCount || 0,
@@ -302,7 +325,7 @@ export function emitStateUpdate(engine: SimulationEngine): void {
       x: engine.camera.position.x,
       y: engine.camera.position.y,
       z: engine.camera.position.z,
-      zoom: engine.camera.zoom,
+      zoom: currentZoom,
     },
     theme: engine.theme,
     nextTheme: engine.nextTheme,

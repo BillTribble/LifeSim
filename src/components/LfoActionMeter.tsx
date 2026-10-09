@@ -38,6 +38,7 @@ export function LfoActionMeter({ state }: LfoActionMeterProps) {
         cycleRandomMeterNorm,
       } = computeLfoModulatedOverall({
         overallMovement: source.overallMovement ?? stateRef.current?.overallMovement ?? 0.40,
+        branchMovement: source.branchMovement ?? stateRef.current?.branchMovement ?? 0.32,
         movementLfoSpeed: source.movementLfoSpeed ?? stateRef.current?.movementLfoSpeed ?? 0.14,
         movementLfoDepth: source.movementLfoDepth ?? stateRef.current?.movementLfoDepth ?? 0.12,
         movementLfoPeak: source.movementLfoPeak ?? stateRef.current?.movementLfoPeak ?? 0.42,
@@ -139,8 +140,8 @@ export function LfoActionMeter({ state }: LfoActionMeterProps) {
             }}
           >
             {`LFO + ACTION METER
-Live unipolar (+) wind surge modulation added to overall MOVEMENT.
-Top (+): Peak wind gust surge.
+Live unipolar (+) wind surge modulation added to BRANCH_MOVE only (does not affect SHIMMER or WAVY).
+Top (+): Peak branch movement gust surge.
 Bottom (0): Flat baseline lull (strictly positive additions).
 LFO_PEAK shapes the wave into a narrow squashed curved sine peak (default 1/3 width) with a flat baseline lull between gusts.
 

@@ -24,7 +24,7 @@ export function extrudePointedTerminalCap(
   const dir = agent.direction.clone().normalize();
   if (dir.lengthSq() < 0.001) dir.set(0, 1, 0);
 
-  const tipLength = Math.max(0.25, currThickness * 1.4);
+  const tipLength = Math.max(0.10, currThickness * 0.70);
   const tipPos = agent.position.clone().addScaledVector(dir, tipLength);
 
   engine.addLineSegment(
@@ -146,7 +146,7 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
     }
     anyEng._isSoftwareRaster = isSoft;
     anyEng._prunePressure = isSoft ? 0.65 : 0.0;
-    if (isSoft && engine.lod) {
+    if (isSoft && engine.lod && engine.lod.mode === "auto") {
       applyLodTier(engine, 3);
       engine.lod.fpsTier = 3;
     }
@@ -164,9 +164,9 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
   }
   anyEng._prunePressure = p;
 
-  // Only use fast Lambert materials on software rasterizers; hardware GPUs keep their unified
-  // shader material and smoothly dissolve complexity via uLodLevel (smoothTier) and vCamDist.
-  if (anyEng._isSoftwareRaster) {
+  // Only use fast Lambert materials on software rasterizers when LOD mode is auto; hardware GPUs
+  // and explicit LOD modes keep unified shader materials.
+  if (anyEng._isSoftwareRaster && engine.lod?.mode === "auto") {
     if (anyEng._fastStemMat === undefined) {
       anyEng._fastStemMat = createFastStemMaterial();
       anyEng._fastLeafMat = createFastLeafMaterial();
@@ -191,7 +191,8 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
     }
   }
 
-  if (anyEng._isSoftwareRaster || (fps < 24.0 && (p >= 0.55 || (engine.lod && engine.lod.tier >= 2)))) {
+  const allowDprDrop = engine.lod?.mode === "auto";
+  if (allowDprDrop && (anyEng._isSoftwareRaster || (fps < 24.0 && (p >= 0.55 || (engine.lod && engine.lod.tier >= 2))))) {
     if (engine.renderer?.setPixelRatio) {
       const targetDpr = anyEng._isSoftwareRaster ? 0.65 : (p >= 0.85 ? 0.70 : 0.85);
       if (engine.renderer.getPixelRatio?.() !== targetDpr) {
@@ -201,7 +202,7 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
     const showGrids = !anyEng._isSoftwareRaster && p < 0.75 && !!engine.showBoundaryBox;
     if (engine.floorGridMesh) engine.floorGridMesh.visible = showGrids;
     if (engine.ceilingGridMesh) engine.ceilingGridMesh.visible = showGrids;
-  } else if (p < 0.35 && engine.lod && engine.lod.tier <= 1) {
+  } else if (!anyEng._isSoftwareRaster || !allowDprDrop) {
     if (engine.renderer?.setPixelRatio) {
       const baseDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
       const normalDpr = engine.isMobile ? 1.0 : Math.min(baseDpr, 1.25);
@@ -504,58 +505,10 @@ export function mergeAdjacentBranchSegments(engine: SimulationEngine, targetPrun
 export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneCount: number): number {
   if (targetPruneCount <= 0) return 0;
   const currentStems = Math.min(engine.pointCount, engine.cylinderMesh.count);
-  const activeAgentIds = new Set(engine.agents.filter(a => a.active).map(a => a.id));
   const isSoft = !!(engine as any)._isSoftwareRaster;
-
-  // Pass 1: Reclaim whole ended feeler trails together (non-feeler organisms are reclaimed as complete strains below).
-  const agentGroups = new Map<number, { indices: number[]; score: number }>();
-
-  for (let i = 0; i < currentStems; i++) {
-    const seg = engine.segments[i];
-    if (!seg || !seg.startPos || !seg.endPos || !seg.isFeeler) continue;
-    if (seg.agentId === undefined || activeAgentIds.has(seg.agentId)) continue;
-
-    const score = getCameraDistanceRatio(engine, seg.startPos) * 4.0;
-    let grp = agentGroups.get(seg.agentId);
-    if (!grp) {
-      grp = { indices: [], score };
-      agentGroups.set(seg.agentId, grp);
-    } else if (score > grp.score) {
-      grp.score = score;
-    }
-    grp.indices.push(i);
-  }
-
-  const sortedGroups = Array.from(agentGroups.values()).sort((a, b) => b.score - a.score);
   let pruned = 0;
 
-  const deleteStemSlot = (victimIdx: number) => {
-    const seg = engine.segments[victimIdx];
-    if (seg && seg.countsForBiomass) {
-      const prev = engine.biomassMap.get(seg.strainName) || 0;
-      const w = seg.biomassWeight ?? 1;
-      if (prev > w) engine.biomassMap.set(seg.strainName, prev - w);
-      else engine.biomassMap.delete(seg.strainName);
-    }
-    engine.segments[victimIdx] = undefined as any;
-    engine.dyingStems.delete(victimIdx);
-    if (engine.growingStems) engine.growingStems.delete(victimIdx);
-    engine.dummy.matrix.makeScale(0, 0, 0);
-    engine.cylinderMesh.setMatrixAt(victimIdx, engine.dummy.matrix);
-    markInstanceIndexDirty(engine.cylinderMesh.instanceMatrix, victimIdx);
-    if (engine.freeStemIndices) engine.freeStemIndices.push(victimIdx);
-    pruned++;
-  };
-
-  for (const grp of sortedGroups) {
-    if (pruned >= targetPruneCount) break;
-    for (const victimIdx of grp.indices) {
-      deleteStemSlot(victimIdx);
-    }
-  }
-
   if (
-    pruned < targetPruneCount &&
     (!engine.dyingStrains || engine.dyingStrains.size === 0) &&
     typeof engine.killSpecies === "function"
   ) {
@@ -572,8 +525,8 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
         strainOldestTs.set(s.strainName, s.timestamp);
       }
     }
-    const minFloor = isSoft ? Math.min(3, engine.minCreatures || 4) : (engine.minCreatures || 4);
-    if (strainOldestTs.size > minFloor) {
+    const minFloor = Math.max(4, engine.minCreatures ?? 4);
+    if (engine.hasReachedMinCreatures && strainOldestTs.size > minFloor) {
       let oldestStrain = "";
       let oldestTs = Infinity;
       for (const [sName, ts] of strainOldestTs.entries()) {

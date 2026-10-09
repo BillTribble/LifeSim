@@ -286,6 +286,7 @@ export function pickNextLfoCycleRandomRoll(
 
 export function computeLfoModulatedOverall(engine: {
   overallMovement?: number;
+  branchMovement?: number;
   movementLfoSpeed?: number;
   movementLfoDepth?: number;
   movementLfoPeak?: number;
@@ -295,6 +296,7 @@ export function computeLfoModulatedOverall(engine: {
   movementLfoCycleRand?: number;
 }): {
   effectiveOverall: number;
+  effectiveBranchMovement: number;
   lfoMult: number;
   lfoUnipolar: number;
   lfoBipolar: number;
@@ -306,6 +308,8 @@ export function computeLfoModulatedOverall(engine: {
   cycleRandomMeterNorm: number;
 } {
   const overall = engine.overallMovement ?? 0.40;
+  const hasExplicitBranch = engine.branchMovement !== undefined;
+  const branchMove = engine.branchMovement ?? overall;
   const cycleLengthMult = engine.movementLfoCycleMult ?? 1.0;
   const randNorm = Math.max(0, Math.min(100, engine.movementLfoRandom ?? 73)) / 100.0;
   const rawCycleRand = randNorm <= 0.0001 ? 0.0 : (engine.movementLfoCycleRand ?? 0.65);
@@ -313,9 +317,10 @@ export function computeLfoModulatedOverall(engine: {
   const cycleGustMult = 1.0 + cycleRandomInfluence * 0.85;
   const cycleRandomMeterNorm = cycleRandomInfluence;
 
-  if (overall <= 0.0001) {
+  if (overall <= 0.0001 || (hasExplicitBranch && branchMove <= 0.0001)) {
     return {
-      effectiveOverall: 0.0,
+      effectiveOverall: hasExplicitBranch && overall > 0.0001 ? overall : 0.0,
+      effectiveBranchMovement: 0.0,
       lfoMult: 1.0,
       lfoUnipolar: 0.0,
       lfoBipolar: 0.0,
@@ -332,6 +337,7 @@ export function computeLfoModulatedOverall(engine: {
   if (lfoSpeed <= 0.0001 || lfoDepth <= 0.0001) {
     return {
       effectiveOverall: overall,
+      effectiveBranchMovement: branchMove,
       lfoMult: 1.0,
       lfoUnipolar: 0.0,
       lfoBipolar: 0.0,
@@ -359,11 +365,12 @@ export function computeLfoModulatedOverall(engine: {
     lfoUnipolar = Math.max(0.0, Math.min(1.0, 0.5 * (1.0 - Math.cos(skewedTheta))));
   }
 
-  const baseSwing = lfoDepth * 1.60 + overall * lfoDepth * 0.50;
+  const baseSwing = lfoDepth * 1.60 + branchMove * lfoDepth * 0.50;
   const lfoSwing = baseSwing * cycleGustMult;
-  const lfoDelta = lfoUnipolar * lfoSwing; // strictly >= 0 (POSITIVE ONLY - more wind!)
-  const effectiveOverall = overall + lfoDelta; // strictly >= overall
-  const lfoMult = overall > 0.0001 ? effectiveOverall / overall : 1.0;
+  const lfoDelta = lfoUnipolar * lfoSwing; // strictly >= 0 (POSITIVE ONLY - more branch sway!)
+  const effectiveBranchMovement = branchMove + lfoDelta; // strictly >= branchMove
+  const effectiveOverall = overall + lfoDelta; // legacy/test compatibility
+  const lfoMult = branchMove > 0.0001 ? effectiveBranchMovement / branchMove : 1.0;
   const lfoMeterNorm = Math.max(
     0.0,
     Math.min(1.0, lfoUnipolar * Math.min(1.0, (lfoDepth / 0.85) * (0.75 + 0.25 * cycleGustMult)))
@@ -371,6 +378,7 @@ export function computeLfoModulatedOverall(engine: {
 
   return {
     effectiveOverall,
+    effectiveBranchMovement,
     lfoMult,
     lfoUnipolar,
     lfoBipolar: lfoUnipolar,
@@ -389,6 +397,7 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
   const branchMovement = engine.branchMovement ?? 0.32;
   const overallMovement = engine.overallMovement ?? 0.40;
   const anyActive = overallMovement > 0.0001 && (shimmer > 0.0001 || wavy > 0.0001 || branchMovement > 0.0001);
+  const branchActive = overallMovement > 0.0001 && branchMovement > 0.0001;
 
   const lfoSpeed = engine.movementLfoSpeed ?? 0.14;
   const lfoDepth = engine.movementLfoDepth ?? 0.12;
@@ -404,7 +413,7 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     engine.movementLfoCycleMult = 1.0;
   }
 
-  if (anyActive && lfoSpeed > 0.0001 && lfoDepth > 0.0001) {
+  if (branchActive && lfoSpeed > 0.0001 && lfoDepth > 0.0001) {
     const baseStep = 0.004 + lfoSpeed * 0.036;
     const cycleMult = engine.movementLfoCycleMult || 1.0;
     const nextPhase = (engine.movementLfoPhase || 0) + baseStep / cycleMult;
@@ -419,13 +428,14 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     }
   }
 
-  const { effectiveOverall } = computeLfoModulatedOverall(engine);
+  const { effectiveBranchMovement } = computeLfoModulatedOverall(engine);
 
   if (engine.windTime === undefined) {
     engine.windTime = 0.0;
   }
   if (anyActive) {
-    engine.windTime += 0.024 * (0.20 + 0.90 * Math.min(3.5, effectiveOverall));
+    // Advance windTime solely from unmodulated overallMovement so LFO gusts only influence branchMovement, never shimmer or wavy
+    engine.windTime += 0.024 * (0.20 + 0.90 * Math.min(3.5, overallMovement));
   }
 
   const mats: (THREE.MeshPhysicalMaterial | undefined)[] = [
@@ -439,8 +449,8 @@ export function updateWindMaterialUniforms(engine: SimulationEngine) {
     mat.userData.uWindTime.value = engine.windTime;
     mat.userData.uShimmer.value = shimmer;
     mat.userData.uWavy.value = wavy;
-    mat.userData.uBranchMovement.value = branchMovement;
-    mat.userData.uOverallMovement.value = effectiveOverall;
+    mat.userData.uBranchMovement.value = effectiveBranchMovement;
+    mat.userData.uOverallMovement.value = overallMovement;
     mat.userData.uWindVelocity.value = engine.windVelocity ?? 0.20;
     mat.userData.uFlutterIntensity.value = engine.flutterIntensity ?? 0.50;
   }

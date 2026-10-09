@@ -19,7 +19,7 @@ import { getBushMorphScale, isBigBranchingMode, isFiligreeMode } from "./Simulat
 /** Partners closer than this (6 units) are exempt from inter-species repulsion so they can touch. */
 const SEEK_CONTACT_RANGE_SQ = 36;
 /** Max per-step lean toward a partner. */
-const SEEK_LERP_MAX = 0.1;
+const SEEK_LERP_MAX = 0.016;
 
 import { extrudePointedTerminalCap, extrudeRootNubCap, getVectorStepPolicy, shouldSpawnAppendage } from "./SimulationTrianglePruner";
 export { extrudePointedTerminalCap, extrudeRootNubCap, getVectorStepPolicy, shouldSpawnAppendage };
@@ -48,7 +48,7 @@ export function processAgents(
 
   const livingOrganisms = engine.getLivingOrganisms();
   const livingOrganismCount = livingOrganisms.size;
-  if (livingOrganismCount >= engine.minCreatures) {
+  if (livingOrganismCount >= Math.max(4, engine.minCreatures ?? 4)) {
     engine.hasReachedMinCreatures = true;
   }
 
@@ -101,26 +101,24 @@ export function processAgents(
     }
 
     let widthSpeedMult = 1.0;
-    if (agent.genome.archetype === "tree" && !agent.isFeeler) {
+    if ((agent.genome.archetype === "tree" || agent.genome.archetype === "rhizome") && !agent.isFeeler) {
       const d = agent.branchDepth || 0;
-      widthSpeedMult = d === 0 ? 1.90 : d <= 2 ? 1.75 : 1.85;
+      widthSpeedMult = d === 0 ? 1.55 : d <= 2 ? 1.50 : 1.48;
     } else if (engine.widthGrowthEffect) {
-      const refThickness = Math.max(0.1, agent.thickness);
-      widthSpeedMult = Math.pow(1.0 / refThickness, engine.widthGrowthEffect);
-      widthSpeedMult = Math.max(0.1, Math.min(5.0, widthSpeedMult));
+      const refThickness = Math.max(0.18, agent.thickness);
+      widthSpeedMult = Math.max(0.75, Math.min(1.6, Math.pow(1.0 / refThickness, engine.widthGrowthEffect * 0.45)));
     }
 
     const branchCountForBoost = strainCounts.get(agent.genome.name) || 1;
     const branchGrowthMultiplier =
       1.0 +
       Math.min(
-        0.35,
-        Math.max(0, branchCountForBoost - 1) * 0.015 * (engine.branchGrowthBoost || 0.2),
+        0.10,
+        Math.max(0, branchCountForBoost - 1) * 0.008 * (engine.branchGrowthBoost || 0.2),
       );
 
     const overSoftBudget = !isDying && !agent.isFeeler && isOverSizeBudget(engine, agent.genome.name);
-    const isTreeTwig = agent.genome.archetype === "tree" && (agent.branchDepth || 0) >= 3;
-    const budgetPaceMult = overSoftBudget ? (isTreeTwig ? 0.85 : 0.32) : 1.0;
+    const budgetPaceMult = overSoftBudget ? 0.90 : 1.0;
 
     const speedMult =
       baseSpeedMult *
@@ -168,6 +166,7 @@ export function processAgents(
       }
       const { genome } = agent;
       const habit = resolveAgentHabit(engine, genome);
+      const cGene = THREE.MathUtils.clamp(genome.curvinessGene ?? 0.5, 0, 1);
 
       let effectiveBifurcationRate = genome.bifurcationRate;
       let effectiveWanderIntensity = genome.wanderIntensity;
@@ -204,7 +203,7 @@ export function processAgents(
       } else if (genome.archetype === "rhizome" || habit === "rhizome_web") {
         effectiveBifurcationRate *= 8.5 * (engine.rhizomeBranching ?? 1.0);
         effectiveStepSize *= (engine.rhizomeStepSize ?? 0.85) * 0.82;
-        effectiveWanderIntensity *= 0.85;
+        effectiveWanderIntensity *= 1.8;
       }
 
       const thickRatio = agent.thickness / Math.max(0.5, genome.thicknessBase);
@@ -212,7 +211,7 @@ export function processAgents(
       effectiveBifurcationRate *= Math.max(0.8, widthBoost);
       // Soft size budget: keeper/seeker tips retain healthy branching so organisms never turn into unbranched snakes
       if (isOverSizeBudget(engine, genome.name)) {
-        effectiveBifurcationRate = agent.isSeekerTwig ? effectiveBifurcationRate * 0.55 : effectiveBifurcationRate * 0.25;
+        effectiveBifurcationRate *= agent.isSeekerTwig ? 0.85 : 0.72;
       }
 
       // Botanical step-size scaling per branch order
@@ -220,18 +219,19 @@ export function processAgents(
         const bushStepScale = engine.bushStepSize ?? 0.75;
         const morphStep = genome.stepSize * Math.pow(getBushMorphScale(genome), 0.35);
         effectiveStepSize = Math.max(
-          0.20,
-          morphStep * bushStepScale * Math.pow(0.86, Math.min(4, agent.branchDepth || 0)),
+          0.26,
+          morphStep * bushStepScale * Math.pow(0.93, Math.min(3, agent.branchDepth || 0)),
         );
       } else {
         effectiveStepSize = getBotanicalStepSize(engine, agent, effectiveStepSize);
       }
-      const treeModel = isTreeModelAgent(agent);
+      const treeModel = isTreeModelAgent(agent) && !agent.isSeekerTwig;
       if (treeModel) {
         ensureTreeAgentInit(engine, agent);
         effectiveStepSize = getTreeStepSize(engine, agent);
         if (isFiligreeMode(genome)) effectiveStepSize = Math.min(effectiveStepSize, 0.42);
       }
+      if (agent.isSeekerTwig) effectiveStepSize = THREE.MathUtils.clamp(effectiveStepSize, 0.30, 0.38);
       if (agent.isFeeler) {
         // Scaled from the parent's botanical step at spawn (was a fixed 1.3)
         effectiveStepSize = getFeelerStepSize(agent);
@@ -350,6 +350,26 @@ export function processAgents(
           effectiveStepSize = Math.min(effectiveStepSize, agent.feelerStepOverride);
         }
       } else {
+        const depth = agent.branchDepth || 0;
+        const dist = Math.sqrt(nearestDistSq);
+
+        // Bounded seeking: outer tips only, subtle lean BEFORE waving/spiral
+        if (canSeek && nearestTargetPos && nearestTarget && seekRamp > 0 &&
+          ((agent.branchDepth || 0) >= (desperate ? 1 : 2) || agent.isSeekerTwig) && dist < seekRadius) {
+          const evo = getEvolutionStepConfig((engine as any).evolutionStep);
+          const toTarget = new THREE.Vector3()
+            .subVectors(nearestTargetPos, agent.position)
+            .normalize();
+          const twigBoost = agent.isSeekerTwig ? 1.5 : 1.0;
+          agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean * twigBoost) * seekRamp).normalize();
+        } else if (nearestTargetPos && seekRamp <= 0 && dist < 18.0) {
+          const awayFromTarget = new THREE.Vector3()
+            .subVectors(agent.position, nearestTargetPos)
+            .normalize();
+          const repulsionLean = 0.02 * (1.0 - dist / 18.0);
+          agent.direction.lerp(awayFromTarget, repulsionLean).normalize();
+        }
+
         // Apply authentic botanical steering (Gnarled Oak, Elm vase, Pine whorls, Willow droop, Rhizome web)
         applyBotanicalConceptSteering(
           engine,
@@ -358,16 +378,26 @@ export function processAgents(
           effectiveWanderIntensity,
         );
 
-        const depth = agent.branchDepth || 0;
-        const skipCurvature = treeModel && depth <= 1;
-        if (!skipCurvature && genome.movementType === "spiral") {
+        // Continuous 3D harmonic waving on all non-feeler agents (trunks, limbs, and twigs)
+        const refUp = Math.abs(agent.direction.y) < 0.92 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+        const waveAxisA = new THREE.Vector3().crossVectors(agent.direction, refUp).normalize();
+        const waveAxisB = new THREE.Vector3().crossVectors(agent.direction, waveAxisA).normalize();
+        const waveFreq = (genome.wavingSpeed || 0.18) * (1.0 + depth * 0.16);
+        const waveAmp = THREE.MathUtils.clamp(genome.wavingAmplitude || 0.09, 0.07, 0.14) * (depth === 0 ? 0.85 : 1.0 + Math.min(3, depth) * 0.15) * THREE.MathUtils.lerp(0.18, 1.35, cGene);
+        const waveA = Math.sin(engine.time * waveFreq + agent.age * 0.22 + (agent.id || 0) * 1.618) * waveAmp;
+        const waveB = Math.cos(engine.time * waveFreq * 0.85 + agent.age * 0.18 + (agent.id || 0) * 2.718) * waveAmp * 0.82;
+        agent.direction.applyAxisAngle(waveAxisA, waveA).applyAxisAngle(waveAxisB, waveB).normalize();
+
+        if (genome.movementType === "spiral") {
+          const spiralSign = ((agent.id || 0) % 2 === 0 ? 1 : -1);
           if (!agent.spiralAxis) {
-            agent.spiralAxis = agent.direction.clone().normalize();
+            agent.spiralAxis = new THREE.Vector3().crossVectors(agent.direction, refUp).normalize()
+              .addScaledVector(agent.direction, 0.28).normalize();
           } else {
-            agent.spiralAxis.lerp(agent.direction, 0.12).normalize();
+            agent.spiralAxis.addScaledVector(new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02), 1).normalize();
           }
-          agent.direction.applyAxisAngle(agent.spiralAxis, 0.09);
-        } else if (!skipCurvature && genome.movementType === "orthogonal") {
+          agent.direction.applyAxisAngle(agent.spiralAxis, spiralSign * THREE.MathUtils.lerp(0.06, 0.28 + (depth === 0 ? 0.04 : 0.08), cGene)).normalize();
+        } else if (genome.movementType === "orthogonal") {
           if (Math.random() < effectiveWanderIntensity * 0.12) {
             const up = new THREE.Vector3(
               Math.random(),
@@ -381,7 +411,7 @@ export function processAgents(
             }
           }
         } else {
-          const jitterScale = treeModel ? (isBigBranchingMode(genome) ? 0.04 : 0.09) : 0.35;
+          const jitterScale = treeModel ? (depth === 0 ? 0.14 : 0.24) : 0.35;
           agent.direction
             .add(
               new THREE.Vector3(
@@ -391,27 +421,6 @@ export function processAgents(
               ),
             )
             .normalize();
-        }
-
-        // CRITICAL FIX (Bug A): Do NOT override structural branch vectors with 0.75 seekStrength!
-        // Only outer canopy/rhizome tips (depth >= 2) apply a subtle phototropic/chemotropic lean (<= 0.022),
-        // preserving 100% of the organism's true botanical silhouette in Simulation Mode!
-        // Bounded seeking (plan 3.1): outer tips only, within 0.4 x world radius, lerp <= 0.1
-        const dist = Math.sqrt(nearestDistSq);
-        if (canSeek && nearestTargetPos && nearestTarget && seekRamp > 0 &&
-          ((agent.branchDepth || 0) >= (desperate ? 1 : 2) || agent.isSeekerTwig) && dist < seekRadius) {
-          const evo = getEvolutionStepConfig((engine as any).evolutionStep);
-          const toTarget = new THREE.Vector3()
-            .subVectors(nearestTargetPos, agent.position)
-            .normalize();
-          const twigBoost = agent.isSeekerTwig ? 1.5 : 1.0;
-          agent.direction.lerp(toTarget, Math.min(SEEK_LERP_MAX, evo.seekLean * twigBoost) * seekRamp).normalize();
-        } else if (nearestTargetPos && seekRamp <= 0 && dist < 18.0) {
-          const awayFromTarget = new THREE.Vector3()
-            .subVectors(agent.position, nearestTargetPos)
-            .normalize();
-          const repulsionLean = 0.035 * (1.0 - dist / 18.0);
-          agent.direction.lerp(awayFromTarget, repulsionLean).normalize();
         }
       }
 
@@ -432,9 +441,9 @@ export function processAgents(
         if (engine.sound) {
           engine.sound.onAgentBounce(agent.position, engine.camera);
         }
-        // Feelers only dissolve at boundary if they have already traveled >75% of their max reach
+        // Feelers freeze at boundary if they have already traveled >75% of their max reach
         if (agent.isFeeler && (agent.feelerTravel ?? 0) > (agent.feelerMaxLen ?? 120) * 0.75) {
-          endFeeler(engine, agent, "boundary", { dissolve: true });
+          endFeeler(engine, agent, "boundary", { dissolve: false });
         }
       }
 
@@ -456,7 +465,7 @@ export function processAgents(
           const livingNonFeelerCount = activeAgents.filter(
             (a) => a.active && !a.tapering && !a.isFeeler,
           ).length;
-          const effectiveMinBranches = isOverSizeBudget(engine, genome.name) ? 2 : minBranchesForArch;
+          const effectiveMinBranches = isOverSizeBudget(engine, genome.name) ? Math.max(4, Math.floor(minBranchesForArch * 0.75)) : minBranchesForArch;
           return (
             nonTaperingBranchesOfStrain > effectiveMinBranches &&
             livingNonFeelerCount - 1 >= engine.minCreatures
@@ -465,10 +474,13 @@ export function processAgents(
 
         if (agent.tapering) {
           agent.taperBudget = (agent.taperBudget || 0) + 1;
-          const taperDecay = Math.max(0.58, 0.76 - (agent.taperBudget || 0) * 0.04);
+          const taperDecay = Math.max(0.74, 0.86 - (agent.taperBudget || 0) * 0.02);
           agent.thickness *= taperDecay;
-          const maxTaperSteps = isBigBranchingMode(genome) ? 3 : (treeModel || isOverSizeBudget(engine, genome.name)) ? 4 : 8;
-          const minTaperThick = 0.035;
+          const refUp = Math.abs(agent.direction.y) < 0.92 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+          const perpAxis = new THREE.Vector3().crossVectors(agent.direction, refUp).normalize();
+          agent.direction.applyAxisAngle(perpAxis, 0.15 * cGene).normalize();
+          const maxTaperSteps = 12;
+          const minTaperThick = 0.024;
           if (agent.thickness <= minTaperThick || agent.taperBudget >= maxTaperSteps) {
             if (agent.id !== undefined) {
               if (!agent.rootOrigin) agent.rootOrigin = (agent.treeRoot || agent.lastPosition || agent.position).clone();
@@ -527,12 +539,13 @@ export function processAgents(
             const floorThickness =
               branchDepth === 0
                 ? Math.max(0.18, genome.thicknessBase * 0.14)
-                : Math.max(0.06, genome.thicknessBase * 0.045);
+                : Math.max(0.068, genome.thicknessBase * 0.055);
             if (agent.thickness < floorThickness) {
               agent.thickness = floorThickness;
             }
-            if (branchDepth >= (engine.maxBranchDepth ?? 5) && agent.age > 75) {
-              agent.branchDepth = Math.max(1, (engine.maxBranchDepth ?? 5) - 2);
+            if ((branchDepth >= (engine.maxBranchDepth ?? 4) - 1 || agent.age > 55) && branchDepth >= 2) {
+              agent.branchDepth = 2;
+              agent.age = 20;
               (agent as any).branchSteps = 0;
               (agent as any).branchDist = 0;
               (agent as any).distSinceLastFork = 0;
@@ -545,7 +558,7 @@ export function processAgents(
               THREE.MathUtils.clamp((genome as any).rambleFactor ?? 1.2, 1.0, 2.2);
             const termChance =
               (engine.terminationProb || 0.05) * 0.014 * (1.0 + branchDepth * 0.5) * archTaper;
-            const minTwigThreshold = 0.055;
+            const minTwigThreshold = 0.042;
             const canTaper = canBushTipTaper(agent);
             if (
               canTaper &&
@@ -559,6 +572,13 @@ export function processAgents(
             }
           }
         }
+      }
+
+      if (agent.targetThickness !== undefined && !agent.tapering) {
+        agent.thickness += (agent.targetThickness - agent.thickness) * 0.08;
+      }
+      if (!agent.isFeeler && !agent.tapering && agent.age % 12 === 0 && cGene > 0.35 && Math.random() < 0.35) {
+        agent.thickness = Math.min(genome.thicknessBase * 1.5, agent.thickness * (1.0 + 0.18 * cGene));
       }
 
       agent.thickness = THREE.MathUtils.clamp(
@@ -578,7 +598,11 @@ export function processAgents(
             : agent.age >= 25
               ? 1.0
               : 0.72 + 0.28 * (agent.age / 25);
-      const renderThickness = Math.max(0.001, agent.thickness * ageScale);
+      const tuberAmp = THREE.MathUtils.lerp(0.015, 0.18, cGene);
+      const tuberWave = (!agent.isFeeler && !agent.tapering)
+        ? (1.0 + tuberAmp * Math.sin(agent.age * 0.32 + (agent.id || 0) * 1.9) + (tuberAmp * 0.5) * Math.cos(agent.age * 0.17 + (agent.id || 0) * 0.7))
+        : 1.0;
+      const renderThickness = Math.max(0.001, agent.thickness * ageScale * tuberWave);
 
       if (isRootTrunk && agent.age === 1) {
         extrudeRootNubCap(engine, agent, genome, renderThickness);
@@ -642,17 +666,14 @@ export function processAgents(
         ).length;
         const isUnderMinCreatures = livingNonFeelerCount < engine.minCreatures;
         if (genome.archetype === "bush") {
-          const activeBushTips = strainCounts.get(genome.name) || 1;
-          if (!isOverSizeBudget(engine, genome.name) || activeBushTips <= 4) {
-            stepBushTendrilBranching(
-              engine,
-              agent,
-              activeAgents,
-              newAgents,
-              strainCounts,
-              isUnderMinCreatures,
-            );
-          }
+          stepBushTendrilBranching(
+            engine,
+            agent,
+            activeAgents,
+            newAgents,
+            strainCounts,
+            isUnderMinCreatures,
+          );
         } else {
           executeBotanicalBranching(
             engine,
@@ -734,8 +755,9 @@ export function processAgents(
   for (let i = 0; i < activeAgents.length; i++) {
     const a = activeAgents[i];
     if (a.isFeeler && !a.active && !a.feelerEnded) {
-      endFeeler(engine, a, isStrainDyingPhase(engine, a.realGenome?.name) ? "parentDying" : "targetLost", {
-        dissolve: true,
+      const hostDying = isStrainDyingPhase(engine, a.realGenome?.name || (a.genome as any).parentStrainName);
+      endFeeler(engine, a, hostDying ? "parentDying" : "targetLost", {
+        dissolve: hostDying,
         detail: "external",
       });
     }

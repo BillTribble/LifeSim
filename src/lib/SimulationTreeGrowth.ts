@@ -38,19 +38,19 @@ interface TreeGrowthState {
 }
 
 /** Growing tips per tree/rhizome at once (paced so crowns unfold continuously over time). */
-const MAX_GROWING_TIPS = 56;
+const MAX_GROWING_TIPS = 9;
 /** Below this many growing tips (and an empty bud bank) the tree sprouts a new shoot. */
-const MIN_GROWING_TIPS = 2;
+const MIN_GROWING_TIPS = 4;
 const MAX_BANKED_BUDS = 240;
 const MAX_NODES = 240;
 /** Growth steps between bud openings / new shoots. */
-const BUD_RELEASE_MIN = 0.03;
-const BUD_RELEASE_RANGE = 0.03;
-const SHOOT_MIN = 2.2;
-const SHOOT_RANGE = 1.2;
+const BUD_RELEASE_MIN = 0.22;
+const BUD_RELEASE_RANGE = 0.14;
+const SHOOT_MIN = 0.42;
+const SHOOT_RANGE = 0.28;
 /** Shoots slowly lose vigor (shorter), floored so the tree never stops growing. */
 const SHOOT_VIGOR_DECAY = 0.994;
-const SHOOT_VIGOR_FLOOR = 0.78;
+const SHOOT_VIGOR_FLOOR = 0.82;
 
 const states = new WeakMap<SimulationEngine, Map<string, TreeGrowthState>>();
 
@@ -87,17 +87,12 @@ export function offerTreeBud(engine: SimulationEngine, bud: Agent): boolean {
   const isSoft = !!(engine as any)._isSoftwareRaster;
   const depth = bud.branchDepth || 0;
 
-  // Never bank structural limbs (depth <= 2) so all big limbs grow out synchronously
-  if (depth <= 2) {
+  // Never bank structural limbs (depth <= 1)
+  if (depth <= 1) {
     s.growing++;
     return false;
   }
-  const hasPrimaryGrowing = s.buds.some((b) => (b.branchDepth || 0) <= 2);
-  if (!hasPrimaryGrowing && s.growing < (isSoft ? 48 : MAX_GROWING_TIPS)) {
-    s.growing++;
-    return false;
-  }
-  if (s.growing < 2 && s.buds.length === 0) {
+  if (s.growing < (isSoft ? 8 : MAX_GROWING_TIPS)) {
     s.growing++;
     return false;
   }
@@ -174,6 +169,10 @@ function pickNode(engine: SimulationEngine, s: TreeGrowthState, minDepth: number
     }
     if (k >= 2 && best) break; // up to 3 valid candidates
   }
+  // Fallback to any node if nearBoundary / depth check rejected everything
+  if (!best && s.nodes.length > 0) {
+    best = s.nodes[Math.floor(Math.random() * s.nodes.length)] || null;
+  }
   return best;
 }
 
@@ -203,6 +202,19 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
   count(activeAgents);
   count(newAgents);
 
+  // Populate alive from engine.biomassMap as well so map.delete(name) NEVER deletes a living tree/rhizome's state!
+  if (engine.biomassMap) {
+    for (const [name, bio] of engine.biomassMap.entries()) {
+      if (
+        bio > 0 &&
+        !engine.dyingStrains?.has(name) &&
+        engine.speciesLifecycleMap?.get(name)?.phase !== "END_OF_LIFE"
+      ) {
+        alive.add(name);
+      }
+    }
+  }
+
   const dt = engine.timeScale ?? 1;
   for (const [name, s] of map) {
     if (!alive.has(name)) {
@@ -226,19 +238,21 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
     const tick = (engine.growthSpeed ?? 0.06) * (engine.treeSpeed ?? 0.65) * dt;
     const isFiligree = isFiligreeMode(s.template?.genome);
     const isSoft = !!(engine as any)._isSoftwareRaster;
-    const maxTips = isSoft ? 48 : (isFiligree ? 64 : 56);
-    const minTips = 2;
+    const maxTips = isSoft ? 8 : (isFiligree ? 12 : 10);
+    const minTips = 6;
 
     s.growing = growing.get(name) || 0;
     s.clock += tick;
-    const overTissueCap = getStrainTissueCount(engine, name) > getOrganismSegmentBudget(engine, name) * 2.15;
+    const tissueCount = getStrainTissueCount(engine, name);
+    const segBudget = getOrganismSegmentBudget(engine, name);
+    const overTissueCap = tissueCount > segBudget * 3.2;
     const hasEssentialBuds = s.buds.some((b) => (b.branchDepth || 0) <= 3);
     if (overTissueCap && !hasEssentialBuds) continue;
     if (s.clock < s.nextRelease || s.growing >= maxTips) continue;
 
     if (s.buds.length > 0) {
-      // Release buds in rich clusters when limbs finish, prioritizing lowest branchDepth first across the crown
-      const releaseLimit = isSoft ? 18 : (isFiligree ? 24 : 20);
+      // Release buds in paced clusters when limbs finish, prioritizing lowest branchDepth first across the crown
+      const releaseLimit = 2;
       const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips
         ? Math.min(releaseLimit, maxTips - s.growing)
         : 1;
@@ -262,13 +276,11 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
       s.nextRelease = s.clock + budInterval + Math.random() * BUD_RELEASE_RANGE;
     } else if (
       s.growing < minTips &&
-      !hasStructuralGrowing.has(name) &&
       s.template &&
       s.nodes.length > 0 &&
-      getStrainTissueCount(engine, name) < getOrganismSegmentBudget(engine, name) * 0.55
+      !overTissueCap
     ) {
-      const mode = s.template.genome?.morphMode;
-      const minDepth = mode === "filigree" || mode === "rhizome_lace" ? 2 : 2;
+      const minDepth = 1;
 
       const node = pickNode(engine, s, minDepth);
       const shootInterval = SHOOT_MIN + Math.random() * SHOOT_RANGE;

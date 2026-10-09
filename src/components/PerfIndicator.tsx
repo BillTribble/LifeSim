@@ -1,6 +1,7 @@
 import React from "react";
 import { Gauge } from "lucide-react";
 import { LOD_LABELS, LodMode, requestLodMode } from "../lib/SimulationLOD";
+import { DEFAULT_CAMERA_ZOOM } from "../lib/SimulationBoundary";
 
 export interface PerfStats {
   fps: number;
@@ -9,6 +10,7 @@ export interface PerfStats {
   lodMode: LodMode;
   triangles: number;
   trianglesAtHigh: number;
+  zoom?: number;
 }
 
 const MODE_CYCLE: LodMode[] = ["auto", 0, 1, 2, 3];
@@ -26,6 +28,7 @@ const DEFAULT_PERF: PerfStats = {
   lodMode: "auto",
   triangles: 0,
   trianglesAtHigh: 0,
+  zoom: DEFAULT_CAMERA_ZOOM,
 };
 
 /**
@@ -36,6 +39,7 @@ export function PerfIndicator({ perf: rawPerf, showHUD }: { perf?: PerfStats; sh
   if (!showHUD) return null;
   const perf = rawPerf ?? DEFAULT_PERF;
   const reduced = perf.lodTier > 0;
+  const zoomVal = perf.zoom ?? DEFAULT_CAMERA_ZOOM;
 
   const modeLabel = perf.lodMode === "auto" ? "Auto" : "Fixed";
   const savedPct = perf.trianglesAtHigh > 0
@@ -52,7 +56,7 @@ export function PerfIndicator({ perf: rawPerf, showHUD }: { perf?: PerfStats; sh
     <button
       onClick={cycle}
       className="h-7 flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 rounded-full bg-[#001220]/80 backdrop-blur-md border border-[#D2B48C]/40 text-[9px] sm:text-[10px] font-mono text-[#D2B48C] pointer-events-auto shadow-sm select-none whitespace-nowrap hover:bg-white/10 transition-colors shrink-0"
-      title={`View detail: ${modeLabel} (${LOD_LABELS[perf.lodTier]}). Click to cycle Auto / High / Medium / Low / Minimal.\nView-only: creature growth is unaffected.\n${perf.triangles.toLocaleString()} triangles drawn (${perf.trianglesAtHigh.toLocaleString()} at High).`}
+      title={`View detail: ${modeLabel} (${LOD_LABELS[perf.lodTier]}). Click to cycle Auto / High / Medium / Low / Minimal.\nView-only: creature growth is unaffected.\n${perf.triangles.toLocaleString()} triangles drawn (${perf.trianglesAtHigh.toLocaleString()} at High).\nCamera zoom: ${zoomVal.toFixed(2)}x`}
     >
       <Gauge className="w-3.5 h-3.5 text-[#87CEEB] shrink-0" />
       <span className="shrink-0">{perf.fps} FPS</span>
@@ -61,6 +65,7 @@ export function PerfIndicator({ perf: rawPerf, showHUD }: { perf?: PerfStats; sh
       </span>
       <span className="hidden lg:inline shrink-0 opacity-70">{formatTris(perf.triangles)} tris</span>
       {reduced && savedPct > 0 && <span className="hidden xl:inline shrink-0 text-emerald-300/80">-{savedPct}%</span>}
+      <span className="shrink-0 text-[#87CEEB]" data-testid="perf-zoom">Zoom {zoomVal.toFixed(2)}x</span>
     </button>
   );
 }

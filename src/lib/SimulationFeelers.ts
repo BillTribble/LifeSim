@@ -12,14 +12,15 @@ import { getEffectiveMaxMatings, getStrainTissueIndex } from "./SimulationPartne
 
 /**
  * Feelers: temporary sensory extensions of an organism. They inherit the root organism's genome
- * and archetype, never spawn feelers, and dissolve when they fail to mate or the parent dies.
+ * and archetype, never spawn feelers, and persist on screen until their parent organism dies.
  */
 
 export type FeelerEndReason = "mated" | "parentDying" | "targetLost" | "lifetime" | "reach" | "boundary";
 
 /**
  * Ends a feeler exactly once: deactivates it and logs `[FEELER_END] len=… reason=…`.
- * When `dissolve` is set its trail segments fade out (FEELER_FADE dial controls the speed).
+ * By default, feelers freeze in place and persist until their parent organism dies.
+ * When `opts.dissolve === true` is explicitly passed, its trail segments fade out immediately.
  */
 export function endFeeler(
   engine: SimulationEngine,
@@ -30,7 +31,7 @@ export function endFeeler(
   agent.active = false;
   if (!agent.isFeeler || agent.feelerEnded) return;
   agent.feelerEnded = true;
-  if (opts.dissolve) engine.markAgentSegmentsDying(agent.id);
+  if (opts.dissolve === true) engine.markAgentSegmentsDying(agent.id);
   const root = agent.realGenome?.name ?? agent.genome.name;
   engine.onLog(
     `[FEELER_END] len=${(agent.feelerTravel ?? 0).toFixed(1)} reason=${reason} owner=${root} target=${agent.feelerTargetStrain ?? "?"} age=${agent.age}${opts.detail ? ` detail=${opts.detail}` : ""}`,
@@ -138,9 +139,9 @@ export const FEELER_MAX_LIFETIME_STEPS = 140;
 /** Feeler step relative to the parent tip's botanical step. */
 const FEELER_STEP_SCALE = 1.05;
 /** Per-step turn toward the target (was a hard copy, which drew ruler-straight rays). */
-const FEELER_HOMING_LERP = 0.34;
+const FEELER_HOMING_LERP = 0.11;
 /** Stronger homing inside a few steps of the target so feelers land instead of orbiting. */
-const FEELER_CLOSE_HOMING_LERP = 0.72;
+const FEELER_CLOSE_HOMING_LERP = 0.55;
 
 /**
  * Maximum feeler reach (spawn distance gate and travel cap): allows feelers to bridge the gap
@@ -161,7 +162,7 @@ export function getFeelerMaxReach(engine: SimulationEngine, genome?: any): numbe
 
 /** Per-step feeler length, scaled from the parent tip's last botanical step. */
 export function getFeelerStepSize(agent: Agent): number {
-  return agent.feelerStep ?? Math.min(1.6, Math.max(1.0, agent.genome.stepSize || 1.0));
+  return agent.feelerStep ?? Math.min(0.75, Math.max(0.50, (agent.genome.stepSize || 1.0) * 0.65));
 }
 
 /**
@@ -180,7 +181,7 @@ export function spawnFeeler(
 ): void {
   const rootGenome = resolveRootOrganismGenome(agent, engine);
   const feelerGenome = createFeelerGenome(agent, engine);
-  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 1.1) * FEELER_STEP_SCALE, 0.95, 1.6);
+  const step = THREE.MathUtils.clamp((agent.lastStepSize ?? 0.8) * 0.70, 0.50, 0.75);
   const maxLen = Math.max(1.35 * targetDist + 8 * step, Math.min(1.45 * targetDist + 12 * step, getFeelerMaxReach(engine, rootGenome)));
   newAgents.push({
     id: engine.nextAgentId++,
@@ -246,8 +247,8 @@ function insideAnyAnchor(anchors: THREE.Vector3[], x: number, y: number, z: numb
 
 /**
  * Per-step feeler update: lifecycle checks, then organic homing toward the locked target.
- * Every exit path dissolves the feeler (AGENTS.md: feelers dissolve if they fail to mate or
- * their parent dies) and logs [FEELER_END].
+ * Exit paths freeze the feeler in place (AGENTS.md: feelers persist on screen once ended
+ * and only dissolve when their parent organism dies) and log [FEELER_END].
  */
 export function updateFeelerSeeking(
   agent: Agent,
@@ -260,10 +261,10 @@ export function updateFeelerSeeking(
   const lifecycleMap = engine.speciesLifecycleMap as any;
   const myMCount = lifecycleMap?.get(myStrainName)?.matingCount || 0;
   const myMaxM = getEffectiveMaxMatings(engine, myMCount);
-  const dissolve = { dissolve: true };
+  const dissolve = { dissolve: false };
 
   if (!engine.allowBreeding) return endFeeler(engine, agent, "parentDying", { ...dissolve, detail: "breedingOff" });
-  if (isStrainDying(engine, myStrainName)) return endFeeler(engine, agent, "parentDying", dissolve);
+  if (isStrainDying(engine, myStrainName)) return endFeeler(engine, agent, "parentDying", { dissolve: true });
   if (myMCount >= myMaxM) {
     return endFeeler(engine, agent, "parentDying", { ...dissolve, detail: "exhausted" });
   }
@@ -368,10 +369,18 @@ export function updateFeelerSeeking(
     agent.feelerStepOverride = dist;
     return;
   }
-  const lerp = dist < step * 4 ? FEELER_CLOSE_HOMING_LERP : FEELER_HOMING_LERP;
+  const isClose = dist < step * 3.5;
+  const lerp = isClose ? FEELER_CLOSE_HOMING_LERP : FEELER_HOMING_LERP;
   const wander = (agent.genome.wanderIntensity ?? 0.15) * 0.35;
   agent.direction
     .lerp(homing, lerp)
-    .add(new THREE.Vector3((Math.random() - 0.5) * wander, (Math.random() - 0.5) * wander, (Math.random() - 0.5) * wander))
-    .normalize();
+    .add(new THREE.Vector3((Math.random() - 0.5) * wander, (Math.random() - 0.5) * wander, (Math.random() - 0.5) * wander));
+
+  if (!isClose) {
+    const up = Math.abs(agent.direction.y) < 0.92 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    const waveAxis = new THREE.Vector3().crossVectors(agent.direction, up).normalize();
+    const waveAmp = 0.14 * Math.sin((agent.age || 0) * 0.22 + (agent.id || 0));
+    agent.direction.addScaledVector(waveAxis, waveAmp);
+  }
+  agent.direction.normalize();
 }

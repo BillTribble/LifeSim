@@ -179,11 +179,8 @@ export function isMobileViewport(width: number): boolean {
 }
 
 const REF_ASPECT = 1.6;
+export const DEFAULT_CAMERA_ZOOM = 1.4334425469092252;
 
-/**
- * Computes the camera distance from `controls.target` using a locked reference
- * horizontal aspect ratio so resizing the viewport never zooms creatures bigger or smaller.
- */
 export function getResponsiveBoundaryCameraDistance(engine: SimulationEngine): number {
   const b = Math.max(10, engine.boundarySize || 45);
   const targetWidthFill = 0.71;
@@ -196,6 +193,12 @@ export function getResponsiveBoundaryCameraDistance(engine: SimulationEngine): n
   const k = 1.0 / (targetWidthFill * tanHalfHRef);
 
   return b * Math.sqrt(1.0 + k * k);
+}
+
+export function getZoomedBoundaryCameraDistance(engine: SimulationEngine): number {
+  const baseDist = getResponsiveBoundaryCameraDistance(engine);
+  const zoom = Math.max(0.05, engine.cameraZoom || DEFAULT_CAMERA_ZOOM);
+  return baseDist / zoom;
 }
 
 /**
@@ -237,7 +240,7 @@ export function applyResponsiveBoundaryCameraDistance(engine: SimulationEngine):
   const tanHalfV = tanHalfHRef / aspect;
   const lockedHorizFOV = THREE.MathUtils.clamp((Math.atan(tanHalfV) * 360) / Math.PI, 1.0, 120.0);
 
-  const newDist = getResponsiveBoundaryCameraDistance(engine);
+  const newDist = getZoomedBoundaryCameraDistance(engine);
 
   const lastW = (engine as any)._lastViewportWidth;
   const lastH = (engine as any)._lastViewportHeight;

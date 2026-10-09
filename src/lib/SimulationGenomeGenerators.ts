@@ -253,6 +253,11 @@ export function breedGenomes(
     g2.windStyle ?? "stiff", g2.recessive?.windStyle
   );
 
+  const curvyInheritance = selectMendelianAlleles(
+    g1.curvinessGene ?? 0.5, g1.recessive?.curvinessGene,
+    g2.curvinessGene ?? 0.5, g2.recessive?.curvinessGene
+  );
+
   // Stable Color Blending: Direct lerp of expressed parent colors with tight variation (+/- 0.015)
   const h1 = g1.color.getHSL({ h: 0, s: 0, l: 0 });
   const h2 = g2.color.getHSL({ h: 0, s: 0, l: 0 });
@@ -358,6 +363,7 @@ export function breedGenomes(
       0,
       1
     ),
+    curvinessGene: curvyInheritance.expressed,
 
     // Carried Recessive Genes (passed to future generations)
     recessive: {
@@ -372,6 +378,7 @@ export function breedGenomes(
       canopyZone: canopyInheritance.recessive,
       phyllotaxisMode: phylloInheritance.recessive,
       windStyle: windInheritance.recessive,
+      curvinessGene: curvyInheritance.recessive,
     },
   };
   inheritGenomeMorphology(res, g1, g2);

@@ -10,7 +10,7 @@ import {
   buildBoundaryGeometry, applyResponsiveBoundaryCameraDistance,
   getEffectiveBoundaryExtents, clampInsideBounds,
 } from "./SimulationBoundary";
-import { assignGenomeMorphology, pickMorphModeForArchetype, computeInitialTrunkThickness } from "./SimulationMorphology";
+import { assignGenomeMorphology, pickMorphModeForArchetype, computeInitialTrunkThickness, setupFoundersCurviness } from "./SimulationMorphology";
 import {
   resetCamera, executeReset, initSpeciesLifecycle, killSpecies,
   spawnHybridArtifact, updateGridHelpers, handleScreenFade,
@@ -635,6 +635,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
     betaGenome.genomeHash = getHashForFamilyAndRange(betaFamily, "beta");
   }
 
+  setupFoundersCurviness(alphaGenome, betaGenome);
   assignGenomeMorphology(alphaGenome);
   assignGenomeMorphology(betaGenome, pickMorphModeForArchetype(betaArchetype, alphaGenome.morphMode));
 

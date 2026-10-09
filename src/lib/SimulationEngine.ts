@@ -41,7 +41,7 @@ import {
 import { SimulationSound, SoundEnvironmentId } from "./SimulationSound";
 import { LodState, createLodState, updateAdaptiveLOD } from "./SimulationLOD";
 import { isMobileDevice, MOBILE_MAX_POINTS, MOBILE_DEFAULT_MAX_DOMS } from "./SimulationVertexTrimmer";
-import { applyResponsiveBoundaryCameraDistance, isMobileViewport } from "./SimulationBoundary";
+import { DEFAULT_CAMERA_ZOOM, applyResponsiveBoundaryCameraDistance, isMobileViewport } from "./SimulationBoundary";
 export class SimulationEngine {
   isMobile: boolean = isMobileDevice();
   maxPoints: number = isMobileDevice() ? MOBILE_MAX_POINTS : MAX_POINTS;
@@ -201,7 +201,7 @@ export class SimulationEngine {
   boundarySize: number = 45;
   boundarySquash: number = 1.0;
   boundaryShape: "sphere" | "cube" = Math.random() < 0.5 ? "sphere" : "cube";
-  maxCreatures: number = 5;
+  maxCreatures: number = 10;
   ecoFade: number = 0.5769956505103522;
   probGlow: number = 0.0;
   branchSplitSizeProb: number = 0.6199182775180784;
@@ -302,7 +302,7 @@ export class SimulationEngine {
   randomizeColors() {
     randomizeColors(this);
   }
-  cameraZoom: number = 1.15;
+  cameraZoom: number = DEFAULT_CAMERA_ZOOM;
   cameraHeight: number = 75;
   gridHeight: number = 166;
   layerGap: number = 166;
@@ -330,11 +330,8 @@ export class SimulationEngine {
   setRotationSpeed(speed: number) { this.rotationSpeed = speed; if (this.controls) this.controls.autoRotateSpeed = speed; }
   setRotationSpeedY(speed: number) { this.rotationSpeedY = speed; }
   setCameraZoom(zoom: number) {
-    this.cameraZoom = zoom;
-    if (this.camera) {
-      this.camera.zoom = zoom;
-      this.camera.updateProjectionMatrix();
-    }
+    this.cameraZoom = Math.max(0.05, zoom);
+    applyResponsiveBoundaryCameraDistance(this);
   }
   setCameraHeight(height: number) {
     this.cameraHeight = height;
@@ -542,9 +539,23 @@ export class SimulationEngine {
         a.active &&
         !a.tapering &&
         !a.isFeeler &&
-        !(this.dyingStrains && this.dyingStrains.has(a.genome.name))
+        !(this.dyingStrains && this.dyingStrains.has(a.genome.name)) &&
+        this.speciesLifecycleMap?.get(a.genome.name)?.phase !== "END_OF_LIFE"
       ) {
         living.add(a.genome.name);
+      }
+    }
+    // Also include organisms that have positive live standing biomass and are not dying / END_OF_LIFE
+    if (this.biomassMap) {
+      for (const [name, bio] of this.biomassMap.entries()) {
+        if (
+          bio > 0 &&
+          !(this.dyingStrains && this.dyingStrains.has(name)) &&
+          this.speciesLifecycleMap?.get(name)?.phase !== "END_OF_LIFE" &&
+          (this.genomeMap?.has(name) || this.agents.some((a) => a.genome.name === name))
+        ) {
+          living.add(name);
+        }
       }
     }
     return living;
@@ -615,7 +626,8 @@ export class SimulationEngine {
       this.renderer.render(this.fadeScene, this.fadeCamera);
       this.renderer.autoClear = true;
     }
-    if (this.reqId % 15 === 0) {
+    const zoomChanged = Math.abs((this.cameraZoom || DEFAULT_CAMERA_ZOOM) - ((this as any)._lastEmittedZoom || 0)) > 0.002;
+    if (this.reqId % 15 === 0 || zoomChanged) {
       emitStateUpdate(this);
     }
   };

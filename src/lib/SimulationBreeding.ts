@@ -200,9 +200,9 @@ export function handleBreedingAndFeelers(
         const parent2Genome = resolveRootOrganismGenome(nearestPartner, engine);
         let allowBreeding = true;
         const isSoft = !!(engine as any)._isSoftwareRaster;
-        const effectiveMaxCreatures = isSoft ? Math.min(4, engine.maxCreatures) : engine.maxCreatures;
-        const effectiveMinCreatures = isSoft ? Math.min(3, engine.minCreatures) : engine.minCreatures;
-        if (nonTaperingStrains.size >= effectiveMaxCreatures) {
+        const effectiveMinCreatures = Math.max(4, engine.minCreatures ?? 4);
+        const effectiveMaxCreatures = Math.max(effectiveMinCreatures + 1, isSoft ? Math.min(8, engine.maxCreatures ?? 10) : (engine.maxCreatures ?? 10));
+        if (engine.hasReachedMinCreatures && nonTaperingStrains.size >= effectiveMaxCreatures) {
           const parentAName = parent1Genome.name;
           const parentBName = parent2Genome.name;
           const lcMap = (engine as any).speciesLifecycleMap;

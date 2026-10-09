@@ -37,13 +37,18 @@ function collectLiveGeometry(engine: SimulationEngine): StrainGeometry {
   return { liveSegs, centroids };
 }
 
-/** Strains owning live, non-dying segments with no active agent (tips or feelers) and not dying. */
+/** Strains owning live, non-dying segments with no active agent that are already dying, at END_OF_LIFE, or have no genome. */
 function findGhostStrains(engine: SimulationEngine, geo: StrainGeometry): string[] {
   const owners = getActiveOwnerNames(engine.agents);
   const ghosts: string[] = [];
   for (const name of geo.liveSegs.keys()) {
     if (owners.has(name)) continue;
-    if (engine.dyingStrains && engine.dyingStrains.has(name)) continue;
+    // NEVER treat a living organism as a ghost strain!
+    const isDying = engine.dyingStrains && engine.dyingStrains.has(name);
+    const lc = engine.speciesLifecycleMap?.get(name);
+    const isEol = lc?.phase === "END_OF_LIFE";
+    const hasGenome = engine.genomeMap?.has(name);
+    if (!isDying && !isEol && hasGenome) continue;
     ghosts.push(name);
   }
   return ghosts;

@@ -5,7 +5,7 @@ import { MAX_POINTS } from './SimulationTypes';
 import { setupShaderMaterial, setupLeafShaderMaterial } from './SimulationGenetics';
 import { APPENDAGE_BUILDERS, buildVariants, registerLodMesh, stemGeometry, SHARED_INSTANCE_ATTRIBUTES } from './SimulationLOD';
 import { weldNonIndexedGeometry } from './SimulationVertexTrimmer';
-import { getResponsiveBoundaryCameraDistance } from './SimulationBoundary';
+import { getZoomedBoundaryCameraDistance } from './SimulationBoundary';
 
 export function setupSimulationScene(engine: SimulationEngine, width: number, height: number) {
     engine.width = width;
@@ -17,9 +17,11 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
     engine.scene.fog = new THREE.Fog(initialBgHex, 120, 771.53);
     
     const aspect = width / Math.max(1, height);
-    const initCamX = 0;
+    const initDist = getZoomedBoundaryCameraDistance(engine);
+    const initDir = new THREE.Vector3(-60.54567454015903, 0, 42.08034001656362).normalize();
+    const initCamX = initDir.x * initDist;
     const initCamY = creatureCenterY;
-    const initCamZ = -getResponsiveBoundaryCameraDistance(engine);
+    const initCamZ = initDir.z * initDist;
 
     engine.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
     engine.camera.position.set(initCamX, initCamY, initCamZ);
@@ -31,7 +33,7 @@ export function setupSimulationScene(engine: SimulationEngine, width: number, he
       engine.renderer.setPixelRatio(engine.isMobile ? Math.min(baseDpr, 1.25) : Math.min(baseDpr, 2));
       engine.controls = new OrbitControls(engine.camera, engine.renderer.domElement);
       engine.controls.target.set(0, creatureCenterY, 0);
-      engine.camera.position.set(0, creatureCenterY, initCamZ);
+      engine.camera.position.set(initCamX, initCamY, initCamZ);
       engine.camera.up.set(0, 1, 0);
       engine.camera.lookAt(engine.controls.target);
       engine.controls.enableDamping = true;

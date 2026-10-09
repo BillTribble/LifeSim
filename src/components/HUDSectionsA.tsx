@@ -647,8 +647,8 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             searchQuery={searchQuery}
             state={state}
             setters={setters}
-            keywords={["lfo", "lfo speed", "lfo rate", "wind lfo", "movement lfo", "gust speed", "swell", "oscillator"]}
-            tooltip={"MOVEMENT LFO SPEED\nBase oscillation rate of the Low-Frequency Oscillator linked to the overall MOVEMENT level (0 = steady, higher = faster wind gusts and lulls)."}
+            keywords={["lfo", "lfo speed", "lfo rate", "wind lfo", "movement lfo", "gust speed", "swell", "oscillator", "branch move"]}
+            tooltip={"MOVEMENT LFO SPEED\nBase oscillation rate of the Low-Frequency Oscillator modulating BRANCH_MOVE only (0 = steady, higher = faster branch sway gusts and lulls; does not affect SHIMMER or WAVY)."}
             label="LFO_SPEED"
             min={0.0}
             max={2.0}
@@ -661,8 +661,8 @@ export function WindMotionSection({ searchQuery, state, setters }: HUDSectionPro
             searchQuery={searchQuery}
             state={state}
             setters={setters}
-            keywords={["lfo", "lfo depth", "lfo amount", "wind lfo", "movement lfo", "gust depth", "modulation", "oscillator"]}
-            tooltip={"MOVEMENT LFO DEPTH\nPositive-only (+) wind surge modulation added to overall MOVEMENT level (0 = constant movement, higher = powerful wind gusts reaching above base level)."}
+            keywords={["lfo", "lfo depth", "lfo amount", "wind lfo", "movement lfo", "gust depth", "modulation", "oscillator", "branch move"]}
+            tooltip={"MOVEMENT LFO DEPTH\nPositive-only (+) wind surge modulation added to BRANCH_MOVE only, without affecting SHIMMER or WAVY (0 = constant branch movement, higher = powerful branch sway gusts reaching above base level)."}
             label="LFO_DEPTH"
             min={0.0}
             max={2.0}

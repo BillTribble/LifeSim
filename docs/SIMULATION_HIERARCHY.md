@@ -86,7 +86,7 @@ Whenever modifying simulation logic, population limits, lifecycle rules, or UI d
    - **No Snake Archetype**: Feelers inherit their parent organism's archetype (`bush`, `tree`, `rhizome`). They must never be assigned `"snake"` or an independent species identity.
    - **No Feeler Procreation**: Feelers cannot sprout other feelers. Only living, non-feeler vegetative branches can emit a feeler.
    - **Parent Genome Inheritance**: When a feeler mates, offspring MUST be bred from the `realGenome` of the root parent organisms. Offspring must never inherit temporary feeler navigation properties.
-   - **Feeler Dissolution / Lifespan**: Feelers must automatically taper and dissolve if they fail to mate within 10 seconds, if their parent organism dies, or once their parent reaches its mating limit (`maxMatings`).
+   - **Feeler Persistence & Dissolution**: Feelers persist on screen once they finish growing (whether they succeed in mating or fail/expire without mating) and only dissolve when their parent organism dies.
 4. **Valid Organism Archetypes**:
    - Organisms in LifeSim are strictly botanical: **`bush`**, **`tree`**, and **`rhizome`**.
    - `ARCHETYPES` array must strictly contain valid botanical archetypes. Mendelian inheritance in `breedGenomes` must never produce non-botanical archetypes.

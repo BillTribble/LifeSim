@@ -89,9 +89,10 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           ratio < ratioThreshold * 0.75 &&
           engine.speciesAbove3Percent.has(strainName) &&
           engine.hasAnyOrganismBred &&
+          engine.hasReachedMinCreatures &&
           // Don't cull an organism that was just born or just bred (it killed founders mid-breeding)
           !isRatioCullProtected(engine, strainName) &&
-          engine.getLivingOrganismCount() - 1 >= engine.minCreatures
+          engine.getLivingOrganismCount() - 1 >= Math.max(4, engine.minCreatures ?? 4)
         ) {
           engine.speciesAbove3Percent.delete(strainName);
           const pctLabel = (ratioThreshold * 100).toFixed(1);
@@ -182,9 +183,10 @@ export function performCapacityCulling(
         }
       }
     }
-    if (oldestName) {
+    if (oldestName && engine.hasReachedMinCreatures) {
       const livingOrganisms = engine.getLivingOrganismCount();
-      if (livingOrganisms - 1 >= engine.minCreatures) {
+      const minFloor = Math.max(4, engine.minCreatures ?? 4);
+      if (livingOrganisms - 1 >= minFloor) {
         engine.onLog(`⚠️ Capacity overflow (${totalActive} agents > ${cap} limit) — culling oldest: ${oldestName}`);
         engine.killSpecies(oldestName, "capacity overflow");
       }

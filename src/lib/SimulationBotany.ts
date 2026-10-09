@@ -134,7 +134,8 @@ export function applyBotanicalConceptSteering(
   const idSeed = (agent.id || 1) * 1.731;
   const age = agent.age || 0;
   const evo = getEvolutionStepConfig((engine as any).evolutionStep);
-  const curviness = Math.max(0.1, ((engine.stemCurviness ?? 3.0) / 3.0) * evo.curvinessAmp);
+  const cGene = THREE.MathUtils.clamp(agent.genome?.curvinessGene ?? 0.5, 0, 1);
+  const curviness = Math.max(0.1, ((engine.stemCurviness ?? 3.0) / 3.0) * evo.curvinessAmp) * THREE.MathUtils.lerp(0.22, 1.45, cGene);
 
   // 1. Coherent 3D Curl / Tortuosity (replaces flat noisy jitter with organic crookedness)
   if (habit === "oak" || habit === "rhizome_web" || habit === "elm" || habit === "pine" || (habit === "willow" && agent.genome.archetype === "bush")) {
@@ -154,20 +155,17 @@ export function applyBotanicalConceptSteering(
           : habit === "rhizome_web"
             ? 0.052 + Math.min(0.072, depth * 0.016)
             : 0.028 + depth * 0.01) * curviness;
-    const morphAmpMod = isBigBranchingMode(agent.genome) ? 0.22 : isFiligreeMode(agent.genome) ? 0.35 : 0.65;
-    const amp = baseAmp * morphAmpMod * (depth === 0 ? 0.25 : 1.0);
+    const morphAmpMod = isBigBranchingMode(agent.genome) ? 0.78 : isFiligreeMode(agent.genome) ? 0.90 : 1.05;
+    const amp = baseAmp * morphAmpMod * (depth === 0 ? 0.72 : 1.0);
 
-    const curlX =
-      Math.sin(age * freq + idSeed) * Math.cos(age * freq * 0.61 - idSeed);
-    const curlY =
-      Math.cos(age * freq * 0.83 + idSeed * 1.3) * (habit === "rhizome_web" ? 0.85 : 0.6);
-    const curlZ =
-      Math.sin(age * freq * 1.17 - idSeed * 0.7) *
-      Math.sin(age * freq * 0.53 + idSeed);
+    const curlX = Math.sin(age * freq + idSeed) * Math.cos(age * freq * 0.61 - idSeed);
+    const curlY = Math.cos(age * freq * 0.83 + idSeed * 1.3) * (habit === "rhizome_web" ? 0.85 : 0.6);
+    const curlZ = Math.sin(age * freq * 1.17 - idSeed * 0.7) * Math.sin(age * freq * 0.53 + idSeed);
 
     const curlVec = new THREE.Vector3(curlX, curlY, curlZ).multiplyScalar(
       amp * (0.7 + effectiveWanderIntensity * 0.5),
     );
+    curlVec.addScaledVector(agent.direction, -curlVec.dot(agent.direction));
     agent.direction.add(curlVec).normalize();
   }
 
@@ -181,14 +179,13 @@ export function applyBotanicalConceptSteering(
     if (radial3D.lengthSq() > 0.25) {
       radial3D.normalize();
       if (habit === "elm" && depth >= 1) {
-        const archProgress = Math.min(1.0, age / 75);
-        agent.direction.lerp(radial3D, 0.035 + archProgress * 0.03).normalize();
+        agent.direction.lerp(radial3D, 0.006).normalize();
       } else if (habit === "willow" && depth >= 1 && age >= 30) {
         // Gentle 3D curtain arc perpendicular to radial vector without forcing all tips to world -Y/ceiling
         const tangent = new THREE.Vector3(-radial3D.z, radial3D.x * 0.5, radial3D.x).normalize();
-        agent.direction.lerp(tangent, 0.04).normalize();
+        agent.direction.lerp(tangent, 0.008).normalize();
       } else if (habit === "oak" && depth === 1) {
-        agent.direction.lerp(radial3D, 0.03).normalize();
+        agent.direction.lerp(radial3D, 0.006).normalize();
       }
     }
   } else if (habit === "pine") {
@@ -581,7 +578,8 @@ export function executeBotanicalBranching(
   const newDirection = agent.direction.clone().applyAxisAngle(forkAxis, forkAngle).normalize();
 
   // Momentum-balanced sympodial deflection: parent kinks in the opposite direction (-forkAngle * alpha/(1-alpha))
-  const sympodialFactor = evo.sympodialFactor * (habit === "oak" ? 1.0 : habit === "rhizome_web" ? 0.88 : 0.78);
+  const cGene = THREE.MathUtils.clamp(agent.genome?.curvinessGene ?? 0.5, 0, 1);
+  const sympodialFactor = evo.sympodialFactor * (habit === "oak" ? 1.0 : habit === "rhizome_web" ? 0.88 : 0.78) * THREE.MathUtils.lerp(0.35, 1.25, cGene);
   const parentDeflection =
     -forkAngle * (alpha / Math.max(0.25, 1.0 - alpha)) * sympodialFactor;
   agent.direction.applyAxisAngle(forkAxis, parentDeflection).normalize();
@@ -645,28 +643,18 @@ export function spawnAgentAppendages(
     genome.appendage === "hair" ||
     genome.appendage === "curlyHair" ||
     genome.appendage === "spirals";
-  const hairProb = (isRhizome ? 0.22 : 0.45) * engine.ornamentFrequency * lodAppMult;
+  const hairProb = 0.08 * engine.ornamentFrequency * lodAppMult;
 
   if (isHairApp && Math.random() < hairProb) {
     const rad = Math.random() * Math.PI * 2;
-    const ax1 = new THREE.Vector3()
-      .crossVectors(agent.direction, new THREE.Vector3(0, 1, 0))
-      .normalize();
+    const ax1 = new THREE.Vector3().crossVectors(agent.direction, new THREE.Vector3(0, 1, 0)).normalize();
     const ax2 = new THREE.Vector3().crossVectors(agent.direction, ax1).normalize();
-    const dir = ax1
-      .multiplyScalar(Math.cos(rad))
-      .add(ax2.multiplyScalar(Math.sin(rad)))
-      .normalize();
+    const dir = ax1.multiplyScalar(Math.cos(rad)).add(ax2.multiplyScalar(Math.sin(rad)))
+      .addScaledVector(agent.direction, 0.75).normalize();
 
-    const hairLength = isRhizome
-      ? (1.0 + Math.random() * 1.4) * Math.min(1.0, renderThickness * 2.2)
-      : 3 + Math.random() * 4;
-    const hairStart = agent.position
-      .clone()
-      .add(dir.clone().multiplyScalar(renderThickness));
-    const hairEnd = hairStart
-      .clone()
-      .add(dir.clone().multiplyScalar(hairLength));
+    const hairLength = 0.25 + Math.random() * 0.35;
+    const hairStart = agent.position.clone().add(dir.clone().multiplyScalar(renderThickness));
+    const hairEnd = hairStart.clone().add(dir.clone().multiplyScalar(hairLength));
     engine.addLineSegment(
       hairStart,
       hairEnd,
@@ -676,10 +664,8 @@ export function spawnAgentAppendages(
       agent.id,
     );
   } else if (
-    (genome.appendage === "thorns" ||
-      genome.appendage === "crystals" ||
-      genome.appendage === "sparkles") &&
-    Math.random() < 0.4 * engine.ornamentFrequency * lodAppMult
+    (genome.appendage === "thorns" || genome.appendage === "crystals" || genome.appendage === "sparkles") &&
+    Math.random() < 0.18 * engine.ornamentFrequency * lodAppMult
   ) {
     const rad = Math.random() * Math.PI * 2;
     const ax1 = new THREE.Vector3()
@@ -688,6 +674,7 @@ export function spawnAgentAppendages(
     const dir = new THREE.Vector3()
       .crossVectors(agent.direction, ax1)
       .applyAxisAngle(agent.direction, rad)
+      .addScaledVector(agent.direction, 0.45)
       .normalize();
 
     const thornStart = agent.position
@@ -695,12 +682,12 @@ export function spawnAgentAppendages(
       .add(dir.clone().multiplyScalar(renderThickness));
     const thornEnd = thornStart
       .clone()
-      .add(dir.clone().multiplyScalar(1.5 + Math.random() * 1.8));
+      .add(dir.clone().multiplyScalar(0.45 + Math.random() * 0.55));
     engine.addLineSegment(
       thornStart,
       thornEnd,
       genome,
-      cappedAppThickness * 0.55,
+      cappedAppThickness * 0.28,
       true,
       agent.id,
     );

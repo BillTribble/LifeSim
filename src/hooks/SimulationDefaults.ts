@@ -84,7 +84,7 @@ export const DEFAULTS: Record<string, any> = {
   "maxBranchesPerSpecies": 24,
   "maxDOMs": 100000,
   "maxAgents": 560,
-  "maxCreatures": 5,
+  "maxCreatures": 10,
   "ecoFade": 0.02946475338922394,
   "minCreatures": 4,
   "boundarySize": 45,
@@ -179,7 +179,8 @@ export const DEFAULTS: Record<string, any> = {
   "fadeSpeed": 4.289796350823339,
   "pulseSpeed": 0.22800937123499115,
   "saturation": 0.3503112579376193,
-  "cameraPosition": { "x": -6.617111014782072, "y": 18.921075000000005, "z": 137.26059245762428, "zoom": 1 }
+  "cameraZoom": 1.4334425469092252,
+  "cameraPosition": { "x": -60.54567454015903, "y": 18.921075000000002, "z": 42.08034001656362, "zoom": 1.4334425469092252 }
 };
 
 export const DEFAULT_PALETTE: string[] = [
@@ -187,7 +188,7 @@ export const DEFAULT_PALETTE: string[] = [
   "#b8e986", "#f8e71c", "#f5a623", "#d0021b", "#9013fe",
 ];
 
-export const CURRENT_SCHEMA = "2026-10-08-v1.9";
+export const CURRENT_SCHEMA = "2026-10-09-v2.2";
 export const CURRENT_SOUND_SCHEMA = "2026-09-28-v1.0";
 
 const SOUND_STORAGE_KEYS = [
@@ -219,7 +220,7 @@ export function getStoredFloat(key: string, fallback?: number): number {
       if (key === "maxDOMs" && val > 500000) return 100000;
       if (key === "hybridCooldown" && val > 30) return DEFAULTS.hybridCooldown;
       if (key === "minCreatures" && (val === 11 || val === 3 || val === 14 || val === 7 || val === 6 || val === 9)) return DEFAULTS.minCreatures;
-      if (key === "maxCreatures" && (val === 10 || val === 14 || val === 15 || val === 19 || val === 7 || val === 12)) return DEFAULTS.maxCreatures;
+      if (key === "maxCreatures" && (val === 5 || val === 12 || val === 14 || val === 15 || val === 19 || val === 7)) return DEFAULTS.maxCreatures;
       if (key === "rotationSpeed" && val === 0.2) return DEFAULTS.rotationSpeed;
       if ((key === "growthSpeed" || key === "extrusionSpeed") && (Math.abs(val - 0.11) < 1e-6 || Math.abs(val - 0.24) < 1e-6)) return DEFAULTS.growthSpeed;
       if ((key === "treeSpeed" || key === "rhizomeSpeed") && Math.abs(val - 0.65) < 1e-6) return DEFAULTS[key];

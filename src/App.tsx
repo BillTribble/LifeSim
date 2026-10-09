@@ -158,6 +158,7 @@ export default function App() {
       fadeSpeed: state.desiccationSpeed,
       pulseSpeed: state.globalPulseSpeed,
       saturation: state.maxSaturation,
+      cameraZoom: stats.cameraPosition?.zoom,
       cameraPosition: stats.cameraPosition,
       version: "0.3",
     };

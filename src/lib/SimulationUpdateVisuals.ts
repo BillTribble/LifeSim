@@ -4,6 +4,7 @@ import { Genome } from "./SimulationTypes";
 import { WIND_STRIDE } from "./SimulationLOD";
 import { updateWindMaterialUniforms, computeLfoModulatedOverall } from "./SimulationWindMotion";
 import { markActiveInstancesDirty } from "./SimulationVertexTrimmer";
+import { getResponsiveBoundaryCameraDistance } from "./SimulationBoundary";
 
 // Scratch objects reused every frame (avoids per-instance heap allocations in the hot loop).
 const scratchQuat = new THREE.Quaternion();
@@ -58,6 +59,13 @@ export function updateCameraAndThemeUniforms(engine: SimulationEngine) {
       engine.camera.lookAt(target);
     }
     engine.controls.update();
+    if (!engine.designerMode && engine.controls.target) {
+      const baseDist = getResponsiveBoundaryCameraDistance(engine);
+      const actualDist = engine.camera.position.distanceTo(engine.controls.target);
+      if (actualDist > 1e-3 && baseDist > 1e-3) {
+        engine.cameraZoom = baseDist / actualDist;
+      }
+    }
   }
 
   // Theme transition progress
@@ -153,9 +161,13 @@ export function updateMeshesAndStemsGrowth(
   if ((engine as any).lastBranchMovement !== engine.branchMovement) { appChanged = true; (engine as any).lastBranchMovement = engine.branchMovement; }
   if ((engine as any).lastOverallMovement !== engine.overallMovement) { appChanged = true; (engine as any).lastOverallMovement = engine.overallMovement; }
 
-  const { effectiveOverall } = computeLfoModulatedOverall(engine);
-  const windFlutterMult = effectiveOverall * ((engine.shimmer ?? 0.04) * 0.65 + (engine.wavy ?? 0.00) * 0.35);
-  const motionActivity = Math.min(1.0, effectiveOverall * ((engine.shimmer ?? 0.04) + (engine.wavy ?? 0.00) + (engine.branchMovement ?? 0.32)));
+  const overallMovement = engine.overallMovement ?? 0.40;
+  const { effectiveBranchMovement } = computeLfoModulatedOverall(engine);
+  const windFlutterMult = overallMovement * ((engine.shimmer ?? 0.04) * 0.65 + (engine.wavy ?? 0.00) * 0.35);
+  const motionActivity = Math.min(
+    1.0,
+    overallMovement * ((engine.shimmer ?? 0.04) + (engine.wavy ?? 0.00) + effectiveBranchMovement),
+  );
 
   const growthDuration = 96;
   const updateMeshGrowth = (mesh: THREE.InstancedMesh, segments: any[]) => {
@@ -255,7 +267,7 @@ export function updateMeshesAndStemsGrowth(
         }
 
         const isLeafApp = mesh === engine.appendages.get("leaves")?.mesh || mesh === engine.appendages.get("ferns")?.mesh;
-        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? 1.0 : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
+        const sizeMult = mesh === engine.cylinderMesh ? 1.0 : isHybrid ? Math.max(0.4, (engine.hybridSize || 2.0) / Math.max(0.5, seg.thickness || 2.0)) : isLeafApp ? ((engine.leafScale ?? 0.55) * (1.0 + ((seg.randomFactor ?? 0.5) - 0.5) * (engine.relativeLeafSizeDiff ?? 0.0))) : (engine.flowerSize || 1.0);
         engine.dummy.scale.multiplyScalar(growth * sizeMult * sizePulse);
         engine.dummy.updateMatrix();
         mesh.setMatrixAt(i, engine.dummy.matrix);
@@ -399,8 +411,6 @@ export function updateMeshesAndStemsGrowth(
 
 export function updateHybridConnectionMesh(engine: SimulationEngine) {
   if (!engine.hybridConnectionMesh) return;
-  engine.hybridConnectionMesh.visible = false;
-  return;
 
   const positions: number[] = [];
   const colors: number[] = [];
@@ -458,4 +468,5 @@ export function updateHybridConnectionMesh(engine: SimulationEngine) {
 
   engine.hybridConnectionMesh.geometry.setDrawRange(0, positions.length / 3);
   engine.hybridConnectionMesh.geometry.getAttribute("position").needsUpdate = true;
+  engine.hybridConnectionMesh.visible = positions.length > 0;
 }
