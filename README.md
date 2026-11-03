@@ -4,6 +4,8 @@
 
 # LifeSim
 
+**An interactive 3D ecosystem.**
+
 🚀 **[Play LifeSim Live on GitHub Pages](https://billtribble.github.io/LifeSim/)**
 
 This contains everything you need to run your app locally.
