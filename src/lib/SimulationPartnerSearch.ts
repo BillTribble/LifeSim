@@ -34,32 +34,45 @@ const MAX_TISSUE_SAMPLES_PER_STRAIN = 160;
  * so partner and feeler scans remain O(1) bounded and hold 60 FPS even with 12 mature organisms.
  */
 export function getStrainTissueIndex(engine: SimulationEngine): Map<string, StrainTissue> {
+  const dyingSize = engine.dyingStrains ? engine.dyingStrains.size : 0;
   const cache = (engine as any)._tissueIndex;
-  if (engine.frameCount !== undefined && cache && cache.frame === engine.frameCount) return cache.map;
+  if (
+    engine.frameCount !== undefined &&
+    engine.frameCount > 0 &&
+    cache &&
+    engine.frameCount >= cache.frame &&
+    engine.frameCount - cache.frame < 3 &&
+    cache.dyingSize === dyingSize &&
+    Math.abs((engine.pointCount ?? 0) - cache.pointCount) < 64
+  ) {
+    return cache.map;
+  }
   const map = new Map<string, StrainTissue>();
   const segLen = engine.segments ? engine.segments.length : 0;
   const limit = Math.min(engine.pointCount ?? segLen, engine.maxDOMs ?? segLen);
   const counts = new Map<string, number>();
   for (let i = 0; i < limit; i++) {
     const seg = engine.segments[i];
-    if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName.startsWith("Feeler-")) continue;
+    if (!seg || seg.dyingStart || seg.isFeeler) continue;
     counts.set(seg.strainName, (counts.get(seg.strainName) || 0) + 1);
   }
   const strides = new Map<string, number>();
   const seen = new Map<string, number>();
   for (const [name, total] of counts.entries()) {
+    if ( name.startsWith("Feeler-")) continue;
     strides.set(name, Math.max(1, Math.floor(total / MAX_TISSUE_SAMPLES_PER_STRAIN)));
     seen.set(name, 0);
     map.set(name, { count: total, xs: [], ys: [], zs: [], cx: 0, cy: 0, cz: 0, r: 0 });
   }
   for (let i = 0; i < limit; i++) {
     const seg = engine.segments[i];
-    if (!seg || seg.dyingStart || seg.isFeeler || seg.strainName.startsWith("Feeler-")) continue;
+    if (!seg || seg.dyingStart || seg.isFeeler) continue;
+    const t = map.get(seg.strainName);
+    if (!t) continue;
     const idx = seen.get(seg.strainName) || 0;
     seen.set(seg.strainName, idx + 1);
     const stride = strides.get(seg.strainName) || 1;
     if (idx % stride !== 0) continue;
-    const t = map.get(seg.strainName)!;
     const m = seg.matrix.elements;
     t.xs.push(m[12]);
     t.ys.push(m[13]);
@@ -87,7 +100,12 @@ export function getStrainTissueIndex(engine: SimulationEngine): Map<string, Stra
     t.cz = cz;
     t.r = Math.sqrt(r2);
   }
-  (engine as any)._tissueIndex = { frame: engine.frameCount, map };
+  (engine as any)._tissueIndex = {
+    frame: engine.frameCount,
+    dyingSize,
+    pointCount: engine.pointCount ?? 0,
+    map,
+  };
   return map;
 }
 
@@ -218,16 +236,18 @@ export function findNearestPartner(
     const partnerMCount = lifecycle?.get(pg.name)?.matingCount || partner.matingCount || 0;
     const partnerMaxM = Math.max(maxM, getEffectiveMaxMatings(engine, partnerMCount));
     const partnerDying = !!(engine.dyingStrains && engine.dyingStrains.has(pg.name));
-    const partnerViable = !partnerDying && (!partner.tapering || partner.thickness > 0.02);
-    if (!partnerViable || partnerMCount >= partnerMaxM || bredThisFrame.has(partner)) continue;
-    if (!areStrainsCompatibleForMating(engine, evalGenome.name, evalGenome, pg.name, pg)) continue;
+    const partnerViable = !partnerDying && (agent.isFeeler || !partner.tapering || partner.thickness > 0.02);
+    if (!partnerViable) continue;
+    if (!agent.isFeeler && (partnerMCount >= partnerMaxM || bredThisFrame.has(partner))) continue;
+    if (!agent.isFeeler && !areStrainsCompatibleForMating(engine, evalGenome.name, evalGenome, pg.name, pg)) continue;
 
     const partnerStrainAge = pg.createdAt !== undefined ? engine.time - pg.createdAt : engine.time;
-    const partnerFertile =
-      !isSpeciesOnCooldown(engine, pg.name, pg) &&
-      partner.cooldown <= 0 &&
-      getSeekRamp(engine, partner, partnerStrainAge) > 0 &&
-      isOrganismMature(engine, pg);
+    const partnerFertile = agent.isFeeler
+      ? !partnerDying
+      : (!isSpeciesOnCooldown(engine, pg.name, pg) &&
+        partner.cooldown <= 0 &&
+        getSeekRamp(engine, partner, partnerStrainAge) > 0 &&
+        isOrganismMature(engine, pg));
 
     const anchors = anchorsFor(engine, evalGenome.name, evalGenome, pg.name, pg);
     let distSq = Infinity;
@@ -254,6 +274,15 @@ export function findNearestPartner(
               best = d; bx = t.xs[k]; by = t.ys[k]; bz = t.zs[k];
             }
           }
+          if (!Number.isFinite(best) && agent.isFeeler) {
+            for (let k = 0; k < t.xs.length; k++) {
+              const dx = ax - t.xs[k], dy = ay - t.ys[k], dz = az - t.zs[k];
+              const d = dx * dx + dy * dy + dz * dz;
+              if (d < best) {
+                best = d; bx = t.xs[k]; by = t.ys[k]; bz = t.zs[k];
+              }
+            }
+          }
           if (Number.isFinite(best)) sr = { d: best, x: bx, y: by, z: bz };
         }
       }
@@ -269,6 +298,10 @@ export function findNearestPartner(
         distSq = d;
         cx = agent.feelerNearestPos.x; cy = agent.feelerNearestPos.y; cz = agent.feelerNearestPos.z;
       }
+    }
+    if (!Number.isFinite(distSq) && agent.isFeeler) {
+      distSq = agent.position.distanceToSquared(partner.position);
+      cx = partner.position.x; cy = partner.position.y; cz = partner.position.z;
     }
 
     if (distSq < res.nearestDistSq) {

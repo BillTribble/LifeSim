@@ -195,9 +195,18 @@ export function updateMeshesAndStemsGrowth(
 
     let pBChanged = false;
     let ambChanged = false;
-    for (let i = 0; i < (mesh.count || 0); i++) {
+    const meshCount = mesh.count || 0;
+    const fastSettledSkip =
+      !isHybrid &&
+      !appChanged &&
+      !leafWind &&
+      pulsingGenomes.length === 0 &&
+      globalTierNorm <= 0.0001 &&
+      engine.frameCount % 4 !== 0;
+    for (let i = 0; i < meshCount; i++) {
       const seg = segments[i];
       if (!seg) continue;
+      if (fastSettledSkip && (seg as any)._settled) continue;
       if (isHybrid && seg.variant !== hybridVarId) {
         continue;
       }
@@ -210,19 +219,22 @@ export function updateMeshesAndStemsGrowth(
         if (val < 1.0) {
           const ts = Math.max(0.25, engine.timeScale || 1.0);
           const leafStep = Math.max(0.006, (engine.leafGrowthSpeed || 0.0045) * 1.6 * ts);
-          pB.setX(i, Math.min(1.0, val + (isLeaf ? leafStep : 0.014 * ts)));
+          const nextV = Math.min(1.0, val + (isLeaf ? leafStep : 0.014 * ts));
+          pB.setX(i, nextV);
           pBChanged = true;
+          if (nextV >= 1.0 && age > growthDuration) (seg as any)._settled = true;
+        } else if (age > growthDuration) {
+          (seg as any)._settled = true;
         }
       }
-      if (ambAttr && seg.matrix) {
-        const me = seg.matrix.elements;
-        const distRatio = Math.hypot(me[12] - camPos.x, me[13] - camPos.y, me[14] - camPos.z) / camRefDist;
-        // At Tier 0 (>= 24 FPS), globalTierNorm is 0.0 so all leaves keep full veins/bump/sculpt;
-        // when FPS drops below 24 FPS (globalTierNorm > 0), distant leaves (distRatio > 0.95) smoothly simplify.
-        const distDetailTarget = THREE.MathUtils.clamp((distRatio - 0.95) / 0.35, 0.0, 1.0);
-        const targetDetail = distRatio <= 0.95
-          ? 0.0
-          : globalTierNorm * distDetailTarget;
+      if (ambAttr && seg.matrix && (globalTierNorm > 0.0001 || seg.detailBlend === undefined || seg.detailBlend > 0.0005)) {
+        let targetDetail = 0.0;
+        if (globalTierNorm > 0.0001) {
+          const me = seg.matrix.elements;
+          const distRatio = Math.hypot(me[12] - camPos.x, me[13] - camPos.y, me[14] - camPos.z) / camRefDist;
+          const distDetailTarget = THREE.MathUtils.clamp((distRatio - 0.95) / 0.35, 0.0, 1.0);
+          targetDetail = distRatio <= 0.95 ? 0.0 : globalTierNorm * distDetailTarget;
+        }
         if (seg.detailBlend === undefined) {
           seg.detailBlend = targetDetail;
           ambAttr.setX(i, seg.detailBlend);
@@ -360,12 +372,14 @@ export function updateMeshesAndStemsGrowth(
   // Ambient reflection from glowing agents (skipped on software rasterizer where fast Lambert shader ignores it)
   const ambientAttr = engine.cylinderMesh.geometry.getAttribute("instanceAmbientReflect") as THREE.InstancedBufferAttribute;
   const lightDirAttr = engine.cylinderMesh.geometry.getAttribute("instanceLightDir") as THREE.InstancedBufferAttribute;
-  if (!(engine as any)._isSoftwareRaster && ambientAttr && lightDirAttr && engine.glowTraitReflect > 0.0) {
-    const glowingAgents = engine.agents.filter((a) => a.active && !a.isFeeler && a.genome.isGlowing);
-    if (glowingAgents.length > 0) {
+  if (!(engine as any)._isSoftwareRaster && ambientAttr && lightDirAttr && engine.glowTraitReflect > 0.0 && engine.frameCount % 3 === 0) {
+    const allGlowing = engine.agents.filter((a) => a.active && !a.isFeeler && a.genome.isGlowing);
+    if (allGlowing.length > 0) {
+      const strideG = Math.max(1, Math.ceil(allGlowing.length / 12));
+      const glowingAgents = strideG === 1 ? allGlowing : allGlowing.filter((_, idx) => idx % strideG === 0);
       const activePoints = Math.min(engine.pointCount, engine.maxDOMs);
-      const batchSize = Math.min(activePoints, 8000);
-      const startIdx = (engine.frameCount * batchSize) % Math.max(1, activePoints);
+      const batchSize = Math.min(activePoints, 2500);
+      const startIdx = (Math.floor(engine.frameCount / 3) * batchSize) % Math.max(1, activePoints);
       let anyUpdated = false;
       const vPos = new THREE.Vector3();
       const maxDist = engine.glowTraitDistance || 50.0;

@@ -38,7 +38,7 @@ export function updateMeshSegments(
     const isSoft = !!(engine as any)._isSoftwareRaster;
     const canExtendPrev = false;
     let poppedFree = -1;
-    const stemCap = isSoft ? getStemBudget(engine) + engine.dyingStems.size + 16 : engine.maxDOMs;
+    const stemCap = (isSoft && !isFeelerSeg) ? getStemBudget(engine) + engine.dyingStems.size + 16 : engine.maxDOMs;
       while (engine.freeStemIndices && engine.freeStemIndices.length > 0) {
         const cand = engine.freeStemIndices.pop()!;
         if (cand < engine.pointCount && !engine.segments[cand]) {
@@ -55,34 +55,23 @@ export function updateMeshSegments(
         }
         if (engine.pointCount >= engine.maxDOMs) return;
         targetIndexStem = engine.pointCount;
-      } else {
-        let foundSlot = -1;
-        const searchLim = Math.min(engine.pointCount, isSoft ? stemCap : engine.maxDOMs);
-        for (let i = 0; i < searchLim; i++) {
-          if (!engine.segments[i]) {
-            foundSlot = i;
-            break;
-          }
+      } else if (!isSoft && engine.pointCount < engine.maxDOMs) {
+        while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
+          engine.pointCount++;
         }
-        if (foundSlot >= 0) {
-          targetIndexStem = foundSlot;
-          reusedFreeSlot = true;
-        } else if (!isSoft && engine.pointCount < engine.maxDOMs) {
-          while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
-            engine.pointCount++;
-          }
-          if (engine.pointCount >= engine.maxDOMs) return;
-          targetIndexStem = engine.pointCount;
-        } else {
-          // Recycle single oldest feeler or furthest-faded dying slot without bulk-erasing the organism
-          let victimSlot = -1;
-          let bestScore = -1;
-          const packA = engine.cylinderMesh?.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute | undefined;
-          for (let i = 0; i < searchLim; i++) {
+        if (engine.pointCount >= engine.maxDOMs) return;
+        targetIndexStem = engine.pointCount;
+      } else {
+        const searchLim = Math.min(engine.pointCount, isSoft && !isFeelerSeg ? stemCap : engine.maxDOMs);
+        let victimSlot = -1;
+        let bestScore = -1;
+        const packA = engine.cylinderMesh?.geometry.getAttribute("instancePackA") as THREE.InstancedBufferAttribute | undefined;
+        if (engine.dyingStems && engine.dyingStems.size > 0) {
+          let checked = 0;
+          for (const i of engine.dyingStems) {
+            if (i >= searchLim) continue;
             const s = engine.segments[i];
             if (!s) { victimSlot = i; bestScore = 1e9; break; }
-            const isDying = engine.dyingStems.has(i) || (engine.dyingStrains && engine.dyingStrains.has(s.strainName));
-            if (!isDying) continue;
             const dissolveProgress = packA?.getZ(i) ?? 0;
             const dAge = s.dyingStart ? Math.max(0, engine.unscaledTime - s.dyingStart) : 0;
             const ageScore = dAge * 10 + dissolveProgress * 5000 + (engine.time - s.timestamp);
@@ -90,22 +79,37 @@ export function updateMeshSegments(
               bestScore = ageScore;
               victimSlot = i;
             }
+            if (++checked >= 24 && victimSlot >= 0) break;
           }
-          if (bestScore < 0) {
-            return;
-          }
-          if (victimSlot >= 0) {
-            targetIndexStem = victimSlot;
-            reusedFreeSlot = true;
-          } else if (engine.pointCount < engine.maxDOMs) {
-            while (engine.pointCount < engine.maxDOMs && engine.segments[engine.pointCount]) {
-              engine.pointCount++;
+        } else if (engine.dyingStrains && engine.dyingStrains.size > 0) {
+          let checked = 0;
+          const startIdx = ((engine as any)._dyingScanCursor || 0) % Math.max(1, searchLim);
+          for (let step = 0; step < searchLim && checked < 64; step++) {
+            const i = (startIdx + step) % searchLim;
+            const s = engine.segments[i];
+            if (!s) { victimSlot = i; bestScore = 1e9; (engine as any)._dyingScanCursor = i + 1; break; }
+            if (!engine.dyingStrains.has(s.strainName)) continue;
+            checked++;
+            const dissolveProgress = packA?.getZ(i) ?? 0;
+            const dAge = s.dyingStart ? Math.max(0, engine.unscaledTime - s.dyingStart) : 0;
+            const ageScore = dAge * 10 + dissolveProgress * 5000 + (engine.time - s.timestamp);
+            if (ageScore > bestScore) {
+              bestScore = ageScore;
+              victimSlot = i;
+              (engine as any)._dyingScanCursor = i + 1;
             }
-            if (engine.pointCount >= engine.maxDOMs) return;
-            targetIndexStem = engine.pointCount;
-          } else {
-            return;
           }
+        }
+        if (victimSlot >= 0) {
+          targetIndexStem = victimSlot;
+          reusedFreeSlot = true;
+        } else if (isFeelerSeg && searchLim > 0) {
+          const cur = (((engine as any)._feelerRecycleCursor || 0) + 1) % searchLim;
+          (engine as any)._feelerRecycleCursor = cur;
+          targetIndexStem = cur;
+          reusedFreeSlot = true;
+        } else {
+          return;
         }
       }
   }
@@ -131,27 +135,42 @@ export function updateMeshSegments(
       let furthestLiveSlot = 0;
       let secondFurthestSlot = -1;
       let maxDist = -1;
-      const searchLim = Math.min(config.mesh.count, appendageLimit);
-      for (let i = 0; i < searchLim; i++) {
-        const seg = config.segments[i];
-        if (!seg) {
-          emptySlot = i;
-          break;
-        }
-        if (config.dyingSet.has(i)) {
-          const dAge = engine.unscaledTime - (seg.dyingStart || 0);
+      const searchLim = Math.max(1, Math.min(config.mesh.count, appendageLimit));
+      if (config.dyingSet && config.dyingSet.size > 0) {
+        let checkedDying = 0;
+        for (const di of config.dyingSet) {
+          if (di >= searchLim) continue;
+          const ds = config.segments[di];
+          if (!ds) { emptySlot = di; break; }
+          const dAge = engine.unscaledTime - (ds.dyingStart || 0);
           if (dAge > maxDyingAge) {
             maxDyingAge = dAge;
-            bestDyingSlot = i;
+            bestDyingSlot = di;
           }
-          continue;
+          if (++checkedDying >= 16) break;
         }
-        const parentPos = engine.segments[seg.parentIndex]?.startPos || seg.rootOrigin;
-        const d = parentPos ? getCameraDistanceRatio(engine, parentPos) : 0;
-        if (d > maxDist) {
-          secondFurthestSlot = furthestLiveSlot;
-          maxDist = d;
-          furthestLiveSlot = i;
+      }
+      if (emptySlot < 0 && bestDyingSlot < 0) {
+        const startCur = ((config as any)._recycleCursor || 0) % searchLim;
+        const probeCount = Math.min(searchLim, 48);
+        for (let step = 0; step < probeCount; step++) {
+          const i = (startCur + step) % searchLim;
+          const seg = config.segments[i];
+          if (!seg) {
+            emptySlot = i;
+            (config as any)._recycleCursor = i + 1;
+            break;
+          }
+          const parentPos = engine.segments[seg.parentIndex]?.startPos || seg.rootOrigin;
+          const d = parentPos ? getCameraDistanceRatio(engine, parentPos) : 0;
+          if (d > maxDist) {
+            secondFurthestSlot = furthestLiveSlot;
+            maxDist = d;
+            furthestLiveSlot = i;
+          }
+        }
+        if (emptySlot < 0) {
+          (config as any)._recycleCursor = (startCur + probeCount) % searchLim;
         }
       }
       if (emptySlot >= 0) {
@@ -451,7 +470,6 @@ export function updateMeshSegments(
         if (prevCount > weight) engine.biomassMap.set(prevSeg.strainName, prevCount - weight);
         else engine.biomassMap.delete(prevSeg.strainName);
       }
-      remapAppendageParent(engine, targetIndex, targetIndex, engine.time);
     }
     if (isStrainAlreadyDying) {
       engine.dyingStems.add(targetIndex);

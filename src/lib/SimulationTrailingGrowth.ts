@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
 import { hasBankedTreeBuds } from "./SimulationTreeGrowth";
+import { isOverSizeBudget } from "./SimulationPartnerSearch";
 
 const MAX_TRAILING_TIPS_PER_ORGANISM = 6;
 const TARGET_TRAILING_TIPS = 3;
@@ -67,9 +68,11 @@ export function sustainTrailingGrowth(
       strainGenome?.morphMode === "big_branching" ||
       strainGenome?.morphMode === "candelabra";
     if (isMacroTree && (nonSeekerCountMap.get(name) || 0) > 0) continue;
-    const targetTrailing = isMacroTree ? 1 : TARGET_TRAILING_TIPS;
+    const overBudget = isOverSizeBudget(engine, name);
+    const targetTrailing = (isMacroTree || overBudget) ? 1 : TARGET_TRAILING_TIPS;
     const trailingCount = trailingCountMap.get(name) || 0;
     if (trailingCount >= targetTrailing) continue;
+    if (overBudget && (engine.frameCount || 0) % 15 !== 0) continue;
 
     const candidates = candidatesMap.get(name) || [];
 
@@ -248,6 +251,7 @@ export function stepTrailingBranching(
     agent.genome.morphMode !== "monolith" &&
     agent.genome.morphMode !== "candelabra" &&
     agent.genome.morphMode !== "big_branching" &&
+    !isOverSizeBudget(engine, agent.genome.name) &&
     Math.random() < 0.82
   ) {
     const name = agent.genome.name;

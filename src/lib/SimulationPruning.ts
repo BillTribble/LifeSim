@@ -53,6 +53,7 @@ function pruneAgentTip(engine: SimulationEngine, agent: Agent) {
  * should NEVER be pruned (protects the organism's foundation and roots).
  */
 function isStructuralStem(agent: Agent): boolean {
+  if (agent.isFeeler) return true;
   const depth = agent.branchDepth || 0;
   if (agent.genome?.archetype === "tree") {
     if (depth <= 2) return true; // Trunk (0), primary limbs (1), and secondary limbs (2)

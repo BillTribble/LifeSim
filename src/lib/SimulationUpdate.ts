@@ -58,36 +58,33 @@ export function updateSimulation(engine: SimulationEngine) {
 
   // INSTANT APPENDAGE SYNC (CRITICAL FIX: Bug #4 — Appendage Sync & Orphan Cleanup):
   // Ensure appendages dissolve both when parent stem is dying AND when parent stem has been removed or overwritten
-  for (const [, app] of engine.appendages.entries()) {
-    const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
-    if (appLim > 0) {
-      let appChanged = false;
-      for (let i = 0; i < appLim; i++) {
-        const seg = app.segments[i];
-        if (seg && !app.dyingSet.has(i)) {
-          // Lifecycle-phase aware + shared fade clock so appendages fade with their body
-          const strainDeathStart = getStrainDeathStart(engine, seg.strainName);
+  if (engine.frameCount % 8 === 0) {
+    for (const [, app] of engine.appendages.entries()) {
+      const appLim = Math.min(app.count, Math.floor(engine.maxDOMs / 4));
+      if (appLim > 0) {
+        for (let i = 0; i < appLim; i++) {
+          const seg = app.segments[i];
+          if (seg && !app.dyingSet.has(i)) {
+            const strainDeathStart = getStrainDeathStart(engine, seg.strainName);
 
-          if (strainDeathStart !== undefined) {
-            engine.markDying(app.segments, app.dyingSet, i, strainDeathStart);
-          } else if (seg.parentIndex !== undefined) {
-            const parentSeg = engine.segments[seg.parentIndex];
-            const parentDying = engine.dyingStems.has(seg.parentIndex);
-            const parentGoneOrOverwritten =
-              !parentSeg ||
-              parentSeg.strainName !== seg.strainName ||
-              parentSeg.timestamp !== seg.parentTimestamp;
+            if (strainDeathStart !== undefined) {
+              engine.markDying(app.segments, app.dyingSet, i, strainDeathStart);
+            } else if (seg.parentIndex !== undefined) {
+              const parentSeg = engine.segments[seg.parentIndex];
+              const parentDying = engine.dyingStems.has(seg.parentIndex);
+              const parentGoneOrOverwritten =
+                !parentSeg ||
+                parentSeg.strainName !== seg.strainName ||
+                parentSeg.timestamp !== seg.parentTimestamp;
 
-            if (parentGoneOrOverwritten) {
-              engine.markDying(app.segments, app.dyingSet, i, engine.unscaledTime);
-            } else if (parentDying && parentSeg.dyingStart) {
-              engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);
+              if (parentGoneOrOverwritten) {
+                engine.markDying(app.segments, app.dyingSet, i, engine.unscaledTime);
+              } else if (parentDying && parentSeg.dyingStart) {
+                engine.markDying(app.segments, app.dyingSet, i, parentSeg.dyingStart);
+              }
             }
           }
         }
-      }
-      if (appChanged) {
-        app.mesh.instanceMatrix.needsUpdate = true;
       }
     }
   }
@@ -179,7 +176,7 @@ export function updateSimulation(engine: SimulationEngine) {
     const allowed = Math.max(0, maxLiveAgents - growingCount);
     const nonFeelers = newAgents.filter(a => !a.isFeeler);
     const feelers = newAgents.filter(a => a.isFeeler);
-    newAgents = [...nonFeelers, ...feelers.slice(0, Math.max(0, allowed - nonFeelers.length))];
+    newAgents = [...feelers, ...nonFeelers.slice(0, Math.max(0, allowed - feelers.length))];
   }
 
   newAgents.forEach(a => {

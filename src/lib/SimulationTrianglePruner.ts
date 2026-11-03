@@ -10,6 +10,7 @@ import {
   deleteStrainAppendages,
 } from "./SimulationVertexTrimmer";
 import { applyLodTier } from "./SimulationLOD";
+import { getKeystoneAnchorStrain } from "./SimulationCulling";
 
 export { createFastStemMaterial, createFastLeafMaterial, createFastAppendageMaterial } from "./SimulationVertexTrimmer";
 
@@ -48,9 +49,11 @@ export function extrudeRootNubCap(
   return;
 }
 
+const _defaultCamTarget = new THREE.Vector3(0, 18.92, 0);
+
 export function getCameraReferenceDistance(engine: SimulationEngine): number {
   if (!engine.camera) return 120;
-  const target = engine.controls?.target || new THREE.Vector3(0, 18.92, 0);
+  const target = engine.controls?.target || _defaultCamTarget;
   return Math.max(60, engine.camera.position.distanceTo(target));
 }
 
@@ -121,6 +124,26 @@ export function remapAppendageParent(
       if (s && s.parentIndex === oldStemIdx) {
         s.parentIndex = newStemIdx;
         s.parentTimestamp = newTimestamp;
+      }
+    }
+  }
+}
+
+export function remapAppendageParentsBatch(
+  engine: SimulationEngine,
+  remap: Map<number, { newIdx: number; newTs: number }>,
+): void {
+  if (remap.size === 0) return;
+  for (const app of engine.appendages.values()) {
+    const lim = Math.min(app.count, app.segments.length);
+    for (let i = 0; i < lim; i++) {
+      const s = app.segments[i];
+      if (s && s.parentIndex !== undefined) {
+        const hit = remap.get(s.parentIndex);
+        if (hit !== undefined) {
+          s.parentIndex = hit.newIdx;
+          s.parentTimestamp = hit.newTs;
+        }
       }
     }
   }
@@ -216,7 +239,12 @@ export function updateTrianglePruner(engine: SimulationEngine, frameDtMs: number
   }
 }
 
-function relocateStemSlot(engine: SimulationEngine, highIdx: number, lowIdx: number): void {
+function relocateStemSlot(
+  engine: SimulationEngine,
+  highIdx: number,
+  lowIdx: number,
+  remapBatch?: Map<number, { newIdx: number; newTs: number }>,
+): void {
   const seg = engine.segments[highIdx];
   if (!seg) return;
 
@@ -274,35 +302,57 @@ function relocateStemSlot(engine: SimulationEngine, highIdx: number, lowIdx: num
     engine.dyingStems.add(lowIdx);
   }
 
-  remapAppendageParent(engine, highIdx, lowIdx, seg.timestamp);
+  if (remapBatch) {
+    remapBatch.set(highIdx, { newIdx: lowIdx, newTs: seg.timestamp });
+  } else {
+    remapAppendageParent(engine, highIdx, lowIdx, seg.timestamp);
+  }
   engine.segments[highIdx] = undefined as any;
   engine.dummy.matrix.makeScale(0, 0, 0);
   engine.cylinderMesh.setMatrixAt(highIdx, engine.dummy.matrix);
   markInstanceIndexDirty(engine.cylinderMesh.instanceMatrix, highIdx);
 }
 
+function packPosKey2x(pos: THREE.Vector3): number {
+  const x = (Math.round(pos.x * 2) + 512) & 0x3ff;
+  const y = (Math.round(pos.y * 2) + 512) & 0x3ff;
+  const z = (Math.round(pos.z * 2) + 512) & 0x3ff;
+  return x | (y << 10) | (z << 20);
+}
+
 function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
   if (targetPruneCount <= 0) return 0;
 
-  const strainSegments = new Map<string, Segment[]>();
+  const agentSegments = new Map<number, Segment[]>();
   const total = Math.min(engine.pointCount, engine.cylinderMesh.count);
+  const keystone = getKeystoneAnchorStrain(engine);
   for (let i = 0; i < total; i++) {
     const seg = engine.segments[i];
-    if (seg && !engine.dyingStems.has(i) && !engine.growingStems?.has(i) && seg.strainName && seg.startPos && seg.endPos && !seg.isTerminal) {
-      let list = strainSegments.get(seg.strainName);
+    if (
+      seg &&
+      seg.agentId !== undefined &&
+      !engine.dyingStems.has(i) &&
+      !engine.growingStems?.has(i) &&
+      seg.strainName &&
+      seg.strainName !== keystone &&
+      seg.startPos &&
+      seg.endPos &&
+      !seg.isTerminal
+    ) {
+      let list = agentSegments.get(seg.agentId);
       if (!list) {
         list = [];
-        strainSegments.set(seg.strainName, list);
+        agentSegments.set(seg.agentId, list);
       }
       list.push(seg);
     }
   }
 
   const p = getPrunePressure(engine);
-  const forkJunctions = new Set<string>();
+  const forkJunctions = new Set<number>();
   const addForkPos = (pos?: THREE.Vector3) => {
     if (pos) {
-      forkJunctions.add(`${Math.round(pos.x * 2)},${Math.round(pos.y * 2)},${Math.round(pos.z * 2)}`);
+      forkJunctions.add(packPosKey2x(pos));
     }
   };
   if (engine.agentAnchorMap) {
@@ -316,17 +366,17 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
     }
   }
 
-  const startCountMap = new Map<string, number>();
+  const startCountMap = new Map<number, number>();
   for (let i = 0; i < total; i++) {
     const s = engine.segments[i];
     if (s && !engine.dyingStems.has(i) && s.startPos) {
-      const k = `${Math.round(s.startPos.x * 2)},${Math.round(s.startPos.y * 2)},${Math.round(s.startPos.z * 2)}`;
+      const k = packPosKey2x(s.startPos);
       startCountMap.set(k, (startCountMap.get(k) || 0) + 1);
     }
   }
 
   function isForkJunction(pos: THREE.Vector3): boolean {
-    const k = `${Math.round(pos.x * 2)},${Math.round(pos.y * 2)},${Math.round(pos.z * 2)}`;
+    const k = packPosKey2x(pos);
     if ((startCountMap.get(k) || 0) > 1) return true;
     return forkJunctions.has(k);
   }
@@ -337,76 +387,50 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
     score: number;
   }[] = [];
 
-  for (const list of strainSegments.values()) {
-    if (list.length < 2) continue;
-    const bucketMap = new Map<string, Segment[]>();
-    for (let i = 0; i < list.length; i++) {
-      const s = list[i];
-      if (s.isTerminal) continue;
-      const bk = `${Math.round(s.startPos.x)},${Math.round(s.startPos.y)},${Math.round(s.startPos.z)}`;
-      let bList = bucketMap.get(bk);
-      if (!bList) {
-        bList = [];
-        bucketMap.set(bk, bList);
-      }
-      bList.push(s);
-    }
+  const isSoftMerge = !!(engine as any)._isSoftwareRaster;
+  const minMergeRatio = isSoftMerge ? 1.05 : Math.max(1.10, 1.35 - p * 0.25);
+  const minDot = 0.994;
+  const maxDist = isSoftMerge ? 1.65 : 1.50;
 
-    for (let i = 0; i < list.length; i++) {
+  for (const list of agentSegments.values()) {
+    const n = list.length;
+    if (n < 2) continue;
+    for (let i = 0; i < n; i++) {
       const segA = list[i];
       if (segA.isTerminal) continue;
-      const bx = Math.round(segA.endPos.x);
-      const by = Math.round(segA.endPos.y);
-      const bz = Math.round(segA.endPos.z);
+      const camDistRatio = getCameraDistanceRatio(engine, segA.startPos);
+      if (camDistRatio < minMergeRatio) continue;
 
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dz = -1; dz <= 1; dz++) {
-            const nbk = `${bx + dx},${by + dy},${bz + dz}`;
-            const bucket = bucketMap.get(nbk);
-            if (!bucket) continue;
-            for (let j = 0; j < bucket.length; j++) {
-              const segB = bucket[j];
-              if (segA === segB || segB.isTerminal) continue;
-              if (segA.agentId === undefined || segA.agentId !== segB.agentId) continue;
-              if ((segA.branchDepth ?? 0) !== (segB.branchDepth ?? 0)) continue;
-              if (segA.endPos.distanceToSquared(segB.startPos) > 0.0025) continue;
+      for (let j = 0; j < n; j++) {
+        if (i === j) continue;
+        const segB = list[j];
+        if (segB.isTerminal) continue;
+        if ((segA.branchDepth ?? 0) !== (segB.branchDepth ?? 0)) continue;
+        if (segA.endPos.distanceToSquared(segB.startPos) > 0.0025) continue;
+        if (Math.abs(segA.thickness - segB.thickness) > segA.thickness * 0.06) continue;
+        if (isForkJunction(segA.endPos)) continue;
 
-              const isSoftMerge = !!(engine as any)._isSoftwareRaster;
-              const camDistRatio = getCameraDistanceRatio(engine, segA.startPos);
-              const minMergeRatio = isSoftMerge ? 1.05 : Math.max(1.10, 1.35 - p * 0.25);
-              if (camDistRatio < minMergeRatio) continue;
-              if (Math.abs(segA.thickness - segB.thickness) > segA.thickness * 0.06) continue;
-              const hasBranchAtEnd = list.some(
-                other => other !== segA && other !== segB && other.startPos.distanceToSquared(segA.endPos) < 0.09,
-              );
-              if (hasBranchAtEnd || isForkJunction(segA.endPos)) continue;
+        _scratchDirA.subVectors(segA.endPos, segA.startPos).normalize();
+        _scratchDirB.subVectors(segB.endPos, segB.startPos).normalize();
+        const dot = _scratchDirA.dot(_scratchDirB);
+        if (dot < minDot) continue;
+        const mergedDist = segA.startPos.distanceTo(segB.endPos);
+        if (mergedDist > maxDist) continue;
 
-              _scratchDirA.subVectors(segA.endPos, segA.startPos).normalize();
-              _scratchDirB.subVectors(segB.endPos, segB.startPos).normalize();
-              const dot = _scratchDirA.dot(_scratchDirB);
-              const mergedDist = segA.startPos.distanceTo(segB.endPos);
+        const p0 = segA.startPos;
+        const p1 = segA.endPos;
+        const p2 = segB.endPos;
+        _scratchChord.subVectors(p2, p0);
+        const chordLenSq = _scratchChord.lengthSq();
+        _scratchV.subVectors(p1, p0);
+        const projT = chordLenSq > 1e-6 ? THREE.MathUtils.clamp(_scratchV.dot(_scratchChord) / chordLenSq, 0, 1) : 0;
+        _scratchClosest.copy(p0).addScaledVector(_scratchChord, projT);
+        const deviation = p1.distanceTo(_scratchClosest);
+        const maxDeviation = Math.max(0.03, segA.thickness * 0.12);
 
-              const p0 = segA.startPos;
-              const p1 = segA.endPos;
-              const p2 = segB.endPos;
-              _scratchChord.subVectors(p2, p0);
-              const chordLenSq = _scratchChord.lengthSq();
-              _scratchV.subVectors(p1, p0);
-              const projT = chordLenSq > 1e-6 ? THREE.MathUtils.clamp(_scratchV.dot(_scratchChord) / chordLenSq, 0, 1) : 0;
-              _scratchClosest.copy(p0).addScaledVector(_scratchChord, projT);
-              const deviation = p1.distanceTo(_scratchClosest);
-
-              const minDot = 0.994;
-              const maxDeviation = Math.max(0.03, segA.thickness * 0.12);
-              const maxDist = isSoftMerge ? 1.65 : 1.50;
-
-              if (dot >= minDot && deviation <= maxDeviation && mergedDist <= maxDist) {
-                const score = (camDistRatio * camDistRatio * (dot + 0.5)) / Math.max(0.08, segA.thickness);
-                candidatePairs.push({ segA, segB, score });
-              }
-            }
-          }
+        if (deviation <= maxDeviation) {
+          const score = (camDistRatio * camDistRatio * (dot + 0.5)) / Math.max(0.08, segA.thickness);
+          candidatePairs.push({ segA, segB, score });
         }
       }
     }
@@ -416,6 +440,7 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
 
   let mergedCount = 0;
   const mergedOrDeleted = new Set<number>();
+  const remapBatch = new Map<number, { newIdx: number; newTs: number }>();
   const packB = engine.cylinderMesh.geometry.getAttribute("instancePackB") as THREE.InstancedBufferAttribute | undefined;
 
   for (const pair of candidatePairs) {
@@ -474,7 +499,7 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
       engine.lastAgentStemIndex.set(segB.agentId, segA.index);
     }
 
-    remapAppendageParent(engine, segB.index, segA.index, segA.timestamp);
+    remapBatch.set(segB.index, { newIdx: segA.index, newTs: segA.timestamp });
     engine.segments[segB.index] = undefined as any;
     engine.dyingStems.delete(segB.index);
     if (engine.growingStems) engine.growingStems.delete(segB.index);
@@ -489,6 +514,7 @@ function mergePass(engine: SimulationEngine, targetPruneCount: number): number {
     mergedCount++;
   }
 
+  remapAppendageParentsBatch(engine, remapBatch);
   return mergedCount;
 }
 
@@ -529,7 +555,9 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
     if (engine.hasReachedMinCreatures && strainOldestTs.size > minFloor) {
       let oldestStrain = "";
       let oldestTs = Infinity;
+      const keystone = getKeystoneAnchorStrain(engine);
       for (const [sName, ts] of strainOldestTs.entries()) {
+        if (keystone && sName === keystone) continue;
         if (ts < oldestTs) {
           oldestTs = ts;
           oldestStrain = sName;
@@ -544,7 +572,8 @@ export function emergencyPruneDistantTips(engine: SimulationEngine, targetPruneC
   return pruned;
 }
 
-function compactTailSlots(engine: SimulationEngine, targetMaxCount: number): void {
+function compactTailSlots(engine: SimulationEngine, rawTargetMaxCount: number): void {
+  const targetMaxCount = Math.min(rawTargetMaxCount, engine.maxDOMs);
   const freeSlots: number[] = [];
   for (let i = 0; i < targetMaxCount; i++) {
     if (!engine.segments[i]) {
@@ -555,15 +584,17 @@ function compactTailSlots(engine: SimulationEngine, targetMaxCount: number): voi
   let highIdx = Math.min(engine.pointCount, engine.cylinderMesh.count) - 1;
   let freePtr = 0;
   let relocatedAny = false;
+  const remapBatch = new Map<number, { newIdx: number; newTs: number }>();
   while (highIdx >= targetMaxCount && freePtr < freeSlots.length) {
     const seg = engine.segments[highIdx];
     if (seg) {
       const targetSlot = freeSlots[freePtr++];
-      relocateStemSlot(engine, highIdx, targetSlot);
+      relocateStemSlot(engine, highIdx, targetSlot, remapBatch);
       relocatedAny = true;
     }
     highIdx--;
   }
+  remapAppendageParentsBatch(engine, remapBatch);
 
   const currentTotal = Math.min(engine.pointCount, engine.cylinderMesh.count);
   let maxActive = -1;
@@ -651,14 +682,18 @@ export function pruneAndCompactGeometry(engine: SimulationEngine): void {
     }
   }
 
-  if (liveStems > stemBudget && engine.frameCount % 4 === 0) {
+  const mergeInterval = (engine as any)._lastMergeYield === 0 ? 32 : 8;
+  if (liveStems > stemBudget && engine.frameCount % mergeInterval === 0) {
     const needed = liveStems - stemBudget;
     const merged = mergeAdjacentBranchSegments(engine, needed);
+    (engine as any)._lastMergeYield = merged;
     const stillNeeded = needed - merged;
     if (stillNeeded > 0) {
       emergencyPruneDistantTips(engine, stillNeeded);
     }
-    compactTailSlots(engine, stemBudget + engine.dyingStems.size);
+    if (merged > 0 || (engine.freeStemIndices?.length || 0) > 0) {
+      compactTailSlots(engine, stemBudget + engine.dyingStems.size);
+    }
   } else if ((engine.freeStemIndices?.length || 0) > 128 && engine.frameCount % 16 === 0) {
     compactTailSlots(engine, Math.max(stemBudget + engine.dyingStems.size, liveStems + engine.dyingStems.size));
   }

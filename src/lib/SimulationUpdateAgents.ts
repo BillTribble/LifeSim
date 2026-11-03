@@ -275,69 +275,75 @@ export function processAgents(
       const desperate = canSeek && isOrganismDesperate(engine, evalGenome, agent.age);
       const seekRadius = getSeekRadius(engine, desperate);
 
-      for (let j = 0; j < activeAgents.length; j++) {
-        const other = activeAgents[j];
-        if (other === agent || other.isFeeler) continue;
+      if (!agent.isFeeler) {
+        for (let j = 0; j < activeAgents.length; j++) {
+          const other = activeAgents[j];
+          if (other === agent || other.isFeeler) continue;
 
-        const otherStrain = other.realGenome?.name || other.genome.name;
-        const isDifferentSpecies = otherStrain !== myStrain;
-        const dSq = agent.position.distanceToSquared(other.position);
+          const otherStrain = other.realGenome?.name || other.genome.name;
+          const isDifferentSpecies = otherStrain !== myStrain;
+          const dSq = agent.position.distanceToSquared(other.position);
 
-        if (isDifferentSpecies) {
-          if (canSeek) {
-            const otherEvalGenome =
-              other.isFeeler && other.realGenome ? other.realGenome : other.genome;
-            const otherMCount =
-              (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount ||
-              other.matingCount ||
-              0;
-            // Only fertile partners attract (plan 3.1)
-            const otherReceptive =
-              !other.tapering &&
-              areStrainsCompatibleForMating(
-                engine,
-                myStrain,
-                evalGenome,
-                otherStrain,
-                otherEvalGenome,
-              ) &&
-              otherMCount < maxM &&
-              other.cooldown <= 0 &&
-              !isSpeciesOnCooldown(engine, otherStrain, otherEvalGenome) &&
-              isOrganismMature(engine, otherEvalGenome);
+          if (isDifferentSpecies) {
+            if (canSeek) {
+              const otherEvalGenome =
+                other.isFeeler && other.realGenome ? other.realGenome : other.genome;
+              const otherMCount =
+                (engine as any).speciesLifecycleMap?.get(otherStrain)?.matingCount ||
+                other.matingCount ||
+                0;
+              // Only fertile partners attract (plan 3.1)
+              const otherReceptive =
+                !other.tapering &&
+                areStrainsCompatibleForMating(
+                  engine,
+                  myStrain,
+                  evalGenome,
+                  otherStrain,
+                  otherEvalGenome,
+                ) &&
+                otherMCount < maxM &&
+                other.cooldown <= 0 &&
+                !isSpeciesOnCooldown(engine, otherStrain, otherEvalGenome) &&
+                isOrganismMature(engine, otherEvalGenome);
 
-            if (otherReceptive && dSq < nearestDistSq) {
-              nearestDistSq = dSq;
-              nearestTarget = other;
-              nearestTargetPos = other.position.clone();
-            }
-            // Keep spacing while seeking: only a receptive partner inside contact range is exempt
-            // (any receptive partner when desperate, or far-spawned founders never meet)
-            if (dSq < 1600 && !(otherReceptive && (desperate || dSq < SEEK_CONTACT_RANGE_SQ || treeModel))) {
+              if (otherReceptive && dSq < nearestDistSq) {
+                nearestDistSq = dSq;
+                nearestTarget = other;
+                nearestTargetPos = other.position.clone();
+              }
+              // Keep spacing while seeking: only a receptive partner inside contact range is exempt
+              // (any receptive partner when desperate, or far-spawned founders never meet)
+              if (
+                !agent.isSeekerTwig &&
+                dSq < 1600 &&
+                !(otherReceptive && (desperate || dSq < SEEK_CONTACT_RANGE_SQ || treeModel))
+              ) {
+                avoidanceForce.add(
+                  new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
+                );
+                avoidanceCount++;
+              }
+            } else if (dSq < 1600 && !treeModel && !agent.isSeekerTwig) {
               avoidanceForce.add(
                 new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
               );
               avoidanceCount++;
             }
-          } else if (dSq < 1600 && !treeModel) {
+          } else if (dSq < 900 && other.parentId !== agent.id && agent.parentId !== other.id && !agent.isSeekerTwig) {
             avoidanceForce.add(
               new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
             );
             avoidanceCount++;
           }
-        } else if (dSq < 900 && other.parentId !== agent.id && agent.parentId !== other.id) {
-          avoidanceForce.add(
-            new THREE.Vector3().subVectors(agent.position, other.position).normalize(),
-          );
-          avoidanceCount++;
         }
-      }
 
-      if (avoidanceCount > 0) {
-        avoidanceForce
-          .divideScalar(avoidanceCount)
-          .multiplyScalar((engine.magnetism || 0.08) * (treeModel ? 0.35 : 1)); // dropped the extra 0.65 damping
-        agent.direction.add(avoidanceForce).normalize();
+        if (avoidanceCount > 0) {
+          avoidanceForce
+            .divideScalar(avoidanceCount)
+            .multiplyScalar((engine.magnetism || 0.08) * (treeModel ? 0.35 : 1)); // dropped the extra 0.65 damping
+          agent.direction.add(avoidanceForce).normalize();
+        }
       }
 
       if (genome.stability > 0) genome.stability -= 0.003;
@@ -444,10 +450,6 @@ export function processAgents(
         if (engine.sound) {
           engine.sound.onAgentBounce(agent.position, engine.camera);
         }
-        // Feelers freeze at boundary if they have already traveled >75% of their max reach
-        if (agent.isFeeler && (agent.feelerTravel ?? 0) > (agent.feelerMaxLen ?? 120) * 0.75) {
-          endFeeler(engine, agent, "boundary", { dissolve: false });
-        }
       }
 
       // Progressive stem tapering along the length of the branch
@@ -460,18 +462,12 @@ export function processAgents(
         else if (arch === "rhizome") minBranchesForArch = engine.rhizomeMinBranches ?? 6;
         else if (arch === "tree") minBranchesForArch = engine.treeMinBranches ?? 4;
 
-        // Lazy: these O(n) scans are only needed by the legacy (non tree-model) taper path
         const canTerminateBranch = () => {
-          const nonTaperingBranchesOfStrain = activeAgents.filter(
-            (a) => a.active && !a.tapering && !a.isFeeler && a.genome.name === genome.name,
-          ).length;
-          const livingNonFeelerCount = activeAgents.filter(
-            (a) => a.active && !a.tapering && !a.isFeeler,
-          ).length;
+          const nonTaperingBranchesOfStrain = strainCounts.get(genome.name) || 0;
           const effectiveMinBranches = isOverSizeBudget(engine, genome.name) ? Math.max(4, Math.floor(minBranchesForArch * 0.75)) : minBranchesForArch;
           return (
             nonTaperingBranchesOfStrain > effectiveMinBranches &&
-            livingNonFeelerCount - 1 >= engine.minCreatures
+            currentActiveCount - 1 >= engine.minCreatures
           );
         };
 
@@ -631,7 +627,7 @@ export function processAgents(
         false,
         agent.id,
       );
-      if ((engine as any)._lastStemWriteSucceeded === false) {
+      if ((engine as any)._lastStemWriteSucceeded === false && !agent.isFeeler) {
         agent.position.copy(agent.lastPosition);
         break;
       }
@@ -665,10 +661,7 @@ export function processAgents(
           effectiveStepSize,
         );
       } else {
-        const livingNonFeelerCount = activeAgents.filter(
-          (a) => a.active && !a.tapering && !a.isFeeler,
-        ).length;
-        const isUnderMinCreatures = livingNonFeelerCount < engine.minCreatures;
+        const isUnderMinCreatures = currentActiveCount < engine.minCreatures;
         if (genome.archetype === "bush") {
           stepBushTendrilBranching(
             engine,

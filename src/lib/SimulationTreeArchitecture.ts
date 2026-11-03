@@ -665,7 +665,7 @@ export function stepTreeArchitecture(
     (!isRhiz && depth <= 3 ? true : roomForTips) &&
     !isHardOverBudget;
   if (!canFork) {
-    if (shouldBecomeKeeper(engine, agent, newAgents) && (isRhiz || agent.thickness <= 0.24)) {
+    if (shouldBecomeKeeper(engine, agent, newAgents)) {
       enterTreeRest(agent);
       return;
     }

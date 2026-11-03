@@ -1,6 +1,7 @@
 import { SimulationEngine } from "./SimulationEngine";
 import { Agent } from "./SimulationTypes";
 import { isRatioCullProtected } from "./SimulationDrought";
+import { getKeystoneAnchorStrain, hasInFlightFeelerConnection } from "./SimulationCulling";
 
 export function performBiomassSweep(engine: SimulationEngine): void {
   if (engine.dyingStrains && engine.dyingStrains.size > 0) {
@@ -91,7 +92,9 @@ export function performRatioCulling(engine: SimulationEngine, activeAgents: Agen
           engine.hasAnyOrganismBred &&
           engine.hasReachedMinCreatures &&
           // Don't cull an organism that was just born or just bred (it killed founders mid-breeding)
+          strainName !== getKeystoneAnchorStrain(engine) &&
           !isRatioCullProtected(engine, strainName) &&
+          !hasInFlightFeelerConnection(activeAgents, strainName, engine) &&
           engine.getLivingOrganismCount() - 1 >= Math.max(4, engine.minCreatures ?? 4)
         ) {
           engine.speciesAbove3Percent.delete(strainName);
@@ -174,8 +177,10 @@ export function performCapacityCulling(
     // Kill only ONE oldest bred species per frame to prevent mass die-off
     let oldestName: string | null = null;
     let oldestAge = -Infinity;
+    const keystone = getKeystoneAnchorStrain(engine);
     for (const a of activeNotTapering) {
-      if (a.hasBred && !a.isFeeler) {
+      if (keystone && a.genome.name === keystone) continue;
+      if (a.hasBred && !a.isFeeler && !hasInFlightFeelerConnection(engine.agents, a.genome.name, engine)) {
         const age = engine.time - (a.genome.createdAt || 0);
         if (age > oldestAge) {
           oldestAge = age;

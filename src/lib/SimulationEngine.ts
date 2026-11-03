@@ -532,6 +532,19 @@ export class SimulationEngine {
     return count;
   }
   getLivingOrganisms(): Set<string> {
+    const dyingSize = this.dyingStrains ? this.dyingStrains.size : 0;
+    const cache = (this as any)._livingSetCache;
+    if (
+      this.frameCount !== undefined &&
+      this.frameCount > 0 &&
+      cache &&
+      cache.frame === this.frameCount &&
+      cache.time === this.time &&
+      cache.agentLen === this.agents.length &&
+      cache.dyingSize === dyingSize
+    ) {
+      return cache.set;
+    }
     const living = new Set<string>();
     for (let i = 0; i < this.agents.length; i++) {
       const a = this.agents[i];
@@ -552,12 +565,19 @@ export class SimulationEngine {
           bio > 0 &&
           !(this.dyingStrains && this.dyingStrains.has(name)) &&
           this.speciesLifecycleMap?.get(name)?.phase !== "END_OF_LIFE" &&
-          (this.genomeMap?.has(name) || this.agents.some((a) => a.genome.name === name))
+          (this.genomeMap?.has(name) || living.has(name))
         ) {
           living.add(name);
         }
       }
     }
+    (this as any)._livingSetCache = {
+      frame: this.frameCount,
+      time: this.time,
+      agentLen: this.agents.length,
+      dyingSize,
+      set: living,
+    };
     return living;
   }
   getLivingOrganismCount(): number {

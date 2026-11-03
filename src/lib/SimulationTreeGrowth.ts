@@ -245,13 +245,14 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
     const segBudget = getOrganismSegmentBudget(engine, name);
     const overTissueCap = tissueCount > segBudget * 1.45;
     const hasEssentialBuds = s.buds.some((b) => (b.branchDepth || 0) <= 2);
-    if (overTissueCap && !hasEssentialBuds) continue;
+    const slowMaintenanceDue = overTissueCap && s.growing === 0 && s.clock >= s.nextRelease + BUD_RELEASE_MIN * 2.5;
+    if (overTissueCap && !hasEssentialBuds && !slowMaintenanceDue) continue;
     if (s.clock < s.nextRelease || s.growing >= maxTips) continue;
 
     if (s.buds.length > 0) {
       // Release buds in paced clusters when limbs finish, prioritizing lowest branchDepth first across the crown
-      const releaseLimit = isFiligree ? 3 : 2;
-      const toRelease = s.buds.length > 1 && s.growing + 1 < maxTips
+      const releaseLimit = overTissueCap ? 1 : (isFiligree ? 3 : 2);
+      const toRelease = !overTissueCap && s.buds.length > 1 && s.growing + 1 < maxTips
         ? Math.min(releaseLimit, maxTips - s.growing)
         : 1;
       for (let r = 0; r < toRelease && s.buds.length > 0; r++) {
@@ -264,19 +265,19 @@ export function sustainTreeGrowth(engine: SimulationEngine, activeAgents: Agent[
             bestIdx = i;
           }
         }
-        if (overTissueCap && bestDepth >= 4) break;
+        if (overTissueCap && bestDepth >= 4 && !slowMaintenanceDue) break;
         const bud = s.buds.splice(bestIdx, 1)[0];
         bud.lastPosition.copy(bud.position);
         newAgents.push(bud);
         s.growing++;
       }
-      const budInterval = isFiligree ? BUD_RELEASE_MIN * 0.65 : BUD_RELEASE_MIN;
+      const budInterval = overTissueCap ? BUD_RELEASE_MIN * 3.0 : (isFiligree ? BUD_RELEASE_MIN * 0.65 : BUD_RELEASE_MIN);
       s.nextRelease = s.clock + budInterval + Math.random() * BUD_RELEASE_RANGE;
     } else if (
-      s.growing < minTips &&
+      s.growing < (overTissueCap ? 1 : minTips) &&
       s.template &&
       s.nodes.length > 0 &&
-      !overTissueCap
+      (!overTissueCap || slowMaintenanceDue)
     ) {
       const mode = s.template.genome?.morphMode;
       let maxShoots = 4;

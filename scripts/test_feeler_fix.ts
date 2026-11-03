@@ -20,6 +20,7 @@ async function testFeelerBreedingAndCreatureControls() {
 
   let snakeEncountered = false;
   let feelerChildEncountered = false;
+  let stalledFeelerEncountered = false;
   let matingEvents = 0;
 
   engine.onLog = (msg: string) => {
@@ -30,6 +31,10 @@ async function testFeelerBreedingAndCreatureControls() {
     if (msg.includes("Feeler-") && msg.includes("Offspring")) {
       console.error(`🚨 FEELER SPAWNED AS OFFSPRING: ${msg}`);
       feelerChildEncountered = true;
+    }
+    if (msg.includes("[FEELER_END]") && !msg.includes("reason=mated")) {
+      console.error(`🚨 FEELER STOPPED BEFORE REACHING MATE: ${msg}`);
+      stalledFeelerEncountered = true;
     }
     if (msg.includes("💖 Offspring")) {
       matingEvents++;
@@ -61,12 +66,13 @@ async function testFeelerBreedingAndCreatureControls() {
   console.log(`Mating events recorded: ${matingEvents}`);
   console.log(`Snake organisms encountered: ${snakeEncountered}`);
   console.log(`Feeler leaked as child organism: ${feelerChildEncountered}`);
+  console.log(`Stalled mid-air feelers encountered: ${stalledFeelerEncountered}`);
 
-  if (snakeEncountered || feelerChildEncountered) {
+  if (snakeEncountered || feelerChildEncountered || stalledFeelerEncountered || matingEvents === 0) {
     console.error(`❌ TESTS FAILED`);
     process.exit(1);
   } else {
-    console.log(`✅ ALL TESTS PASSED: Feelers remain extensions of organisms and only valid organism archetypes are bred!`);
+    console.log(`✅ ALL TESTS PASSED: Feelers never stop mid-air before reaching a mate, remain extensions of organisms, and breed valid archetypes!`);
   }
 }
 

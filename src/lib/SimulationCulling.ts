@@ -7,6 +7,7 @@ import {
 } from "./SimulationSeekRamp";
 import { getStrainTissueCount } from "./SimulationPartnerSearch";
 import { inatService } from "./SimulationINatService";
+import { getInFlightFeelers } from "./SimulationFeelers";
 
 /** Unbred organisms get this many growth steps after reaching fertility before they may be culled. */
 export const MATURITY_GRACE_STEPS = 220;
@@ -21,7 +22,8 @@ export function canEnterDeleting(
   activeAgents: Agent[],
   countAsRemoved: number = 1,
 ): boolean {
-  if (!engine.hasAnyOrganismBred || !engine.hasReachedMinCreatures) return false;
+  if (!engine.hasAnyOrganismBred) return false;
+  if (engine.hasReachedMinCreatures !== undefined && !engine.hasReachedMinCreatures) return false;
   const livingOrganisms =
     typeof engine.getLivingOrganismCount === "function"
       ? engine.getLivingOrganismCount()
@@ -35,25 +37,64 @@ export function canEnterDeleting(
           }
           return living.size;
         })();
-  const minCreatures = Math.max(4, engine.minCreatures ?? 4);
+  const minCreatures =
+    engine.minCreatures !== undefined
+      ? Math.max(4, engine.minCreatures)
+      : typeof engine.getLivingOrganismCount === "function"
+        ? 4
+        : 3;
   if (livingOrganisms < minCreatures) return false;
   if (livingOrganisms - countAsRemoved < minCreatures) return false;
   return true;
 }
 
-/** True if `strainName` is the oldest non-tapering living organism in the simulation. */
+/** True if `strainName` currently owns or is targeted by an active in-flight feeler. */
+export function hasInFlightFeelerConnection(
+  activeAgents: Agent[],
+  strainName: string,
+  engine?: SimulationEngine,
+): boolean {
+  const list = engine ? getInFlightFeelers(engine, activeAgents) : activeAgents;
+  for (let i = 0; i < list.length; i++) {
+    const a = list[i];
+    if (!a.active || !a.isFeeler || a.feelerEnded) continue;
+    const owner = a.realGenome?.name || a.parentAgent?.genome?.name || (a.genome as any).parentStrainName || a.genome.name;
+    if (owner === strainName || a.feelerTargetStrain === strainName) return true;
+  }
+  return false;
+}
+
+/** Returns the single protected keystone/anchor strain (earliest living strain) so at least one mature specimen persists across generations. */
+export function getKeystoneAnchorStrain(engine: SimulationEngine): string | null {
+  const living = typeof engine.getLivingOrganisms === "function" ? engine.getLivingOrganisms() : null;
+  if (!living || living.size <= 1) return null;
+  let earliestName: string | null = null;
+  let earliestTime = Infinity;
+  for (const name of living) {
+    const t = engine.genomeMap?.get(name)?.createdAt ?? Infinity;
+    if (t < earliestTime) {
+      earliestTime = t;
+      earliestName = name;
+    }
+  }
+  return earliestName;
+}
+
+/** True if `strainName` is the oldest non-tapering living organism in the simulation (excluding the protected keystone anchor). */
 function isOldestLivingOrganism(
   engine: SimulationEngine,
   activeAgents: Agent[],
   strainName: string,
 ): boolean {
+  const keystone = getKeystoneAnchorStrain(engine);
+  if (keystone && strainName === keystone) return false;
   const myGenome = engine.genomeMap?.get(strainName);
   const myCreatedAt = myGenome?.createdAt ?? 0;
   for (let i = 0; i < activeAgents.length; i++) {
     const a = activeAgents[i];
     if (!a.active || a.tapering || a.isFeeler) continue;
     const otherName = a.genome.name;
-    if (otherName === strainName) continue;
+    if (otherName === strainName || otherName === keystone) continue;
     if (engine.dyingStrains && engine.dyingStrains.has(otherName)) continue;
     const otherCreatedAt = a.genome.createdAt ?? 0;
     if (otherCreatedAt < myCreatedAt) return false;
@@ -70,6 +111,7 @@ export function checkLifespanDeath(
   maxM: number,
 ) {
   if (agent.tapering || agent.isFeeler) return;
+  if (hasInFlightFeelerConnection(activeAgents, agent.genome.name, engine)) return;
   const charge = Math.min(1, Math.max(0, (inatService.getBroodinessMultiplier() - 1) / 1.5));
   const broodTempoScale = Math.max(0.68, 1.0 - 0.28 * charge);
   const organismAgeSteps = getOrganismGrowthSteps(engine, agent.genome);
@@ -167,6 +209,7 @@ export function selectCullVictim(
   let oldestCreatedAt = Infinity;
   let bestBred = false;
   let bestSize = Infinity;
+  const keystone = getKeystoneAnchorStrain(engine);
   const seen = new Set<string>();
   for (let idx = 0; idx < activeAgents.length; idx++) {
     const ca = activeAgents[idx];
@@ -176,6 +219,7 @@ export function selectCullVictim(
     seen.add(name);
     if (engine.dyingStrains && engine.dyingStrains.has(name)) continue;
     if (exclude.has(name)) continue;
+    if (keystone && name === keystone) continue;
     if (policy === "oldest") {
       if (ca.genome.createdAt < oldestCreatedAt) {
         oldestCreatedAt = ca.genome.createdAt;
@@ -186,6 +230,7 @@ export function selectCullVictim(
     const lc = engine.speciesLifecycleMap.get(name);
     const bred = !!(lc?.hasBred || (lc?.matingCount ?? 0) > 0 || ca.hasBred);
     if (!ignoreProtection) {
+      if (hasInFlightFeelerConnection(activeAgents, name, engine)) continue;
       const steps = getOrganismGrowthSteps(engine, ca.genome);
       const isSoft = !!(engine as any)._isSoftwareRaster;
       const minSteps = bred

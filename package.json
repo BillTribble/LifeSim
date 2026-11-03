@@ -10,6 +10,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:dissolve": "tsx scripts/test_dissolve_guard.ts",
+    "test:feeler": "tsx test_feeler_targeting_qa.ts && tsx scripts/test_feeler_fix.ts",
+    "test:lifecycle": "tsx test_lifecycle_qa.ts",
     "test:population": "tsx scripts/test_population_bounds.ts"
   },
   "dependencies": {

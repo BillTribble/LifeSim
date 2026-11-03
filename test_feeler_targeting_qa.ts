@@ -230,6 +230,67 @@ function createMockEngine(time: number = 0) {
   assert(matingBredThisFrame.has(feeler), "QA-FEELER-05-MATE", "Feeler successfully mates upon physical contact with partner");
   assert(engine.hasAnyOrganismBred === true, "QA-FEELER-05-BRED", "Engine records successful organism breeding");
   assert(feeler.active === false, "QA-FEELER-05-FREEZE", "Feeler freezes in place after mating");
+  // ---------------------------------------------------------
+  // TEST 6: Feeler across far distance (> initial feelerMaxLen & > FEELER_MAX_LIFETIME_STEPS)
+  //         never stops mid-air and continues until reaching and mating with partner
+  // ---------------------------------------------------------
+  const farEngine = createMockEngine(500);
+  farEngine.boundarySize = 60;
+  farEngine.genomeMap = new Map([
+    [alphaGenome.name, alphaGenome],
+    [betaGenome.name, betaGenome],
+  ]);
+  const farAlpha = {
+    id: 1,
+    position: new THREE.Vector3(-45, 0, -45),
+    lastPosition: new THREE.Vector3(-45, 0, -45),
+    direction: new THREE.Vector3(0, 1, 0),
+    genome: { ...alphaGenome, cooldownUntil: -Infinity, lastFeelerSpawnTime: -Infinity, matedPartners: new Set(), matedPartnerTimes: new Map() },
+    active: true,
+    age: 300,
+    thickness: 1.0,
+    cooldown: 0,
+  } as any;
+  const farBeta = {
+    id: 2,
+    position: new THREE.Vector3(45, 0, 45),
+    lastPosition: new THREE.Vector3(45, 0, 45),
+    direction: new THREE.Vector3(0, -1, 0),
+    genome: { ...betaGenome, cooldownUntil: -Infinity, lastFeelerSpawnTime: -Infinity, matedPartners: new Set(), matedPartnerTimes: new Map() },
+    active: true,
+    age: 300,
+    thickness: 1.0,
+    cooldown: 0,
+  } as any;
+  farEngine.agents = [farAlpha, farBeta];
+  const farNew: any[] = [];
+  const farBred = new Set<any>();
+  const farStrains = new Set<string>(["Alpha-101", "Beta-202"]);
+  farEngine.feelerProb = 100.0;
+  handleBreedingAndFeelers(farAlpha, 0, farEngine.agents, farNew, farBred, farEngine, farStrains);
+  assert(farNew.length === 1 && farNew[0].isFeeler === true, "QA-FEELER-06-SPAWN", "Long-range feeler spawned across 127-unit diagonal");
+  const farFeeler = farNew[0];
+  // Intentionally set feelerMaxLen small (10 units) and age high (200 steps) to prove it never stops early
+  farFeeler.feelerMaxLen = 10;
+  farFeeler.age = 200;
+  farEngine.agents.push(farFeeler);
+
+  let stepsToMate = 0;
+  while (farFeeler.active && stepsToMate < 500) {
+    stepsToMate++;
+    farFeeler.age++;
+    updateFeelerSeeking(farFeeler, farEngine);
+    if (!farFeeler.active) break;
+    const stepLen = farFeeler.feelerStepOverride ?? farFeeler.feelerStep ?? 0.65;
+    farFeeler.position.addScaledVector(farFeeler.direction, stepLen);
+    farFeeler.feelerTravel = (farFeeler.feelerTravel || 0) + stepLen;
+    handleBreedingAndFeelers(farFeeler, 2, farEngine.agents, [], farBred, farEngine, farStrains);
+  }
+  assert(
+    farBred.has(farFeeler) && !farFeeler.active,
+    "QA-FEELER-06-NEVER-STOP-EARLY",
+    `Feeler crossed 127-unit gap (${stepsToMate} steps, travel=${farFeeler.feelerTravel.toFixed(1)}) without stopping mid-air and mated on contact`,
+  );
 }
 
 console.log(`\n=== QA TEST SUITE COMPLETED: ${passed} PASSED, ${failed} FAILED ===`);
