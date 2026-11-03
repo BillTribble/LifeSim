@@ -87,7 +87,9 @@ export function retireOldestBushSibling(
     if (a.active && !a.tapering && !a.isFeeler && a.genome.name === strainName) {
       nonTaperingCount++;
       if (a !== excludeAgent && (a.branchDepth || 0) > 0) {
-        if ((((a as any).branchDist ?? 0) >= 2.2 || a.age >= 6) && a.age > maxAge) {
+        const bushScale = getBushMorphScale(a.genome);
+        const minRetireDist = 4.2 * Math.min(1.45, Math.max(0.50, bushScale));
+        if ((((a as any).branchDist ?? 0) >= minRetireDist || a.age >= 14) && a.age > maxAge) {
           maxAge = a.age; oldest = a;
         }
       }
@@ -134,7 +136,7 @@ export function stepBushTendrilBranching(
   if (agent.genome.archetype !== "bush" || agent.isFeeler || agent.tapering) return false;
   const tissueCount = getStrainTissueCount(engine, agent.genome.name);
   const segBudget = getOrganismSegmentBudget(engine, agent.genome.name);
-  if (tissueCount > segBudget * 3.2 && !agent.isSeekerTwig) return false;
+  if (tissueCount > segBudget * 1.50 && !agent.isSeekerTwig) return false;
 
   const currentDepth = agent.branchDepth || 0;
   const branchDist = (agent as any).branchDist ?? (agent.age * 0.6);

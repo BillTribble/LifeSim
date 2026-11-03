@@ -383,12 +383,14 @@ export function processAgents(
         const waveAxisA = new THREE.Vector3().crossVectors(agent.direction, refUp).normalize();
         const waveAxisB = new THREE.Vector3().crossVectors(agent.direction, waveAxisA).normalize();
         const waveFreq = (genome.wavingSpeed || 0.18) * (1.0 + depth * 0.16);
-        const waveAmp = THREE.MathUtils.clamp(genome.wavingAmplitude || 0.09, 0.07, 0.14) * (depth === 0 ? 0.85 : 1.0 + Math.min(3, depth) * 0.15) * THREE.MathUtils.lerp(0.18, 1.35, cGene);
+        const treeWaveDamp = treeModel ? (depth === 0 ? 0.14 : depth === 1 ? 0.28 : 0.65) : 1.0;
+        const waveAmp = THREE.MathUtils.clamp(genome.wavingAmplitude || 0.09, 0.07, 0.14) * (depth === 0 ? 0.85 : 1.0 + Math.min(3, depth) * 0.15) * THREE.MathUtils.lerp(0.18, 1.35, cGene) * treeWaveDamp;
         const waveA = Math.sin(engine.time * waveFreq + agent.age * 0.22 + (agent.id || 0) * 1.618) * waveAmp;
         const waveB = Math.cos(engine.time * waveFreq * 0.85 + agent.age * 0.18 + (agent.id || 0) * 2.718) * waveAmp * 0.82;
         agent.direction.applyAxisAngle(waveAxisA, waveA).applyAxisAngle(waveAxisB, waveB).normalize();
 
-        if (genome.movementType === "spiral") {
+        const skipTreeMacroCurve = treeModel && depth <= 1;
+        if (!skipTreeMacroCurve && genome.movementType === "spiral") {
           const spiralSign = ((agent.id || 0) % 2 === 0 ? 1 : -1);
           if (!agent.spiralAxis) {
             agent.spiralAxis = new THREE.Vector3().crossVectors(agent.direction, refUp).normalize()
@@ -396,7 +398,8 @@ export function processAgents(
           } else {
             agent.spiralAxis.addScaledVector(new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02), 1).normalize();
           }
-          agent.direction.applyAxisAngle(agent.spiralAxis, spiralSign * THREE.MathUtils.lerp(0.06, 0.28 + (depth === 0 ? 0.04 : 0.08), cGene)).normalize();
+          const treeSpiralDamp = treeModel ? (depth === 0 ? 0.20 : depth === 1 ? 0.45 : 0.80) : 1.0;
+          agent.direction.applyAxisAngle(agent.spiralAxis, spiralSign * THREE.MathUtils.lerp(0.06, 0.28 + (depth === 0 ? 0.04 : 0.08), cGene) * treeSpiralDamp).normalize();
         } else if (genome.movementType === "orthogonal") {
           if (Math.random() < effectiveWanderIntensity * 0.12) {
             const up = new THREE.Vector3(
@@ -577,7 +580,7 @@ export function processAgents(
       if (agent.targetThickness !== undefined && !agent.tapering) {
         agent.thickness += (agent.targetThickness - agent.thickness) * 0.08;
       }
-      if (!agent.isFeeler && !agent.tapering && agent.age % 12 === 0 && cGene > 0.35 && Math.random() < 0.35) {
+      if (!agent.isFeeler && !agent.tapering && !treeModel && agent.age % 12 === 0 && cGene > 0.35 && Math.random() < 0.35) {
         agent.thickness = Math.min(genome.thicknessBase * 1.5, agent.thickness * (1.0 + 0.18 * cGene));
       }
 
@@ -598,7 +601,8 @@ export function processAgents(
             : agent.age >= 25
               ? 1.0
               : 0.72 + 0.28 * (agent.age / 25);
-      const tuberAmp = THREE.MathUtils.lerp(0.015, 0.18, cGene);
+      const rawTuberAmp = THREE.MathUtils.lerp(0.015, 0.18, cGene);
+      const tuberAmp = genome.archetype === "tree" ? rawTuberAmp * 0.22 : rawTuberAmp;
       const tuberWave = (!agent.isFeeler && !agent.tapering)
         ? (1.0 + tuberAmp * Math.sin(agent.age * 0.32 + (agent.id || 0) * 1.9) + (tuberAmp * 0.5) * Math.cos(agent.age * 0.17 + (agent.id || 0) * 0.7))
         : 1.0;

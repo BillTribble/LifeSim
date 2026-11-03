@@ -141,15 +141,15 @@ export function clampArchetypeGenome(res: Genome): Genome {
   }
   res.singleton = false;
   if (res.archetype === "rhizome") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.55, 1.65);
-    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.03, 0.14);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.45, 1.85);
+    res.minThickness = THREE.MathUtils.clamp(res.minThickness, 0.025, 0.14);
     res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.978, 0.992);
     res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.06, 0.04, 0.16);
     res.branchTendency = THREE.MathUtils.clamp(res.branchTendency || 2.0, 1.8, 4.5);
     res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.65, 1.35);
     res.wanderIntensity = THREE.MathUtils.clamp(res.wanderIntensity || 0.4, 0.12, 0.65);
   } else if (res.archetype === "bush") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.95, 2.20);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 0.80, 2.40);
     res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.10, 0.05, 0.22);
     res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.985, 0.995);
     res.bifurcationRate = Math.max(res.bifurcationRate || 0.01, 0.22 + Math.random() * 0.12);
@@ -157,7 +157,7 @@ export function clampArchetypeGenome(res: Genome): Genome {
     res.stepSize = THREE.MathUtils.clamp(res.stepSize, 0.35, 0.85);
     res.wanderIntensity = Math.min(res.wanderIntensity || 0.5, 0.75);
   } else if (res.archetype === "tree") {
-    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.00, 4.80);
+    res.thicknessBase = THREE.MathUtils.clamp(res.thicknessBase, 2.00, 5.40);
     res.minThickness = THREE.MathUtils.clamp(res.minThickness || 0.16, 0.03, 0.45);
     res.thicknessDecay = THREE.MathUtils.clamp(res.thicknessDecay, 0.978, 0.995);
     res.bifurcationRate = THREE.MathUtils.clamp(res.bifurcationRate || 0.03, 0.018, 0.085);
@@ -298,9 +298,9 @@ export function breedGenomes(
     movementType: newMovementType,
     color: baseColor,
     thicknessBase: Math.max(
-      0.5,
+      0.45,
       ((g1.thicknessBase + g2.thicknessBase) / 2) *
-        (1 + (Math.random() - 0.5) * 0.2),
+        (1 + (Math.random() - 0.5) * 0.38),
     ),
     minThickness: Math.max(
       0.1,

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { SimulationEngine } from "./SimulationEngine";
 import type { Agent } from "./SimulationTypes";
+import { hasBankedTreeBuds } from "./SimulationTreeGrowth";
 
 const MAX_TRAILING_TIPS_PER_ORGANISM = 6;
 const TARGET_TRAILING_TIPS = 3;
@@ -17,7 +18,7 @@ export function sustainTrailingGrowth(
   activeAgents: Agent[],
   newAgents: Agent[],
 ): void {
-  if (engine.designerMode) return;
+  if (engine.designerMode || engine.allowBreeding === false) return;
 
   const livingOrganisms = engine.getLivingOrganisms();
   if (livingOrganisms.size === 0) return;
@@ -58,9 +59,17 @@ export function sustainTrailingGrowth(
 
   for (const name of livingOrganisms) {
     if (engine.dyingStrains?.has(name) || engine.suppressedStrains?.has(name)) continue;
+    if (hasBankedTreeBuds(engine, name)) continue;
 
+    const strainGenome = engine.genomeMap.get(name);
+    const isMacroTree =
+      strainGenome?.morphMode === "monolith" ||
+      strainGenome?.morphMode === "big_branching" ||
+      strainGenome?.morphMode === "candelabra";
+    if (isMacroTree && (nonSeekerCountMap.get(name) || 0) > 0) continue;
+    const targetTrailing = isMacroTree ? 1 : TARGET_TRAILING_TIPS;
     const trailingCount = trailingCountMap.get(name) || 0;
-    if (trailingCount >= TARGET_TRAILING_TIPS) continue;
+    if (trailingCount >= targetTrailing) continue;
 
     const candidates = candidatesMap.get(name) || [];
 
@@ -88,6 +97,10 @@ export function sustainTrailingGrowth(
         .add(new THREE.Vector3((Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.7))
         .normalize();
 
+      const startShootThick = Math.max(
+        TRAILING_THICKNESS,
+        Math.min(0.22, (bestCandidate.thickness || TRAILING_THICKNESS) * 0.68),
+      );
       const shoot: Agent = {
         id: engine.nextAgentId++,
         position: bestCandidate.position.clone(),
@@ -96,7 +109,7 @@ export function sustainTrailingGrowth(
         genome: bestCandidate.genome,
         active: true,
         age: 0,
-        thickness: Math.min(TRAILING_THICKNESS, (bestCandidate.genome.minThickness || 0.05) * 0.85),
+        thickness: startShootThick,
         targetThickness: Math.min(TRAILING_THICKNESS, (bestCandidate.genome.minThickness || 0.05) * 0.85),
         cooldown: bestCandidate.cooldown || 0,
         branchDepth: Math.max(3, (bestCandidate.branchDepth || 0) + 1),
@@ -110,9 +123,9 @@ export function sustainTrailingGrowth(
       newAgents.push(shoot);
       trailingCountMap.set(name, trailingCount + 1);
 
-      if ((nonSeekerCountMap.get(name) || 0) === 0 && (engine.frameCount || 0) % 25 === 0) {
+      if ((nonSeekerCountMap.get(name) || 0) === 0 && (engine.frameCount || 0) % 45 === 0 && !isMacroTree) {
         const g = bestCandidate.genome;
-        const secThick = Math.max(0.14, Math.min(0.42, (g.minThickness || 0.22) * 1.15));
+        const secThick = Math.max(0.12, Math.min(0.32, (g.minThickness || 0.16) * 1.15));
         const secDir = bestCandidate.direction
           .clone()
           .add(new THREE.Vector3((Math.random() - 0.5) * 0.65, (Math.random() - 0.5) * 0.65, (Math.random() - 0.5) * 0.65))
@@ -128,8 +141,9 @@ export function sustainTrailingGrowth(
           thickness: secThick,
           targetThickness: secThick,
           cooldown: bestCandidate.cooldown || 0,
-          branchDepth: 2,
-          isSeekerTwig: false,
+          branchDepth: 3,
+          isSeekerTwig: true,
+          seekerFlushes: 1,
           isCanopy: true,
           rootOrigin: (bestCandidate.rootOrigin || bestCandidate.position).clone(),
           branchBasePos: bestCandidate.position.clone(),
@@ -196,32 +210,6 @@ export function sustainTrailingGrowth(
 
         newAgents.push(shoot);
         trailingCountMap.set(name, trailingCount + 1);
-
-        if ((nonSeekerCountMap.get(name) || 0) === 0) {
-          const secThick = Math.max(0.14, Math.min(0.42, (genome.minThickness || 0.22) * 1.15));
-          const secDir = segDir
-            .clone()
-            .add(new THREE.Vector3((Math.random() - 0.5) * 0.65, (Math.random() - 0.5) * 0.65, (Math.random() - 0.5) * 0.65))
-            .normalize();
-          newAgents.push({
-            id: engine.nextAgentId++,
-            position: distalSegment.endPos.clone(),
-            lastPosition: distalSegment.endPos.clone(),
-            direction: secDir,
-            genome: genome,
-            active: true,
-            age: 0,
-            thickness: secThick,
-            targetThickness: secThick,
-            cooldown: 0,
-            branchDepth: 2,
-            isSeekerTwig: false,
-            isCanopy: true,
-            rootOrigin: rootOrigin.clone(),
-            branchBasePos: distalSegment.endPos.clone(),
-          });
-          nonSeekerCountMap.set(name, 1);
-        }
       }
     }
   }
@@ -254,7 +242,14 @@ export function stepTrailingBranching(
     return;
   }
 
-  if (agent.age >= 14 && agent.age % 16 === 0 && Math.random() < 0.82) {
+  if (
+    agent.age >= 14 &&
+    agent.age % 16 === 0 &&
+    agent.genome.morphMode !== "monolith" &&
+    agent.genome.morphMode !== "candelabra" &&
+    agent.genome.morphMode !== "big_branching" &&
+    Math.random() < 0.82
+  ) {
     const name = agent.genome.name;
     let trailingTips = 0;
     let oldest: Agent | null = null;

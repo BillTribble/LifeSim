@@ -34,13 +34,13 @@ export interface TreeProfile {
 }
 
 export const PROFILES: Record<TreeHabit, TreeProfile> = {
-  monolith: { trunkLength: 4.6, crownDivision: 2, divisionSpreadDeg: 48, trunkLateralsFrom: 0.32, limbLength: 11.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.42, forkAngleDeg: 38, endTaper: 0.84, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, flareBoost: 0.20 },
-  big_branching: { trunkLength: 4.5, crownDivision: 2, divisionSpreadDeg: 48, trunkLateralsFrom: 0.32, limbLength: 12.0, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.42, forkAngleDeg: 38, endTaper: 0.82, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, flareBoost: 0.18 },
-  candelabra: { trunkLength: 4.4, crownDivision: 3, divisionSpreadDeg: 50, trunkLateralsFrom: 0.32, limbLength: 11.0, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.40, forkAngleDeg: 38, endTaper: 0.82, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, noMidBranchLaterals: false, flareBoost: 0.18 },
-  oak: { trunkLength: 4.5, crownDivision: 2, divisionSpreadDeg: 48, trunkLateralsFrom: 0.32, limbLength: 11.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.40, forkAngleDeg: 38, endTaper: 0.82, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, flareBoost: 0.18 },
-  elm: { trunkLength: 4.8, crownDivision: 2, divisionSpreadDeg: 46, trunkLateralsFrom: 0.32, limbLength: 12.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.38, forkAngleDeg: 38, endTaper: 0.80, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, flareBoost: 0.16 },
-  pine: { trunkLength: 5.0, crownDivision: 2, divisionSpreadDeg: 44, trunkLateralsFrom: 0.32, limbLength: 11.0, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.38, forkAngleDeg: 38, endTaper: 0.78, stepMin: 0.36, stepMax: 0.68, maxDepth: 4, whorlSpacing: 3.4, flareBoost: 0.16 },
-  filigree: { trunkLength: 4.2, crownDivision: 2, divisionSpreadDeg: 48, trunkLateralsFrom: 0.32, limbLength: 10.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.38, forkAngleDeg: 38, endTaper: 0.80, stepMin: 0.30, stepMax: 0.56, maxDepth: 4, flareBoost: 0.16 },
+  monolith: { trunkLength: 9.5, crownDivision: 3, divisionSpreadDeg: 40, trunkLateralsFrom: 1.8, limbLength: 16.5, lengthRatio: 0.68, lateralSpacing: 0.68, lateralAngleDeg: 44, lateralAlpha: 0.38, forkAngleDeg: 36, endTaper: 0.76, stepMin: 0.38, stepMax: 0.68, maxDepth: 3, flareBoost: 0.38 },
+  big_branching: { trunkLength: 9.0, crownDivision: 3, divisionSpreadDeg: 38, trunkLateralsFrom: 0.72, limbLength: 16.0, lengthRatio: 0.66, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.34, forkAngleDeg: 35, endTaper: 0.74, stepMin: 0.36, stepMax: 0.66, maxDepth: 3, flareBoost: 0.34 },
+  candelabra: { trunkLength: 8.5, crownDivision: 3, divisionSpreadDeg: 36, trunkLateralsFrom: 0.68, limbLength: 16.0, lengthRatio: 0.72, lateralSpacing: 0.56, lateralAngleDeg: 40, lateralAlpha: 0.36, forkAngleDeg: 35, endTaper: 0.76, stepMin: 0.36, stepMax: 0.66, maxDepth: 3, noMidBranchLaterals: false, flareBoost: 0.32 },
+  oak: { trunkLength: 7.5, crownDivision: 3, divisionSpreadDeg: 36, trunkLateralsFrom: 0.56, limbLength: 13.5, lengthRatio: 0.64, lateralSpacing: 0.34, lateralAngleDeg: 42, lateralAlpha: 0.28, forkAngleDeg: 34, endTaper: 0.70, stepMin: 0.34, stepMax: 0.64, maxDepth: 4, flareBoost: 0.28 },
+  elm: { trunkLength: 9.5, crownDivision: 4, divisionSpreadDeg: 28, trunkLateralsFrom: 2.0, limbLength: 17.0, lengthRatio: 0.60, lateralSpacing: 0.30, lateralAngleDeg: 38, lateralAlpha: 0.24, forkAngleDeg: 32, endTaper: 0.68, stepMin: 0.34, stepMax: 0.64, maxDepth: 4, flareBoost: 0.25 },
+  pine: { trunkLength: 24.0, crownDivision: 0, divisionSpreadDeg: 0, trunkLateralsFrom: 0.18, limbLength: 12.5, lengthRatio: 0.52, lateralSpacing: 0.28, lateralAngleDeg: 58, lateralAlpha: 0.20, forkAngleDeg: 30, endTaper: 0.62, stepMin: 0.36, stepMax: 0.66, maxDepth: 3, whorlSpacing: 4.2, flareBoost: 0.28 },
+  filigree: { trunkLength: 4.8, crownDivision: 4, divisionSpreadDeg: 38, trunkLateralsFrom: 0.42, limbLength: 9.2, lengthRatio: 0.68, lateralSpacing: 0.18, lateralAngleDeg: 42, lateralAlpha: 0.26, forkAngleDeg: 36, endTaper: 0.76, stepMin: 0.28, stepMax: 0.54, maxDepth: 5, flareBoost: 0.16 },
   rhizome: { trunkLength: 4.2, crownDivision: 3, divisionSpreadDeg: 54, trunkLateralsFrom: 0.32, limbLength: 13.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.36, forkAngleDeg: 38, endTaper: 0.62, stepMin: 0.32, stepMax: 0.60, maxDepth: 3 },
   rhizome_tuber: { trunkLength: 4.8, crownDivision: 3, divisionSpreadDeg: 52, trunkLateralsFrom: 0.32, limbLength: 13.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.38, forkAngleDeg: 38, endTaper: 0.62, stepMin: 0.32, stepMax: 0.60, maxDepth: 3, flareBoost: 0.16 },
   rhizome_lace: { trunkLength: 3.8, crownDivision: 3, divisionSpreadDeg: 54, trunkLateralsFrom: 0.32, limbLength: 12.5, lengthRatio: 0.78, lateralSpacing: 0.52, lateralAngleDeg: 42, lateralAlpha: 0.34, forkAngleDeg: 38, endTaper: 0.74, stepMin: 0.32, stepMax: 0.60, maxDepth: 3 },
@@ -70,20 +70,20 @@ export function pickMorphModeForArchetype(archetype: Archetype, avoidMode?: Morp
   const isAvoidMacro = avoidMode === "monolith" || avoidMode === "big_branching" || avoidMode === "candelabra";
   const isAvoidMicro = avoidMode === "filigree";
   const r = Math.random();
-  if (isAvoidMacro) return r < 0.45 ? "filigree" : r < 0.75 ? "spire" : "umbrella";
+  if (isAvoidMacro) return r < 0.30 ? "filigree" : r < 0.65 ? "spire" : "umbrella";
   if (isAvoidMicro) return r < 0.38 ? "monolith" : r < 0.72 ? "big_branching" : "candelabra";
-  if (r < 0.22) return "monolith";
-  if (r < 0.42) return "big_branching";
-  if (r < 0.58) return "candelabra";
-  if (r < 0.70) return "spire";
-  if (r < 0.80) return "umbrella";
+  if (r < 0.26) return "monolith";
+  if (r < 0.50) return "big_branching";
+  if (r < 0.68) return "candelabra";
+  if (r < 0.80) return "spire";
+  if (r < 0.90) return "umbrella";
   return "filigree";
 }
 
 export function clampTrunkGirthMod(archetype?: Archetype, val: number = 1.0): number {
-  if (archetype === "rhizome") return THREE.MathUtils.clamp(val, 0.22, 0.68);
-  if (archetype === "bush") return THREE.MathUtils.clamp(val, 0.52, 1.18);
-  return THREE.MathUtils.clamp(val, 1.15, 2.25);
+  if (archetype === "rhizome") return THREE.MathUtils.clamp(val, 0.16, 0.82);
+  if (archetype === "bush") return THREE.MathUtils.clamp(val, 0.34, 1.35);
+  return THREE.MathUtils.clamp(val, 1.05, 2.75);
 }
 
 export function clampRambleFactor(archetype?: Archetype, val: number = 1.0): number {
@@ -97,30 +97,32 @@ export function rollTrunkGirthMod(archetype?: Archetype, mode?: MorphMode): numb
   if (archetype === "rhizome") {
     const raw =
       mode === "rhizome_lace"
-        ? 0.22 + u * 0.16
+        ? 0.16 + u * 0.15
         : mode === "rhizome_tuber"
-          ? 0.46 + u * 0.22
-          : 0.30 + u * 0.22;
+          ? 0.52 + u * 0.28
+          : 0.28 + u * 0.22;
     return clampTrunkGirthMod("rhizome", raw);
   }
   if (archetype === "bush") {
     const raw =
       mode === "bush_compact"
-        ? 0.52 + u * 0.24
+        ? 0.34 + u * 0.22
         : mode === "bush_giant"
-          ? 0.90 + u * 0.28
-          : 0.70 + u * 0.26;
+          ? 0.92 + u * 0.38
+          : 0.58 + u * 0.30;
     return clampTrunkGirthMod("bush", raw);
   }
-  // tree: stout-to-monumental structural trunks
+  // tree: stout-to-monumental structural trunks with wide girth variance
   const raw =
     mode === "filigree"
-      ? 1.15 + u * 0.35
+      ? 1.05 + u * 0.25
       : mode === "spire" || mode === "umbrella"
-        ? 1.30 + u * 0.45
-        : mode === "monolith"
-          ? 1.60 + u * 0.65
-          : 1.40 + u * 0.55;
+        ? 1.55 + u * 0.45
+        : mode === "candelabra"
+          ? 1.75 + u * 0.50
+          : mode === "big_branching"
+            ? 2.00 + u * 0.55
+            : 2.25 + u * 0.50;
   return clampTrunkGirthMod("tree", raw);
 }
 
@@ -157,16 +159,19 @@ export function rollRambleFactor(archetype?: Archetype, mode?: MorphMode): numbe
 export function computeInitialTrunkThickness(genome: Genome, zeroG: boolean = true): number {
   const girthMod = clampTrunkGirthMod(genome.archetype, genome.trunkGirthMod ?? 1.0);
   if (genome.archetype === "rhizome" || genome.growthHabit === "rhizome_web") {
-    const base = THREE.MathUtils.clamp(genome.thicknessBase || 1.1, 0.55, 1.65);
-    return THREE.MathUtils.clamp(base * 0.34 * girthMod, 0.10, 0.38);
+    const base = THREE.MathUtils.clamp(genome.thicknessBase || 1.0, 0.45, 1.75);
+    return THREE.MathUtils.clamp(base * 0.34 * girthMod, 0.08, 0.46);
   }
   if (genome.archetype === "bush") {
-    const base = THREE.MathUtils.clamp(genome.thicknessBase || 1.5, 0.95, 2.20);
-    return THREE.MathUtils.clamp(base * 0.42 * girthMod, 0.32, 0.86);
+    const base = THREE.MathUtils.clamp(genome.thicknessBase || 1.4, 0.80, 2.30);
+    return THREE.MathUtils.clamp(base * 0.34 * girthMod, 0.18, 0.82);
   }
-  // tree (default): plump ginger tuber base
-  const base = THREE.MathUtils.clamp(genome.thicknessBase || 2.8, 1.80, 3.20);
-  return THREE.MathUtils.clamp(base * (zeroG ? 0.22 : 0.26) * girthMod, 0.42, 0.88);
+  // tree (default): unmistakably fat, sturdy structural trunk with wide variance across modes
+  const base = THREE.MathUtils.clamp(genome.thicknessBase || 3.2, 2.00, 4.80);
+  if (genome.morphMode === "filigree") {
+    return THREE.MathUtils.clamp(base * (zeroG ? 0.27 : 0.30) * girthMod, 0.78, 1.05);
+  }
+  return THREE.MathUtils.clamp(base * (zeroG ? 0.30 : 0.33) * girthMod, 1.55, 2.55);
 }
 
 export function assignGenomeMorphology(genome: Genome, forceMode?: MorphMode): Genome {
@@ -180,63 +185,63 @@ export function assignGenomeMorphology(genome: Genome, forceMode?: MorphMode): G
   const rand = Math.random();
 
   if (mode === "monolith") {
-    genome.morphScale = 1.00 + rand * 0.35; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.9 + rand * 0.8; genome.minThickness = 0.035 + rand * 0.020; genome.thicknessDecay = 0.985;
-    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.018 + rand * 0.008; genome.branchTendency = 1.8 + rand * 0.8;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "oak"; genome.canopyZone = "terminal";
+    genome.morphScale = 1.15 + rand * 0.55; genome.branchOrderCap = 3;
+    genome.thicknessBase = 4.2 + rand * 1.4; genome.minThickness = 0.22 + rand * 0.12; genome.thicknessDecay = 0.988;
+    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.014 + rand * 0.008; genome.branchTendency = 1.6 + rand * 0.8;
+    genome.wanderIntensity = 0.20 + rand * 0.16; genome.growthHabit = "oak"; genome.canopyZone = "terminal";
   } else if (mode === "big_branching") {
-    genome.morphScale = 0.95 + rand * 0.35; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.7 + rand * 0.8; genome.minThickness = 0.035 + rand * 0.020; genome.thicknessDecay = 0.986;
-    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.020 + rand * 0.010; genome.branchTendency = 2.2 + rand * 1.0;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "oak"; genome.canopyZone = "terminal";
+    genome.morphScale = 1.05 + rand * 0.55; genome.branchOrderCap = 3;
+    genome.thicknessBase = 3.8 + rand * 1.3; genome.minThickness = 0.18 + rand * 0.10; genome.thicknessDecay = 0.988;
+    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.016 + rand * 0.010; genome.branchTendency = 2.0 + rand * 1.0;
+    genome.wanderIntensity = 0.24 + rand * 0.18; genome.growthHabit = "oak"; genome.canopyZone = "terminal";
   } else if (mode === "candelabra") {
-    genome.morphScale = 0.95 + rand * 0.35; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.6 + rand * 0.7; genome.minThickness = 0.035 + rand * 0.020; genome.thicknessDecay = 0.988;
-    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.018 + rand * 0.008; genome.branchTendency = 2.0 + rand * 0.8;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "elm"; genome.canopyZone = "terminal";
+    genome.morphScale = 1.00 + rand * 0.55; genome.branchOrderCap = 3;
+    genome.thicknessBase = 3.5 + rand * 1.2; genome.minThickness = 0.18 + rand * 0.10; genome.thicknessDecay = 0.989;
+    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.015 + rand * 0.008; genome.branchTendency = 1.8 + rand * 0.8;
+    genome.wanderIntensity = 0.22 + rand * 0.18; genome.growthHabit = "elm"; genome.canopyZone = "terminal";
   } else if (mode === "spire") {
-    genome.morphScale = 0.90 + rand * 0.45; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.5 + rand * 0.7; genome.minThickness = 0.035 + rand * 0.020; genome.thicknessDecay = 0.984;
+    genome.morphScale = 0.90 + rand * 0.65; genome.branchOrderCap = 3;
+    genome.thicknessBase = 3.2 + rand * 1.1; genome.minThickness = 0.10 + rand * 0.06; genome.thicknessDecay = 0.986;
     genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.022 + rand * 0.010; genome.branchTendency = 2.4 + rand * 1.2;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "pine";
+    genome.wanderIntensity = 0.22 + rand * 0.18; genome.growthHabit = "pine";
   } else if (mode === "umbrella") {
-    genome.morphScale = 0.90 + rand * 0.45; genome.branchOrderCap = 5;
-    genome.thicknessBase = 2.6 + rand * 0.7; genome.minThickness = 0.035 + rand * 0.020; genome.thicknessDecay = 0.984;
+    genome.morphScale = 0.90 + rand * 0.65; genome.branchOrderCap = 4;
+    genome.thicknessBase = 3.2 + rand * 1.1; genome.minThickness = 0.10 + rand * 0.06; genome.thicknessDecay = 0.986;
     genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.024 + rand * 0.012; genome.branchTendency = 2.8 + rand * 1.4;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "elm";
+    genome.wanderIntensity = 0.24 + rand * 0.20; genome.growthHabit = "elm";
   } else if (mode === "filigree") {
-    genome.morphScale = 0.70 + rand * 0.40; genome.branchOrderCap = 6;
-    genome.thicknessBase = 2.3 + rand * 0.6; genome.minThickness = 0.030 + rand * 0.018; genome.thicknessDecay = 0.978;
-    genome.stepSize = 0.42 + rand * 0.14; genome.bifurcationRate = 0.032 + rand * 0.016; genome.branchTendency = 3.8 + rand * 1.8;
-    genome.wanderIntensity = 0.28 + rand * 0.22; genome.growthHabit = "oak";
+    genome.morphScale = 0.50 + rand * 0.35; genome.branchOrderCap = 5;
+    genome.thicknessBase = 2.1 + rand * 0.7; genome.minThickness = 0.025 + rand * 0.015; genome.thicknessDecay = 0.980;
+    genome.stepSize = 0.38 + rand * 0.12; genome.bifurcationRate = 0.032 + rand * 0.016; genome.branchTendency = 3.8 + rand * 1.8;
+    genome.wanderIntensity = 0.26 + rand * 0.22; genome.growthHabit = "oak";
   } else if (mode === "bush_compact") {
-    genome.morphScale = 0.55 + rand * 0.22; genome.branchOrderCap = 3;
-    genome.thicknessBase = 1.15 + rand * 0.30; genome.minThickness = 0.07 + rand * 0.03; genome.thicknessDecay = 0.988;
-    genome.stepSize = 0.36 + rand * 0.12; genome.bifurcationRate = 0.24 + rand * 0.10; genome.branchTendency = 4.2 + rand * 2.5;
-    genome.wanderIntensity = 0.55 + rand * 0.30;
+    genome.morphScale = 0.42 + rand * 0.22; genome.branchOrderCap = 4;
+    genome.thicknessBase = 0.82 + rand * 0.30; genome.minThickness = 0.045 + rand * 0.025; genome.thicknessDecay = 0.985;
+    genome.stepSize = 0.32 + rand * 0.10; genome.bifurcationRate = 0.24 + rand * 0.10; genome.branchTendency = 4.2 + rand * 2.5;
+    genome.wanderIntensity = 0.48 + rand * 0.28;
   } else if (mode === "bush_medium") {
-    genome.morphScale = 0.80 + rand * 0.28; genome.branchOrderCap = 4;
-    genome.thicknessBase = 1.40 + rand * 0.35; genome.minThickness = 0.08 + rand * 0.04; genome.thicknessDecay = 0.990;
-    genome.stepSize = 0.36 + rand * 0.12; genome.bifurcationRate = 0.25 + rand * 0.10; genome.branchTendency = 4.6 + rand * 3.0;
-    genome.wanderIntensity = 0.55 + rand * 0.30;
+    genome.morphScale = 0.85 + rand * 0.35; genome.branchOrderCap = 5;
+    genome.thicknessBase = 1.35 + rand * 0.40; genome.minThickness = 0.065 + rand * 0.035; genome.thicknessDecay = 0.989;
+    genome.stepSize = 0.46 + rand * 0.14; genome.bifurcationRate = 0.25 + rand * 0.10; genome.branchTendency = 4.6 + rand * 3.0;
+    genome.wanderIntensity = 0.48 + rand * 0.28;
   } else if (mode === "bush_giant") {
-    genome.morphScale = 1.05 + rand * 0.35; genome.branchOrderCap = 4;
-    genome.thicknessBase = 1.65 + rand * 0.45; genome.minThickness = 0.09 + rand * 0.04; genome.thicknessDecay = 0.991;
-    genome.stepSize = 0.36 + rand * 0.12; genome.bifurcationRate = 0.23 + rand * 0.10; genome.branchTendency = 4.5 + rand * 3.0;
-    genome.wanderIntensity = 0.55 + rand * 0.30;
+    genome.morphScale = 1.48 + rand * 0.72; genome.branchOrderCap = 5;
+    genome.thicknessBase = 1.85 + rand * 0.65; genome.minThickness = 0.085 + rand * 0.045; genome.thicknessDecay = 0.992;
+    genome.stepSize = 0.62 + rand * 0.20; genome.bifurcationRate = 0.22 + rand * 0.10; genome.branchTendency = 4.5 + rand * 3.0;
+    genome.wanderIntensity = 0.44 + rand * 0.25;
   } else if (mode === "rhizome_tuber") {
     genome.morphScale = 0.95 + rand * 0.45; genome.branchOrderCap = 3;
-    genome.thicknessBase = 1.15 + rand * 0.35; genome.minThickness = 0.06 + rand * 0.03; genome.thicknessDecay = 0.984;
+    genome.thicknessBase = 1.25 + rand * 0.45; genome.minThickness = 0.065 + rand * 0.035; genome.thicknessDecay = 0.984;
     genome.stepSize = 0.38 + rand * 0.14; genome.bifurcationRate = 0.04 + rand * 0.03; genome.branchTendency = 1.8 + rand * 1.0;
     genome.wanderIntensity = 0.48 + rand * 0.28; genome.growthHabit = "rhizome_web";
   } else if (mode === "rhizome_stolon") {
     genome.morphScale = 0.85 + rand * 0.50; genome.branchOrderCap = 3;
-    genome.thicknessBase = 0.90 + rand * 0.35; genome.minThickness = 0.045 + rand * 0.025; genome.thicknessDecay = 0.982;
+    genome.thicknessBase = 0.85 + rand * 0.35; genome.minThickness = 0.042 + rand * 0.022; genome.thicknessDecay = 0.982;
     genome.stepSize = 0.38 + rand * 0.14; genome.bifurcationRate = 0.06 + rand * 0.04; genome.branchTendency = 2.4 + rand * 1.2;
     genome.wanderIntensity = 0.48 + rand * 0.28; genome.growthHabit = "rhizome_web";
   } else if (mode === "rhizome_lace") {
     genome.morphScale = 0.65 + rand * 0.42; genome.branchOrderCap = 4;
-    genome.thicknessBase = 0.68 + rand * 0.28; genome.minThickness = 0.028 + rand * 0.016; genome.thicknessDecay = 0.978;
+    genome.thicknessBase = 0.52 + rand * 0.26; genome.minThickness = 0.025 + rand * 0.015; genome.thicknessDecay = 0.978;
     genome.stepSize = 0.38 + rand * 0.14; genome.bifurcationRate = 0.08 + rand * 0.04; genome.branchTendency = 3.0 + rand * 1.5;
     genome.wanderIntensity = 0.48 + rand * 0.28; genome.growthHabit = "rhizome_web";
   }
@@ -338,7 +343,7 @@ export function inheritGenomeMorphology(child: Genome, g1: Genome, g2: Genome): 
     child.trunkGirthMod = rollTrunkGirthMod(child.archetype, chosenMode);
   } else {
     const parentGirth = parent.trunkGirthMod ?? rollTrunkGirthMod(child.archetype, chosenMode);
-    child.trunkGirthMod = clampTrunkGirthMod(child.archetype, parentGirth * (0.82 + Math.random() * 0.36));
+    child.trunkGirthMod = clampTrunkGirthMod(child.archetype, parentGirth * (0.74 + Math.random() * 0.52));
   }
   if (parent.archetype !== child.archetype || Math.random() < 0.35) {
     child.rambleFactor = rollRambleFactor(child.archetype, chosenMode);
@@ -369,12 +374,12 @@ export function getOrganismBudgetMultiplier(genome?: Genome): number {
     return THREE.MathUtils.clamp((genome.morphScale ?? 1.15) * 1.15, 1.05, 1.65);
   }
   let mult = 1.0;
-  if (
-    genome.morphMode === "rhizome_tuber" ||
-    genome.morphMode === "bush_giant"
-  ) {
-    const scale = genome.morphMode === "rhizome_tuber" ? 0.50 : 0.65;
-    mult = THREE.MathUtils.clamp((genome.morphScale ?? 1.2) * scale, 0.50, 1.15);
+  if (genome.morphMode === "rhizome_tuber") {
+    mult = THREE.MathUtils.clamp((genome.morphScale ?? 1.2) * 0.55, 0.50, 1.15);
+  } else if (genome.morphMode === "bush_giant") {
+    mult = THREE.MathUtils.clamp((genome.morphScale ?? 1.5) * 0.95, 1.15, 1.85);
+  } else if (genome.morphMode === "bush_compact") {
+    mult = THREE.MathUtils.clamp((genome.morphScale ?? 0.5) * 0.90, 0.42, 0.72);
   } else if (genome.morphMode === "filigree" || genome.morphMode === "rhizome_lace") {
     mult = THREE.MathUtils.clamp((genome.morphScale ?? 1.0) * 1.35, 1.1, 1.55);
   } else {

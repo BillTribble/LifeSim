@@ -558,7 +558,7 @@ export function setupInitialCreatures(engine: SimulationEngine): void {
       active: true,
       age: 0,
       lastPosition: spawnPos.clone(),
-      thickness: designerGenome.archetype === "tree" ? computeInitialTrunkThickness(designerGenome, false) : designerGenome.thicknessBase * (designerGenome.archetype === "bush" ? 1.05 : 1.5),
+      thickness: computeInitialTrunkThickness(designerGenome, false),
       cooldown: 0,
     };
     engine.agents.push(designerAgent);
