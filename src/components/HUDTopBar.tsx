@@ -55,9 +55,7 @@ export function HUDTopBar({
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [presetPanelOpen, setPresetPanelOpen] = useState(false);
-  const [inatPanelOpen, setInatPanelOpen] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 768 : true
-  );
+  const [inatPanelOpen, setInatPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!showHUD) {
